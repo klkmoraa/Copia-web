@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "ignorePatterns": [
+    "dist/**",
+    "output/**",
+    "structureCo/**",
+    "structureCo-backup-*/**",
+    "structureCo-worktrees/**",
+    "structureco-sites/**",
+    "structureco-sites-worktrees/**",
+    "structureco-design-review/**",
+    "structureco-palette-lab/**",
+    "structureCo-contexto-*/**",
+    "structureCo-documentacion-integral-*/**"
+  ],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}

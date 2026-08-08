@@ -1,0 +1,51 @@
+{
+  "name": "structureco",
+  "private": true,
+  "version": "0.8.2",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "typecheck": "tsc -b --noEmit",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "verify:protected": "node scripts/check-protected-baseline.mjs",
+    "perf": "npm run build && node scripts/measure-performance.mjs",
+    "inspect:pdf": "node scripts/inspect-pdf.mjs",
+    "validate:ci": "node scripts/validate-ci.mjs",
+    "verify:perf": "node scripts/check-performance-budget.mjs",
+    "verify": "npm run lint && npm run verify:protected && npm test && npm run build && npm run verify:perf",
+    "qa": "npm run build && node qa.mjs",
+    "qa:webkit": "npm run build && node qa-webkit.mjs",
+    "qa:phase2": "npm run build && node qa-phase2.mjs",
+    "qa:phase3": "npm run build && node qa-phase3.mjs",
+    "qa:phase11": "npm run build && node qa-phase11.mjs",
+    "qa:phase12": "npm run build && node qa-phase12.mjs",
+    "qa:phase13": "npm run build && node qa-phase13.mjs",
+    "qa:phase14": "npm run build && node qa-phase14.mjs"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "lucide-react": "^1.24.0",
+    "motion": "^12.43.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "jsdom": "^29.1.1",
+    "oxlint": "^1.71.0",
+    "playwright": "^1.61.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,1318 @@
+{
+  "generatedAt": "2026-07-17T18:32:10.300Z",
+  "scope": "Phase 2 UI-only geometric and accessibility verification",
+  "checks": {
+    "longProjectNameCommitted": true,
+    "lightContrastprimaryOnSurface": true,
+    "lightContrastsecondaryOnSurface": true,
+    "lightContraststatus": true,
+    "lightContrastanalyze": true,
+    "lightContrastwarning": true,
+    "lightContrasterror": true,
+    "darkContrastprimaryOnSurface": true,
+    "darkContrastsecondaryOnSurface": true,
+    "darkContraststatus": true,
+    "darkContrastanalyze": true,
+    "darkContrastwarning": true,
+    "darkContrasterror": true,
+    "es390x844NoIntersections": true,
+    "es390x844ControlsInsideHeader": true,
+    "es390x844NoHorizontalOverflow": true,
+    "es390x844AnalyzeVisible": true,
+    "es390x844MoreVisible": true,
+    "es390x844TouchTargets44": true,
+    "es430x932NoIntersections": true,
+    "es430x932ControlsInsideHeader": true,
+    "es430x932NoHorizontalOverflow": true,
+    "es430x932AnalyzeVisible": true,
+    "es430x932MoreVisible": true,
+    "es430x932TouchTargets44": true,
+    "es834x1194NoIntersections": true,
+    "es834x1194ControlsInsideHeader": true,
+    "es834x1194NoHorizontalOverflow": true,
+    "es834x1194AnalyzeVisible": true,
+    "es834x1194MoreVisible": true,
+    "es834x1194TouchTargets44": true,
+    "es1024x768NoIntersections": true,
+    "es1024x768ControlsInsideHeader": true,
+    "es1024x768NoHorizontalOverflow": true,
+    "es1024x768AnalyzeVisible": true,
+    "es1024x768MoreVisible": true,
+    "es1194x834NoIntersections": true,
+    "es1194x834ControlsInsideHeader": true,
+    "es1194x834NoHorizontalOverflow": true,
+    "es1194x834AnalyzeVisible": true,
+    "es1194x834MoreVisible": true,
+    "es1280x800NoIntersections": true,
+    "es1280x800ControlsInsideHeader": true,
+    "es1280x800NoHorizontalOverflow": true,
+    "es1280x800AnalyzeVisible": true,
+    "es1280x800MoreVisible": true,
+    "es1366x768NoIntersections": true,
+    "es1366x768ControlsInsideHeader": true,
+    "es1366x768NoHorizontalOverflow": true,
+    "es1366x768AnalyzeVisible": true,
+    "es1366x768MoreVisible": true,
+    "es1440x900NoIntersections": true,
+    "es1440x900ControlsInsideHeader": true,
+    "es1440x900NoHorizontalOverflow": true,
+    "es1440x900AnalyzeVisible": true,
+    "es1440x900MoreVisible": true,
+    "es1536x960NoIntersections": true,
+    "es1536x960ControlsInsideHeader": true,
+    "es1536x960NoHorizontalOverflow": true,
+    "es1536x960AnalyzeVisible": true,
+    "es1536x960MoreVisible": true,
+    "esOverflow1194InsideViewport": true,
+    "esOverflow1194FocusVisible": true,
+    "esOverflow1194EscapeReturnsFocus": true,
+    "esOverflow390InsideViewport": true,
+    "esOverflow390FocusVisible": true,
+    "esOverflow390EscapeReturnsFocus": true,
+    "languageEnglishApplied": true,
+    "en390x844NoIntersections": true,
+    "en390x844ControlsInsideHeader": true,
+    "en390x844NoHorizontalOverflow": true,
+    "en390x844AnalyzeVisible": true,
+    "en390x844MoreVisible": true,
+    "en390x844TouchTargets44": true,
+    "en1194x834NoIntersections": true,
+    "en1194x834ControlsInsideHeader": true,
+    "en1194x834NoHorizontalOverflow": true,
+    "en1194x834AnalyzeVisible": true,
+    "en1194x834MoreVisible": true,
+    "en1280x800NoIntersections": true,
+    "en1280x800ControlsInsideHeader": true,
+    "en1280x800NoHorizontalOverflow": true,
+    "en1280x800AnalyzeVisible": true,
+    "en1280x800MoreVisible": true,
+    "en1366x768NoIntersections": true,
+    "en1366x768ControlsInsideHeader": true,
+    "en1366x768NoHorizontalOverflow": true,
+    "en1366x768AnalyzeVisible": true,
+    "en1366x768MoreVisible": true,
+    "en1536x960NoIntersections": true,
+    "en1536x960ControlsInsideHeader": true,
+    "en1536x960NoHorizontalOverflow": true,
+    "en1536x960AnalyzeVisible": true,
+    "en1536x960MoreVisible": true,
+    "enOverflow390InsideViewport": true,
+    "enOverflow390FocusVisible": true,
+    "enOverflow390EscapeReturnsFocus": true,
+    "statusReady": true,
+    "statusCalculating": true,
+    "analyzeWidthStableDuringLoading": true,
+    "statusResolved": true,
+    "statusStale": true,
+    "criticalTextAtLeast12": true,
+    "statusError": true,
+    "errorStatusExpandsResults": true,
+    "errorStatusOpensIssues": true,
+    "loadingEvidenceCapturedWhileBusy": true,
+    "reducedMotionMediaApplied": true,
+    "reducedMotionDisablesSpinner": true,
+    "zoom200desktop1366x768NoIntersections": true,
+    "zoom200desktop1366x768InsideHeader": true,
+    "zoom200desktop1366x768NoHorizontalOverflow": true,
+    "zoom200desktop1366x768PrimaryActionsVisible": true,
+    "zoom200tablet834x1194NoIntersections": true,
+    "zoom200tablet834x1194InsideHeader": true,
+    "zoom200tablet834x1194NoHorizontalOverflow": true,
+    "zoom200tablet834x1194PrimaryActionsVisible": true
+  },
+  "matrix": {
+    "es": [
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 100,
+            "height": 44
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Más acciones",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Analizar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Alejar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Abrir inspector",
+            "width": 44,
+            "height": 44
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 430,
+          "height": 932
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 100,
+            "height": 44
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Más acciones",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Analizar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Alejar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Abrir inspector",
+            "width": 44,
+            "height": 44
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 834,
+          "height": 1194
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 190,
+            "height": 44
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Más acciones",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Analizar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Alejar",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Abrir inspector",
+            "width": 44,
+            "height": 44
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1024,
+          "height": 768
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 225.265625,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 124,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1194,
+          "height": 834
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 124,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Caso o combinación",
+            "width": 192,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Deshacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Rehacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1366,
+          "height": 768
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Caso o combinación",
+            "width": 204.890625,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Deshacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Rehacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Caso o combinación",
+            "width": 216,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Unidades",
+            "width": 104,
+            "height": 40
+          },
+          {
+            "label": "Deshacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Rehacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Exportar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1536,
+          "height": 960
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Nombre del proyecto",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Abrir proyectos y ejemplos",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Caso o combinación",
+            "width": 230,
+            "height": 40
+          },
+          {
+            "label": "Modo de cálculo",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Unidades",
+            "width": 104,
+            "height": 40
+          },
+          {
+            "label": "Deshacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Rehacer",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Exportar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Más acciones",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analizar",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Acercar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Alejar",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Ajustar modelo a la vista",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      }
+    ],
+    "en": [
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Project name",
+            "width": 100,
+            "height": 44
+          },
+          {
+            "label": "Open projects and examples",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "More actions",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Analyze",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Zoom in",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Zoom out",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Fit model to view",
+            "width": 44,
+            "height": 44
+          },
+          {
+            "label": "Open inspector",
+            "width": 44,
+            "height": 44
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1194,
+          "height": 834
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Project name",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Open projects and examples",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Calculation mode",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "More actions",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analyze",
+            "width": 124,
+            "height": 44
+          },
+          {
+            "label": "Zoom in",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Zoom out",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Fit model to view",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Project name",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Open projects and examples",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Load case or combination",
+            "width": 192,
+            "height": 40
+          },
+          {
+            "label": "Calculation mode",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Undo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Redo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "More actions",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analyze",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Zoom in",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Zoom out",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Fit model to view",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1366,
+          "height": 768
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Project name",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Open projects and examples",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Load case or combination",
+            "width": 204.890625,
+            "height": 40
+          },
+          {
+            "label": "Calculation mode",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Undo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Redo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "More actions",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analyze",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Zoom in",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Zoom out",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Fit model to view",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1536,
+          "height": 960
+        },
+        "intersections": [],
+        "outside": [],
+        "horizontalOverflow": 0,
+        "analyzeVisible": true,
+        "moreVisible": true,
+        "status": "ready",
+        "touchTargets": [
+          {
+            "label": "Ir al inicio",
+            "width": 34,
+            "height": 34
+          },
+          {
+            "label": "Project name",
+            "width": 260,
+            "height": 24
+          },
+          {
+            "label": "Open projects and examples",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Load case or combination",
+            "width": 230,
+            "height": 40
+          },
+          {
+            "label": "Calculation mode",
+            "width": 160,
+            "height": 40
+          },
+          {
+            "label": "Units",
+            "width": 104,
+            "height": 40
+          },
+          {
+            "label": "Undo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Redo",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Export",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "More actions",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Analyze",
+            "width": 148,
+            "height": 44
+          },
+          {
+            "label": "Zoom in",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Zoom out",
+            "width": 40,
+            "height": 40
+          },
+          {
+            "label": "Fit model to view",
+            "width": 40,
+            "height": 40
+          }
+        ]
+      }
+    ]
+  },
+  "themes": {
+    "light": {
+      "theme": "light",
+      "app": "#f3f5f4",
+      "surface": "#fff",
+      "text": "#17201c",
+      "secondary": "#5f6c66",
+      "status": {
+        "color": "rgb(8, 122, 91)",
+        "background": "color(srgb 0.92251 0.958275 0.948549)"
+      },
+      "analyze": {
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(8, 122, 91)"
+      },
+      "warning": {
+        "color": "rgb(138, 79, 0)",
+        "background": "color(srgb 0.963294 0.944784 0.92)"
+      },
+      "error": {
+        "color": "rgb(169, 47, 47)",
+        "background": "color(srgb 0.97302 0.934745 0.934745)"
+      },
+      "contrast": {
+        "primaryOnSurface": 16.669253166335373,
+        "secondaryOnSurface": 5.492398926303059,
+        "status": 4.7665443719260185,
+        "analyze": 5.32291809132081,
+        "warning": 5.837114836616984,
+        "error": 5.90377586014873
+      }
+    },
+    "dark": {
+      "theme": "dark",
+      "app": "#0d1110",
+      "surface": "#151a18",
+      "text": "#f2f6f4",
+      "secondary": "#aab5b0",
+      "status": {
+        "color": "rgb(43, 185, 138)",
+        "background": "color(srgb 0.0892549 0.151843 0.129882)"
+      },
+      "analyze": {
+        "color": "rgb(8, 22, 17)",
+        "background": "rgb(43, 185, 138)"
+      },
+      "warning": {
+        "color": "rgb(240, 170, 60)",
+        "background": "color(srgb 0.151059 0.147137 0.105412)"
+      },
+      "error": {
+        "color": "rgb(242, 107, 107)",
+        "background": "color(srgb 0.151686 0.127373 0.120157)"
+      },
+      "contrast": {
+        "primaryOnSurface": 16.14985719640866,
+        "secondaryOnSurface": 8.337860085034075,
+        "status": 6.254563578919892,
+        "analyze": 7.42095562531755,
+        "warning": 7.671886533606053,
+        "error": 5.387165542715545
+      }
+    }
+  },
+  "zoom200": {
+    "desktop1366x768": {
+      "viewport": {
+        "width": 683,
+        "height": 384
+      },
+      "intersections": [],
+      "outside": [],
+      "horizontalOverflow": 0,
+      "analyzeVisible": true,
+      "moreVisible": true,
+      "status": "ready",
+      "touchTargets": [
+        {
+          "label": "Ir al inicio",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Nombre del proyecto",
+          "width": 190,
+          "height": 44
+        },
+        {
+          "label": "Abrir proyectos y ejemplos",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Más acciones",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Analizar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Acercar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Alejar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Ajustar modelo a la vista",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Abrir inspector",
+          "width": 44,
+          "height": 44
+        }
+      ],
+      "physical": "1366x768 at 200%",
+      "method": "effective CSS viewport"
+    },
+    "tablet834x1194": {
+      "viewport": {
+        "width": 417,
+        "height": 597
+      },
+      "intersections": [],
+      "outside": [],
+      "horizontalOverflow": 0,
+      "analyzeVisible": true,
+      "moreVisible": true,
+      "status": "ready",
+      "touchTargets": [
+        {
+          "label": "Ir al inicio",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Nombre del proyecto",
+          "width": 100,
+          "height": 44
+        },
+        {
+          "label": "Abrir proyectos y ejemplos",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Más acciones",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Analizar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Acercar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Alejar",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Ajustar modelo a la vista",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Abrir inspector",
+          "width": 44,
+          "height": 44
+        }
+      ],
+      "physical": "834x1194 at 200%",
+      "method": "effective CSS viewport"
+    }
+  },
+  "states": {
+    "initial": "ready",
+    "loading": {
+      "initialWidth": 148,
+      "loadingWidth": 148,
+      "status": "calculating"
+    },
+    "resolved": "resolved",
+    "stale": "stale",
+    "error": "error",
+    "errorNavigation": {
+      "collapsedBefore": true,
+      "expanded": true,
+      "selected": "issues"
+    },
+    "loadingEvidence": {
+      "observed": {
+        "status": "calculating",
+        "width": 148
+      },
+      "afterScreenshot": {
+        "status": "calculating",
+        "busy": "true"
+      },
+      "delayMs": 1200
+    }
+  },
+  "accessibility": {
+    "minimumCriticalText": {
+      "minimum": 12,
+      "below12": []
+    },
+    "reducedMotion": {
+      "mediaMatches": true,
+      "animationName": "none"
+    }
+  },
+  "console": [],
+  "pageErrors": [],
+  "failedChecks": []
+}

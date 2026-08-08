@@ -1,0 +1,725 @@
+[
+  {
+    "file": "before-topbar-1536x960.png",
+    "viewport": {
+      "width": 1536,
+      "height": 960
+    },
+    "overflow": 0,
+    "overlaps": []
+  },
+  {
+    "file": "before-topbar-1440x900.png",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "overflow": 0,
+    "overlaps": [
+      {
+        "a": "Deshacer",
+        "area": 1296,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Rehacer",
+        "area": 1296,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Local",
+        "area": 649,
+        "b": "Caso o combinación"
+      }
+    ],
+    "controls": [
+      {
+        "bottom": 49.5,
+        "height": 34,
+        "index": 0,
+        "name": "Ir al inicio",
+        "right": 52,
+        "tag": "button",
+        "width": 34,
+        "x": 18,
+        "y": 15.5
+      },
+      {
+        "bottom": 43,
+        "height": 21,
+        "index": 1,
+        "name": "Nombre del proyecto",
+        "right": 400.34375,
+        "tag": "input",
+        "width": 220,
+        "x": 180.34375,
+        "y": 22
+      },
+      {
+        "bottom": 45.5,
+        "height": 26,
+        "index": 2,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 434.34375,
+        "tag": "button",
+        "width": 26,
+        "x": 408.34375,
+        "y": 19.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 3,
+        "name": "Deshacer",
+        "right": 690.015625,
+        "tag": "button",
+        "width": 36,
+        "x": 654.015625,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 4,
+        "name": "Rehacer",
+        "right": 732.015625,
+        "tag": "button",
+        "width": 36,
+        "x": 696.015625,
+        "y": 14.5
+      },
+      {
+        "bottom": 40,
+        "height": 15,
+        "index": 5,
+        "name": "Local",
+        "right": 785.984375,
+        "tag": "span",
+        "width": 43.96875,
+        "x": 742.015625,
+        "y": 25
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 6,
+        "name": "Caso o combinación",
+        "right": 785.28125,
+        "tag": "select",
+        "width": 230,
+        "x": 555.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 7,
+        "name": "Modo de cálculo",
+        "right": 947.28125,
+        "tag": "select",
+        "width": 152,
+        "x": 795.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 8,
+        "name": "Unidades",
+        "right": 1055.28125,
+        "tag": "select",
+        "width": 98,
+        "x": 957.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 9,
+        "name": "Idioma",
+        "right": 1137.28125,
+        "tag": "select",
+        "width": 72,
+        "x": 1065.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 10,
+        "name": "Cambiar tema",
+        "right": 1245.28125,
+        "tag": "button",
+        "width": 98,
+        "x": 1147.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 11,
+        "name": "Exportar",
+        "right": 1291.28125,
+        "tag": "button",
+        "width": 36,
+        "x": 1255.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 53.5,
+        "height": 42,
+        "index": 12,
+        "name": "Analizar",
+        "right": 1422,
+        "tag": "button",
+        "width": 120.71875,
+        "x": 1301.28125,
+        "y": 11.5
+      }
+    ]
+  },
+  {
+    "file": "before-topbar-1366x768.png",
+    "viewport": {
+      "height": 768,
+      "width": 1366
+    },
+    "overflow": 0,
+    "overlaps": [
+      {
+        "a": "Deshacer",
+        "area": 1296,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Rehacer",
+        "area": 1296,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Local",
+        "area": 94,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Local",
+        "area": 416,
+        "b": "Modo de cálculo"
+      }
+    ],
+    "controls": [
+      {
+        "bottom": 49.5,
+        "height": 34,
+        "index": 0,
+        "name": "Ir al inicio",
+        "right": 52,
+        "tag": "button",
+        "width": 34,
+        "x": 18,
+        "y": 15.5
+      },
+      {
+        "bottom": 43,
+        "height": 21,
+        "index": 1,
+        "name": "Nombre del proyecto",
+        "right": 400.34375,
+        "tag": "input",
+        "width": 220,
+        "x": 180.34375,
+        "y": 22
+      },
+      {
+        "bottom": 45.5,
+        "height": 26,
+        "index": 2,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 434.34375,
+        "tag": "button",
+        "width": 26,
+        "x": 408.34375,
+        "y": 19.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 3,
+        "name": "Deshacer",
+        "right": 653.015625,
+        "tag": "button",
+        "width": 36,
+        "x": 617.015625,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 4,
+        "name": "Rehacer",
+        "right": 695.015625,
+        "tag": "button",
+        "width": 36,
+        "x": 659.015625,
+        "y": 14.5
+      },
+      {
+        "bottom": 40,
+        "height": 15,
+        "index": 5,
+        "name": "Local",
+        "right": 748.984375,
+        "tag": "span",
+        "width": 43.96875,
+        "x": 705.015625,
+        "y": 25
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 6,
+        "name": "Caso o combinación",
+        "right": 711.28125,
+        "tag": "select",
+        "width": 230,
+        "x": 481.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 7,
+        "name": "Modo de cálculo",
+        "right": 873.28125,
+        "tag": "select",
+        "width": 152,
+        "x": 721.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 8,
+        "name": "Unidades",
+        "right": 981.28125,
+        "tag": "select",
+        "width": 98,
+        "x": 883.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 9,
+        "name": "Idioma",
+        "right": 1063.28125,
+        "tag": "select",
+        "width": 72,
+        "x": 991.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 10,
+        "name": "Cambiar tema",
+        "right": 1171.28125,
+        "tag": "button",
+        "width": 98,
+        "x": 1073.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 11,
+        "name": "Exportar",
+        "right": 1217.28125,
+        "tag": "button",
+        "width": 36,
+        "x": 1181.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 53.5,
+        "height": 42,
+        "index": 12,
+        "name": "Analizar",
+        "right": 1348,
+        "tag": "button",
+        "width": 120.71875,
+        "x": 1227.28125,
+        "y": 11.5
+      }
+    ]
+  },
+  {
+    "file": "before-topbar-1194x834.png",
+    "viewport": {
+      "height": 834,
+      "width": 1194
+    },
+    "overflow": 0,
+    "overlaps": [
+      {
+        "a": "Nombre del proyecto",
+        "area": 1912,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Abrir proyectos y ejemplos",
+        "area": 676,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Deshacer",
+        "area": 1197,
+        "b": "Caso o combinación"
+      },
+      {
+        "a": "Rehacer",
+        "area": 1251,
+        "b": "Modo de cálculo"
+      },
+      {
+        "a": "Local",
+        "area": 660,
+        "b": "Modo de cálculo"
+      }
+    ],
+    "controls": [
+      {
+        "bottom": 49.5,
+        "height": 34,
+        "index": 0,
+        "name": "Ir al inicio",
+        "right": 52,
+        "tag": "button",
+        "width": 34,
+        "x": 18,
+        "y": 15.5
+      },
+      {
+        "bottom": 43,
+        "height": 21,
+        "index": 1,
+        "name": "Nombre del proyecto",
+        "right": 400.34375,
+        "tag": "input",
+        "width": 220,
+        "x": 180.34375,
+        "y": 22
+      },
+      {
+        "bottom": 45.5,
+        "height": 26,
+        "index": 2,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 434.34375,
+        "tag": "button",
+        "width": 26,
+        "x": 408.34375,
+        "y": 19.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 3,
+        "name": "Deshacer",
+        "right": 542.03125,
+        "tag": "button",
+        "width": 36,
+        "x": 506.03125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 4,
+        "name": "Rehacer",
+        "right": 584.03125,
+        "tag": "button",
+        "width": 36,
+        "x": 548.03125,
+        "y": 14.5
+      },
+      {
+        "bottom": 40,
+        "height": 15,
+        "index": 5,
+        "name": "Local",
+        "right": 638,
+        "tag": "span",
+        "width": 43.96875,
+        "x": 594.03125,
+        "y": 25
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 6,
+        "name": "Caso o combinación",
+        "right": 539.28125,
+        "tag": "select",
+        "width": 230,
+        "x": 309.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 7,
+        "name": "Modo de cálculo",
+        "right": 701.28125,
+        "tag": "select",
+        "width": 152,
+        "x": 549.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 8,
+        "name": "Unidades",
+        "right": 809.28125,
+        "tag": "select",
+        "width": 98,
+        "x": 711.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 9,
+        "name": "Idioma",
+        "right": 891.28125,
+        "tag": "select",
+        "width": 72,
+        "x": 819.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 10,
+        "name": "Cambiar tema",
+        "right": 999.28125,
+        "tag": "button",
+        "width": 98,
+        "x": 901.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 50.5,
+        "height": 36,
+        "index": 11,
+        "name": "Exportar",
+        "right": 1045.28125,
+        "tag": "button",
+        "width": 36,
+        "x": 1009.28125,
+        "y": 14.5
+      },
+      {
+        "bottom": 53.5,
+        "height": 42,
+        "index": 12,
+        "name": "Analizar",
+        "right": 1176,
+        "tag": "button",
+        "width": 120.71875,
+        "x": 1055.28125,
+        "y": 11.5
+      }
+    ]
+  },
+  {
+    "file": "before-tablet-834x1194.png",
+    "viewport": {
+      "height": 1194,
+      "width": 834
+    },
+    "overflow": 0,
+    "overlaps": [],
+    "controls": [
+      {
+        "bottom": 50.5,
+        "height": 44,
+        "index": 0,
+        "name": "Ir al inicio",
+        "right": 54,
+        "tag": "button",
+        "width": 44,
+        "x": 10,
+        "y": 6.5
+      },
+      {
+        "bottom": 39,
+        "height": 21,
+        "index": 1,
+        "name": "Nombre del proyecto",
+        "right": 202,
+        "tag": "input",
+        "width": 132,
+        "x": 70,
+        "y": 18
+      },
+      {
+        "bottom": 50.5,
+        "height": 44,
+        "index": 2,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 254,
+        "tag": "button",
+        "width": 44,
+        "x": 210,
+        "y": 6.5
+      },
+      {
+        "bottom": 46.5,
+        "height": 36,
+        "index": 3,
+        "name": "Más acciones",
+        "right": 776,
+        "tag": "button",
+        "width": 36,
+        "x": 740,
+        "y": 10.5
+      },
+      {
+        "bottom": 48.5,
+        "height": 40,
+        "index": 4,
+        "name": "Analizar",
+        "right": 824,
+        "tag": "button",
+        "width": 43,
+        "x": 781,
+        "y": 8.5
+      }
+    ]
+  },
+  {
+    "file": "before-mobile-430x932.png",
+    "viewport": {
+      "height": 932,
+      "width": 430
+    },
+    "overflow": 0,
+    "overlaps": [],
+    "controls": [
+      {
+        "bottom": 49,
+        "height": 44,
+        "index": 0,
+        "name": "Ir al inicio",
+        "right": 54,
+        "tag": "button",
+        "width": 44,
+        "x": 10,
+        "y": 5
+      },
+      {
+        "bottom": 37.5,
+        "height": 21,
+        "index": 1,
+        "name": "Nombre del proyecto",
+        "right": 216,
+        "tag": "input",
+        "width": 146,
+        "x": 70,
+        "y": 16.5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "index": 2,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 268,
+        "tag": "button",
+        "width": 44,
+        "x": 224,
+        "y": 5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "index": 3,
+        "name": "Más acciones",
+        "right": 373,
+        "tag": "button",
+        "width": 44,
+        "x": 329,
+        "y": 5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "index": 4,
+        "name": "Analizar",
+        "right": 420,
+        "tag": "button",
+        "width": 44,
+        "x": 376,
+        "y": 5
+      }
+    ]
+  },
+  {
+    "file": "before-mobile-390x844.png",
+    "viewport": {
+      "height": 844,
+      "width": 390
+    },
+    "overflow": 0,
+    "overlaps": [],
+    "controls": [
+      {
+        "bottom": 49,
+        "height": 44,
+        "name": "Ir al inicio",
+        "right": 54,
+        "width": 44,
+        "x": 10,
+        "y": 5
+      },
+      {
+        "bottom": 37.5,
+        "height": 21,
+        "name": "Nombre del proyecto",
+        "right": 202.59375,
+        "width": 132.59375,
+        "x": 70,
+        "y": 16.5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "name": "Abrir proyectos y ejemplos",
+        "right": 254.59375,
+        "width": 44,
+        "x": 210.59375,
+        "y": 5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "name": "Más acciones",
+        "right": 333,
+        "width": 44,
+        "x": 289,
+        "y": 5
+      },
+      {
+        "bottom": 49,
+        "height": 44,
+        "name": "Analizar",
+        "right": 380,
+        "width": 44,
+        "x": 336,
+        "y": 5
+      }
+    ],
+    "theme": "dark"
+  }
+]

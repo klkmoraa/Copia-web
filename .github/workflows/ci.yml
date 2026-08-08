@@ -1,0 +1,70 @@
+# Gate rápido — structureCo
+#
+# Runs on every push and pull request. Mechanical checks only: lint, the protected
+# mathematical boundary, the deterministic test suite, and a production build. No AI model
+# is called from this workflow (no Anthropic, no OpenAI, no Claude, no Codex), no browser
+# automation, no deploy, no commit, no tag, no package publish.
+#
+# Preparado localmente el 2 de agosto de 2026 (programa 0.8.1). No se ha conectado a GitHub
+# ni ejecutado de forma remota — ver docs/releases/0.8.1/CI.md.
+
+name: Gate rápido
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only by default. This workflow never needs to write to the repository, open issues,
+# or touch packages.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, frontera protegida, pruebas y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node canónico
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Instalar dependencias exactas
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      - name: Comprobación de tipos
+        run: npm run typecheck
+
+      - name: Frontera matemática protegida
+        run: npm run verify:protected
+
+      - name: Pruebas deterministas
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
+
+      - name: Presupuestos de rendimiento
+        run: npm run verify:perf
+
+      - name: Conservar el build en caso de fallo
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-rapido-dist
+          path: dist/
+          retention-days: 5
+          if-no-files-found: ignore

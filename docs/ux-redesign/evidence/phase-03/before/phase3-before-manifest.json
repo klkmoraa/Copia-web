@@ -1,0 +1,22 @@
+{
+  "phase": "3.0",
+  "capturedAt": "2026-07-17",
+  "url": "http://127.0.0.1:4173/",
+  "browserSurface": "Codex in-app Browser",
+  "devicePixelRatio": 1.3,
+  "notes": "Viewport CSS exacto; el raster de captura se normaliza a 960 px de ancho en viewports anchos.",
+  "captures": [
+    { "file": "phase3_30_1536x960_light_complete_ready_baseline.png", "viewport": [1536, 960], "raster": [960, 960], "bytes": 233403, "sha256": "2e38fca35736bab1acdc28b08a4ced130b098a572071513efc2502f6accfaeae", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_1440x900_light_complete_ready_baseline.png", "viewport": [1440, 900], "raster": [960, 900], "bytes": 234196, "sha256": "de41bd068fe496a465758239ffc78ec44092c891ab481d1e928979f7aa3f8d87", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_1440x900_light_complete_analyzed_member-selected.png", "viewport": [1440, 900], "raster": [960, 900], "bytes": 362129, "sha256": "06ed7bef84aaf99729f69f19f3008397c8d08b24b38aa4e2f84d0d2e5fab34a8", "theme": "light", "mode": "complete", "state": "analyzed-member-selected" },
+    { "file": "phase3_30_1366x768_light_complete_analyzed_baseline.png", "viewport": [1366, 768], "raster": [960, 768], "bytes": 324485, "sha256": "74cb32f08fdacff9d7d93309d31ae1a2d581367e28a2d96dc68f8f7f113633a0", "theme": "light", "mode": "complete", "state": "analyzed" },
+    { "file": "phase3_30_1280x800_light_complete_analyzed_baseline.png", "viewport": [1280, 800], "raster": [960, 800], "bytes": 343724, "sha256": "941b337a792d5a10a68d53e22462881400a04c7d42e4816f30f48fd69faddabb", "theme": "light", "mode": "complete", "state": "analyzed" },
+    { "file": "phase3_30_1194x834_light_complete_ready_baseline.png", "viewport": [1194, 834], "raster": [960, 834], "bytes": 195037, "sha256": "a83994b864343933f6a7d5095bdc467334d3b6a3c037daaf732b7d35357e8a1d", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_1024x768_light_complete_ready_baseline.png", "viewport": [1024, 768], "raster": [960, 768], "bytes": 202780, "sha256": "7f286f315e404e9d5f24595221232522b76f97d07c9ab1219879993a62d05297", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_1024x768_dark_complete_analyzed_baseline.png", "viewport": [1024, 768], "raster": [960, 768], "bytes": 344991, "sha256": "75f1b9a987306e9cc82e3783a17abe8580d5e2fa47c33f828f27d0c1562f1697", "theme": "dark", "mode": "complete", "state": "analyzed" },
+    { "file": "phase3_30_834x1194_light_complete_ready_baseline.png", "viewport": [834, 1194], "raster": [834, 1032], "bytes": 98458, "sha256": "7992d13017a47e5d698332635dab65f40dffb327b8d2e1282e7b8bd8d1576571", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_430x932_light_complete_ready_baseline.png", "viewport": [430, 932], "raster": [430, 932], "bytes": 96570, "sha256": "c1dbb8ab66972600cb9ac3c72ec06d2943dd21d6566bd1e1a3711245f12426d9", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_390x844_light_complete_ready_baseline.png", "viewport": [390, 844], "raster": [390, 844], "bytes": 87219, "sha256": "ebb7419019de948e91d09358e4ca63ff59c4bb3f86fa6632a5ffe2ab3a2086aa", "theme": "light", "mode": "complete", "state": "ready" },
+    { "file": "phase3_30_390x844_dark_complete_analyzed_baseline.png", "viewport": [390, 844], "raster": [390, 844], "bytes": 133437, "sha256": "9242a5c7f54032ce71a1ffbc6990fd6d3bc10eb37a671bee9f35680a87702bb2", "theme": "dark", "mode": "complete", "state": "analyzed" }
+  ]
+}

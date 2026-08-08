@@ -1,0 +1,310 @@
+{
+  "generatedAt": "2026-07-17T21:31:56.109Z",
+  "screenshots": [
+    {
+      "file": "phase3_after_390x844_light_complete_ready.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 36592,
+      "sha256": "cd4357e2e78d24f2c12ef04bc78953170fa5b2ea1eae161f0912c4eac550855a",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_390x844_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_430x932_light_complete_ready.png",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 39636,
+      "sha256": "7772a6ccb1475d93a578e5442e0d46a95314c3e8670fd1d5ef27bf356ba88aa0",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_430x932_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_834x1194_light_complete_ready.png",
+      "viewport": {
+        "width": 834,
+        "height": 1194
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 48139,
+      "sha256": "16665d9ec28719fb1974d16e4e1ef9b71f45138481887971f482dd5185ed5b3a",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_834x1194_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1024x768_light_complete_ready.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 50775,
+      "sha256": "a195be1c5e56b755b06852819f066806ea96494bc2df1bec64fae21e51d90b5f",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1024x768_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1194x834_light_complete_ready.png",
+      "viewport": {
+        "width": 1194,
+        "height": 834
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 54476,
+      "sha256": "558649af437ab80a8320d0ee1aa5a7017134fedba0ec09a777a4c6a3609d8a03",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1194x834_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1280x800_light_complete_ready.png",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 52906,
+      "sha256": "ad7718e5223eb310132b3caafe7a634eccd7b74a38573e8a71ca9ccb85a970e3",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1280x800_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1366x768_light_complete_ready.png",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 53854,
+      "sha256": "2b34c2b077e354c444976a55a2f99623f76a8fea93ab86eeb461f83c78f6cc52",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1366x768_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1440x900_light_complete_ready.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 61514,
+      "sha256": "6a10fe7045a46db45a0f3939d09056b5bc4e928a863fe6ad14f0af3a6267f20c",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1536x960_light_complete_ready.png",
+      "viewport": {
+        "width": 1536,
+        "height": 960
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "none"
+      },
+      "bytes": 61943,
+      "sha256": "fdc23ee451aa678b556cad6aba21a37254f31db96bbcd59cbf36e68fc307b116",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1536x960_light_complete_ready.png"
+    },
+    {
+      "file": "phase3_after_1440x900_light_complete_member-selected.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "member"
+      },
+      "bytes": 72424,
+      "sha256": "7a6a31a07f1803ecfdc63c82eee37cac735015a189dc541b8a33d211074acb20",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_member-selected.png"
+    },
+    {
+      "file": "phase3_after_430x932_light_complete_node-support-selected.png",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "node-support"
+      },
+      "bytes": 39402,
+      "sha256": "c47a0414fbfd82c0a4a933abb534314973dffaf25bda3d7c5eaed4e104cdb6a6",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_430x932_light_complete_node-support-selected.png"
+    },
+    {
+      "file": "phase3_after_1366x768_dark_complete_load-selected.png",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "state": {
+        "theme": "dark",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "load"
+      },
+      "bytes": 55948,
+      "sha256": "e2cbf91c88cddb8e82effcb87088eba3e8519eea7aa0fcd2b5347326ac4aed68",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1366x768_dark_complete_load-selected.png"
+    },
+    {
+      "file": "phase3_after_1024x768_light_complete_multi-selected.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "multi"
+      },
+      "bytes": 56318,
+      "sha256": "d9274d2141460a86e8909c7606e4f06dff6eaab7532e8264fc81e08c31afd006",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1024x768_light_complete_multi-selected.png"
+    },
+    {
+      "file": "phase3_after_834x1194_light_complete_layers-open.png",
+      "viewport": {
+        "width": 834,
+        "height": 1194
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "ready",
+        "selection": "multi",
+        "panel": "layers"
+      },
+      "bytes": 72027,
+      "sha256": "57dc1ae759fa34cf99662d83227384323d2593588b589297f3286f1b15b39aa0",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_834x1194_light_complete_layers-open.png"
+    },
+    {
+      "file": "phase3_after_1440x900_light_complete_analyzed-moment.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": {
+        "theme": "light",
+        "mode": "complete",
+        "analysis": "resolved",
+        "result": "moment"
+      },
+      "bytes": 97597,
+      "sha256": "15830ab40504b4a6877895040cc3626038c362585e218f6c6f9c92f8f3f77dde",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_analyzed-moment.png"
+    },
+    {
+      "file": "phase3_after_1280x800_light_complete_english-analyzed.png",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "state": {
+        "theme": "light",
+        "language": "en",
+        "mode": "complete",
+        "analysis": "resolved"
+      },
+      "bytes": 86989,
+      "sha256": "1d2e638620dfa8ab8ea9b6021f8575c18ca79a55bf13c241dc35433cfb53cc8c",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1280x800_light_complete_english-analyzed.png"
+    },
+    {
+      "file": "phase3_after_390x844_dark_aula_analyzed.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "state": {
+        "theme": "dark",
+        "language": "es",
+        "mode": "classroom",
+        "analysis": "resolved"
+      },
+      "bytes": 30474,
+      "sha256": "fc58bee9f8954d191401f64f12bebd69a1ad55923affaff80e64b8c7fecf5d3a",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_390x844_dark_aula_analyzed.png"
+    },
+    {
+      "file": "phase3_after_webkit_430x932_light_member-selected.png",
+      "viewport": {
+        "width": 430,
+        "height": 932
+      },
+      "state": {
+        "engine": "webkit",
+        "theme": "light",
+        "mode": "complete",
+        "selection": "member"
+      },
+      "bytes": 46830,
+      "sha256": "cd15884b9dbc57d133ab30a6187a690d0f55ba6a29e938cc008ce45bb7d72a95",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_webkit_430x932_light_member-selected.png"
+    },
+    {
+      "file": "phase3_after_webkit_834x1194_light_member-selected.png",
+      "viewport": {
+        "width": 834,
+        "height": 1194
+      },
+      "state": {
+        "engine": "webkit",
+        "theme": "light",
+        "mode": "complete",
+        "selection": "member"
+      },
+      "bytes": 55532,
+      "sha256": "06649b941a5e413afb1ffeee5bd462c2c48173659b95e8eefc87bc904fedca29",
+      "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_webkit_834x1194_light_member-selected.png"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+/* La materia clay componible.
+ *
+ * Se declara UNA VEZ por rol de elevación, aplicada por lista de selectores.
+ * Cambiar la materia es editar un bloque aquí, no perseguir siete reglas
+ * repartidas por `styles.css`. Cada tarea de vestido añade sus propios
+ * selectores al grupo que le corresponde.
+ *
+ * Se importa desde `App.tsx` DESPUÉS de `styles.css`, así que queda en el
+ * chunk de entrada (nunca sufre el retraso del chunk lazy de `ui.css`) y
+ * gana la cascada a todo `styles.css` sin necesitar `!important`.
+ *
+ * Un elemento sólo tiene un valor de `data-level` a la vez, así que los tres
+ * grupos de nivel no compiten entre sí. `[data-pressed='true']` sí puede
+ * coexistir con un nivel, y por eso va al final: gana la cascada por orden de
+ * aparición cuando ambos atributos están presentes en el mismo elemento.
+ *
+ * `Surface` (`design-system/components/surface.tsx`) emite `data-level` y
+ * `data-pressed`. Cualquier otro selector puede sumarse a un grupo sin pasar
+ * por `Surface`: por eso `[data-level='…']` genérico también engancha marcado
+ * que no usa el componente React. */
+
+/* flat: sin volumen. Zonas técnicas densas — tablas, filas del inspector,
+   el lienzo. Es el nivel por defecto en esas zonas, no una excepción. */
+.sc-surface[data-level='flat'],
+[data-level='flat'],
+.selection-card,
+.number-control,
+.select-field select,
+.effect-card,
+.combination-card,
+.norm-source,
+.compact-toggle-grid label,
+.inspector-note,
+.load-tool-grid button,
+.matrix-view,
+.education-explorer,
+.diagram-cursor-readout,
+.learning-toolbar,
+.learning-steps details,
+.hide-classroom-results {
+  background: var(--sc-color-surface-1);
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: none;
+}
+
+/* raised: la superficie normal — paneles, barras, tarjetas. */
+.sc-surface[data-level='raised'],
+[data-level='raised'],
+.topbar,
+.toolbar,
+.inspector-panel,
+.inspector-summary,
+.results-panel {
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-md);
+}
+
+.toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
+.inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
+.results-panel { border-width: var(--results-clay-border-width, 1px 0 0); }
+
+/* floating: lo que se despega del plano — popovers, hojas, menús. */
+.sc-surface[data-level='floating'],
+[data-level='floating'],
+.popover,
+.sc-toast-card,
+.import-center-dialog,
+.mobile-tool-palette,
+.welcome-header,
+.welcome-badge-pill,
+.welcome-highlight-item,
+.welcome-filter-tabs,
+.welcome-workflow,
+.welcome-footer {
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-lg);
+}
+
+.sc-toast-card--success { border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--info { border-color: color-mix(in srgb, var(--sc-color-info) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--warning { border-color: color-mix(in srgb, var(--sc-color-state-warning) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--error { border-color: color-mix(in srgb, var(--sc-color-state-error) 40%, var(--sc-color-border-soft)); }
+
+/* pressed: invierte la iluminación. Coexiste con cualquier nivel — por eso
+   va al final y sólo toca lo que un estado pulsado necesita cambiar. */
+.sc-surface[data-pressed='true'],
+[data-pressed='true'] {
+  background: var(--sc-color-surface-pressed);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+/* Chrome del lienzo — lo que flota sobre el dibujo técnico (badge de modo,
+   chips, controles de zoom, status, leyenda, quick-entry, tooltip de corte,
+   panel de capas). Su relleno opaco y borde medido sustituyen el vidrio sin
+   tocar el lienzo ni sus colores técnicos. */
+.canvas-mode-badge,
+.canvas-view-chips span,
+.canvas-controls,
+.canvas-status,
+.canvas-result-legend,
+.canvas-feedback,
+.canvas-hint,
+.mobile-inspector-toggle,
+.quick-entry-bar,
+.selection-cycle-indicator,
+.cut-tooltip,
+.canvas-layer-trigger,
+.canvas-layer-panel {
+  background: var(--sc-color-surface-2);
+  border: 1px solid var(--sc-color-border-canvas-chrome);
+  box-shadow: var(--sc-shadow-clay-floating);
+}
+
+@media print {
+  .results-panel { background:transparent !important; border:0 !important; box-shadow:none !important; }
+}

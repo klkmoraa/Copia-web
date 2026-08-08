@@ -1,0 +1,70 @@
+# Gate completo — structureCo
+#
+# Candidato de release. Ejecuta el Gate rápido más los recorridos de extremo a extremo en
+# Chromium y WebKit: bienvenida responsive, importación/exportación .structureco, PDF nativo
+# reimportable, edición táctil, Aula móvil y objetivos táctiles ≥44px en dispositivos reales
+# emulados. Sólo se dispara manualmente — no hay trigger automático en push/PR, porque instala
+# navegadores y tarda considerablemente más que el gate rápido.
+#
+# Sin IA (nada de Anthropic, OpenAI, Claude ni Codex), sin FTool gráfico, sin deploy, sin
+# commits, sin tags, sin publicación de paquetes. Permisos mínimos.
+#
+# Preparado localmente el 2 de agosto de 2026 (programa 0.8.1). No se ha conectado a GitHub
+# ni ejecutado de forma remota — ver docs/releases/0.8.1/CI.md.
+
+name: Gate completo
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-qa:
+    name: QA de release (Chromium + WebKit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node canónico
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Instalar dependencias exactas
+        run: npm ci
+
+      - name: Gate rápido (lint, tipos, frontera protegida, pruebas)
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run verify:protected
+          npm test
+
+      - name: Instalar navegadores de Playwright
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: QA Chromium (desktop, móvil, Aula, importación)
+        run: npm run qa
+
+      - name: QA WebKit (iPhone, iPad, táctil, PDF nativo)
+        run: npm run qa:webkit
+
+      - name: Conservar evidencia (capturas, métricas)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-qa-evidence
+          path: |
+            qa-artifacts/
+            dist/
+          retention-days: 14
+          if-no-files-found: warn

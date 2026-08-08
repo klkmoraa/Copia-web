@@ -1,0 +1,1140 @@
+{
+  "phase": 14,
+  "generatedAt": "2026-08-02T07:05:37.172Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "win32-x64",
+    "headless": true,
+    "previewPort": 4184
+  },
+  "browsers": {
+    "chromium": {
+      "desktop": {
+        "viewport": "1536x960",
+        "touch": false,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "multiSelectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "persistentInspector": true,
+          "resultsPanelVisible": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "deformationVisible": true,
+          "learningStepsVisible": true,
+          "influenceLazyViewVisible": true,
+          "influenceChunkRequested": true,
+          "influenceCalculated": true,
+          "influenceWorkerRequested": true,
+          "noHorizontalOverflow": true,
+          "undoEnabledAfterEdit": true,
+          "undoRestoresEdit": true,
+          "redoRestoresEdit": true,
+          "unitSelectionVisible": true,
+          "unitSwitchPreservesTechnicalValues": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1375.94,
+          "workspaceActivationMs": 530.2,
+          "analysisMs": 456.67,
+          "momentTabMs": 73.99,
+          "influenceActivationMs": 411.63
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 27.4,
+              "domContentLoaded": 26.1,
+              "loadEvent": 27.4,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 15,
+          "transferSize": 70431,
+          "decodedBodySize": 205731,
+          "longTaskSupported": true,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 160,
+          "longestTaskMs": 160
+        },
+        "requestedAssets": [
+          "InfluenceLineView-ChXx5I3Y.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "influence.worker-CylX3CWD.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 1536,
+          "clientWidth": 1536,
+          "scrollHeight": 960,
+          "clientHeight": 960
+        }
+      },
+      "tablet": {
+        "viewport": "834x1194",
+        "touch": true,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1325.32,
+          "workspaceActivationMs": 414.05,
+          "analysisMs": 232.14,
+          "momentTabMs": 119.66
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 29.3,
+              "domContentLoaded": 28.1,
+              "loadEvent": 29.3,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 30239,
+          "decodedBodySize": 81972,
+          "longTaskSupported": true,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 73,
+          "longestTaskMs": 73
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 330,
+          "exposedCanvasHeight": 1072,
+          "canvasWidth": 834,
+          "panelWidth": 834,
+          "reservedCanvasSpace": false,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "shellMetrics": {
+          "scrollWidth": 834,
+          "clientWidth": 834,
+          "scrollHeight": 1194,
+          "clientHeight": 1194
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "touch": true,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsModelessSemantics": true,
+          "resultsCanvasInteractive": true,
+          "resultsDoNotBlockCanvas": true,
+          "compactModeBadge": true,
+          "compactResultContext": true,
+          "compactResultTabs": true,
+          "compactResultPanel": true,
+          "compactResultLegend": true,
+          "compactResultContextUntabbable": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsUsePartialMobileSheet": true,
+          "resultsReserveCanvasSpace": true,
+          "resultsAutoFitShowsEveryNode": true,
+          "canvasFitControlReachable": true,
+          "canvasPinchChangesScale": true,
+          "canvasPinchPreservesSelection": true,
+          "canvasPansWithResultsOpen": true,
+          "canvasInteractiveAfterPinch": true,
+          "resultsEscapeCloses": true,
+          "resultsEscapePreservesSelection": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1362.67,
+          "workspaceActivationMs": 442.65,
+          "analysisMs": 227.65,
+          "momentTabMs": 52.88
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 31.7,
+              "domContentLoaded": 30.4,
+              "loadEvent": 31.7,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 30239,
+          "decodedBodySize": 81972,
+          "longTaskSupported": true,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 69,
+          "longestTaskMs": 69
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 354.46875,
+          "exposedCanvasHeight": 383.53125,
+          "canvasWidth": 390,
+          "panelWidth": 390,
+          "reservedCanvasSpace": true,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "pinchMetrics": {
+          "beforeDistance": 274,
+          "afterDistance": 534.9523849487305,
+          "selectionBefore": "M1",
+          "selectionAfter": "M1"
+        },
+        "shellMetrics": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "scrollHeight": 844,
+          "clientHeight": 844
+        }
+      },
+      "mobile-landscape": {
+        "viewport": "683x384",
+        "touch": true,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsModelessSemantics": true,
+          "resultsCanvasInteractive": true,
+          "resultsDoNotBlockCanvas": true,
+          "compactModeBadge": true,
+          "compactResultContext": true,
+          "compactResultTabs": true,
+          "compactResultPanel": true,
+          "compactResultLegend": true,
+          "compactResultContextUntabbable": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsUsePartialMobileSheet": true,
+          "resultsReserveCanvasSpace": true,
+          "resultsAutoFitShowsEveryNode": true,
+          "canvasFitControlReachable": true,
+          "canvasPinchChangesScale": true,
+          "canvasPinchPreservesSelection": true,
+          "canvasPansWithResultsOpen": true,
+          "canvasInteractiveAfterPinch": true,
+          "resultsEscapeCloses": true,
+          "resultsEscapePreservesSelection": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1326.36,
+          "workspaceActivationMs": 434.96,
+          "analysisMs": 226.98,
+          "momentTabMs": 58.58
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 30.7,
+              "domContentLoaded": 29.4,
+              "loadEvent": 30.7,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 30239,
+          "decodedBodySize": 81972,
+          "longTaskSupported": true,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 85,
+          "longestTaskMs": 85
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 278,
+          "exposedCanvasHeight": 278,
+          "canvasWidth": 396.125,
+          "panelWidth": 286.859375,
+          "reservedCanvasSpace": true,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "pinchMetrics": {
+          "beforeDistance": 174,
+          "afterDistance": 339.7142906188965,
+          "selectionBefore": "M1",
+          "selectionAfter": "M1"
+        },
+        "shellMetrics": {
+          "scrollWidth": 683,
+          "clientWidth": 683,
+          "scrollHeight": 384,
+          "clientHeight": 384
+        }
+      }
+    },
+    "webkit": {
+      "desktop": {
+        "viewport": "1366x768",
+        "touch": false,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "multiSelectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "persistentInspector": true,
+          "resultsPanelVisible": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "deformationVisible": true,
+          "learningStepsVisible": true,
+          "noHorizontalOverflow": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1177.78,
+          "workspaceActivationMs": 594.17,
+          "analysisMs": 319.6,
+          "momentTabMs": 199.4
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 79,
+              "domContentLoaded": 78,
+              "loadEvent": 79,
+              "transferSize": 940,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 129549,
+          "decodedBodySize": 455622,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 1366,
+          "clientWidth": 1366,
+          "scrollHeight": 768,
+          "clientHeight": 768
+        }
+      },
+      "tablet": {
+        "viewport": "834x1194",
+        "touch": true,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1169.77,
+          "workspaceActivationMs": 515.62,
+          "analysisMs": 310.02,
+          "momentTabMs": 195.6
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 75,
+              "domContentLoaded": 75,
+              "loadEvent": 75,
+              "transferSize": 940,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 129549,
+          "decodedBodySize": 455622,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 330,
+          "exposedCanvasHeight": 1072,
+          "canvasWidth": 834,
+          "panelWidth": 834,
+          "reservedCanvasSpace": false,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "shellMetrics": {
+          "scrollWidth": 834,
+          "clientWidth": 834,
+          "scrollHeight": 1194,
+          "clientHeight": 1194
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "touch": true,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsModelessSemantics": true,
+          "resultsCanvasInteractive": true,
+          "resultsDoNotBlockCanvas": true,
+          "compactModeBadge": true,
+          "compactResultContext": true,
+          "compactResultTabs": true,
+          "compactResultPanel": true,
+          "compactResultLegend": true,
+          "compactResultContextUntabbable": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsUsePartialMobileSheet": true,
+          "resultsReserveCanvasSpace": true,
+          "resultsAutoFitShowsEveryNode": true,
+          "canvasFitControlReachable": true,
+          "canvasPinchChangesScale": true,
+          "canvasPinchPreservesSelection": true,
+          "canvasPansWithResultsOpen": true,
+          "canvasInteractiveAfterPinch": true,
+          "resultsEscapeCloses": true,
+          "resultsEscapePreservesSelection": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1151.62,
+          "workspaceActivationMs": 536.12,
+          "analysisMs": 390.82,
+          "momentTabMs": 173.17
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 77,
+              "domContentLoaded": 77,
+              "loadEvent": 77,
+              "transferSize": 940,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 129549,
+          "decodedBodySize": 455622,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 354.46875,
+          "exposedCanvasHeight": 383.515625,
+          "canvasWidth": 390,
+          "panelWidth": 390,
+          "reservedCanvasSpace": true,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "pinchMetrics": {
+          "beforeDistance": 274,
+          "afterDistance": 534.9523849487305,
+          "selectionBefore": "M1",
+          "selectionAfter": "M1"
+        },
+        "shellMetrics": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "scrollHeight": 844,
+          "clientHeight": 844
+        }
+      },
+      "mobile-landscape": {
+        "viewport": "683x384",
+        "touch": true,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsModelessSemantics": true,
+          "resultsCanvasInteractive": true,
+          "resultsDoNotBlockCanvas": true,
+          "compactModeBadge": true,
+          "compactResultContext": true,
+          "compactResultTabs": true,
+          "compactResultPanel": true,
+          "compactResultLegend": true,
+          "compactResultContextUntabbable": true,
+          "resultsWithinViewport": true,
+          "resultsLeaveModelVisible": true,
+          "resultsShowModelGeometry": true,
+          "resultsUsePartialMobileSheet": true,
+          "resultsReserveCanvasSpace": true,
+          "resultsAutoFitShowsEveryNode": true,
+          "canvasFitControlReachable": true,
+          "canvasPinchChangesScale": true,
+          "canvasPinchPreservesSelection": true,
+          "canvasPansWithResultsOpen": true,
+          "canvasInteractiveAfterPinch": true,
+          "resultsEscapeCloses": true,
+          "resultsEscapePreservesSelection": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "axialDiagramVisible": true,
+          "axialCanvasOverlayVisible": true,
+          "axialSelectionStable": true,
+          "shearDiagramVisible": true,
+          "shearCanvasOverlayVisible": true,
+          "shearSelectionStable": true,
+          "momentDiagramVisible": true,
+          "momentCanvasOverlayVisible": true,
+          "momentSelectionStable": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1140.36,
+          "workspaceActivationMs": 535.41,
+          "analysisMs": 393.21,
+          "momentTabMs": 171.02
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 76,
+              "domContentLoaded": 76,
+              "loadEvent": 76,
+              "transferSize": 940,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 129549,
+          "decodedBodySize": 455622,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BcxUA6Ay.css",
+          "WorkspaceShell-D7PWqnyz.js",
+          "analysis.worker-DGWJYyKB.js",
+          "index-3JGPWKdu.js",
+          "index-DLMfRhaI.css",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-D5vdMX-q.js",
+          "units-yg6la7PU.js",
+          "useI18n-dm-3q4N3.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "mobileCanvasMetrics": {
+          "panelHeight": 278,
+          "exposedCanvasHeight": 278,
+          "canvasWidth": 396.125,
+          "panelWidth": 286.859375,
+          "reservedCanvasSpace": true,
+          "nodeCount": 4,
+          "fullyVisibleNodeCount": 4,
+          "visibleModelObjectCount": 4
+        },
+        "pinchMetrics": {
+          "beforeDistance": 174,
+          "afterDistance": 339.7142906188965,
+          "selectionBefore": "M1",
+          "selectionAfter": "M1"
+        },
+        "shellMetrics": {
+          "scrollWidth": 683,
+          "clientWidth": 683,
+          "scrollHeight": 384,
+          "clientHeight": 384
+        }
+      }
+    }
+  },
+  "criticalFlows": {
+    "importExport": {
+      "checks": {
+        "jsonDownloaded": true,
+        "exportPreservesTechnicalValues": true,
+        "dialogModal": true,
+        "initialFocusInside": true,
+        "resultFocused": true,
+        "roundTripPreservesTechnicalValues": true,
+        "workspaceRestored": true,
+        "consoleClean": true,
+        "pageErrorsClean": true
+      },
+      "console": [],
+      "pageErrors": []
+    },
+    "classroom": {
+      "checks": {
+        "journeyVisible": true,
+        "predictionRequiredBeforeResults": true,
+        "predictionTabsKeyboardAccessible": true,
+        "resultsRemainLocked": true,
+        "resultsRevealAfterPrediction": true,
+        "classroomModeRetained": true,
+        "consoleClean": true,
+        "pageErrorsClean": true
+      },
+      "console": [],
+      "pageErrors": []
+    }
+  },
+  "runtime": {
+    "samples": [
+      {
+        "browser": "chromium",
+        "viewport": "desktop",
+        "cleanStartupMs": 1375.94,
+        "workspaceActivationMs": 530.2,
+        "analysisMs": 456.67,
+        "momentTabMs": 73.99,
+        "influenceActivationMs": 411.63,
+        "navigation": [
+          {
+            "duration": 27.4,
+            "domContentLoaded": 26.1,
+            "loadEvent": 27.4,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 15,
+        "transferSize": 70431,
+        "decodedBodySize": 205731,
+        "longTaskSupported": true,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 160,
+        "longestTaskMs": 160
+      },
+      {
+        "browser": "chromium",
+        "viewport": "tablet",
+        "cleanStartupMs": 1325.32,
+        "workspaceActivationMs": 414.05,
+        "analysisMs": 232.14,
+        "momentTabMs": 119.66,
+        "navigation": [
+          {
+            "duration": 29.3,
+            "domContentLoaded": 28.1,
+            "loadEvent": 29.3,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 30239,
+        "decodedBodySize": 81972,
+        "longTaskSupported": true,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 73,
+        "longestTaskMs": 73
+      },
+      {
+        "browser": "chromium",
+        "viewport": "mobile",
+        "cleanStartupMs": 1362.67,
+        "workspaceActivationMs": 442.65,
+        "analysisMs": 227.65,
+        "momentTabMs": 52.88,
+        "navigation": [
+          {
+            "duration": 31.7,
+            "domContentLoaded": 30.4,
+            "loadEvent": 31.7,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 30239,
+        "decodedBodySize": 81972,
+        "longTaskSupported": true,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 69,
+        "longestTaskMs": 69
+      },
+      {
+        "browser": "chromium",
+        "viewport": "mobile-landscape",
+        "cleanStartupMs": 1326.36,
+        "workspaceActivationMs": 434.96,
+        "analysisMs": 226.98,
+        "momentTabMs": 58.58,
+        "navigation": [
+          {
+            "duration": 30.7,
+            "domContentLoaded": 29.4,
+            "loadEvent": 30.7,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 30239,
+        "decodedBodySize": 81972,
+        "longTaskSupported": true,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 85,
+        "longestTaskMs": 85
+      },
+      {
+        "browser": "webkit",
+        "viewport": "desktop",
+        "cleanStartupMs": 1177.78,
+        "workspaceActivationMs": 594.17,
+        "analysisMs": 319.6,
+        "momentTabMs": 199.4,
+        "navigation": [
+          {
+            "duration": 79,
+            "domContentLoaded": 78,
+            "loadEvent": 79,
+            "transferSize": 940,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 129549,
+        "decodedBodySize": 455622,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      {
+        "browser": "webkit",
+        "viewport": "tablet",
+        "cleanStartupMs": 1169.77,
+        "workspaceActivationMs": 515.62,
+        "analysisMs": 310.02,
+        "momentTabMs": 195.6,
+        "navigation": [
+          {
+            "duration": 75,
+            "domContentLoaded": 75,
+            "loadEvent": 75,
+            "transferSize": 940,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 129549,
+        "decodedBodySize": 455622,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      {
+        "browser": "webkit",
+        "viewport": "mobile",
+        "cleanStartupMs": 1151.62,
+        "workspaceActivationMs": 536.12,
+        "analysisMs": 390.82,
+        "momentTabMs": 173.17,
+        "navigation": [
+          {
+            "duration": 77,
+            "domContentLoaded": 77,
+            "loadEvent": 77,
+            "transferSize": 940,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 129549,
+        "decodedBodySize": 455622,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      {
+        "browser": "webkit",
+        "viewport": "mobile-landscape",
+        "cleanStartupMs": 1140.36,
+        "workspaceActivationMs": 535.41,
+        "analysisMs": 393.21,
+        "momentTabMs": 171.02,
+        "navigation": [
+          {
+            "duration": 76,
+            "domContentLoaded": 76,
+            "loadEvent": 76,
+            "transferSize": 940,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 129549,
+        "decodedBodySize": 455622,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      }
+    ],
+    "summary": {
+      "cleanStartupMs": {
+        "samples": 8,
+        "minimum": 1140.36,
+        "median": 1325.32,
+        "maximum": 1375.94
+      },
+      "workspaceActivationMs": {
+        "samples": 8,
+        "minimum": 414.05,
+        "median": 530.2,
+        "maximum": 594.17
+      },
+      "analysisMs": {
+        "samples": 8,
+        "minimum": 226.98,
+        "median": 319.6,
+        "maximum": 456.67
+      },
+      "momentTabMs": {
+        "samples": 8,
+        "minimum": 52.88,
+        "median": 171.02,
+        "maximum": 199.4
+      },
+      "longTaskTotalMs": {
+        "samples": 8,
+        "minimum": 0,
+        "median": 69,
+        "maximum": 160
+      },
+      "longestTaskMs": {
+        "samples": 8,
+        "minimum": 0,
+        "median": 69,
+        "maximum": 160
+      },
+      "note": "Tiempos locales headless; sirven como línea base reproducible y no como SLA de hardware real."
+    }
+  },
+  "screenshots": [
+    "phase14-chromium-desktop-1536x960-light.png",
+    "phase14-chromium-tablet-834x1194-dark.png",
+    "phase14-chromium-mobile-390x844-light.png",
+    "phase14-chromium-mobile-landscape-683x384-light.png",
+    "phase14-chromium-import-roundtrip-1536x960.png",
+    "phase14-webkit-desktop-1366x768-dark.png",
+    "phase14-webkit-tablet-834x1194-light.png",
+    "phase14-webkit-mobile-390x844-dark.png",
+    "phase14-webkit-mobile-landscape-683x384-dark.png",
+    "phase14-webkit-classroom-1366x768-dark.png"
+  ],
+  "console": [],
+  "pageErrors": [],
+  "failures": []
+}

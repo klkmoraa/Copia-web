@@ -1,0 +1,6 @@
+﻿=== LINT ===
+
+> structureco@0.8.0 lint
+> oxlint
+
+EXIT=0

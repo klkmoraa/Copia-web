@@ -1,0 +1,37 @@
+﻿=== BUILD ===
+
+> structureco@0.8.0 build
+> tsc -b && vite build
+
+vite v8.1.4 building client environment for production...
+[2K
+transforming...✓ 2028 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   1.57 kB │ gzip:   0.64 kB
+dist/assets/analysis.worker-DGWJYyKB.js          81.58 kB
+dist/assets/scenarios.worker-H0sTkUeX.js         81.76 kB
+dist/assets/influence.worker-CylX3CWD.js         90.90 kB
+dist/assets/pdf.worker-BASQQs-o.mjs           2,366.08 kB
+dist/assets/WorkspaceShell-BcxUA6Ay.css          31.64 kB │ gzip:   4.88 kB
+dist/assets/index-VSRfncd4.css                  170.04 kB │ gzip:  30.00 kB
+dist/assets/pdf.worker-BNprRpH7.js                0.08 kB │ gzip:   0.10 kB
+dist/assets/rolldown-runtime-QTnfLwEv.js          0.69 kB │ gzip:   0.42 kB
+dist/assets/preload-helper-HclGiUj8.js            1.21 kB │ gzip:   0.67 kB
+dist/assets/portable-wBrpPaIx.js                  1.44 kB │ gzip:   0.76 kB
+dist/assets/units-DTvGdZnQ.js                     3.30 kB │ gzip:   1.20 kB
+dist/assets/modelOperations-CGzj28H-.js          10.14 kB │ gzip:   3.46 kB
+dist/assets/migrate-CXbEFtjY.js                  21.82 kB │ gzip:   6.57 kB
+dist/assets/PortableImportCenter-DM_DBY8v.js     25.36 kB │ gzip:   6.30 kB
+dist/assets/browser-DEYugRT4.js                  31.78 kB │ gzip:  12.19 kB
+dist/assets/InfluenceLineView-JC6IqKAk.js        32.85 kB │ gzip:  10.16 kB
+dist/assets/portableFile-T6g9yWYy.js             38.95 kB │ gzip:  14.78 kB
+dist/assets/solver-DHmhvbTA.js                   81.67 kB │ gzip:  26.54 kB
+dist/assets/useI18n-D2Kx_1YP.js                 123.19 kB │ gzip:  37.40 kB
+dist/assets/index-lRW5f6Bd.js                   213.03 kB │ gzip:  67.23 kB
+dist/assets/WorkspaceShell-_0z5KC9S.js          255.92 kB │ gzip:  68.00 kB
+dist/assets/es-CguXVnAz.js                      428.29 kB │ gzip: 178.35 kB
+dist/assets/pdf-fEmWGOLp.js                     479.84 kB │ gzip: 145.23 kB
+
+✓ built in 2.28s
+EXIT=0

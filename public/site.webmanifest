@@ -1,0 +1,20 @@
+{
+  "name": "structureCo · Análisis estructural 2D",
+  "short_name": "structureCo",
+  "description": "Modelado, análisis y aprendizaje interactivo de estructuras planas 2D.",
+  "lang": "es",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F7F5",
+  "theme_color": "#157A55",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

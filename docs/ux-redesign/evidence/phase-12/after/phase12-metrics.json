@@ -1,0 +1,676 @@
+{
+  "phase": 12,
+  "generatedAt": "2026-07-27T05:55:12.496Z",
+  "preview": "http://127.0.0.1:4182/",
+  "contrast": {
+    "light": {
+      "theme": "light",
+      "pairs": {
+        "primaryText": {
+          "foreground": "rgb(23, 32, 28)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 16.67,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "secondaryText": {
+          "foreground": "rgb(95, 108, 102)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 5.49,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "primaryAction": {
+          "foreground": "rgb(255, 255, 255)",
+          "background": "rgb(8, 122, 91)",
+          "ratio": 5.32,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "warningText": {
+          "foreground": "rgb(138, 79, 0)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 6.56,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "errorText": {
+          "foreground": "rgb(169, 47, 47)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 6.7,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "focusToken": {
+          "foreground": "rgb(40, 103, 232)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 5.01,
+          "minimum": 3,
+          "pass": true
+        }
+      },
+      "elements": {
+        "analyzeButton": {
+          "selector": ".analyze-button",
+          "foreground": "rgb(255, 255, 255)",
+          "background": "rgb(8, 122, 91)",
+          "ratio": 5.32,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "brandName": {
+          "selector": ".brand-name",
+          "foreground": "rgb(95, 108, 102)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 5.49,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "activeInspectorTab": {
+          "selector": ".inspector-tabs button.active",
+          "foreground": "rgb(9, 122, 91)",
+          "background": "rgb(255, 255, 255)",
+          "ratio": 5.32,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "focusedControl": {
+          "selector": ".utility-more-button",
+          "focused": true,
+          "focusVisible": true,
+          "outlineColor": "rgb(40, 103, 232)",
+          "outlineStyle": "solid",
+          "outlineWidth": "3px",
+          "background": "color(srgb 1 1 1 / 0.94)",
+          "ratio": 5.01,
+          "minimum": 3,
+          "pass": true
+        },
+        "loadCaseInputFocus": {
+          "selector": ".load-case-row div input",
+          "focused": true,
+          "focusVisible": true,
+          "outlineColor": "rgb(40, 103, 232)",
+          "outlineStyle": "solid",
+          "outlineWidth": "3px",
+          "background": "rgb(237, 241, 239)",
+          "ratio": 4.39,
+          "minimum": 3,
+          "pass": true
+        }
+      }
+    },
+    "dark": {
+      "theme": "dark",
+      "pairs": {
+        "primaryText": {
+          "foreground": "rgb(242, 246, 244)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 16.15,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "secondaryText": {
+          "foreground": "rgb(170, 181, 176)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 8.34,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "primaryAction": {
+          "foreground": "rgb(6, 20, 15)",
+          "background": "rgb(43, 185, 138)",
+          "ratio": 7.54,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "warningText": {
+          "foreground": "rgb(240, 170, 60)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 8.82,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "errorText": {
+          "foreground": "rgb(242, 107, 107)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 5.94,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "focusToken": {
+          "foreground": "rgb(110, 160, 255)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 6.82,
+          "minimum": 3,
+          "pass": true
+        }
+      },
+      "elements": {
+        "analyzeButton": {
+          "selector": ".analyze-button",
+          "foreground": "rgb(6, 20, 15)",
+          "background": "rgb(43, 185, 138)",
+          "ratio": 7.54,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "brandName": {
+          "selector": ".brand-name",
+          "foreground": "rgb(170, 181, 176)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 8.34,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "activeInspectorTab": {
+          "selector": ".inspector-tabs button.active",
+          "foreground": "rgb(52, 185, 141)",
+          "background": "rgb(21, 26, 24)",
+          "ratio": 7.1,
+          "minimum": 4.5,
+          "pass": true
+        },
+        "focusedControl": {
+          "selector": ".utility-more-button",
+          "focused": true,
+          "focusVisible": true,
+          "outlineColor": "rgb(110, 160, 255)",
+          "outlineStyle": "solid",
+          "outlineWidth": "3px",
+          "background": "color(srgb 0.082353 0.101961 0.0941176 / 0.94)",
+          "ratio": 6.82,
+          "minimum": 3,
+          "pass": true
+        },
+        "loadCaseInputFocus": {
+          "selector": ".load-case-row div input",
+          "focused": true,
+          "focusVisible": true,
+          "outlineColor": "rgb(110, 160, 255)",
+          "outlineStyle": "solid",
+          "outlineWidth": "3px",
+          "background": "rgb(28, 35, 32)",
+          "ratio": 6.21,
+          "minimum": 3,
+          "pass": true
+        }
+      }
+    }
+  },
+  "reducedMotion": {
+    "mediaMatches": true,
+    "styles": {
+      ".workspace-screen": {
+        "animationName": "native-screen-in",
+        "animationDuration": "1e-06s",
+        "transitionDuration": "1e-06s"
+      },
+      ".results-panel": {
+        "animationName": "none",
+        "animationDuration": "1e-06s",
+        "transitionDuration": "0s"
+      },
+      ".inspector-panel": {
+        "animationName": "none",
+        "animationDuration": "1e-06s",
+        "transitionDuration": "0s"
+      },
+      ".spin": {
+        "animationName": "none",
+        "animationDuration": "0s",
+        "transitionDuration": "1e-06s"
+      }
+    },
+    "maximumDurationMs": 0.001,
+    "spinnerStopped": true,
+    "pass": true
+  },
+  "i18n": {
+    "catalogs": {
+      "esCount": 971,
+      "enCount": 971,
+      "missingInEnglish": [],
+      "extraInEnglish": [],
+      "pass": true
+    },
+    "spanish": {
+      "lang": "es",
+      "analyze": "Analizar",
+      "loadsTab": "Cargas",
+      "viewTab": "Vista",
+      "storage": "Local"
+    },
+    "english": {
+      "lang": "en",
+      "analyze": "Analyze",
+      "loadsTab": "Loads",
+      "viewTab": "View",
+      "storage": "Local",
+      "moreActionsLabel": "More actions"
+    },
+    "english390": {
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "topbarScrollWidth": 390,
+      "topbarClientWidth": 390
+    },
+    "runtimeEnglish": {
+      "newExercise": {
+        "description": {
+          "ids": [
+            "new-exercise-subtitle"
+          ],
+          "text": [
+            "Start from scratch or generate a model with editable geometry, supports, and load."
+          ]
+        },
+        "initialFocusInside": true,
+        "initialFocus": "Close",
+        "keyboard": {
+          "selectedSimpleBeam": true,
+          "focusMovedToSimpleBeam": true
+        },
+        "focusReturns": true,
+        "inputs": {
+          "length": 12,
+          "load": 55,
+          "position": 0.25
+        },
+        "languageAfterCreate": "en",
+        "effectiveLanguage": "en",
+        "technicalFingerprint": {
+          "name": "Viga simplemente apoyada",
+          "schemaVersion": 5,
+          "units": "kN-m",
+          "nodes": [
+            {
+              "id": "N1",
+              "x": 0,
+              "y": 0,
+              "support": {
+                "type": "pin"
+              }
+            },
+            {
+              "id": "N2",
+              "x": 12,
+              "y": 0,
+              "support": {
+                "type": "roller",
+                "angleDeg": 90
+              }
+            }
+          ],
+          "members": [
+            {
+              "id": "M1",
+              "i": "N1",
+              "j": "N2",
+              "type": "frame",
+              "E": 200000000,
+              "A": 0.01,
+              "I": 0.00008,
+              "releases": {
+                "iMoment": true,
+                "jMoment": true
+              }
+            }
+          ],
+          "nodalLoads": [],
+          "memberLoads": [
+            {
+              "id": "ML1",
+              "memberId": "M1",
+              "caseId": "LC1",
+              "type": "point",
+              "coordinateSystem": "global",
+              "lengthBasis": "real",
+              "start": 0,
+              "end": 1,
+              "px": 0,
+              "py": -55,
+              "position": 0.25
+            }
+          ],
+          "loadCaseIds": [
+            "LC1"
+          ]
+        },
+        "technicalDataPass": true
+      },
+      "importCenter": {
+        "description": {
+          "ids": [
+            "import-center-subtitle"
+          ],
+          "text": [
+            "Review the file before opening it and decide exactly what to keep."
+          ]
+        },
+        "progress": [
+          "1",
+          "File",
+          "2",
+          "Inspection",
+          "3",
+          "Content",
+          "4",
+          "Destination",
+          "5",
+          "Confirm",
+          "6",
+          "Result"
+        ],
+        "initialFocus": true,
+        "initialFocusDetails": {
+          "tag": "BUTTON",
+          "className": "",
+          "label": null,
+          "text": "Choose file"
+        },
+        "contentFocus": true,
+        "contentPreservesProjectName": true,
+        "contentPreservesFilename": true,
+        "destinationFocus": true,
+        "mergeDescription": {
+          "ids": [
+            "merge-import-help"
+          ],
+          "text": [
+            "Merge is unavailable until identifiers, units, and duplicate cases can be resolved safely."
+          ]
+        },
+        "confirmFocus": true,
+        "resultFocus": true,
+        "resultTitle": "Project imported",
+        "beforeFingerprint": {
+          "name": "Viga simplemente apoyada",
+          "schemaVersion": 5,
+          "units": "kN-m",
+          "nodes": [
+            {
+              "id": "N1",
+              "x": 0,
+              "y": 0,
+              "support": {
+                "type": "pin"
+              }
+            },
+            {
+              "id": "N2",
+              "x": 12,
+              "y": 0,
+              "support": {
+                "type": "roller",
+                "angleDeg": 90
+              }
+            }
+          ],
+          "members": [
+            {
+              "id": "M1",
+              "i": "N1",
+              "j": "N2",
+              "type": "frame",
+              "E": 200000000,
+              "A": 0.01,
+              "I": 0.00008,
+              "releases": {
+                "iMoment": true,
+                "jMoment": true
+              }
+            }
+          ],
+          "nodalLoads": [],
+          "memberLoads": [
+            {
+              "id": "ML1",
+              "memberId": "M1",
+              "caseId": "LC1",
+              "type": "point",
+              "coordinateSystem": "global",
+              "lengthBasis": "real",
+              "start": 0,
+              "end": 1,
+              "px": 0,
+              "py": -55,
+              "position": 0.25
+            }
+          ],
+          "loadCaseIds": [
+            "LC1"
+          ]
+        },
+        "afterFingerprint": {
+          "name": "Viga simplemente apoyada",
+          "schemaVersion": 5,
+          "units": "kN-m",
+          "nodes": [
+            {
+              "id": "N1",
+              "x": 0,
+              "y": 0,
+              "support": {
+                "type": "pin"
+              }
+            },
+            {
+              "id": "N2",
+              "x": 12,
+              "y": 0,
+              "support": {
+                "type": "roller",
+                "angleDeg": 90
+              }
+            }
+          ],
+          "members": [
+            {
+              "id": "M1",
+              "i": "N1",
+              "j": "N2",
+              "type": "frame",
+              "E": 200000000,
+              "A": 0.01,
+              "I": 0.00008,
+              "releases": {
+                "iMoment": true,
+                "jMoment": true
+              }
+            }
+          ],
+          "nodalLoads": [],
+          "memberLoads": [
+            {
+              "id": "ML1",
+              "memberId": "M1",
+              "caseId": "LC1",
+              "type": "point",
+              "coordinateSystem": "global",
+              "lengthBasis": "real",
+              "start": 0,
+              "end": 1,
+              "px": 0,
+              "py": -55,
+              "position": 0.25
+            }
+          ],
+          "loadCaseIds": [
+            "LC1"
+          ]
+        },
+        "preservedTechnicalData": true,
+        "languageAfterOpen": "en"
+      },
+      "numericValidation": {
+        "label": "Position",
+        "draft": "1.2",
+        "ariaInvalid": "true",
+        "ariaErrorMessage": "inspector-number-_r_h_-error",
+        "describedBy": {
+          "ids": [
+            "inspector-number-_r_h_-unit",
+            "inspector-number-_r_h_-error"
+          ],
+          "text": [
+            "x/L",
+            "Use a value between 0 and 1."
+          ]
+        },
+        "error": "Use a value between 0 and 1.",
+        "storedPositionBefore": 0.25,
+        "storedPositionAfter": 0.25,
+        "preservedStoredValue": true,
+        "projectJsonUnchanged": true,
+        "analysisStatusBefore": "resolved",
+        "analysisStatusAfter": "resolved",
+        "selectionSemantics": {
+          "role": "button",
+          "tabIndex": 0,
+          "ariaKeyShortcuts": "Enter Space",
+          "focused": true,
+          "selected": true
+        },
+        "selectionSemanticsAfterAnalysis": {
+          "role": "button",
+          "tabIndex": 0,
+          "ariaKeyShortcuts": "Enter Space",
+          "focused": true,
+          "selected": true
+        }
+      },
+      "results": {
+        "analysisStatus": "resolved",
+        "selectionSemantics": {
+          "role": "button",
+          "tabIndex": 0,
+          "ariaKeyShortcuts": "Enter Space",
+          "focused": true,
+          "selected": true
+        },
+        "moment": {
+          "tabDescribedBy": {
+            "ids": [
+              "result-family-forces"
+            ],
+            "text": [
+              "Forces"
+            ]
+          },
+          "graphLabel": "Bending moment diagram for member M1",
+          "member": "M1"
+        },
+        "deformed": {
+          "graphLabel": "v response for member M1",
+          "member": "M1"
+        },
+        "understand": {
+          "tabDescribedBy": {
+            "ids": [
+              "result-family-understand"
+            ],
+            "text": [
+              "Understand"
+            ]
+          },
+          "explorerVisible": true,
+          "stageTablistVisible": true,
+          "modelStageSelected": true
+        }
+      },
+      "influence": {
+        "targetMember": "M1",
+        "graphLabel": "Influence line M at M1, x = 6.000 m",
+        "technicalSelection": true,
+        "calculateLabel": "Calculate"
+      },
+      "technicalDataPreservedThroughRuntime": true
+    }
+  },
+  "offlineLocalFirst": {
+    "state": "offline",
+    "label": "Sin conexión · local",
+    "description": "Sin conexión. Puedes seguir trabajando; los cambios permanecen en este navegador.",
+    "editedWhileOffline": true,
+    "persistedLocally": true,
+    "persistedName": "Proyecto local sin conexión QA",
+    "scope": "Current session and local browser persistence; no offline reload/PWA guarantee."
+  },
+  "keyboardFocus": {
+    "desktopTabs": {
+      "arrowSelectsNextTab": true,
+      "arrowMovesFocus": true,
+      "homeReturnsFirstTab": true
+    },
+    "mobileInspector": {
+      "dialogSemantics": true,
+      "initialFocusInside": true,
+      "escapeCloses": true,
+      "focusReturns": true
+    }
+  },
+  "responsive": {
+    "mobile": {
+      "viewport": "390x844",
+      "before": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "clientHeight": 844
+      },
+      "inspectorBox": {
+        "x": 0,
+        "y": 185.6875,
+        "width": 390,
+        "height": 658.3125
+      },
+      "checks": {
+        "noHorizontalOverflow": true,
+        "canvasVisible": true,
+        "inspectorWithinViewport": true,
+        "noOverlayHorizontalOverflow": true
+      }
+    },
+    "tablet": {
+      "viewport": "834x1194",
+      "before": {
+        "scrollWidth": 834,
+        "clientWidth": 834,
+        "scrollHeight": 1194,
+        "clientHeight": 1194
+      },
+      "inspectorBox": {
+        "x": 414,
+        "y": 58,
+        "width": 420,
+        "height": 1136
+      },
+      "checks": {
+        "noHorizontalOverflow": true,
+        "canvasVisible": true,
+        "inspectorWithinViewport": true,
+        "noOverlayHorizontalOverflow": true
+      }
+    },
+    "desktop": {
+      "viewport": "1366x768",
+      "before": {
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "scrollHeight": 768,
+        "clientHeight": 768
+      },
+      "inspectorBox": null,
+      "checks": {
+        "noHorizontalOverflow": true,
+        "canvasVisible": true,
+        "persistentInspector": true
+      }
+    }
+  },
+  "console": [],
+  "pageErrors": [],
+  "failures": [],
+  "runtimeErrors": []
+}
