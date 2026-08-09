@@ -21,6 +21,7 @@ import {
   Play,
   Redo2,
   Save,
+  Search,
   Sun,
   Undo2,
 } from 'lucide-react';
@@ -393,6 +394,16 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+        <button
+          type="button"
+          className="topbar-search-btn"
+          onClick={() => emitWorkspaceCommand('open-command-palette')}
+          title="Buscar comandos, plantillas y herramientas (Ctrl+K)"
+        >
+          <Search size={14} />
+          <span>Comandos</span>
+          <kbd>Ctrl K</kbd>
+        </button>
         <div className="history-controls" aria-label={t('history.label')}>
           <IconButton className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
           <IconButton className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
