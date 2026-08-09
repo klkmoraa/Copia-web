@@ -241,6 +241,27 @@ export const StructuralCanvas = ({
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
+  /** P6 — Heatmap: demand ratio η per member. Pure presentation — reads frozen analysis data, never writes. */
+  const heatmapRatios = useMemo<Map<string, number>>(() => {
+    if (!analysis?.success || !layers.heatmap) return new Map();
+    const fy = 250_000; // kPa = kN/m², ref. S275
+    const ratioMap = new Map<string, number>();
+    for (const result of analysis.memberResults) {
+      const member = memberMap.get(result.memberId);
+      if (!member || member.type === 'rigid') continue;
+      const area = member.A > 0 ? member.A : 0.005;
+      const inertia = member.I > 0 ? member.I : 0.00008;
+      const depth = Math.sqrt((12 * inertia) / area) || 0.3;
+      const Wel = inertia / (depth / 2) || 0.0005;
+      const maxAxial = Math.max(Math.abs(result.maxAxial ?? 0), Math.abs(result.minAxial ?? 0));
+      const maxMoment = Math.max(Math.abs(result.maxMoment ?? 0), Math.abs(result.minMoment ?? 0));
+      const sigmaAxial = maxAxial / area;   // kPa
+      const sigmaBending = maxMoment / Wel;  // kPa
+      const ratio = (sigmaAxial + sigmaBending) / fy;
+      ratioMap.set(result.memberId, ratio);
+    }
+    return ratioMap;
+  }, [analysis, layers.heatmap, memberMap]);
   const units = project.settings.units;
   const selectionFilter = useMemo(() => project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }, [project.settings.selectionFilter]);
   const resultsAllowed = project.settings.calculationMode !== 'classroom' || resultsVisible;
@@ -1598,6 +1619,7 @@ export const StructuralCanvas = ({
           momentLabel={momentLabel}
           distributedLabel={distributedLabel}
           t={t}
+          heatmapRatios={heatmapRatios}
           onObjectPointerDown={handleObjectPointerDown}
           onSelect={setSelection}
           onLoadKeyDown={handleLoadKeyDown}
@@ -1706,6 +1728,7 @@ export const StructuralCanvas = ({
         coordinateReadoutRef={coordinateReadoutRef}
         lengthLabel={lengthLabel}
         scale={camera.scale}
+        hasAnalysis={Boolean(analysis?.success)}
         onCancelPlacement={() => setActiveTool('select')}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}

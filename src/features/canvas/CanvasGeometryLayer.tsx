@@ -48,6 +48,8 @@ export interface CanvasGeometryLayerProps {
   momentLabel: string;
   distributedLabel: string;
   t: Translate;
+  /** P6: demand ratio η per member id [0..∞]. Used when layers.heatmap is true. */
+  heatmapRatios?: Map<string, number>;
   onObjectPointerDown: (event: ReactPointerEvent, target: StructuralTarget) => void;
   onSelect: (target: Selection) => void;
   onLoadKeyDown: (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => void;
@@ -58,10 +60,20 @@ export interface CanvasGeometryLayerProps {
 const CanvasGeometryLayerImpl = ({
   slot, project, nodeMap, memberMap, toScreen, camera, selectionVisualState, learningFocus, memberStartId,
   layers, loadsLayerVisible, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
+  heatmapRatios,
   onObjectPointerDown, onSelect, onLoadKeyDown, onShowCut, onCutLeave,
 }: CanvasGeometryLayerProps) => {
   const selectedNodeIds = selectionVisualState.nodeIds;
   const selectedMemberIds = selectionVisualState.memberIds;
+
+  /** P6: computes heatmap stroke color for a demand ratio η. */
+  const heatmapColor = (ratio: number): string => {
+    if (ratio >= 1.0) return 'var(--sc-heatmap-critical, #ef4444)';
+    if (ratio >= 0.85) return 'var(--sc-heatmap-warning, #f97316)';
+    if (ratio >= 0.6) return 'var(--sc-heatmap-moderate, #f59e0b)';
+    if (ratio >= 0.3) return 'var(--sc-heatmap-low, #84cc16)';
+    return 'var(--sc-heatmap-safe, #22c55e)';
+  };
 
   const renderSupport = (node: NodeModel) => {
     if (node.support.type === 'none') return null;
@@ -251,7 +263,14 @@ const CanvasGeometryLayerImpl = ({
             >
               {selected ? <line className="member-selection-halo" x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null}
               <line className="member-hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-              <line className="member-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+              <line
+                className="member-line"
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                {...(layers.heatmap && heatmapRatios ? (() => {
+                  const ratio = heatmapRatios.get(member.id) ?? 0;
+                  return { stroke: heatmapColor(ratio), strokeWidth: selected ? 5 : 3.5 };
+                })() : {})}
+              />
               {member.type === 'frame' && ((member.rigidOffsetI ?? 0) > 0 || (member.rigidOffsetJ ?? 0) > 0) ? (() => {
                 const length = Math.hypot(nj.x - ni.x, nj.y - ni.y);
                 const ti = length > 0 ? (member.rigidOffsetI ?? 0) / length : 0;

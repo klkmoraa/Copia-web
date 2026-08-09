@@ -8076,9 +8076,218 @@ button:not(:disabled):active,.selection-card:active {
   .canvas-mode-badge .touch-gesture-hint {
     display: none !important;
   }
+} /* end @media (max-width: 767px) */
+
+
+/* ============================================================
+   P3 · GLOW SELECTION — Aura pulsante en selección
+   AG-032 · 2026-08-09
+   ============================================================ */
+
+@keyframes glow-pulse-member {
+  0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--selection) 55%, transparent)); }
+  50%       { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--selection) 90%, transparent)); }
+}
+
+@keyframes glow-pulse-node {
+  0%, 100% { filter: drop-shadow(0 0 2px color-mix(in srgb, var(--selection) 50%, transparent)); }
+  50%       { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--selection) 85%, transparent)); }
+}
+
+/* Halo pulsante en barra seleccionada */
+.member-object.selected .member-line {
+  animation: glow-pulse-member 2s ease-in-out infinite;
+}
+
+/* Halo pulsante en nodo seleccionado */
+.node-object.selected .node-dot {
+  animation: glow-pulse-node 2s ease-in-out infinite;
+}
+
+/* Fade de elementos NO seleccionados cuando hay algo seleccionado en el canvas */
+.member-layer:has(.member-object.selected) .member-object:not(.selected) {
+  opacity: 0.42;
+  transition: opacity 0.3s var(--ease-native);
+}
+.member-layer:has(.member-object.selected) .member-object.selected {
+  opacity: 1;
+}
+.node-layer:has(.node-object.selected) .node-object:not(.selected) {
+  opacity: 0.42;
+  transition: opacity 0.3s var(--ease-native);
+}
+
+/* Inspector entrance animation (P3): slide-in suave cuando aparece */
+.inspector-panel {
+  animation: inspector-slide-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes inspector-slide-in {
+  from { transform: translateY(6px); opacity: 0.6; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+/* Desactivar animaciones si prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .member-object.selected .member-line,
+  .node-object.selected .node-dot { animation: none; }
+  .member-layer:has(.member-object.selected) .member-object:not(.selected),
+  .node-layer:has(.node-object.selected) .node-object:not(.selected) { transition: none; }
+  .inspector-panel { animation: none; }
 }
 
 
+/* ============================================================
+   P5 · INSPECTOR NARRATIVO — MemberNarrativeCard
+   AG-032 · 2026-08-09
+   ============================================================ */
+
+.member-narrative-card {
+  margin: 8px 12px 4px;
+  border-radius: var(--sc-radius-md, 10px);
+  background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 96%, var(--sc-color-bg-app, transparent));
+  border: 1.5px solid var(--sc-color-border-subtle, var(--border));
+  border-left-width: 4px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.member-narrative-card--ok     { border-left-color: #22c55e; }
+.member-narrative-card--warning { border-left-color: #f97316; }
+.member-narrative-card--overstressed { border-left-color: #ef4444; animation: narrative-warning-pulse 1.8s ease-in-out infinite; }
+
+@keyframes narrative-warning-pulse {
+  0%, 100% { border-left-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50%       { border-left-color: #dc2626; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+}
+
+.member-narrative-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px 4px;
+  color: var(--sc-color-text-secondary, var(--muted));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.member-narrative-badge {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.member-narrative-badge[data-tone="ok"]          { background: color-mix(in srgb, #22c55e 15%, transparent); color: #16a34a; }
+.member-narrative-badge[data-tone="warning"]     { background: color-mix(in srgb, #f97316 15%, transparent); color: #ea6c00; }
+.member-narrative-badge[data-tone="overstressed"] { background: color-mix(in srgb, #ef4444 18%, transparent); color: #dc2626; }
+
+:root[data-theme='dark'] .member-narrative-badge[data-tone="ok"]          { color: #4ade80; }
+:root[data-theme='dark'] .member-narrative-badge[data-tone="warning"]     { color: #fb923c; }
+:root[data-theme='dark'] .member-narrative-badge[data-tone="overstressed"] { color: #f87171; }
+
+/* Barra de progreso de utilización */
+.member-narrative-bar-wrap {
+  position: relative;
+  height: 4px;
+  background: color-mix(in srgb, var(--border, #ddd) 60%, transparent);
+  margin: 0 10px 6px;
+  border-radius: 2px;
+  overflow: visible;
+}
+
+.member-narrative-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.member-narrative-bar[data-tone="ok"]           { background: linear-gradient(90deg, #22c55e, #84cc16); }
+.member-narrative-bar[data-tone="warning"]      { background: linear-gradient(90deg, #f59e0b, #f97316); }
+.member-narrative-bar[data-tone="overstressed"] { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+/* Línea de umbral 85% */
+.member-narrative-bar-threshold {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--sc-color-text-secondary, var(--muted));
+  opacity: 0.4;
+  border-radius: 1px;
+}
+
+.member-narrative-text {
+  margin: 0;
+  padding: 4px 10px 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--sc-color-text-secondary, var(--muted));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-narrative-card--overstressed { animation: none; }
+  .member-narrative-bar { transition: none; }
+}
+
+
+/* ============================================================
+   P6 · HEATMAP MODE — Toggle y coloración de barras
+   AG-032 · 2026-08-09
+   ============================================================ */
+
+/* CSS tokens de colores Heatmap (sobrescribibles por tema) */
+:root {
+  --sc-heatmap-safe:     #22c55e;
+  --sc-heatmap-low:      #84cc16;
+  --sc-heatmap-moderate: #f59e0b;
+  --sc-heatmap-warning:  #f97316;
+  --sc-heatmap-critical: #ef4444;
+}
+
+/* Botón toggle del Heatmap en el Chrome del canvas */
+.canvas-heatmap-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-subtle, var(--border)) 80%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 88%, transparent);
+  color: var(--sc-color-text-secondary, var(--muted));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.canvas-heatmap-toggle:hover {
+  background: color-mix(in srgb, var(--sc-heatmap-safe) 15%, var(--sc-color-surface-1, var(--surface)));
+  border-color: var(--sc-heatmap-safe);
+  color: var(--sc-color-text-primary, var(--text));
+}
+
+.canvas-heatmap-toggle.active {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--sc-heatmap-safe) 18%, var(--sc-color-surface-1, var(--surface))),
+    color-mix(in srgb, var(--sc-heatmap-critical) 12%, var(--sc-color-surface-1, var(--surface)))
+  );
+  border-color: var(--sc-heatmap-moderate);
+  color: var(--sc-color-text-primary, var(--text));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc-heatmap-moderate) 30%, transparent);
+}
+
+/* Cuando el heatmap está activo, las barras con color inline tienen transición suave */
+.member-layer[data-heatmap-active] .member-line {
+  transition: stroke 0.4s ease, stroke-width 0.25s ease;
+}
 
 
 

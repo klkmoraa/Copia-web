@@ -30,6 +30,7 @@ describe('CanvasChrome', () => {
       coordinateReadoutRef={coordinateReadoutRef}
       lengthLabel="m"
       scale={102}
+      hasAnalysis={false}
       onCancelPlacement={onCancelPlacement}
       onZoomIn={onZoomIn}
       onZoomOut={onZoomOut}

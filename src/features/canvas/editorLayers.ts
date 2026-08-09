@@ -6,7 +6,8 @@ export type EditorLayerId =
   | 'results'
   | 'labels'
   | 'help'
-  | 'diagnostics';
+  | 'diagnostics'
+  | 'heatmap';
 
 export type EditorLayerState = Record<EditorLayerId, boolean>;
 
@@ -21,6 +22,7 @@ const EDITOR_LAYER_IDS: readonly EditorLayerId[] = [
   'labels',
   'help',
   'diagnostics',
+  'heatmap',
 ];
 
 export type EditorLayerAction =
@@ -37,6 +39,7 @@ export const DEFAULT_EDITOR_LAYERS: Readonly<EditorLayerState> = Object.freeze({
   labels: true,
   help: true,
   diagnostics: true,
+  heatmap: false,
 });
 
 export const editorLayerReducer = (

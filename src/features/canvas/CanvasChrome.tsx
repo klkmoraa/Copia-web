@@ -1,4 +1,4 @@
-import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
+import { Crosshair, Flame, LocateFixed, Minus, Plus, X } from 'lucide-react';
 import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
@@ -20,6 +20,7 @@ export interface CanvasChromeProps {
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
   lengthLabel: string;
   scale: number;
+  hasAnalysis: boolean;
   onCancelPlacement: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -38,6 +39,7 @@ export const CanvasChrome = ({
   coordinateReadoutRef,
   lengthLabel,
   scale,
+  hasAnalysis,
   onCancelPlacement,
   onZoomIn,
   onZoomOut,
@@ -64,6 +66,18 @@ export const CanvasChrome = ({
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
       <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
       <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
+      {hasAnalysis ? (
+        <button
+          type="button"
+          className={`canvas-heatmap-toggle${layers.heatmap ? ' active' : ''}`}
+          aria-pressed={layers.heatmap}
+          title={layers.heatmap ? 'Desactivar Heatmap de Demanda' : 'Activar Heatmap de Demanda (η)'}
+          onClick={() => dispatchLayers({ type: 'toggle', layer: 'heatmap' })}
+        >
+          <Flame size={12} aria-hidden="true" />
+          Heatmap
+        </button>
+      ) : null}
     </div>
     <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
       <IconButton label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={onZoomIn}><Plus size={18} /></IconButton>
