@@ -5515,34 +5515,38 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-mode-badge,
 .canvas-view-chips span,
 .canvas-status {
-  background:var(--surface);
-  border:1px solid color-mix(in srgb,var(--border) 72%,white);
-  box-shadow:var(--sc-shadow-clay-xs);
+  background: var(--sc-color-surface-elevated);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-xs);
 }
 .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled),
-.canvas-controls button:hover { background:var(--sc-color-surface-2); color:var(--text); }
+.canvas-controls button:hover { background: var(--sc-color-surface-2); color: var(--sc-color-text-primary); }
 .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
-.canvas-controls button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.96); }
+.canvas-controls button:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px) scale(.96); }
 
 .tool-button {
-  border-radius:var(--sc-radius-sm);
-  transition:background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-xs);
+  transition: background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
 }
-.tool-button:hover:not(:disabled) { background:var(--sc-color-surface-2); transform:translateY(-1px); }
+.tool-button:hover:not(:disabled) { background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
 .tool-button.active {
-  color:var(--accent-foreground);
-  background:linear-gradient(160deg,color-mix(in srgb,var(--tool-color) 78%,white) 0%,var(--tool-color) 48%,color-mix(in srgb,var(--tool-color) 82%,black) 100%);
-  box-shadow:0 4px 10px color-mix(in srgb,var(--tool-color) 28%,transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb,var(--tool-color) 25%,black 20%);
+  color: var(--accent-foreground);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tool-color) 78%, white) 0%, var(--tool-color) 48%, color-mix(in srgb, var(--tool-color) 82%, black) 100%);
+  box-shadow: var(--sc-shadow-clay-sm), 0 4px 10px color-mix(in srgb, var(--tool-color) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb, var(--tool-color) 25%, black 20%);
+  border-color: color-mix(in srgb, var(--tool-color) 40%, white);
 }
-.tool-button.active:hover:not(:disabled) { transform:translateY(-1px); }
-.tool-button:active:not(:disabled) { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.97); }
+.tool-button.active:hover:not(:disabled) { transform: translateY(-1.5px); }
+.tool-button:active:not(:disabled) { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px) scale(.97); }
 
 .canvas-mode-badge,
 .canvas-view-chips span,
-.canvas-status { border-radius:var(--sc-radius-pill); }
-.canvas-controls { border-radius:11px; overflow:hidden; }
-.canvas-controls button { transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
-.canvas-host { background-color:var(--canvas-bg); }
+.canvas-status { border-radius: var(--sc-radius-pill); }
+.canvas-controls { border-radius: 11px; overflow: hidden; }
+.canvas-controls button { transition: background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
+.canvas-host { background-color: var(--canvas-bg); }
 
 /* Inspector, results, fields and physical switches ---------------------- */
 .inspector-tabs,
@@ -5566,7 +5570,12 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-note,
 .combination-card,
 .norm-source,
-.compact-toggle-grid label { background:var(--sc-color-surface-2); border:0; box-shadow:var(--sc-shadow-clay-pressed); }
+.compact-toggle-grid label {
+  background: var(--sc-color-surface-2);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-sm);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
 
 .toggle-row input[type='checkbox'],
 .compact-toggle-grid input[type='checkbox'] {
