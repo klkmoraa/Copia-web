@@ -1741,8 +1741,30 @@ export const StructuralCanvas = ({
       {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{t('canvas.selectionCycle', { index: cycleIndicator.index, total: cycleIndicator.total })}</div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
-          <div className="cut-title-row"><strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong><span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span></div>
-          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel}</span>
+          <div className="cut-title-row">
+            <strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong>
+            {(() => {
+              const member = memberMap.get(cut.memberId);
+              if (!member || member.type === 'rigid') return null;
+              const area = member.A > 0 ? member.A : 0.005;
+              const inertia = member.I > 0 ? member.I : 0.00008;
+              const depth = Math.sqrt((12 * inertia) / area) || 0.3;
+              const Wel = inertia / (depth / 2) || 0.0005;
+              const sigmaAxial = (Math.abs(cut.point.axial) / area) / 1000;
+              const sigmaBending = Wel > 0 ? (Math.abs(cut.point.moment) / Wel) / 1000 : 0;
+              const sigmaTotal = sigmaAxial + sigmaBending;
+              const ratio = sigmaTotal / 250;
+              const pct = Math.round(ratio * 100);
+              const tone = ratio > 1.0 ? 'overstressed' : ratio > 0.85 ? 'warning' : 'ok';
+              return (
+                <span className="member-narrative-badge" data-tone={tone}>
+                  η = {pct}%
+                </span>
+              );
+            })()}
+            <span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span>
+          </div>
+          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small>({formatFixed(cut.ratio * 100, 1)}%)</small></span>
           <div className="cut-values">
             <span className="axial-text">N = {formatFixed(toDisplay(cut.point.axial, units, 'force'), 3)} {forceLabel}</span>
             <span className="shear-text">V = {formatFixed(toDisplay(cut.point.shear, units, 'force'), 3)} {forceLabel}</span>

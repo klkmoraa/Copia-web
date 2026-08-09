@@ -982,12 +982,33 @@ button.analysis-status:active { transform: scale(0.96); }
 .load-hit { fill:none!important; stroke:transparent!important; stroke-width:28!important; pointer-events:stroke; vector-effect:non-scaling-stroke; }
 .load-symbol:focus-visible,.distributed-symbol:focus-visible { outline:none; filter:drop-shadow(0 0 6px color-mix(in srgb,var(--focus) 64%,transparent)); }
 .diagram-shape { pointer-events: none; }
-.diagram-fill { opacity: .18; stroke: none; }
-.diagram-line-exact { fill: none; stroke-width: 2.15; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.diagram-fill {
+  opacity: .18;
+  stroke: none;
+  animation: diagram-fill-fade 0.35s var(--ease-native) both;
+}
+.diagram-line-exact {
+  fill: none;
+  stroke-width: 2.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 45%, transparent));
+  animation: diagram-line-reveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 .diagram-jumps { fill: none; stroke-width: 1.35; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
 .diagram-shape.axial .diagram-fill { fill: var(--axial); }.diagram-shape.axial .diagram-line-exact,.diagram-shape.axial .diagram-jumps { stroke: var(--axial); }
 .diagram-shape.shear .diagram-fill { fill: var(--shear); }.diagram-shape.shear .diagram-line-exact,.diagram-shape.shear .diagram-jumps { stroke: var(--shear); }
 .diagram-shape.moment .diagram-fill { fill: var(--moment); }.diagram-shape.moment .diagram-line-exact,.diagram-shape.moment .diagram-jumps { stroke: var(--moment); }
+
+@keyframes diagram-fill-fade {
+  from { opacity: 0; }
+  to   { opacity: 0.18; }
+}
+@keyframes diagram-line-reveal {
+  from { opacity: 0.3; stroke-width: 1.5; }
+  to   { opacity: 1; stroke-width: 2.15; }
+}
 .multi-selection-envelope { pointer-events:none; color:var(--selection); }
 .multi-selection-frame { fill:color-mix(in srgb,var(--selection) 7%,transparent); stroke:var(--selection); stroke-width:1.5; stroke-dasharray:7 5; vector-effect:non-scaling-stroke; }
 .multi-selection-handle { fill:var(--surface); stroke:var(--selection); stroke-width:1.5; vector-effect:non-scaling-stroke; }
