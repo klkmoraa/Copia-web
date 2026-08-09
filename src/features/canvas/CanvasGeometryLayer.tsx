@@ -3,7 +3,7 @@ import type { MemberLoad, MemberModel, NodeModel, ProjectModel, Selection } from
 import type { CanvasSelectionVisualState } from './selectionVisuals';
 import type { EditorLayerState } from './editorLayers';
 import type { ResultTab } from '../../store/ProjectContext';
-import { toDisplay } from '../../engine/units';
+import { toDisplay, unitLabel } from '../../engine/units';
 import {
   distributedIntensityAt,
   grossRatioFromFlexible,
@@ -278,6 +278,67 @@ const CanvasGeometryLayerImpl = ({
                 const faceI = toScreen(ni.x + (nj.x - ni.x) * ti, ni.y + (nj.y - ni.y) * ti);
                 const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
                 return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
+              })() : null}
+              {layers.dimensions || selected ? (() => {
+                const length = Math.hypot(nj.x - ni.x, nj.y - ni.y);
+                const displayLength = formatFixed(toDisplay(length, units, 'length'), 2);
+                const unit = unitLabel(units, 'length');
+                const dx = nj.x - ni.x;
+                const dy = nj.y - ni.y;
+                const angleDeg = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 180;
+                
+                // Normal perpendicular en pantalla
+                const screenDx = b.x - a.x;
+                const screenDy = b.y - a.y;
+                const screenLen = Math.max(1, Math.hypot(screenDx, screenDy));
+                const nx = -screenDy / screenLen;
+                const ny = screenDx / screenLen;
+                
+                // Offset de la cota según el ángulo
+                const offsetDist = selected ? 32 : 24;
+                const p1 = { x: a.x + nx * offsetDist, y: a.y + ny * offsetDist };
+                const p2 = { x: b.x + nx * offsetDist, y: b.y + ny * offsetDist };
+                const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                
+                // Extensiones nodales
+                const ext1Start = { x: a.x + nx * 4, y: a.y + ny * 4 };
+                const ext1End = { x: a.x + nx * (offsetDist + 6), y: a.y + ny * (offsetDist + 6) };
+                const ext2Start = { x: b.x + nx * 4, y: b.y + ny * 4 };
+                const ext2End = { x: b.x + nx * (offsetDist + 6), y: b.y + ny * (offsetDist + 6) };
+                
+                // Ticks a 45° tipo CAD
+                const tickLen = 5;
+                const tickUx = (screenDx - screenDy) / (screenLen * Math.SQRT2);
+                const tickUy = (screenDy + screenDx) / (screenLen * Math.SQRT2);
+
+                return (
+                  <g className={`cad-dimension-overlay${selected ? ' is-selected' : ''}`} pointerEvents="none">
+                    {/* Líneas de extensión */}
+                    <line className="cad-dim-extension" x1={ext1Start.x} y1={ext1Start.y} x2={ext1End.x} y2={ext1End.y} />
+                    <line className="cad-dim-extension" x1={ext2Start.x} y1={ext2Start.y} x2={ext2End.x} y2={ext2End.y} />
+                    {/* Línea de cota principal */}
+                    <line className="cad-dim-line" x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} />
+                    {/* Ticks oblicuos CAD 45° */}
+                    <line className="cad-dim-tick" x1={p1.x - tickUx * tickLen} y1={p1.y - tickUy * tickLen} x2={p1.x + tickUx * tickLen} y2={p1.y + tickUy * tickLen} />
+                    <line className="cad-dim-tick" x1={p2.x - tickUx * tickLen} y1={p2.y - tickUy * tickLen} x2={p2.x + tickUx * tickLen} y2={p2.y + tickUy * tickLen} />
+                    {/* Píldora numérica de cota */}
+                    <g transform={`translate(${mid.x} ${mid.y})`}>
+                      <rect className="cad-dim-badge-bg" x="-32" y="-10" width="64" height="20" rx="6" />
+                      <text className="cad-dim-badge-text" x="0" y="3.5" textAnchor="middle">
+                        {displayLength} {unit}
+                      </text>
+                    </g>
+                    {/* Detalle secundario en barra seleccionada */}
+                    {selected && (
+                      <g transform={`translate(${mid.x} ${mid.y + 16})`}>
+                        <rect className="cad-dim-subbadge-bg" x="-42" y="-7" width="84" height="14" rx="4" />
+                        <text className="cad-dim-subbadge-text" x="0" y="3" textAnchor="middle">
+                          θ={formatFixed(angleDeg, 1)}° · Δx={formatFixed(toDisplay(Math.abs(dx), units, 'length'), 2)}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
               })() : null}
               {layers.dimensions && project.settings.showLocalAxes ? (() => {
                 const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;

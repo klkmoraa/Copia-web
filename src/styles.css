@@ -8356,3 +8356,246 @@ button:not(:disabled):active,.selection-card:active {
 @media (prefers-reduced-motion: reduce) {
   .canvas-oscillation-toggle.active { animation: none; }
 }
+
+/* ============================================================
+   AG-035 · BRANDBOOK CLAYMORPHISM PRO SUITE
+   P1 Cotas CAD · P2 Diagramas Mohr · P3 Inspector 3D · 
+   P4 Matriz Táctil · P5 Visor 3D · P6 Keycaps Instrumental
+   ============================================================ */
+
+/* P1 · Cotas Técnicas CAD */
+.cad-dimension-overlay {
+  pointer-events: none;
+}
+.cad-dim-line {
+  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.cad-dim-extension {
+  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke-width: 0.9;
+  stroke-dasharray: 2 2;
+  opacity: 0.65;
+  vector-effect: non-scaling-stroke;
+}
+.cad-dim-tick {
+  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.cad-dim-badge-bg {
+  fill: var(--sc-color-surface-elevated, #ffffff);
+  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke-width: 1.1;
+  filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--sc-black, #000) 10%, transparent));
+}
+.cad-dim-badge-text {
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--sc-color-text-primary, #23312c);
+}
+.cad-dim-subbadge-bg {
+  fill: var(--sc-color-surface-inset, #f1ede5);
+  stroke: var(--sc-color-border-strong, #b9afa1);
+  stroke-width: 0.9;
+}
+.cad-dim-subbadge-text {
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 7px;
+  font-weight: 600;
+  fill: var(--sc-color-text-secondary, #607068);
+}
+.cad-dimension-overlay.is-selected .cad-dim-line {
+  stroke-width: 1.6;
+}
+.cad-dimension-overlay.is-selected .cad-dim-badge-bg {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--sc-color-brand-secondary, #1f88b8) 25%, transparent));
+}
+
+/* P2 · Diagramas con Hachurado de Mohr & Sellos de Puntos Críticos */
+.diagram-hatch-line {
+  stroke: currentColor;
+  stroke-width: 0.95;
+  stroke-linecap: round;
+  opacity: 0.32;
+  vector-effect: non-scaling-stroke;
+}
+.diagram-shape.axial .diagram-hatch-line { stroke: var(--axial); }
+.diagram-shape.shear .diagram-hatch-line { stroke: var(--shear); }
+.diagram-shape.moment .diagram-hatch-line { stroke: var(--moment); }
+
+.diagram-critical-seal {
+  pointer-events: none;
+  animation: diagram-seal-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.diagram-critical-seal-dot {
+  fill: currentColor;
+  stroke: var(--sc-color-surface-elevated, #ffffff);
+  stroke-width: 1.5;
+}
+.diagram-shape.axial .diagram-critical-seal-dot { fill: var(--axial); }
+.diagram-shape.shear .diagram-critical-seal-dot { fill: var(--shear); }
+.diagram-shape.moment .diagram-critical-seal-dot { fill: var(--moment); }
+
+.diagram-critical-seal-bg {
+  fill: var(--sc-color-surface-elevated, #ffffff);
+  stroke: currentColor;
+  stroke-width: 1.2;
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--sc-black, #000) 12%, transparent));
+}
+.diagram-shape.axial .diagram-critical-seal-bg { stroke: var(--axial); }
+.diagram-shape.shear .diagram-critical-seal-bg { stroke: var(--shear); }
+.diagram-shape.moment .diagram-critical-seal-bg { stroke: var(--moment); }
+
+.diagram-critical-seal-text {
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 7.5px;
+  font-weight: 700;
+  fill: var(--sc-color-text-primary, #23312c);
+}
+@keyframes diagram-seal-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* P4 · Matriz de Rigidez Táctil & Heatmap */
+.matrix-view {
+  background: var(--sc-color-surface-1, #fffcf7);
+  border-radius: var(--sc-radius-lg, 16px);
+  border: 1px solid var(--sc-color-border, #ded8ce);
+  box-shadow: var(--sc-shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+  padding: 16px;
+  margin-block: 12px;
+}
+.matrix-view-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.matrix-view-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.matrix-dim-badge {
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--sc-color-surface-inset, #f1ede5);
+  color: var(--sc-color-text-secondary, #607068);
+}
+.matrix-type-tag {
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--sc-green-50, #e8f5ee);
+  color: var(--sc-green-700, #06684c);
+}
+.matrix-tactile-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+}
+.dof-pill {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--sc-color-surface-inset, #f1ede5);
+  color: var(--sc-color-text-secondary, #607068);
+}
+.matrix-tactile-cell {
+  text-align: right;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--sc-color-border-soft, #ebe5dc);
+  background: var(--sc-color-surface-inset, #f1ede5);
+  font-size: 10.5px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.matrix-tactile-cell.nonzero:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--sc-color-action-primary, #087e5c) 25%, transparent);
+  border-color: var(--sc-color-action-primary, #087e5c);
+  z-index: 2;
+  position: relative;
+}
+.matrix-tactile-cell.zero {
+  text-align: center;
+  color: var(--sc-color-text-disabled, #9aa0a1);
+  background: transparent;
+  border-color: transparent;
+}
+.matrix-num-val {
+  color: var(--sc-color-text-primary, #23312c);
+}
+.matrix-tactile-cell.negative .matrix-num-val {
+  color: var(--sc-violet-500, #7d63c9);
+}
+
+/* P5 · Visor 3D Isométrico Toggle */
+.section-viewer-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--sc-color-surface-inset, #f1ede5);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--sc-color-border, #ded8ce);
+}
+.section-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--sc-color-text-secondary, #607068);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.section-toggle-btn.active {
+  background: var(--sc-color-surface-elevated, #ffffff);
+  color: var(--sc-color-action-primary, #087e5c);
+  box-shadow: var(--sc-shadow-sm, 0 2px 6px rgba(0,0,0,0.06));
+}
+
+/* P6 · Keycaps en Botones de Herramientas */
+.sc-tool-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--sc-color-surface-inset, #f1ede5);
+  border: 1px solid var(--sc-color-border, #ded8ce);
+  box-shadow: 0 1px 0 var(--sc-color-border-strong, #b9afa1);
+  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--sc-color-text-secondary, #607068);
+  pointer-events: none;
+}
+.sc-tool-button.is-active .sc-tool-keycap {
+  background: color-mix(in srgb, var(--sc-color-action-primary, #087e5c) 20%, var(--sc-color-surface-elevated, #ffffff));
+  border-color: var(--sc-color-action-primary, #087e5c);
+  color: var(--sc-color-action-primary, #087e5c);
+}
+

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { AnalysisResult, DiagramQuantity, MemberModel, NodeModel, ProjectModel } from '../../types';
 import type { InfluenceCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
 import type { CanvasCamera } from './canvasInteraction';
@@ -120,10 +120,59 @@ const CanvasResultLayerImpl = ({
     });
     fillCommands.push(`L ${baselineEnd.x} ${baselineEnd.y}`, 'Z');
     jumpCommands.push(`M ${lastPoint.x} ${lastPoint.y} L ${baselineEnd.x} ${baselineEnd.y}`);
+
+    // P2: Mohr Slice Hatching (rebanadas transversales equidistantes con relieve técnico)
+    const hatchLines: ReactNode[] = [];
+    const numSlices = Math.max(8, Math.min(22, Math.round(result.length * 3.5)));
+    for (let sIdx = 1; sIdx < numSlices; sIdx++) {
+      const xSlice = (result.length / numSlices) * sIdx;
+      const point = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, xSlice, 'right');
+      const vSlice = point ? point[key] : 0;
+      if (Math.abs(vSlice) > 1e-6) {
+        const basePt = toScreen(ni.x + tx * ((result.startOffset ?? 0) + xSlice), ni.y + ty * ((result.startOffset ?? 0) + xSlice));
+        const diagPt = locate(xSlice, vSlice);
+        hatchLines.push(
+          <line
+            key={`hatch-${member.id}-${sIdx}`}
+            x1={basePt.x}
+            y1={basePt.y}
+            x2={diagPt.x}
+            y2={diagPt.y}
+            className="diagram-hatch-line"
+          />
+        );
+      }
+    }
+
+    // P2: Sellos flotantes de puntos notables (Mmax, Vmax, V=0)
+    const criticalBadges: ReactNode[] = [];
+    const activePoints = result.criticalPoints.filter((pt) => pt.quantity === key && Math.abs(pt.value) > 1e-5);
+    activePoints.forEach((pt, idx) => {
+      const ptScreen = locate(pt.x, pt.value);
+      const isMax = pt.kind === 'maximum' || pt.kind === 'minimum';
+      if (isMax) {
+        const unit = key === 'moment' ? momentLabel : forceLabel;
+        const valFormatted = formatFixed(toDisplay(pt.value, units, key === 'moment' ? 'moment' : 'force'), 2);
+        criticalBadges.push(
+          <g key={`crit-${member.id}-${idx}`} transform={`translate(${ptScreen.x} ${ptScreen.y})`} className="diagram-critical-seal">
+            <circle cx="0" cy="0" r="3.5" className="diagram-critical-seal-dot" />
+            <g transform="translate(0, -14)">
+              <rect x="-26" y="-8" width="52" height="16" rx="4" className="diagram-critical-seal-bg" />
+              <text x="0" y="3" textAnchor="middle" className="diagram-critical-seal-text">
+                {valFormatted} {unit}
+              </text>
+            </g>
+          </g>
+        );
+      }
+    });
+
     return <g key={member.id} className={`diagram-shape ${key}`}>
       <path d={fillCommands.join(' ')} className="diagram-fill" />
+      <g className="diagram-hatch-group">{hatchLines}</g>
       <path d={lineCommands.join(' ')} className="diagram-line-exact" />
       <path d={jumpCommands.join(' ')} className="diagram-jumps" />
+      <g className="diagram-critical-group">{criticalBadges}</g>
     </g>;
   };
 

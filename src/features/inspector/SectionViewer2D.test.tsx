@@ -42,4 +42,29 @@ describe('SectionViewer2D Component', () => {
     expect(screen.getByText(/b =/i)).toBeTruthy();
     expect(screen.getByText(/h =/i)).toBeTruthy();
   });
+
+  it('toggles to 3D isometric mode with Navier stress distribution and extreme values', async () => {
+    const ipe300 = standardSections.find((s) => s.id === 'ipe-300')!;
+    const { userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+
+    render(
+      <SectionViewer2D
+        section={ipe300}
+        area={ipe300.area}
+        inertia={ipe300.inertiaX}
+        units="kN-m"
+        bendingMoment={45000}
+        axialForce={-20000}
+      />
+    );
+
+    const toggle3D = screen.getByRole('button', { name: /3D Isométrico/i });
+    expect(toggle3D).toBeTruthy();
+    await user.click(toggle3D);
+
+    expect(screen.getByText('E.N.')).toBeTruthy();
+    expect(screen.getByText(/σ_sup =/i)).toBeTruthy();
+    expect(screen.getByText(/σ_inf =/i)).toBeTruthy();
+  });
 });

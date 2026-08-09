@@ -805,7 +805,77 @@ const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => 
   const rowLimit = Math.min(trace.rows, 12);
   const columnLimit = Math.min(trace.columns, 12);
   const values = new Map(trace.entries.map((entry) => [`${entry.row}:${entry.column}`, entry.value]));
-  return <div className="matrix-view"><div className="matrix-view-heading"><strong>{title}</strong><span>{trace.rows} × {trace.columns}</span></div>{trace.rows > rowLimit || trace.columns > columnLimit ? <small>{t('results.partialMatrix')}</small> : null}<div className="matrix-scroll"><table aria-label={title}><thead><tr><th>{t('results.dof')}</th>{trace.columnLabels.slice(0, columnLimit).map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trace.rowLabels.slice(0, rowLimit).map((label, row) => <tr key={label}><th scope="row">{label}</th>{Array.from({ length: columnLimit }, (_, column) => { const value = values.get(`${row}:${column}`) ?? 0; return <td className={value === 0 ? 'zero' : ''} key={`${row}-${column}`}>{value === 0 ? '·' : formatScientific(value, 2)}</td>; })}</tr>)}</tbody></table></div></div>;
+  
+  // Calcular valor máximo para escalado del heatmap
+  const maxAbsValue = useMemo(() => {
+    let max = 1e-9;
+    trace.entries.forEach((e) => {
+      if (Math.abs(e.value) > max) max = Math.abs(e.value);
+    });
+    return max;
+  }, [trace.entries]);
+
+  return (
+    <div className="matrix-view">
+      <div className="matrix-view-heading">
+        <div className="matrix-view-title-wrap">
+          <strong>{title}</strong>
+          <span className="matrix-dim-badge">{trace.rows} × {trace.columns}</span>
+        </div>
+        <span className="matrix-type-tag">[K]</span>
+      </div>
+      {trace.rows > rowLimit || trace.columns > columnLimit ? (
+        <small className="matrix-partial-hint">{t('results.partialMatrix')}</small>
+      ) : null}
+      <div className="matrix-scroll">
+        <table className="matrix-tactile-table" aria-label={title}>
+          <thead>
+            <tr>
+              <th className="matrix-corner-cell">{t('results.dof')}</th>
+              {trace.columnLabels.slice(0, columnLimit).map((label) => (
+                <th key={label} scope="col" className="matrix-col-header">
+                  <span className="dof-pill">{label}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {trace.rowLabels.slice(0, rowLimit).map((label, row) => (
+              <tr key={label} className="matrix-row">
+                <th scope="row" className="matrix-row-header">
+                  <span className="dof-pill">{label}</span>
+                </th>
+                {Array.from({ length: columnLimit }, (_, column) => {
+                  const value = values.get(`${row}:${column}`) ?? 0;
+                  const absVal = Math.abs(value);
+                  const isZero = absVal < 1e-12;
+                  const ratio = isZero ? 0 : Math.min(1, Math.sqrt(absVal / maxAbsValue));
+                  const heatStyle = !isZero ? {
+                    backgroundColor: `color-mix(in srgb, var(--sc-color-action-primary, #087e5c) ${Math.round(ratio * 28 + 6)}%, var(--sc-color-surface-1, #fffcf7))`,
+                  } : undefined;
+
+                  return (
+                    <td
+                      key={`${row}-${column}`}
+                      className={`matrix-tactile-cell${isZero ? ' zero' : ' nonzero'}${value < 0 ? ' negative' : ''}`}
+                      style={heatStyle}
+                      title={!isZero ? `${label} × ${trace.columnLabels[column]}: ${value.toExponential(4)}` : undefined}
+                    >
+                      {isZero ? <span className="matrix-dot">·</span> : (
+                        <span className="matrix-num-val">
+                          {formatScientific(value, 2)}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 /**
