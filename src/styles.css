@@ -7564,6 +7564,240 @@ button:not(:disabled):active,.selection-card:active {
   }
 }
 
+/* ==========================================================================
+   AG-026 · Corrección Integral de Errores Visuales en Teléfonos Móviles
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  /* ── 1. TopBar en Móviles ── */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 8px;
+    height: 48px;
+    gap: 4px;
+    overflow: hidden;
+  }
+  
+  .document-identity .project-name input {
+    max-width: 105px;
+    font-size: 12px;
+  }
+  
+  .topbar-document-zone {
+    gap: 6px;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .top-actions {
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Ocultar undo/redo directos en barra para dar espacio (están en menú ...) */
+  .topbar .history-controls {
+    display: none;
+  }
+
+  /* Botón de búsqueda compacto solo con lupa */
+  .topbar-search-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .topbar-search-btn span,
+  .topbar-search-btn kbd {
+    display: none;
+  }
+
+  /* ── 2. Panel de Resultados y Bottom Sheet en Móviles ── */
+  .result-summary-workspace {
+    padding: 8px;
+  }
+  
+  .result-summary-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .result-summary-actions {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+
+  .result-summary-actions button {
+    flex-shrink: 0;
+    font-size: 11px;
+    padding: 0 10px;
+    min-height: 32px;
+  }
+
+  .global-extrema-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .global-extrema-grid button {
+    padding: 10px 12px;
+  }
+
+  /* ── 3. Medidor de Salud Estructural en Móviles ── */
+  .structural-health-card {
+    padding: 12px;
+    margin: 8px 0;
+    gap: 10px;
+  }
+
+  .structural-health-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .health-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .health-detail-item small {
+    font-size: 9px;
+  }
+
+  .health-detail-item strong {
+    font-size: 12px;
+  }
+
+  /* ── 4. Visualizador de Sección 2.5D en Inspector Móvil ── */
+  .section-viewer-card {
+    padding: 10px;
+    margin: 8px 0;
+  }
+
+  .section-viewer-svg-wrap {
+    max-height: 180px;
+  }
+
+  .section-properties-chips {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  .section-chip {
+    padding: 4px 6px;
+  }
+
+  .section-chip small {
+    font-size: 8.5px;
+  }
+
+  .section-chip strong {
+    font-size: 11px;
+  }
+
+  /* ── 5. Capas de Información 2.0 en Móviles ── */
+  .canvas-layer-panel {
+    position: fixed;
+    top: 56px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 120px);
+    z-index: 55;
+  }
+
+  .canvas-layer-presets-bar {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .presets-pill-group button {
+    padding: 0 6px;
+    font-size: 9.5px;
+    min-height: 22px;
+  }
+
+  /* ── 6. Command Palette en Móviles ── */
+  .command-palette-backdrop {
+    padding: 10px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+
+  .command-palette-modal {
+    width: calc(100vw - 20px);
+    max-height: 80vh;
+    border-radius: 14px;
+  }
+
+  .command-palette-item-category {
+    display: none;
+  }
+
+  .command-palette-item-desc {
+    display: none;
+  }
+
+  /* ── 7. Pantalla de Bienvenida en Móviles ── */
+  .welcome-content {
+    width: calc(100% - 24px);
+    padding: 24px 0 32px;
+    gap: 28px;
+  }
+
+  .welcome-hero {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .welcome-hero-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .welcome-features-highlights {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .welcome-hero-figure {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+
+  .welcome-pillars-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .welcome-hero-launcher {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .welcome-launcher-card {
+    width: 100%;
+    padding: 14px 16px;
+  }
+
+  .welcome-templates-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+
 
 
 
