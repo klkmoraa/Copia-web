@@ -928,27 +928,26 @@ button.analysis-status:active { transform: scale(0.96); }
 .menu-copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); line-height: 1.4; }
 
 .workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w, 204px) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
-.toolbar { padding: 10px 8px; display: flex; flex-direction: column; gap: 3px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; background: var(--sc-color-surface-1); border-right: 1px solid var(--sc-color-border-soft); }
+.toolbar { padding: 10px 8px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; background: var(--sc-color-surface-1); border-right: 1px solid var(--sc-color-border-soft); }
 .desktop-tool-list { display:contents; }
 .mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle,.results-sheet-backdrop { display:none; }
 .tool-button {
-  min-height: 38px;
+  min-height: 40px;
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
   border-radius: var(--sc-radius-xs, 8px);
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   text-align: left;
   padding: 0 10px;
   color: var(--sc-color-text-secondary);
   cursor: pointer;
   transition: background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
 }
-.tool-button svg { width: 17px; height: 17px; color: currentColor; flex-shrink: 0; }
-.tool-button span { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool-button svg { width: 18px; height: 18px; color: currentColor; flex-shrink: 0; }
+.tool-button span { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .tool-button kbd {
   display: inline-flex;
   align-items: center;
@@ -963,6 +962,8 @@ button.analysis-status:active { transform: scale(0.96); }
   background: var(--sc-color-surface-2);
   border: 1px solid var(--sc-color-border-soft);
   border-radius: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .tool-button:hover:not(:disabled) {
   background: var(--sc-color-surface-2);
@@ -972,19 +973,28 @@ button.analysis-status:active { transform: scale(0.96); }
   transform: scale(0.98);
 }
 .tool-button.active {
-  background: var(--sc-color-surface-elevated);
-  color: var(--sc-color-action-primary);
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
   font-weight: 750;
-  border-color: var(--sc-color-border-soft);
-  box-shadow: var(--sc-shadow-clay-xs);
+  border: 1px solid color-mix(in srgb, var(--sc-color-action-primary) 30%, var(--sc-color-surface-elevated));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 .tool-button.active svg {
-  color: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
+}
+.tool-button.active span {
+  color: var(--sc-color-action-foreground);
 }
 .tool-button.active kbd {
-  background: color-mix(in srgb, var(--sc-color-action-primary) 14%, var(--sc-color-surface-elevated));
-  color: var(--sc-color-action-primary);
-  border-color: color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent);
+  background: color-mix(in srgb, var(--sc-color-bg-app) 28%, transparent);
+  color: var(--sc-color-action-foreground);
+  border-color: color-mix(in srgb, var(--sc-color-action-foreground) 20%, transparent);
+}
+:root[data-theme='dark'] .tool-button.active {
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
+  border-color: color-mix(in srgb, var(--sc-color-action-foreground) 18%, transparent);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
 }
 .toolbar-spacer { flex: 1; }
 .selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
