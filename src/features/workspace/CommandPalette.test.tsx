@@ -29,15 +29,15 @@ describe('CommandPalette', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeTruthy();
-    const input = screen.getByPlaceholderText(/Buscar comando/i);
+    const input = screen.getByPlaceholderText(/comando/i);
     expect(input).toBeTruthy();
 
     // Type query to filter
-    await user.type(input, 'Auto-encuadrar');
-    expect(screen.getByText(/Auto-encuadrar Canvas/i)).toBeTruthy();
+    await user.type(input, 'Ajustar');
+    expect(screen.getByText(/Ajustar modelo a la pantalla/i)).toBeTruthy();
 
     // Click on command
-    await user.click(screen.getByText(/Auto-encuadrar Canvas/i));
+    await user.click(screen.getByText(/Ajustar modelo a la pantalla/i));
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -51,7 +51,7 @@ describe('CommandPalette', () => {
       </ProjectProvider>
     );
 
-    const input = screen.getByPlaceholderText(/Buscar comando/i);
+    const input = screen.getByPlaceholderText(/comando/i);
     await user.type(input, '{Escape}');
     expect(onClose).toHaveBeenCalled();
   });
