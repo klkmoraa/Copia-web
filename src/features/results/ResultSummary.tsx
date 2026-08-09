@@ -11,6 +11,7 @@ import { formatResultNumber, formatResultValue } from './resultFormatting';
 import { useI18n } from '../../i18n/useI18n';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { StructuralHealthMeter } from './StructuralHealthMeter';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -105,6 +106,7 @@ export const ResultSummary = () => {
       </> : null}
       {analysis.pDelta.failureReason ? <small className="is-warning">{t('pdelta.failureReason', { reason: analysis.pDelta.failureReason })}</small> : null}
     </section> : null}
+    <StructuralHealthMeter project={project} analysis={analysis} onLocateMember={(memberId) => locate('moment', memberId, 0)} />
     <div className="global-extrema-grid">
       {(['axial', 'shear', 'moment'] as const).map((quantity) => {
         const item = summary.diagrams[quantity]?.absolute;
