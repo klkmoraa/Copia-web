@@ -7795,6 +7795,180 @@ button:not(:disabled):active,.selection-card:active {
     grid-template-columns: 1fr;
     gap: 10px;
   }
+
+  /* ── 8. Despeje de Lienzo y Píldora Móvil Limpia (Sin Textos Amontonados) ── */
+  
+  /* Píldora flotante compacta centrada */
+  .toolbar,
+  .mobile-tool-dock {
+    position: absolute !important;
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: calc(100vw - 90px) !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 3px 6px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
+    background: color-mix(in srgb, var(--sc-color-surface-elevated, var(--surface)) 94%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border: 1px solid color-mix(in srgb, var(--sc-color-border) 70%, white) !important;
+    box-shadow: var(--sc-shadow-clay-lg) !important;
+    z-index: 35 !important;
+    overflow: hidden !important;
+  }
+
+  .toolbar .tool-button,
+  .mobile-tool-dock .tool-button {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .toolbar .tool-button.active,
+  .mobile-tool-dock .tool-button.active {
+    background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 16%, var(--sc-color-surface-1)) !important;
+    color: var(--sc-color-action-primary, var(--accent)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), var(--sc-shadow-clay-xs) !important;
+  }
+
+  .toolbar .tool-button svg,
+  .mobile-tool-dock .tool-button svg {
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Ocultar etiquetas de texto para que la píldora sea 100% limpia como en navegador */
+  .toolbar .tool-button > span:not(.sc-tool-button__icon),
+  .toolbar .tool-button kbd,
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon),
+  .mobile-tool-dock .tool-button kbd {
+    display: none !important;
+  }
+
+  /* Botón FAB circular para el Inspector a la derecha */
+  .mobile-inspector-toggle {
+    position: absolute !important;
+    right: 14px !important;
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    border-radius: 50% !important;
+    z-index: 40 !important;
+    display: grid !important;
+    place-items: center !important;
+    box-shadow: var(--sc-shadow-clay-md) !important;
+  }
+
+  /* Coordenadas en la esquina superior izquierda */
+  .canvas-status {
+    position: absolute !important;
+    top: calc(56px + env(safe-area-inset-top)) !important;
+    left: 12px !important;
+    bottom: auto !important;
+    right: auto !important;
+    height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 10px !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--sc-color-surface-elevated, var(--surface)) 88%, transparent) !important;
+    backdrop-filter: blur(12px) !important;
+    z-index: 20 !important;
+  }
+
+  /* Controles de zoom compactos verticales a la izquierda */
+  .canvas-controls {
+    position: absolute !important;
+    top: calc(88px + env(safe-area-inset-top)) !important;
+    left: 12px !important;
+    bottom: auto !important;
+    right: auto !important;
+    width: 32px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 3px !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--sc-color-surface-elevated, var(--surface)) 88%, transparent) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--sc-color-border-soft) !important;
+    box-shadow: var(--sc-shadow-clay-xs) !important;
+    z-index: 20 !important;
+  }
+
+  .canvas-controls button {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    min-height: 26px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+  }
+
+  .canvas-controls button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* Ocultar elementos invasivos en teléfono */
+  .canvas-minimap-card,
+  .canvas-view-chips {
+    display: none !important;
+  }
+
+  /* Botón de capas arriba a la derecha */
+  .canvas-layers-trigger {
+    position: absolute !important;
+    top: calc(56px + env(safe-area-inset-top)) !important;
+    right: 12px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    border-radius: 50% !important;
+    display: grid !important;
+    place-items: center !important;
+    z-index: 25 !important;
+  }
+
+  /* Badge de modo en el centro superior */
+  .canvas-mode-badge {
+    top: calc(56px + env(safe-area-inset-top)) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100vw - 120px) !important;
+    padding: 3px 10px !important;
+    font-size: 10.5px !important;
+    height: auto !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    z-index: 22 !important;
+  }
+  .canvas-mode-badge .desktop-gesture-hint,
+  .canvas-mode-badge .touch-gesture-hint {
+    display: none !important;
+  }
 }
 
 
