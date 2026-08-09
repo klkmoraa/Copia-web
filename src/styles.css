@@ -5303,9 +5303,10 @@ button:not(:disabled):active,.selection-card:active {
 }
 .tool-button:hover:not(:disabled) { background:var(--sc-color-surface-2); }
 .tool-button.active {
-  color:var(--accent-foreground);
-  background:linear-gradient(160deg, color-mix(in srgb, var(--tool-color) 78%, white) 0%, var(--tool-color) 48%, color-mix(in srgb, var(--tool-color) 82%, black) 100%);
-  box-shadow:0 4px 10px color-mix(in srgb, var(--tool-color) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb, var(--tool-color) 25%, black 20%);
+  color: var(--tool-color);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: translateY(1px) scale(.98);
 }
 .tool-button.active svg,
 .tool-button.active kbd { color:currentColor; }

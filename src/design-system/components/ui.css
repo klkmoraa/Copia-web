@@ -486,15 +486,15 @@
   background: var(--sc-color-surface-elevated);
   border-color: var(--sc-color-border);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-sm);
-  transform: translateY(-1.5px);
+  box-shadow: var(--sc-shadow-clay-xs);
+  transform: translateY(-2px);
 }
 .sc-tool-button.is-active {
-  border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft));
-  background: var(--sc-color-surface-inset);
+  background: var(--sc-color-action-primary);
+  border-color: var(--sc-color-action-primary);
   box-shadow: var(--sc-shadow-clay-pressed);
-  color: var(--sc-color-action-primary);
-  transform: translateY(1.5px) scale(0.985);
+  color: var(--sc-color-action-foreground);
+  transform: translateY(1px);
 }
 .sc-tool-button__icon { width: var(--sc-size-icon-tool); height: var(--sc-size-icon-tool); display: grid; place-items: center; color: var(--sc-tool-color); }
 .sc-tool-button.is-active .sc-tool-button__icon { color: var(--sc-color-action-primary); }
