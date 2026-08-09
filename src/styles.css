@@ -487,9 +487,8 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   align-items: center;
   gap: var(--sc-space-3);
   padding: 0 var(--sc-layout-gutter);
-  border-bottom: 1px solid var(--sc-color-border);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-1);
   position: relative;
   z-index: var(--sc-z-topbar);
   box-shadow: var(--sc-shadow-clay-xs);
@@ -5473,20 +5472,30 @@ button:not(:disabled):active,.selection-card:active {
 .welcome-footer { background:transparent; border:0; border-top:1px solid var(--border); box-shadow:none; }
 
 /* Workspace: barras, navegación y chrome del lienzo --------------------- */
-.topbar,
-.toolbar,
-.inspector-panel,
-.results-panel {
-  background:var(--surface);
-  border-color:var(--border);
-  box-shadow:none;
+.topbar {
+  background: var(--sc-color-surface-1);
+  border-bottom: 1px solid var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-clay-xs);
 }
-.topbar { background:color-mix(in srgb,var(--surface) 92%,transparent); box-shadow:0 1px 0 color-mix(in srgb,var(--sc-color-surface-elevated) 72%,transparent); }
-.toolbar { background:var(--surface); }
-.tool-group + .tool-group { border-top-color:var(--border-soft); }
+.toolbar {
+  background: var(--sc-color-surface-1);
+  border-right: 1px solid var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+.inspector-panel {
+  background: var(--sc-color-surface-1);
+  border-left: 1px solid var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-lifted);
+}
+.results-panel {
+  background: var(--sc-color-surface-1);
+  border-top: 1px solid var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-sheet);
+}
+.tool-group + .tool-group { border-top-color: var(--sc-color-border-soft); }
 .tool-group-heading,
 .result-tab-family__label,
-.inspector-property-group__mode { font-family:var(--sc-font-mono); letter-spacing:.06em; }
+.inspector-property-group__mode { font-family: var(--sc-font-mono); letter-spacing: .06em; }
 
 .topbar .compact-select,
 .topbar .project-name input,
