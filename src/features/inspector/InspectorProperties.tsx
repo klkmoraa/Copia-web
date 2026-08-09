@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { repairProjectTopology } from '../../data/modelOperations';
 import type { StandardMaterial } from '../../data/standardMaterials';
-import type { StandardSection } from '../../data/standardSections';
+import { standardSections, type StandardSection } from '../../data/standardSections';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
@@ -32,6 +32,7 @@ import { InspectorNumericField } from './InspectorNumericField';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
+import { SectionViewer2D } from './SectionViewer2D';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -527,6 +528,7 @@ export const InspectorProperties = () => {
       const nj = nodeMap.get(selectedMember.j);
       const length = ni && nj ? Math.hypot(nj.x - ni.x, nj.y - ni.y) : Number.NaN;
       const angle = ni && nj ? Math.atan2(nj.y - ni.y, nj.x - ni.x) * 180 / Math.PI : Number.NaN;
+      const activeSection = standardSections.find((s) => s.area === selectedMember.A && s.inertiaX === selectedMember.I);
       return <>
         <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberFrequentDescription')}>
           <SelectField label={t('inspector.element')} value={selectedMember.type} onChange={(value) => updateMember('type', value)}>
@@ -536,6 +538,14 @@ export const InspectorProperties = () => {
             {/* `key` remonta los selectores al cambiar de miembro: el preset elegido pertenece al miembro activo, no al panel. */}
             <MaterialPresetSelector key={`${selectionKey}:material`} units={units} current={{ E: selectedMember.E, G: selectedMember.G, density: selectedMember.density }} onSelect={applyMaterialPreset} />
             <SectionPresetSelector key={`${selectionKey}:section`} units={units} current={{ A: selectedMember.A, I: selectedMember.I }} onSelect={applySectionPreset} />
+            <SectionViewer2D
+              section={activeSection}
+              area={selectedMember.A}
+              inertia={selectedMember.I}
+              units={units}
+              axialForce={memberResult?.maxAxial}
+              bendingMoment={memberResult?.maxMoment}
+            />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
