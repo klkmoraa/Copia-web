@@ -224,14 +224,14 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
         {/* Caras extruidas superiores y laterales */}
         <polygon
           points={`${l},${t} ${r},${t} ${r + extX},${t + extY} ${l + extX},${t + extY}`}
-          fill="color-mix(in srgb, var(--sc-color-surface-elevated, #fff) 85%, var(--sc-color-action-primary, #087e5c) 15%)"
-          stroke="var(--sc-color-border-strong, #b9afa1)"
+          fill="color-mix(in srgb, var(--sc-color-surface-elevated) 85%, var(--sc-color-action-primary) 15%)"
+          stroke="var(--sc-color-border-strong)"
           strokeWidth="1.2"
         />
         <polygon
           points={`${r},${t} ${r},${b} ${r + extX},${b + extY} ${r + extX},${t + extY}`}
-          fill="color-mix(in srgb, var(--sc-color-surface-2, #f7f4ee) 70%, var(--sc-color-text-secondary, #607068) 30%)"
-          stroke="var(--sc-color-border-strong, #b9afa1)"
+          fill="color-mix(in srgb, var(--sc-color-surface-2) 70%, var(--sc-color-text-secondary) 30%)"
+          stroke="var(--sc-color-border-strong)"
           strokeWidth="1.2"
         />
 
@@ -253,7 +253,7 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
           y1={isoY}
           x2={r + extX + 12}
           y2={isoY + extY}
-          stroke="var(--sc-color-brand-secondary, #1f88b8)"
+          stroke="var(--sc-color-brand-secondary)"
           strokeWidth="1.4"
           strokeDasharray="4 2"
         />
@@ -264,7 +264,7 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
           fontSize="7.5"
           fontWeight="700"
           fontFamily="var(--sc-font-mono)"
-          fill="var(--sc-color-brand-secondary, #1f88b8)"
+          fill="var(--sc-color-brand-secondary)"
         >
           E.N.
         </text>
@@ -272,20 +272,20 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
         {/* Gradiente de tensiones */}
         <defs>
           <linearGradient id="stress-gradient-iso" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--sc-violet-500, #7d63c9)" stopOpacity="0.85" />
-            <stop offset="50%" stopColor="var(--sc-color-surface-1, #fffcf7)" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="var(--sc-color-action-primary, #087e5c)" stopOpacity="0.85" />
+            <stop offset="0%" stopColor="var(--sc-color-state-info)" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="var(--sc-color-surface-1)" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="var(--sc-color-action-primary)" stopOpacity="0.85" />
           </linearGradient>
         </defs>
 
         {/* Etiquetas de tensiones extremas */}
         <g transform={`translate(${l - 8}, ${t + 4})`}>
-          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-violet-500, #7d63c9)">
+          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-color-state-info)">
             σ_sup = {formatFixed(sigmaTop, 1)} MPa
           </text>
         </g>
         <g transform={`translate(${l - 8}, ${b})`}>
-          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-color-action-primary, #087e5c)">
+          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-color-action-primary)">
             σ_inf = {formatFixed(sigmaBot, 1)} MPa
           </text>
         </g>

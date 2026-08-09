@@ -8167,19 +8167,19 @@ button:not(:disabled):active,.selection-card:active {
   margin: 8px 12px 4px;
   border-radius: var(--sc-radius-md, 10px);
   background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 96%, var(--sc-color-bg-app, transparent));
-  border: 1.5px solid var(--sc-color-border-subtle, var(--border));
+  border: 1.5px solid var(--sc-color-border-soft, var(--border));
   border-left-width: 4px;
   overflow: hidden;
   transition: border-color 0.2s ease;
 }
 
-.member-narrative-card--ok     { border-left-color: #22c55e; }
-.member-narrative-card--warning { border-left-color: #f97316; }
-.member-narrative-card--overstressed { border-left-color: #ef4444; animation: narrative-warning-pulse 1.8s ease-in-out infinite; }
+.member-narrative-card--ok     { border-left-color: var(--sc-color-state-success); }
+.member-narrative-card--warning { border-left-color: var(--sc-color-state-warning); }
+.member-narrative-card--overstressed { border-left-color: var(--sc-color-state-critical); animation: narrative-warning-pulse 1.8s ease-in-out infinite; }
 
 @keyframes narrative-warning-pulse {
-  0%, 100% { border-left-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-  50%       { border-left-color: #dc2626; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+  0%, 100% { border-left-color: var(--sc-color-state-critical); box-shadow: 0 0 0 0 rgba(179, 38, 30, 0); }
+  50%       { border-left-color: var(--sc-color-state-error); box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.18); }
 }
 
 .member-narrative-header {
@@ -8187,7 +8187,7 @@ button:not(:disabled):active,.selection-card:active {
   align-items: center;
   gap: 5px;
   padding: 7px 10px 4px;
-  color: var(--sc-color-text-secondary, var(--muted));
+  color: var(--sc-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -8204,19 +8204,19 @@ button:not(:disabled):active,.selection-card:active {
   letter-spacing: 0;
 }
 
-.member-narrative-badge[data-tone="ok"]          { background: color-mix(in srgb, #22c55e 15%, transparent); color: #16a34a; }
-.member-narrative-badge[data-tone="warning"]     { background: color-mix(in srgb, #f97316 15%, transparent); color: #ea6c00; }
-.member-narrative-badge[data-tone="overstressed"] { background: color-mix(in srgb, #ef4444 18%, transparent); color: #dc2626; }
+.member-narrative-badge[data-tone="ok"]          { background: color-mix(in srgb, var(--sc-color-state-success) 15%, transparent); color: var(--sc-color-state-success); }
+.member-narrative-badge[data-tone="warning"]     { background: color-mix(in srgb, var(--sc-color-state-warning) 15%, transparent); color: var(--sc-color-state-warning-foreground); }
+.member-narrative-badge[data-tone="overstressed"] { background: color-mix(in srgb, var(--sc-color-state-critical) 18%, transparent); color: var(--sc-color-state-critical); }
 
-:root[data-theme='dark'] .member-narrative-badge[data-tone="ok"]          { color: #4ade80; }
-:root[data-theme='dark'] .member-narrative-badge[data-tone="warning"]     { color: #fb923c; }
-:root[data-theme='dark'] .member-narrative-badge[data-tone="overstressed"] { color: #f87171; }
+:root[data-theme='dark'] .member-narrative-badge[data-tone="ok"]          { color: var(--sc-color-state-success); }
+:root[data-theme='dark'] .member-narrative-badge[data-tone="warning"]     { color: var(--sc-color-state-warning); }
+:root[data-theme='dark'] .member-narrative-badge[data-tone="overstressed"] { color: var(--sc-color-state-critical); }
 
 /* Barra de progreso de utilización */
 .member-narrative-bar-wrap {
   position: relative;
   height: 4px;
-  background: color-mix(in srgb, var(--border, #ddd) 60%, transparent);
+  background: color-mix(in srgb, var(--sc-color-border) 60%, transparent);
   margin: 0 10px 6px;
   border-radius: 2px;
   overflow: visible;
@@ -8227,9 +8227,9 @@ button:not(:disabled):active,.selection-card:active {
   border-radius: 2px;
   transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.member-narrative-bar[data-tone="ok"]           { background: linear-gradient(90deg, #22c55e, #84cc16); }
-.member-narrative-bar[data-tone="warning"]      { background: linear-gradient(90deg, #f59e0b, #f97316); }
-.member-narrative-bar[data-tone="overstressed"] { background: linear-gradient(90deg, #f97316, #ef4444); }
+.member-narrative-bar[data-tone="ok"]           { background: linear-gradient(90deg, var(--sc-color-state-success), var(--sc-color-action-primary)); }
+.member-narrative-bar[data-tone="warning"]      { background: linear-gradient(90deg, var(--sc-color-state-warning), var(--sc-color-state-warning-foreground)); }
+.member-narrative-bar[data-tone="overstressed"] { background: linear-gradient(90deg, var(--sc-color-state-warning), var(--sc-color-state-critical)); }
 
 /* Línea de umbral 85% */
 .member-narrative-bar-threshold {
@@ -8237,7 +8237,7 @@ button:not(:disabled):active,.selection-card:active {
   top: -3px;
   bottom: -3px;
   width: 2px;
-  background: var(--sc-color-text-secondary, var(--muted));
+  background: var(--sc-color-text-secondary);
   opacity: 0.4;
   border-radius: 1px;
 }
@@ -8247,7 +8247,7 @@ button:not(:disabled):active,.selection-card:active {
   padding: 4px 10px 10px;
   font-size: 11.5px;
   line-height: 1.55;
-  color: var(--sc-color-text-secondary, var(--muted));
+  color: var(--sc-color-text-secondary);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -8261,15 +8261,6 @@ button:not(:disabled):active,.selection-card:active {
    AG-032 · 2026-08-09
    ============================================================ */
 
-/* CSS tokens de colores Heatmap (sobrescribibles por tema) */
-:root {
-  --sc-heatmap-safe:     #22c55e;
-  --sc-heatmap-low:      #84cc16;
-  --sc-heatmap-moderate: #f59e0b;
-  --sc-heatmap-warning:  #f97316;
-  --sc-heatmap-critical: #ef4444;
-}
-
 /* Botón toggle del Heatmap en el Chrome del canvas */
 .canvas-heatmap-toggle {
   display: inline-flex;
@@ -8277,9 +8268,9 @@ button:not(:disabled):active,.selection-card:active {
   gap: 4px;
   padding: 3px 9px;
   border-radius: 99px;
-  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-subtle, var(--border)) 80%, transparent);
-  background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 88%, transparent);
-  color: var(--sc-color-text-secondary, var(--muted));
+  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-soft) 80%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  color: var(--sc-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -8290,19 +8281,19 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 .canvas-heatmap-toggle:hover {
-  background: color-mix(in srgb, var(--sc-heatmap-safe) 15%, var(--sc-color-surface-1, var(--surface)));
-  border-color: var(--sc-heatmap-safe);
-  color: var(--sc-color-text-primary, var(--text));
+  background: color-mix(in srgb, var(--sc-color-state-success) 15%, var(--sc-color-surface-1));
+  border-color: var(--sc-color-state-success);
+  color: var(--sc-color-text-primary);
 }
 
 .canvas-heatmap-toggle.active {
   background: linear-gradient(135deg,
-    color-mix(in srgb, var(--sc-heatmap-safe) 18%, var(--sc-color-surface-1, var(--surface))),
-    color-mix(in srgb, var(--sc-heatmap-critical) 12%, var(--sc-color-surface-1, var(--surface)))
+    color-mix(in srgb, var(--sc-color-state-success) 18%, var(--sc-color-surface-1)),
+    color-mix(in srgb, var(--sc-color-state-critical) 12%, var(--sc-color-surface-1))
   );
-  border-color: var(--sc-heatmap-moderate);
-  color: var(--sc-color-text-primary, var(--text));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc-heatmap-moderate) 30%, transparent);
+  border-color: var(--sc-color-state-warning);
+  color: var(--sc-color-text-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc-color-state-warning) 30%, transparent);
 }
 
 /* Cuando el heatmap está activo, las barras con color inline tienen transición suave */
@@ -8322,9 +8313,9 @@ button:not(:disabled):active,.selection-card:active {
   gap: 4px;
   padding: 3px 9px;
   border-radius: 99px;
-  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-subtle, var(--border)) 80%, transparent);
-  background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 88%, transparent);
-  color: var(--sc-color-text-secondary, var(--muted));
+  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-soft) 80%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  color: var(--sc-color-text-secondary);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -8335,13 +8326,13 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 .canvas-oscillation-toggle:hover {
-  background: color-mix(in srgb, var(--deformed) 15%, var(--sc-color-surface-1, var(--surface)));
+  background: color-mix(in srgb, var(--deformed) 15%, var(--sc-color-surface-1));
   border-color: var(--deformed);
-  color: var(--sc-color-text-primary, var(--text));
+  color: var(--sc-color-text-primary);
 }
 
 .canvas-oscillation-toggle.active {
-  background: color-mix(in srgb, var(--deformed) 22%, var(--sc-color-surface-1, var(--surface)));
+  background: color-mix(in srgb, var(--deformed) 22%, var(--sc-color-surface-1));
   border-color: var(--deformed);
   color: var(--deformed);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--deformed) 35%, transparent);
@@ -8368,53 +8359,53 @@ button:not(:disabled):active,.selection-card:active {
   pointer-events: none;
 }
 .cad-dim-line {
-  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke: var(--sc-color-brand-secondary);
   stroke-width: 1.2;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 .cad-dim-extension {
-  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke: var(--sc-color-brand-secondary);
   stroke-width: 0.9;
   stroke-dasharray: 2 2;
   opacity: 0.65;
   vector-effect: non-scaling-stroke;
 }
 .cad-dim-tick {
-  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  stroke: var(--sc-color-brand-secondary);
   stroke-width: 1.5;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
 .cad-dim-badge-bg {
-  fill: var(--sc-color-surface-elevated, #ffffff);
-  stroke: var(--sc-color-brand-secondary, #1f88b8);
+  fill: var(--sc-color-surface-elevated);
+  stroke: var(--sc-color-brand-secondary);
   stroke-width: 1.1;
-  filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--sc-black, #000) 10%, transparent));
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.1));
 }
 .cad-dim-badge-text {
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
   font-size: 8.5px;
   font-weight: 700;
-  fill: var(--sc-color-text-primary, #23312c);
+  fill: var(--sc-color-text-primary);
 }
 .cad-dim-subbadge-bg {
-  fill: var(--sc-color-surface-inset, #f1ede5);
-  stroke: var(--sc-color-border-strong, #b9afa1);
+  fill: var(--sc-color-surface-inset);
+  stroke: var(--sc-color-border-strong);
   stroke-width: 0.9;
 }
 .cad-dim-subbadge-text {
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
   font-size: 7px;
   font-weight: 600;
-  fill: var(--sc-color-text-secondary, #607068);
+  fill: var(--sc-color-text-secondary);
 }
 .cad-dimension-overlay.is-selected .cad-dim-line {
   stroke-width: 1.6;
 }
 .cad-dimension-overlay.is-selected .cad-dim-badge-bg {
   stroke-width: 1.5;
-  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--sc-color-brand-secondary, #1f88b8) 25%, transparent));
+  filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--sc-color-brand-secondary) 25%, transparent));
 }
 
 /* P2 · Diagramas con Hachurado de Mohr & Sellos de Puntos Críticos */
@@ -8435,7 +8426,7 @@ button:not(:disabled):active,.selection-card:active {
 }
 .diagram-critical-seal-dot {
   fill: currentColor;
-  stroke: var(--sc-color-surface-elevated, #ffffff);
+  stroke: var(--sc-color-surface-elevated);
   stroke-width: 1.5;
 }
 .diagram-shape.axial .diagram-critical-seal-dot { fill: var(--axial); }
@@ -8443,20 +8434,20 @@ button:not(:disabled):active,.selection-card:active {
 .diagram-shape.moment .diagram-critical-seal-dot { fill: var(--moment); }
 
 .diagram-critical-seal-bg {
-  fill: var(--sc-color-surface-elevated, #ffffff);
+  fill: var(--sc-color-surface-elevated);
   stroke: currentColor;
   stroke-width: 1.2;
-  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--sc-black, #000) 12%, transparent));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
 }
 .diagram-shape.axial .diagram-critical-seal-bg { stroke: var(--axial); }
 .diagram-shape.shear .diagram-critical-seal-bg { stroke: var(--shear); }
 .diagram-shape.moment .diagram-critical-seal-bg { stroke: var(--moment); }
 
 .diagram-critical-seal-text {
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
   font-size: 7.5px;
   font-weight: 700;
-  fill: var(--sc-color-text-primary, #23312c);
+  fill: var(--sc-color-text-primary);
 }
 @keyframes diagram-seal-pop {
   from { opacity: 0; transform: scale(0.6); }
@@ -8465,10 +8456,10 @@ button:not(:disabled):active,.selection-card:active {
 
 /* P4 · Matriz de Rigidez Táctil & Heatmap */
 .matrix-view {
-  background: var(--sc-color-surface-1, #fffcf7);
-  border-radius: var(--sc-radius-lg, 16px);
-  border: 1px solid var(--sc-color-border, #ded8ce);
-  box-shadow: var(--sc-shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+  background: var(--sc-color-surface-1);
+  border-radius: var(--sc-radius-lg);
+  border: 1px solid var(--sc-color-border);
+  box-shadow: var(--shadow-sm);
   padding: 16px;
   margin-block: 12px;
 }
@@ -8484,28 +8475,28 @@ button:not(:disabled):active,.selection-card:active {
   gap: 8px;
 }
 .matrix-dim-badge {
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: var(--sc-color-surface-inset, #f1ede5);
-  color: var(--sc-color-text-secondary, #607068);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-text-secondary);
 }
 .matrix-type-tag {
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
   font-size: 9.5px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 99px;
-  background: var(--sc-green-50, #e8f5ee);
-  color: var(--sc-green-700, #06684c);
+  background: var(--sc-color-action-subtle);
+  color: var(--sc-color-action-primary);
 }
 .matrix-tactile-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 4px;
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  font-family: var(--sc-font-mono);
 }
 .dof-pill {
   display: inline-block;
@@ -8513,47 +8504,47 @@ button:not(:disabled):active,.selection-card:active {
   font-weight: 700;
   padding: 2px 5px;
   border-radius: 4px;
-  background: var(--sc-color-surface-inset, #f1ede5);
-  color: var(--sc-color-text-secondary, #607068);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-text-secondary);
 }
 .matrix-tactile-cell {
   text-align: right;
   padding: 6px 8px;
   border-radius: 6px;
-  border: 1px solid var(--sc-color-border-soft, #ebe5dc);
-  background: var(--sc-color-surface-inset, #f1ede5);
+  border: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-inset);
   font-size: 10.5px;
   font-weight: 600;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .matrix-tactile-cell.nonzero:hover {
   transform: scale(1.08);
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--sc-color-action-primary, #087e5c) 25%, transparent);
-  border-color: var(--sc-color-action-primary, #087e5c);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--sc-color-action-primary) 25%, transparent);
+  border-color: var(--sc-color-action-primary);
   z-index: 2;
   position: relative;
 }
 .matrix-tactile-cell.zero {
   text-align: center;
-  color: var(--sc-color-text-disabled, #9aa0a1);
+  color: var(--sc-color-text-disabled);
   background: transparent;
   border-color: transparent;
 }
 .matrix-num-val {
-  color: var(--sc-color-text-primary, #23312c);
+  color: var(--sc-color-text-primary);
 }
 .matrix-tactile-cell.negative .matrix-num-val {
-  color: var(--sc-violet-500, #7d63c9);
+  color: var(--sc-color-state-info);
 }
 
 /* P5 · Visor 3D Isométrico Toggle */
 .section-viewer-mode-toggle {
   display: inline-flex;
   gap: 4px;
-  background: var(--sc-color-surface-inset, #f1ede5);
+  background: var(--sc-color-surface-inset);
   padding: 3px;
   border-radius: 8px;
-  border: 1px solid var(--sc-color-border, #ded8ce);
+  border: 1px solid var(--sc-color-border);
 }
 .section-toggle-btn {
   display: inline-flex;
@@ -8563,16 +8554,16 @@ button:not(:disabled):active,.selection-card:active {
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--sc-color-text-secondary, #607068);
+  color: var(--sc-color-text-secondary);
   font-size: 10.5px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 .section-toggle-btn.active {
-  background: var(--sc-color-surface-elevated, #ffffff);
-  color: var(--sc-color-action-primary, #087e5c);
-  box-shadow: var(--sc-shadow-sm, 0 2px 6px rgba(0,0,0,0.06));
+  background: var(--sc-color-surface-elevated);
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 /* P6 · Keycaps en Botones de Herramientas */
@@ -8584,18 +8575,18 @@ button:not(:disabled):active,.selection-card:active {
   height: 15px;
   padding: 0 3px;
   border-radius: 4px;
-  background: var(--sc-color-surface-inset, #f1ede5);
-  border: 1px solid var(--sc-color-border, #ded8ce);
-  box-shadow: 0 1px 0 var(--sc-color-border-strong, #b9afa1);
-  font-family: var(--sc-font-mono, 'IBM Plex Mono', monospace);
+  background: var(--sc-color-surface-inset);
+  border: 1px solid var(--sc-color-border);
+  box-shadow: 0 1px 0 var(--sc-color-border-strong);
+  font-family: var(--sc-font-mono);
   font-size: 8.5px;
   font-weight: 700;
-  color: var(--sc-color-text-secondary, #607068);
+  color: var(--sc-color-text-secondary);
   pointer-events: none;
 }
 .sc-tool-button.is-active .sc-tool-keycap {
-  background: color-mix(in srgb, var(--sc-color-action-primary, #087e5c) 20%, var(--sc-color-surface-elevated, #ffffff));
-  border-color: var(--sc-color-action-primary, #087e5c);
-  color: var(--sc-color-action-primary, #087e5c);
+  background: color-mix(in srgb, var(--sc-color-action-primary) 20%, var(--sc-color-surface-elevated));
+  border-color: var(--sc-color-action-primary);
+  color: var(--sc-color-action-primary);
 }
 

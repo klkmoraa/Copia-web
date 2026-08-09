@@ -851,7 +851,7 @@ const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => 
                   const isZero = absVal < 1e-12;
                   const ratio = isZero ? 0 : Math.min(1, Math.sqrt(absVal / maxAbsValue));
                   const heatStyle = !isZero ? {
-                    backgroundColor: `color-mix(in srgb, var(--sc-color-action-primary, #087e5c) ${Math.round(ratio * 28 + 6)}%, var(--sc-color-surface-1, #fffcf7))`,
+                    backgroundColor: `color-mix(in srgb, var(--sc-color-action-primary) ${Math.round(ratio * 28 + 6)}%, var(--sc-color-surface-1))`,
                   } : undefined;
 
                   return (
@@ -859,7 +859,7 @@ const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => 
                       key={`${row}-${column}`}
                       className={`matrix-tactile-cell${isZero ? ' zero' : ' nonzero'}${value < 0 ? ' negative' : ''}`}
                       style={heatStyle}
-                      title={!isZero ? `${label} × ${trace.columnLabels[column]}: ${value.toExponential(4)}` : undefined}
+                      title={!isZero ? `${label} × ${trace.columnLabels[column]}: ${formatScientific(value, 4)}` : undefined}
                     >
                       {isZero ? <span className="matrix-dot">·</span> : (
                         <span className="matrix-num-val">

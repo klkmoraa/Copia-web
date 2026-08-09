@@ -12,6 +12,7 @@ describe('editor layer state', () => {
       labels: true,
       help: true,
       diagnostics: true,
+      heatmap: false,
     });
   });
 

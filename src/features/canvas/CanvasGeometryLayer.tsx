@@ -68,11 +68,11 @@ const CanvasGeometryLayerImpl = ({
 
   /** P6: computes heatmap stroke color for a demand ratio η. */
   const heatmapColor = (ratio: number): string => {
-    if (ratio >= 1.0) return 'var(--sc-heatmap-critical, #ef4444)';
-    if (ratio >= 0.85) return 'var(--sc-heatmap-warning, #f97316)';
-    if (ratio >= 0.6) return 'var(--sc-heatmap-moderate, #f59e0b)';
-    if (ratio >= 0.3) return 'var(--sc-heatmap-low, #84cc16)';
-    return 'var(--sc-heatmap-safe, #22c55e)';
+    if (ratio >= 1.0) return 'var(--sc-color-state-critical)';
+    if (ratio >= 0.85) return 'var(--sc-color-state-error)';
+    if (ratio >= 0.6) return 'var(--sc-color-state-warning)';
+    if (ratio >= 0.3) return 'var(--sc-color-action-primary)';
+    return 'var(--sc-color-state-success)';
   };
 
   const renderSupport = (node: NodeModel) => {
