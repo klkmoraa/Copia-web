@@ -3,6 +3,7 @@ import type { StandardSection, SectionShapeType } from '../../data/standardSecti
 import { toDisplay, unitLabel } from '../../engine/units';
 import type { UnitSystemId } from '../../types';
 import { formatInspectorValue } from './numericFormatting';
+import { formatFixed } from '../../utils/numberFormat';
 
 export interface SectionViewer2DProps {
   section?: StandardSection | null;
@@ -192,8 +193,8 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
     }
   };
 
-  const dimWidthMm = (width * (units === 'kN-m' ? 1000 : 1)).toFixed(0);
-  const dimDepthMm = (depth * (units === 'kN-m' ? 1000 : 1)).toFixed(0);
+  const dimWidthMm = formatFixed(width * (units === 'kN-m' ? 1000 : 1), 0, 'inspector');
+  const dimDepthMm = formatFixed(depth * (units === 'kN-m' ? 1000 : 1), 0, 'inspector');
 
   return (
     <div className="section-viewer-2d-card" data-testid="section-viewer-2d">
@@ -327,7 +328,7 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
         </div>
         <div className="section-chip">
           <small>Mód. Elástico (W)</small>
-          <strong>{(Wel * 1e6).toFixed(0)} cm³</strong>
+          <strong>{formatFixed(Wel * 1e6, 0, 'inspector')} cm³</strong>
         </div>
       </div>
     </div>

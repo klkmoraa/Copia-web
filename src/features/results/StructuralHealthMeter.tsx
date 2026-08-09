@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { standardSections } from '../../data/standardSections';
 import type { AnalysisResult, ProjectModel } from '../../types';
+import { formatFixed } from '../../utils/numberFormat';
 
 export interface StructuralHealthMeterProps {
   project: ProjectModel;
@@ -152,12 +153,12 @@ export const StructuralHealthMeter: React.FC<StructuralHealthMeterProps> = ({
 
         <div className="health-detail-item">
           <small>Tensión Máx. (σ_max)</small>
-          <strong>{critical.sigmaTotal.toFixed(1)} MPa</strong>
+          <strong>{formatFixed(critical.sigmaTotal, 1, 'inspector')} MPa</strong>
         </div>
 
         <div className="health-detail-item">
           <small>Factor de Seguridad (SF)</small>
-          <strong>{safetyFactor >= 10 ? '>10' : safetyFactor.toFixed(2)}</strong>
+          <strong>{safetyFactor >= 10 ? '>10' : formatFixed(safetyFactor, 2, 'inspector')}</strong>
         </div>
 
         <div className="health-detail-item">
