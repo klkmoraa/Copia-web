@@ -7,6 +7,7 @@ import { ToolRail } from '../canvas/ToolRail';
 import { TopBar } from '../topbar/TopBar';
 import { ClassroomGuide } from '../classroom/ClassroomGuide';
 import { ToastNotification } from './ToastNotification';
+import { CommandPalette } from './CommandPalette';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
@@ -17,6 +18,7 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
 export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -59,6 +61,21 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
 
   useEffect(() => {
     return onWorkspaceCommand('expand-mobile-results', () => setMobileInspectorOpen(false));
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
+    return onWorkspaceCommand('open-command-palette', () => setCommandPaletteOpen(true));
   }, []);
 
   useEffect(() => {
@@ -131,6 +148,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
         }} />
         <ResultsPanel />
         <ToastNotification />
+        <CommandPalette isOpen={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
       </>}
     backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}
     inspector={<Inspector

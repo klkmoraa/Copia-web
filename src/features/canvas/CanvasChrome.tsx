@@ -3,6 +3,8 @@ import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
 import { CanvasLayers } from './CanvasLayers';
+import { CanvasMiniMap } from './CanvasMiniMap';
+import { useProjectModel } from '../../store/ProjectContext';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -42,12 +44,14 @@ export const CanvasChrome = ({
   onFit,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
+  const { project } = useProjectModel();
 
   useEffect(() => {
     return onWorkspaceCommand('fit-canvas', () => onFit());
   }, [onFit]);
 
   return <>
+    <CanvasMiniMap project={project} onFit={onFit} />
     <div className={`canvas-mode-badge${placementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
       <strong>{modeLabel}</strong>
       {placementInstruction ? <span className="canvas-action-instruction">{placementInstruction}</span> : showHelp ? <>
