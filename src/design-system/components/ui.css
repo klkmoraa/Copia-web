@@ -461,17 +461,19 @@
 .sc-tool-button {
   --sc-tool-color: var(--sc-color-tool-navigation);
   width: 100%;
-  min-height: 54px;
+  min-height: 42px;
   display: grid;
   grid-template-columns: var(--sc-size-icon-tool) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--sc-space-3);
-  padding: var(--sc-space-2) var(--sc-space-3);
-  border: var(--sc-border-width) solid transparent;
-  border-radius: var(--sc-radius-md);
-  background: transparent;
-  color: var(--sc-color-text-primary);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-2);
+  color: var(--sc-color-text-secondary);
   text-align: left;
+  box-shadow: var(--sc-shadow-clay-xs);
+  transition: background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard), box-shadow var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
 }
 .sc-tool-button--structure { --sc-tool-color: var(--sc-color-tool-structure); }
 .sc-tool-button--load { --sc-tool-color: var(--sc-color-tool-point-load); }
@@ -480,19 +482,39 @@
 .sc-tool-button--dimension { --sc-tool-color: var(--sc-color-tool-dimension); }
 .sc-tool-button--cut { --sc-tool-color: var(--sc-color-tool-cut); }
 .sc-tool-button--destructive { --sc-tool-color: var(--sc-color-tool-destructive); }
-.sc-tool-button:not(:disabled):hover { background: color-mix(in srgb, var(--sc-tool-color) 7%, var(--sc-color-surface-1)); }
-.sc-tool-button.is-active { border-color: color-mix(in srgb, var(--sc-tool-color) 34%, var(--sc-color-border)); background: color-mix(in srgb, var(--sc-tool-color) 10%, var(--sc-color-surface-1)); }
+.sc-tool-button:not(:disabled):hover {
+  background: var(--sc-color-surface-elevated);
+  border-color: var(--sc-color-border);
+  color: var(--sc-color-text-primary);
+  box-shadow: var(--sc-shadow-clay-sm);
+  transform: translateY(-1.5px);
+}
+.sc-tool-button.is-active {
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft));
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  color: var(--sc-color-action-primary);
+  transform: translateY(1.5px) scale(0.985);
+}
 .sc-tool-button__icon { width: var(--sc-size-icon-tool); height: var(--sc-size-icon-tool); display: grid; place-items: center; color: var(--sc-tool-color); }
+.sc-tool-button.is-active .sc-tool-button__icon { color: var(--sc-color-action-primary); }
 .sc-tool-button__copy { min-width: 0; display: grid; gap: 2px; }
-.sc-tool-button__copy strong { overflow: hidden; text-overflow: ellipsis; font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-semibold); white-space: nowrap; }
+.sc-tool-button__copy strong { overflow: hidden; text-overflow: ellipsis; font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-semibold); white-space: nowrap; color: inherit; }
+.sc-tool-button.is-active .sc-tool-button__copy strong { color: var(--sc-color-action-primary); font-weight: 750; }
 .sc-tool-button__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
 .sc-tool-button kbd { color: var(--sc-color-text-muted); font: inherit; font-size: var(--sc-font-size-caption); }
+.sc-tool-button.is-active kbd {
+  background: color-mix(in srgb, var(--sc-color-action-primary) 14%, var(--sc-color-surface-inset));
+  color: var(--sc-color-action-primary);
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 30%, transparent);
+  box-shadow: inset 1px 1.5px 2px rgba(0, 0, 0, 0.45);
+}
 .sc-tool-button.is-compact { width: var(--sc-control-height-touch); min-height: var(--sc-control-height-touch); grid-template-columns: 1fr; justify-items: center; padding: 0; }
 .sc-tool-button.is-compact .sc-tool-button__copy { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 
 .sc-tool-group { display: grid; gap: var(--sc-space-2); }
 .sc-tool-group > h3 { margin: 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); font-weight: var(--sc-font-weight-bold); letter-spacing: 0.06em; text-transform: uppercase; }
-.sc-tool-group__items { display: grid; gap: var(--sc-space-1); }
+.sc-tool-group__items { display: grid; gap: 6px; }
 .sc-tool-group.is-compact .sc-tool-group__items { grid-template-columns: repeat(auto-fit, var(--sc-control-height-touch)); }
 
 .sc-status-strip {

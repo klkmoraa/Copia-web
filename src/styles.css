@@ -995,37 +995,44 @@ button.analysis-status:active { transform: scale(0.96); }
 .tool-button.active,
 .tool-button.is-active,
 .sc-tool-button.is-active {
-  background: linear-gradient(150deg, color-mix(in srgb, var(--sc-color-action-primary) 85%, var(--sc-color-surface-elevated)) 0%, var(--sc-color-action-primary) 100%);
-  color: var(--sc-color-action-foreground);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-primary);
   font-weight: 750;
-  border: 1px solid color-mix(in srgb, var(--sc-color-action-primary) 45%, var(--sc-color-surface-elevated));
-  box-shadow: 3px 5px 12px rgba(0, 0, 0, 0.42), inset 0 1.5px 0 rgba(255, 255, 255, 0.35), inset -2px -2px 5px rgba(0, 0, 0, 0.35);
-  transform: translateY(-1px);
-}
-:root:not([data-theme='dark']) .tool-button.active,
-:root:not([data-theme='dark']) .tool-button.is-active,
-:root:not([data-theme='dark']) .sc-tool-button.is-active {
-  box-shadow: var(--sc-shadow-clay-sm);
+  border: 1px solid color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft));
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: translateY(1.5px) scale(0.985);
 }
 .tool-button.active svg,
 .tool-button.is-active svg,
 .sc-tool-button.is-active svg,
 .sc-tool-button.is-active .sc-tool-button__icon svg {
-  color: var(--sc-color-action-foreground);
+  color: var(--sc-color-action-primary);
 }
 .tool-button.active span,
 .tool-button.is-active span,
 .sc-tool-button.is-active .sc-tool-button__copy strong {
-  color: var(--sc-color-action-foreground) !important;
+  color: var(--sc-color-action-primary) !important;
 }
 .tool-button.active kbd,
 .tool-button.is-active kbd,
 .sc-tool-button.is-active kbd,
 .sc-tool-button.is-active .sc-tool-keycap {
-  background: color-mix(in srgb, var(--sc-color-bg-app) 35%, transparent);
-  color: var(--sc-color-action-foreground);
-  border: 1px solid color-mix(in srgb, var(--sc-color-action-foreground) 25%, transparent);
-  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--sc-color-action-primary) 14%, var(--sc-color-surface-inset));
+  color: var(--sc-color-action-primary);
+  border: 1px solid color-mix(in srgb, var(--sc-color-action-primary) 30%, transparent);
+  box-shadow: inset 1px 1.5px 2px rgba(0, 0, 0, 0.45);
+}
+.tool-group { display: flex; flex-direction: column; gap: 4px; }
+.tool-group-actions { display: flex; flex-direction: column; gap: 5px; }
+.tool-group-heading {
+  font-family: var(--sc-font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sc-color-text-muted);
+  padding: 6px 4px 2px;
+  margin: 0;
 }
 .toolbar-spacer { flex: 1; }
 .selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
