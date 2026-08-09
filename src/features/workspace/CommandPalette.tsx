@@ -14,10 +14,16 @@ import {
   Eye,
   Crosshair,
   Compass,
+  GraduationCap,
+  Download,
+  Box,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
 import { exampleProjects } from '../../data/defaultProject';
+import { standardSections } from '../../data/standardSections';
+import { exportProjectJson } from '../../utils/export';
+import { formatFixed } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from './workspaceCommands';
 
 export interface CommandPaletteProps {
@@ -37,7 +43,19 @@ interface CommandItem {
 
 export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
   const { t } = useI18n();
-  const { replaceProject, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const {
+    project,
+    replaceProject,
+    updateProject,
+    updateProjectView,
+    setSelection,
+    selection,
+    analyze,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useProject();
   const { theme, setTheme, setActiveTool } = useWorkspaceUI();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -111,6 +129,62 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         icon: theme === 'dark' ? Sun : Moon,
         action: () => {
           setTheme(theme === 'dark' ? 'light' : 'dark');
+          onClose();
+        },
+      },
+      {
+        id: 'action-toggle-classroom',
+        category: t('palette.categoryView') || 'Vista y Temas',
+        label: project.settings.calculationMode === 'classroom'
+          ? 'Cambiar a Modo Completo (Profesional)'
+          : 'Cambiar a Modo Aula (Pedagógico)',
+        description: 'Alternar experiencia pedagógica o ingeniería completa',
+        icon: GraduationCap,
+        action: () => {
+          updateProjectView((draft) => ({
+            ...draft,
+            settings: {
+              ...draft.settings,
+              calculationMode: draft.settings.calculationMode === 'classroom' ? 'complete' : 'classroom',
+            },
+          }));
+          onClose();
+        },
+      },
+      {
+        id: 'action-toggle-grid',
+        category: t('palette.categoryView') || 'Vista y Temas',
+        label: project.settings.showGrid ? 'Ocultar Rejilla (Grid)' : 'Mostrar Rejilla (Grid)',
+        icon: Grid,
+        action: () => {
+          updateProjectView((draft) => ({
+            ...draft,
+            settings: { ...draft.settings, showGrid: !draft.settings.showGrid },
+          }));
+          onClose();
+        },
+      },
+      {
+        id: 'action-toggle-snap',
+        category: t('palette.categoryView') || 'Vista y Temas',
+        label: project.settings.snap ? 'Desactivar SNAP Imantación' : 'Activar SNAP Imantación',
+        icon: Magnet,
+        action: () => {
+          updateProjectView((draft) => ({
+            ...draft,
+            settings: { ...draft.settings, snap: !draft.settings.snap },
+          }));
+          onClose();
+        },
+      },
+      {
+        id: 'action-export-json',
+        category: t('palette.categoryActions') || 'Acciones',
+        label: 'Exportar Proyecto como JSON',
+        description: 'Descargar archivo de proyecto structureCo',
+        icon: Download,
+        action: () => {
+          exportProjectJson(project);
           onClose();
         },
       },
@@ -228,6 +302,53 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
           onClose();
         },
       },
+      // Quick Standard Sections for Members
+      ...standardSections.slice(0, 8).map((sec) => ({
+        id: `section-${sec.name}`,
+        category: 'Perfiles de Catálogo',
+        label: `Asignar sección ${sec.name}`,
+        description: `${sec.shapeType.toUpperCase()} · A = ${formatFixed(sec.area * 1e4, 1)} cm², I = ${formatFixed(sec.inertiaX * 1e8, 0)} cm⁴`,
+        icon: Box,
+        action: () => {
+          updateProject((draft) => {
+            const targetMembers = selection?.kind === 'member'
+              ? draft.members.filter((m) => m.id === selection.id)
+              : selection?.kind === 'multi'
+                ? draft.members.filter((m) => selection.memberIds.includes(m.id))
+                : draft.members;
+            for (const member of targetMembers) {
+              member.A = sec.area;
+              member.I = sec.inertiaX;
+            }
+            return draft;
+          });
+          onClose();
+        },
+      })),
+      // Direct Member Navigation
+      ...project.members.map((member) => ({
+        id: `member-${member.id}`,
+        category: 'Navegación de Barras',
+        label: `Barra ${member.id} (${member.i} → ${member.j})`,
+        description: `Tipo: ${member.type} · E = ${formatFixed(member.E / 1e6, 0)} GPa`,
+        icon: Compass,
+        action: () => {
+          setSelection({ kind: 'member', id: member.id });
+          onClose();
+        },
+      })),
+      // Direct Node Navigation
+      ...project.nodes.map((node) => ({
+        id: `node-${node.id}`,
+        category: 'Navegación de Nodos',
+        label: `Nodo ${node.id} (X: ${formatFixed(node.x, 2)}, Y: ${formatFixed(node.y, 2)})`,
+        description: `Apoyo: ${node.support.type}`,
+        icon: Crosshair,
+        action: () => {
+          setSelection({ kind: 'node', id: node.id });
+          onClose();
+        },
+      })),
       // Templates
       ...exampleProjects.map((ex) => ({
         id: `template-${ex.name}`,
@@ -242,7 +363,24 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       })),
     ];
     return list;
-  }, [t, analyze, onClose, canUndo, undo, canRedo, redo, theme, setTheme, setActiveTool, replaceProject]);
+  }, [
+    t,
+    analyze,
+    onClose,
+    canUndo,
+    undo,
+    canRedo,
+    redo,
+    theme,
+    setTheme,
+    setActiveTool,
+    replaceProject,
+    project,
+    updateProject,
+    updateProjectView,
+    setSelection,
+    selection,
+  ]);
 
   const filteredCommands = useMemo(() => {
     if (!query.trim()) return commands;

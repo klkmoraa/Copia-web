@@ -8311,5 +8311,48 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 
+/* ============================================================
+   P12 · DYNAMIC MODE SHAPES — Oscilación Deformada
+   AG-034 · 2026-08-09
+   ============================================================ */
 
+.canvas-oscillation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1.5px solid color-mix(in srgb, var(--sc-color-border-subtle, var(--border)) 80%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1, var(--surface)) 88%, transparent);
+  color: var(--sc-color-text-secondary, var(--muted));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
 
+.canvas-oscillation-toggle:hover {
+  background: color-mix(in srgb, var(--deformed) 15%, var(--sc-color-surface-1, var(--surface)));
+  border-color: var(--deformed);
+  color: var(--sc-color-text-primary, var(--text));
+}
+
+.canvas-oscillation-toggle.active {
+  background: color-mix(in srgb, var(--deformed) 22%, var(--sc-color-surface-1, var(--surface)));
+  border-color: var(--deformed);
+  color: var(--deformed);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--deformed) 35%, transparent);
+  animation: oscillation-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes oscillation-glow {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--deformed) 30%, transparent); }
+  50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--deformed) 55%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-oscillation-toggle.active { animation: none; }
+}

@@ -271,6 +271,28 @@ export const StructuralCanvas = ({
   const distributedLabel = unitLabel(units, 'distributedForce');
   const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId) ?? null;
   const selectionVisualState = useMemo(() => buildCanvasSelectionVisualState(selection), [selection]);
+
+  /** P12 — Dynamic Mode Shapes: Harmonic oscillation loop for deformed shape */
+  const [oscillating, setOscillating] = useState(false);
+  const [oscillationFactor, setOscillationFactor] = useState(1);
+
+  useEffect(() => {
+    if (!oscillating || resultTab !== 'deformed' || !analysis?.success) {
+      setOscillationFactor(1);
+      return undefined;
+    }
+    let frame: number;
+    const startTime = performance.now();
+    const loop = (now: number) => {
+      const elapsed = (now - startTime) / 1000;
+      // Harmonic wave: sin(2*pi*f*t) with f = 0.85 Hz
+      const factor = Math.sin(elapsed * Math.PI * 2 * 0.85);
+      setOscillationFactor(factor);
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  }, [oscillating, resultTab, analysis?.success]);
   const loadPlacementInstruction = activeTool === 'pointLoad'
     ? t('canvas.placePointLoad')
     : activeTool === 'distributedLoad'
@@ -1599,6 +1621,7 @@ export const StructuralCanvas = ({
           showDiagnostics={layers.diagnostics}
           size={size}
           t={t}
+          oscillationFactor={oscillationFactor}
         />
 
         <CanvasGeometryLayer
@@ -1652,6 +1675,7 @@ export const StructuralCanvas = ({
           showDiagnostics={layers.diagnostics}
           size={size}
           t={t}
+          oscillationFactor={oscillationFactor}
         />
 
         <CanvasGeometryLayer
@@ -1729,6 +1753,9 @@ export const StructuralCanvas = ({
         lengthLabel={lengthLabel}
         scale={camera.scale}
         hasAnalysis={Boolean(analysis?.success)}
+        isDeformedTab={resultTab === 'deformed'}
+        oscillating={oscillating}
+        onToggleOscillation={() => setOscillating((prev) => !prev)}
         onCancelPlacement={() => setActiveTool('select')}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}

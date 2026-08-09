@@ -1,4 +1,4 @@
-import { Crosshair, Flame, LocateFixed, Minus, Plus, X } from 'lucide-react';
+import { Crosshair, Flame, LocateFixed, Minus, Plus, Waves, X } from 'lucide-react';
 import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
@@ -21,6 +21,9 @@ export interface CanvasChromeProps {
   lengthLabel: string;
   scale: number;
   hasAnalysis: boolean;
+  isDeformedTab?: boolean;
+  oscillating?: boolean;
+  onToggleOscillation?: () => void;
   onCancelPlacement: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -40,6 +43,9 @@ export const CanvasChrome = ({
   lengthLabel,
   scale,
   hasAnalysis,
+  isDeformedTab = false,
+  oscillating = false,
+  onToggleOscillation,
   onCancelPlacement,
   onZoomIn,
   onZoomOut,
@@ -76,6 +82,18 @@ export const CanvasChrome = ({
         >
           <Flame size={12} aria-hidden="true" />
           Heatmap
+        </button>
+      ) : null}
+      {hasAnalysis && isDeformedTab && onToggleOscillation ? (
+        <button
+          type="button"
+          className={`canvas-oscillation-toggle${oscillating ? ' active' : ''}`}
+          aria-pressed={oscillating}
+          title={oscillating ? 'Pausar oscilación dinámica' : 'Simular oscilación dinámica armónica'}
+          onClick={onToggleOscillation}
+        >
+          <Waves size={12} aria-hidden="true" />
+          {oscillating ? 'Oscilando' : 'Oscilar'}
         </button>
       ) : null}
     </div>

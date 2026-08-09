@@ -41,6 +41,8 @@ export interface CanvasResultLayerProps {
   showDiagnostics: boolean;
   size: { width: number; height: number };
   t: Translate;
+  /** P12: Dynamic harmonic scale factor in [-1, 1] for deformed shape oscillation. Defaults to 1. */
+  oscillationFactor?: number;
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -65,6 +67,7 @@ const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
   units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
+  oscillationFactor = 1,
 }: CanvasResultLayerProps) => {
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);
 
@@ -129,7 +132,7 @@ const CanvasResultLayerImpl = ({
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
     const { c, s } = memberAxis(member, ni, nj);
-    const scale = project.settings.deformedScale;
+    const scale = project.settings.deformedScale * oscillationFactor;
     const curved = result.deformation.map((point) => {
       const grossX = (result.startOffset ?? 0) + point.x;
       const gx = ni.x + c * grossX + scale * (c * point.u - s * point.v);
