@@ -928,59 +928,63 @@ button.analysis-status:active { transform: scale(0.96); }
 .menu-copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); line-height: 1.4; }
 
 .workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w, 204px) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
-.toolbar { padding: 10px 8px; display: flex; flex-direction: column; gap: 3px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
+.toolbar { padding: 10px 8px; display: flex; flex-direction: column; gap: 3px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; background: var(--sc-color-surface-1); border-right: 1px solid var(--sc-color-border-soft); }
 .desktop-tool-list { display:contents; }
 .mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle,.results-sheet-backdrop { display:none; }
 .tool-button {
-  min-height: 42px;
+  min-height: 38px;
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  border-radius: var(--sc-radius-xs, 9px);
+  border-radius: var(--sc-radius-xs, 8px);
   display: grid;
-  grid-template-columns: 24px 1fr auto;
+  grid-template-columns: 20px 1fr auto;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   text-align: left;
   padding: 0 10px;
-  color: var(--sc-color-text-primary, var(--text));
-  transition: background var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard);
+  color: var(--sc-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
 }
-.tool-button svg { color: currentColor; flex-shrink: 0; }
-.tool-button span { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.tool-button svg { width: 17px; height: 17px; color: currentColor; flex-shrink: 0; }
+.tool-button span { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tool-button kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 19px;
+  min-width: 19px;
+  height: 18px;
   padding: 0 4px;
   font-family: var(--sc-font-mono, monospace);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 750;
-  color: var(--sc-color-text-secondary, var(--muted));
-  background: var(--sc-color-surface-2, var(--surface-2));
-  border: 1px solid var(--sc-color-border-soft, var(--border-soft));
+  color: var(--sc-color-text-muted);
+  background: var(--sc-color-surface-2);
+  border: 1px solid var(--sc-color-border-soft);
   border-radius: 4px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
-.tool-button:hover {
-  background: var(--sc-color-surface-2, var(--surface-2));
+.tool-button:hover:not(:disabled) {
+  background: var(--sc-color-surface-2);
+  color: var(--sc-color-text-primary);
+}
+.tool-button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .tool-button.active {
-  color: var(--sc-color-action-primary, var(--accent));
-  background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 12%, var(--sc-color-surface-1, var(--surface)));
-  border-color: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 26%, transparent);
+  background: var(--sc-color-surface-elevated);
+  color: var(--sc-color-action-primary);
+  font-weight: 750;
+  border-color: var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+.tool-button.active svg {
+  color: var(--sc-color-action-primary);
 }
 .tool-button.active kbd {
-  background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 16%, var(--sc-color-surface-1, var(--surface)));
-  color: var(--sc-color-action-primary, var(--accent));
-  border-color: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 35%, transparent);
-}
-:root[data-theme='dark'] .tool-button.active {
-  color: var(--sc-color-action-primary, var(--accent));
-  background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 14%, var(--sc-color-surface-1));
-  border-color: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 30%, transparent);
+  background: color-mix(in srgb, var(--sc-color-action-primary) 14%, var(--sc-color-surface-elevated));
+  color: var(--sc-color-action-primary);
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent);
 }
 .toolbar-spacer { flex: 1; }
 .selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
@@ -5524,22 +5528,6 @@ button:not(:disabled):active,.selection-card:active {
 .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
 .canvas-controls button:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px) scale(.96); }
 
-.tool-button {
-  border-radius: var(--sc-radius-sm);
-  background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-xs);
-  transition: background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
-}
-.tool-button:hover:not(:disabled) { background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
-.tool-button.active {
-  color: var(--accent-foreground);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--tool-color) 78%, white) 0%, var(--tool-color) 48%, color-mix(in srgb, var(--tool-color) 82%, black) 100%);
-  box-shadow: var(--sc-shadow-clay-sm), 0 4px 10px color-mix(in srgb, var(--tool-color) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb, var(--tool-color) 25%, black 20%);
-  border-color: color-mix(in srgb, var(--tool-color) 40%, white);
-}
-.tool-button.active:hover:not(:disabled) { transform: translateY(-1.5px); }
-.tool-button:active:not(:disabled) { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px) scale(.97); }
 
 .canvas-mode-badge,
 .canvas-view-chips span,
