@@ -1,5 +1,7 @@
 # structureCo
 
+> 🌐 **Demo en Vivo (GitHub Pages):** [https://klkmoraa.github.io/Copia-web/](https://klkmoraa.github.io/Copia-web/)
+
 Aplicación web local-first para modelar, analizar y aprender estructuras planas
 2D. Integra un editor gráfico, un motor matricial independiente de la interfaz y
 resultados trazables desde el modelo hasta las matrices, reacciones y diagramas.

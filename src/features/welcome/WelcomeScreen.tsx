@@ -253,6 +253,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                   <strong>{t('welcome.import')}</strong>
                   <small>{t('welcome.importDescription')}</small>
                 </span>
+                <span className="welcome-import-formats">
+                  <span className="welcome-format-chip">.JSON</span>
+                  <span className="welcome-format-chip">.FTL</span>
+                  <span className="welcome-format-chip">.POS</span>
+                  <span className="welcome-format-chip">.ZIP</span>
+                </span>
                 <ArrowRight size={16} className="welcome-launcher-arrow" />
               </button>
 
