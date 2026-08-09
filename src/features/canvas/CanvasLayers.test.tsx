@@ -40,6 +40,40 @@ describe('CanvasLayers', () => {
     expect(loads.getAttribute('aria-checked')).toBe('true');
   });
 
+  it('supports quick layer presets (Modelo, Cargas, Resultados, Limpio)', async () => {
+    const user = userEvent.setup();
+    render(<ProjectProvider><Harness /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: /capas de información/i }));
+
+    // Click 'Limpio' preset
+    const cleanPresetBtn = screen.getByRole('button', { name: /limpio/i });
+    await user.click(cleanPresetBtn);
+
+    const loads = screen.getByRole('switch', { name: /cargas.*aplicadas/i });
+    expect(loads.getAttribute('aria-checked')).toBe('false');
+
+    // Click 'Todas' preset
+    const allPresetBtn = screen.getByRole('button', { name: /todas/i });
+    await user.click(allPresetBtn);
+    expect(loads.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('toggles layers using numeric keys (1-8)', async () => {
+    const user = userEvent.setup();
+    render(<ProjectProvider><Harness /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: /capas de información/i }));
+
+    const loads = screen.getByRole('switch', { name: /cargas.*aplicadas/i });
+    expect(loads.getAttribute('aria-checked')).toBe('true');
+
+    // Key '2' toggles loads layer
+    await user.keyboard('2');
+    expect(loads.getAttribute('aria-checked')).toBe('false');
+
+    await user.keyboard('2');
+    expect(loads.getAttribute('aria-checked')).toBe('true');
+  });
+
   it('closes with Escape and restores focus to its trigger', async () => {
     const user = userEvent.setup();
     render(<ProjectProvider><Harness /></ProjectProvider>);
