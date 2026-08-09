@@ -7796,77 +7796,97 @@ button:not(:disabled):active,.selection-card:active {
     gap: 10px;
   }
 
-  /* ── 8. Despeje de Lienzo y Píldora Móvil Limpia (Sin Textos Amontonados) ── */
+  /* ── 8. Barra de Herramientas Inferior Móvil (Dock Completo Equitativo y Acomodado) ── */
   
-  /* Píldora flotante compacta centrada */
-  .toolbar,
-  .mobile-tool-dock {
-    position: absolute !important;
-    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
-    left: 50% !important;
-    right: auto !important;
-    transform: translateX(-50%) !important;
-    width: auto !important;
-    max-width: calc(100vw - 90px) !important;
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 3px 6px !important;
-    border-radius: 999px !important;
-    display: inline-flex !important;
+  .toolbar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: calc(56px + env(safe-area-inset-bottom)) !important;
+    min-height: calc(56px + env(safe-area-inset-bottom)) !important;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom)) !important;
+    border-radius: 16px 16px 0 0 !important;
+    display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 4px !important;
-    background: color-mix(in srgb, var(--sc-color-surface-elevated, var(--surface)) 94%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-    border: 1px solid color-mix(in srgb, var(--sc-color-border) 70%, white) !important;
-    box-shadow: var(--sc-shadow-clay-lg) !important;
+    background: var(--sc-color-surface-elevated, var(--surface)) !important;
+    border-top: 1px solid var(--sc-color-border-soft, var(--border-soft)) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.10) !important;
     z-index: 35 !important;
     overflow: hidden !important;
   }
 
-  .toolbar .tool-button,
-  .mobile-tool-dock .tool-button {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
+  .mobile-tool-dock {
     display: grid !important;
-    place-items: center !important;
-    margin: 0 !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .mobile-tool-dock .tool-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 8px !important;
+    padding: 3px 1px 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
     background: transparent !important;
     border: none !important;
+    box-shadow: none !important;
+    color: var(--sc-color-text-secondary, var(--muted)) !important;
+    transition: all var(--sc-motion-fast) var(--sc-ease-standard) !important;
   }
 
-  .toolbar .tool-button.active,
   .mobile-tool-dock .tool-button.active {
-    background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 16%, var(--sc-color-surface-1)) !important;
     color: var(--sc-color-action-primary, var(--accent)) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), var(--sc-shadow-clay-xs) !important;
+    background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 12%, transparent) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 25%, transparent) !important;
   }
 
-  .toolbar .tool-button svg,
   .mobile-tool-dock .tool-button svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 20px !important;
+    height: 20px !important;
+    flex-shrink: 0 !important;
     margin: 0 auto !important;
   }
 
-  /* Ocultar etiquetas de texto para que la píldora sea 100% limpia como en navegador */
-  .toolbar .tool-button > span:not(.sc-tool-button__icon),
-  .toolbar .tool-button kbd,
-  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon),
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {
+    display: block !important;
+    max-width: 100% !important;
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    letter-spacing: -0.02em !important;
+  }
+
   .mobile-tool-dock .tool-button kbd {
     display: none !important;
   }
 
-  /* Botón FAB circular para el Inspector a la derecha */
+  /* Botón FAB circular para el Inspector sobre la barra */
   .mobile-inspector-toggle {
     position: absolute !important;
     right: 14px !important;
-    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    bottom: calc(68px + env(safe-area-inset-bottom)) !important;
     width: 44px !important;
     height: 44px !important;
     min-width: 44px !important;
@@ -7875,6 +7895,8 @@ button:not(:disabled):active,.selection-card:active {
     z-index: 40 !important;
     display: grid !important;
     place-items: center !important;
+    background: var(--sc-color-surface-elevated, var(--surface)) !important;
+    border: 1px solid var(--sc-color-border, var(--border)) !important;
     box-shadow: var(--sc-shadow-clay-md) !important;
   }
 
