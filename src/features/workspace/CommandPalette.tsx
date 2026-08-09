@@ -3,7 +3,6 @@ import {
   Search,
   Play,
   FileDown,
-  Layers,
   Sun,
   Moon,
   Grid,
@@ -17,10 +16,9 @@ import {
   Compass,
 } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
 import { exampleProjects } from '../../data/defaultProject';
 import { emitWorkspaceCommand } from './workspaceCommands';
-import type { Tool } from '../../types';
 
 export interface CommandPaletteProps {
   isOpen: boolean;
@@ -38,29 +36,23 @@ interface CommandItem {
 }
 
 export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
+  const { t } = useI18n();
+  const { replaceProject, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const { theme, setTheme, setActiveTool } = useWorkspaceUI();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const { t } = useI18n();
-  const {
-    setActiveTool,
-    analyze,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    theme,
-    setTheme,
-    replaceProject,
-  } = useProject();
 
+  // Reset query and focus on open
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
-      window.requestAnimationFrame(() => inputRef.current?.focus());
+      window.requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
     }
   }, [isOpen]);
 
@@ -70,7 +62,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'action-analyze',
         category: t('palette.categoryActions') || 'Acciones',
-        label: t('palette.runAnalysis') || 'Ejecutar Análisis Estructural',
+        label: t('analysis.run') || 'Ejecutar Análisis Estructural',
         description: 'P-Delta & Solver Matricial',
         icon: Play,
         shortcut: 'Ctrl+Enter',
@@ -136,28 +128,28 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'canvas-theme-blueprint',
         category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Lienzo Engineering Blueprint (Plano Técnico)',
-        icon: Compass,
+        label: 'Tema Blueprint Técnico (Azul Cian)',
+        icon: Eye,
         action: () => {
           document.documentElement.setAttribute('data-canvas-theme', 'blueprint');
           onClose();
         },
       },
       {
-        id: 'canvas-theme-cad',
+        id: 'canvas-theme-charcoal',
         category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Lienzo CAD Charcoal (Alto Contraste)',
-        icon: Crosshair,
+        label: 'Tema CAD Charcoal (Grafito Oscuro)',
+        icon: Eye,
         action: () => {
           document.documentElement.setAttribute('data-canvas-theme', 'cad-charcoal');
           onClose();
         },
       },
       {
-        id: 'canvas-theme-clean',
+        id: 'canvas-theme-editorial',
         category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Lienzo Editorial Clean (Blanco Inmaculado)',
-        icon: FileDown,
+        label: 'Tema Editorial Clean (Papel Técnico)',
+        icon: Eye,
         action: () => {
           document.documentElement.setAttribute('data-canvas-theme', 'editorial-clean');
           onClose();
@@ -165,20 +157,10 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       },
       // Tools
       {
-        id: 'tool-select',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Herramienta Selección / Cursor',
-        icon: Crosshair,
-        shortcut: 'V',
-        action: () => {
-          setActiveTool('select');
-          onClose();
-        },
-      },
-      {
         id: 'tool-node',
         category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Crear Nodos de Estructura',
+        label: 'Herramienta Nodo',
+        description: 'Insertar nodos en el modelo',
         icon: Crosshair,
         shortcut: 'N',
         action: () => {
@@ -189,9 +171,10 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'tool-member',
         category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Dibujar Barras / Elementos Viga',
-        icon: Layers,
-        shortcut: 'B',
+        label: 'Herramienta Barra / Miembro',
+        description: 'Dibujar elementos entre nodos',
+        icon: Compass,
+        shortcut: 'M',
         action: () => {
           setActiveTool('member');
           onClose();
@@ -200,8 +183,9 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'tool-support',
         category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Asignar Apoyos y Restricciones',
-        icon: Magnet,
+        label: 'Herramienta Apoyo',
+        description: 'Asignar condiciones de contorno',
+        icon: Grid,
         shortcut: 'S',
         action: () => {
           setActiveTool('support');
@@ -211,8 +195,9 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'tool-point-load',
         category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Aplicar Carga Puntual',
-        icon: Grid,
+        label: 'Carga Puntual',
+        description: 'Aplicar fuerza o momento',
+        icon: Magnet,
         shortcut: 'P',
         action: () => {
           setActiveTool('pointLoad');
@@ -222,43 +207,52 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
       {
         id: 'tool-distributed-load',
         category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Aplicar Carga Distribuida',
-        icon: Grid,
+        label: 'Carga Distribuida',
+        description: 'Carga uniforme o trapezoidal sobre barra',
+        icon: Magnet,
         shortcut: 'D',
         action: () => {
           setActiveTool('distributedLoad');
           onClose();
         },
       },
-    ];
-
-    // Add Examples
-    exampleProjects.forEach((ex) => {
-      list.push({
-        id: `example-${ex.name}`,
-        category: t('palette.categoryTemplates') || 'Plantillas y Ejemplos',
-        label: `Cargar: ${ex.name}`,
-        description: ex.description,
+      {
+        id: 'tool-dimension',
+        category: t('palette.categoryTools') || 'Herramientas',
+        label: 'Herramienta Cota',
+        description: 'Medir distancia o longitud',
         icon: FileCode2,
+        shortcut: 'C',
         action: () => {
-          replaceProject(ex.build());
-          emitWorkspaceCommand('fit-canvas');
+          setActiveTool('dimension');
           onClose();
         },
-      });
-    });
-
+      },
+      // Templates
+      ...exampleProjects.map((ex) => ({
+        id: `template-${ex.name}`,
+        category: t('palette.categoryTemplates') || 'Plantillas',
+        label: `Cargar: ${ex.name}`,
+        description: ex.description,
+        icon: FileDown,
+        action: () => {
+          replaceProject(ex.build());
+          onClose();
+        },
+      })),
+    ];
     return list;
-  }, [t, analyze, canUndo, canRedo, undo, redo, theme, setTheme, setActiveTool, replaceProject, onClose]);
+  }, [t, analyze, onClose, canUndo, undo, canRedo, redo, theme, setTheme, setActiveTool, replaceProject]);
 
   const filteredCommands = useMemo(() => {
     if (!query.trim()) return commands;
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
     return commands.filter(
       (c) =>
         c.label.toLowerCase().includes(q) ||
         c.category.toLowerCase().includes(q) ||
-        (c.description && c.description.toLowerCase().includes(q))
+        (c.description && c.description.toLowerCase().includes(q)) ||
+        (c.shortcut && c.shortcut.toLowerCase().includes(q))
     );
   }, [commands, query]);
 
@@ -326,37 +320,31 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
             <div className="empty-small">{t('palette.noResults') || 'No se encontraron comandos'}</div>
           ) : (
             filteredCommands.map((item, index) => {
-              const Icon = item.icon;
               const isSelected = index === selectedIndex;
+              const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   type="button"
+                  className={`command-palette-item ${isSelected ? 'selected' : ''}`}
+                  onClick={() => item.action()}
+                  onMouseEnter={() => setSelectedIndex(index)}
                   role="option"
                   aria-selected={isSelected}
-                  className={`command-palette-item${isSelected ? ' selected' : ''}`}
-                  onClick={item.action}
-                  onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                    <Icon size={16} style={{ opacity: 0.8, flexShrink: 0 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                      <span style={{ fontWeight: 650, color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {item.label}
-                      </span>
-                      {item.description ? (
-                        <small style={{ fontSize: '10px', opacity: 0.7 }}>{item.description}</small>
-                      ) : null}
-                    </div>
+                  <span className="command-palette-item-icon">
+                    <Icon size={16} />
+                  </span>
+                  <div className="command-palette-item-text">
+                    <span className="command-palette-item-label">{item.label}</span>
+                    {item.description && (
+                      <span className="command-palette-item-desc">{item.description}</span>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                    <span style={{ fontSize: '9.5px', textTransform: 'uppercase', opacity: 0.6 }}>
-                      {item.category}
-                    </span>
-                    {item.shortcut ? (
-                      <span className="command-palette-keycap">{item.shortcut}</span>
-                    ) : null}
-                  </div>
+                  <span className="command-palette-item-category">{item.category}</span>
+                  {item.shortcut && (
+                    <span className="command-palette-item-shortcut">{item.shortcut}</span>
+                  )}
                 </button>
               );
             })
@@ -364,8 +352,15 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
         </div>
 
         <div className="command-palette-footer">
-          <span>{filteredCommands.length} {t('palette.commandsAvailable') || 'comandos disponibles'}</span>
-          <span><b>↑↓</b> navegar · <b>↵</b> ejecutar · <b>ESC</b> cerrar</span>
+          <span>
+            <kbd>↑</kbd> <kbd>↓</kbd> Navegar
+          </span>
+          <span>
+            <kbd>↵</kbd> Ejecutar
+          </span>
+          <span>
+            <kbd>ESC</kbd> Cerrar
+          </span>
         </div>
       </div>
     </div>

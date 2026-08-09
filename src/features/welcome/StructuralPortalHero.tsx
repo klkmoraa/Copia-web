@@ -82,10 +82,10 @@ export const StructuralPortalHero = () => {
     });
 
     // Puntos nodales clave proyectados (vértices superiores e inferiores)
-    const { span, columnHeight, beamDepth, columnWidth } = DEFAULT_PORTAL;
+    const { span, columnHeight, beamHeight, columnWidth } = DEFAULT_PORTAL;
     const nodes = [
-      projectIso({ x: columnWidth / 2, y: columnHeight + beamDepth / 2, z: 0 }),
-      projectIso({ x: span - columnWidth / 2, y: columnHeight + beamDepth / 2, z: 0 }),
+      projectIso({ x: columnWidth / 2, y: columnHeight + beamHeight / 2, z: 0 }),
+      projectIso({ x: span - columnWidth / 2, y: columnHeight + beamHeight / 2, z: 0 }),
       projectIso({ x: columnWidth / 2, y: 0, z: 0 }),
       projectIso({ x: span - columnWidth / 2, y: 0, z: 0 }),
     ];

@@ -1081,6 +1081,17 @@ export const es = {
   'influence.useSelection': 'Usar selección ({count})',
   'influence.value': 'valor',
   'influence.viewLabel': 'Vista de influencia',
+  'palette.placeholder': 'Escribe un comando, herramienta o plantilla…',
+  'palette.noResults': 'No se encontraron comandos para "{query}"',
+  'palette.commandsAvailable': '{count} comandos disponibles',
+  'palette.categoryActions': 'Acciones Rápidas',
+  'palette.categoryView': 'Vista y Zoom',
+  'palette.categoryCanvasTheme': 'Temas de Canvas',
+  'palette.categoryTools': 'Herramientas de Modelado',
+  'palette.categoryTemplates': 'Plantillas y Ejemplos',
+  'palette.fitCanvas': 'Ajustar modelo a la pantalla',
+  'palette.undo': 'Deshacer último cambio',
+  'palette.redo': 'Rehacer cambio',
 } as const;
 
 export type TranslationKey = keyof typeof es;
@@ -2170,6 +2181,17 @@ export const en: Catalog = {
   'influence.useSelection': 'Use selection ({count})',
   'influence.value': 'value',
   'influence.viewLabel': 'Influence view',
+  'palette.placeholder': 'Type a command, tool, or template…',
+  'palette.noResults': 'No commands found for "{query}"',
+  'palette.commandsAvailable': '{count} commands available',
+  'palette.categoryActions': 'Quick Actions',
+  'palette.categoryView': 'View and Zoom',
+  'palette.categoryCanvasTheme': 'Canvas Themes',
+  'palette.categoryTools': 'Modeling Tools',
+  'palette.categoryTemplates': 'Templates and Examples',
+  'palette.fitCanvas': 'Fit model to screen',
+  'palette.undo': 'Undo last change',
+  'palette.redo': 'Redo change',
 };
 
 export const catalogs: Record<Language, Catalog> = { es, en };

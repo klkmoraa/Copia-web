@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AnalysisResult, ProjectModel } from '../../types';
+import type { AnalysisResult, MemberResult, ProjectModel } from '../../types';
 import { StructuralHealthMeter } from './StructuralHealthMeter';
 
 describe('StructuralHealthMeter Component', () => {
@@ -19,14 +19,12 @@ describe('StructuralHealthMeter Component', () => {
     ],
     nodalLoads: [],
     memberLoads: [],
-    loadCases: [{ id: 'LC1', name: 'Dead Load' }],
+    loadCases: [{ id: 'LC1', name: 'Dead Load', category: 'permanent', active: true }],
     settings: {
       units: 'kN-m',
-      theme: 'system',
-      snapGrid: 0.5,
-      calculationMode: 'engineering',
-    },
-  };
+      calculationMode: 'complete',
+    } as ProjectModel['settings'],
+  } as unknown as ProjectModel;
 
   const mockAnalysis: AnalysisResult = {
     success: true,
@@ -40,10 +38,9 @@ describe('StructuralHealthMeter Component', () => {
         minShear: -20,
         maxMoment: 40,
         minMoment: 0,
-        stations: [],
-      },
+      } as unknown as MemberResult,
     ],
-  };
+  } as unknown as AnalysisResult;
 
   it('renders structural health meter with utilization and safety factor', () => {
     render(
@@ -76,12 +73,11 @@ describe('StructuralHealthMeter Component', () => {
   });
 
   it('returns null when analysis is unsuccessful', () => {
-    const failedAnalysis: AnalysisResult = {
+    const failedAnalysis = {
       success: false,
-      error: 'Singular matrix',
       nodeResults: [],
       memberResults: [],
-    };
+    } as unknown as AnalysisResult;
 
     const { container } = render(
       <StructuralHealthMeter

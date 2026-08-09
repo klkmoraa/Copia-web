@@ -343,7 +343,7 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
             fontFamily="var(--sc-font-mono)"
             fill="var(--sc-color-text-secondary, var(--muted))"
           >
-            b = {(width * (units === 'metric-m' ? 1000 : 100)).toFixed(0)} mm
+            b = {(width * (units === 'kN-m' ? 1000 : 1)).toFixed(0)} mm
           </text>
           <text
             x={cx - pxW / 2 - 6}
@@ -355,7 +355,7 @@ export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
             fill="var(--sc-color-text-secondary, var(--muted))"
             transform={`rotate(-90 ${cx - pxW / 2 - 6} ${cy})`}
           >
-            h = {(depth * (units === 'metric-m' ? 1000 : 100)).toFixed(0)} mm
+            h = {(depth * (units === 'kN-m' ? 1000 : 1)).toFixed(0)} mm
           </text>
         </svg>
       </div>

@@ -67,8 +67,8 @@ export const CanvasMiniMap = ({ project, onFit }: CanvasMiniMapProps) => {
       <svg width="100%" height="100%" viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet">
         {/* Render Members */}
         {members.map((m) => {
-          const start = nodeMap.get(m.startNodeId);
-          const end = nodeMap.get(m.endNodeId);
+          const start = nodeMap.get(m.i);
+          const end = nodeMap.get(m.j);
           if (!start || !end) return null;
           return (
             <line

@@ -41,6 +41,8 @@ export interface WorkspaceCommands {
     tone?: 'success' | 'info' | 'warning' | 'error';
     durationMs?: number;
   };
+  /** Open the global Command Palette modal. */
+  'open-command-palette': void;
 }
 
 export type WorkspaceCommand = keyof WorkspaceCommands;
