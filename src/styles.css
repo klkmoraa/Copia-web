@@ -6894,3 +6894,182 @@ button:not(:disabled):active,.selection-card:active {
   background: var(--sc-color-state-success, var(--success));
   box-shadow: 0 0 6px var(--sc-color-state-success, var(--success));
 }
+
+/* ==========================================================================
+   AG-020 · Pulido Visual Integral Clay, Brandbook Fidelidad & Mobile Libre
+   ========================================================================== */
+
+/* ── FASE 1: Armonización de Sombras, Luces y Biselado Clay ── */
+
+/* Bisel de luz superior-izquierdo para elevación Clay auténtica */
+:root[data-theme='light'] .sc-button--primary,
+:root[data-theme='light'] .analyze-button:not(:disabled),
+:root[data-theme='light'] .quick-entry-bar > button[type='submit'],
+:root[data-theme='light'] .new-exercise-submit {
+  box-shadow:
+    inset 0 1.5px 0 color-mix(in srgb, white 45%, transparent),
+    inset 0 -1.5px 0 color-mix(in srgb, black 15%, transparent),
+    var(--sc-shadow-clay-sm);
+}
+
+:root[data-theme='dark'] .sc-button--primary,
+:root[data-theme='dark'] .analyze-button:not(:disabled),
+:root[data-theme='dark'] .quick-entry-bar > button[type='submit'],
+:root[data-theme='dark'] .new-exercise-submit {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 35%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, black 30%, transparent),
+    var(--sc-shadow-clay-sm),
+    0 0 16px color-mix(in srgb, var(--sc-color-action-primary) 18%, transparent);
+}
+
+/* Biselado en tarjetas interactivas */
+.selection-card,
+.issue-card,
+.scenario-cards article,
+.effect-card {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 35%, transparent),
+    var(--sc-shadow-clay-xs);
+}
+
+:root[data-theme='dark'] .selection-card,
+:root[data-theme='dark'] .issue-card,
+:root[data-theme='dark'] .scenario-cards article,
+:root[data-theme='dark'] .effect-card {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 15%, transparent),
+    var(--sc-shadow-clay-xs);
+}
+
+/* ── FASE 2: Corrección de Elementos Disparejos & Alineación Geométrica ── */
+
+/* Control de altura uniforme en controles secundarios */
+.select-field select,
+.field-row input,
+.compact-select,
+.number-control {
+  min-height: var(--sc-control-height-md, 36px);
+  border-radius: var(--sc-radius-xs, 8px);
+}
+
+/* Limpieza de dobles bordes y espaciados armónicos */
+.inspector-section:last-child {
+  border-bottom: none;
+}
+
+.results-panel .summary-table-wrap {
+  border: 1px solid var(--sc-color-border-soft, var(--border-soft));
+}
+
+/* ── FASE 3: Rediseño Móvil "Canvas Libre" (Ultra-Premium & Despejado) ── */
+
+@media (max-width: 1023px) {
+  /* Topbar compacta y elegante */
+  .topbar {
+    height: 48px;
+    min-height: 48px;
+    padding-inline: 10px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .topbar-brand {
+    font-size: 13px;
+  }
+  
+  /* Floating Island Toolbar centrada en la base */
+  .toolbar {
+    position: absolute;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: calc(100vw - 84px);
+    height: 48px;
+    border-radius: 999px;
+    padding: 3px 6px;
+    background: color-mix(in srgb, var(--sc-color-surface-elevated, var(--surface)) 90%, transparent);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid color-mix(in srgb, var(--sc-color-border) 65%, white);
+    box-shadow: var(--sc-shadow-clay-lg);
+    z-index: 35;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .toolbar .tool-button {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+  }
+
+  /* Floating Action Button (FAB) circular para el Inspector */
+  .mobile-inspector-toggle {
+    position: absolute;
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--sc-color-border) 70%, white);
+    background: var(--sc-color-surface-elevated, var(--surface));
+    color: var(--sc-color-text-primary, var(--text));
+    display: grid;
+    place-items: center;
+    box-shadow: 
+      inset 0 1.5px 0 color-mix(in srgb, white 50%, transparent),
+      var(--sc-shadow-clay-md);
+    cursor: pointer;
+    z-index: 40;
+    transition: transform var(--sc-motion-press) var(--sc-ease-press), box-shadow var(--sc-motion-fast) var(--sc-ease-standard);
+  }
+  .mobile-inspector-toggle:active {
+    transform: scale(0.92);
+    box-shadow: var(--sc-shadow-clay-pressed);
+  }
+  :root[data-theme='dark'] .mobile-inspector-toggle {
+    background: color-mix(in srgb, var(--sc-color-surface-elevated) 95%, var(--sc-color-action-primary));
+    box-shadow: 
+      inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 30%, transparent),
+      var(--sc-shadow-clay-md),
+      0 0 14px color-mix(in srgb, var(--sc-color-action-primary) 20%, transparent);
+  }
+
+  /* Bottom Sheet con radio superior generoso y agarre elástico */
+  .inspector-panel.mobile-open {
+    border-radius: 22px 22px 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--sc-color-border) 70%, white);
+    box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.25);
+  }
+  .inspector-panel.mobile-open::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sc-color-border-soft) 80%, var(--sc-color-action-primary));
+    margin: 8px auto 4px;
+    opacity: 0.8;
+  }
+
+  /* Despeje de controles flotantes de cámara para no invadir el centro del canvas */
+  .canvas-controls {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 10px;
+  }
+  .canvas-view-chips {
+    top: 56px;
+    right: 10px;
+  }
+}
+
+/* ── FASE 4: Pulido de Tipografía y Contraste WCAG AA ── */
+.inspector-summary span,
+.field-row label,
+.select-field label {
+  color: var(--sc-color-text-secondary, var(--muted));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
