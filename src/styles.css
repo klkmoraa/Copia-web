@@ -7210,4 +7210,112 @@ button:not(:disabled):active,.selection-card:active {
   }
 }
 
+/* ==========================================================================
+   AG-024 · Welcome Hub 2.0 & Escultura 3D Isométrica Clay Iluminada
+   ========================================================================== */
+
+/* ── Escultura 3D Isométrica con Iluminación Volumétrica ── */
+.portal-hero--enhanced {
+  filter: drop-shadow(0 14px 28px rgba(83, 72, 55, 0.12));
+}
+
+:root[data-theme='dark'] .portal-hero--enhanced {
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.45));
+}
+
+.portal-hero__halo {
+  animation: sc-halo-pulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes sc-halo-pulse {
+  0% { opacity: 0.6; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1.04); }
+}
+
+.portal-node-halo {
+  animation: sc-node-pulse 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes sc-node-pulse {
+  0% { opacity: 0.3; transform: scale(0.85); }
+  100% { opacity: 0.8; transform: scale(1.25); }
+}
+
+/* ── Launcher Card Primaria ── */
+.welcome-launcher-card--primary {
+  border-color: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 40%, var(--sc-color-border-soft)) !important;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 6%, var(--sc-color-surface-1, var(--surface))) 0%,
+    var(--sc-color-surface-1, var(--surface)) 100%) !important;
+}
+
+.welcome-launcher-card--primary:hover {
+  border-color: var(--sc-color-action-primary, var(--accent)) !important;
+  box-shadow:
+    var(--sc-shadow-clay-md),
+    0 0 16px color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 16%, transparent) !important;
+}
+
+/* ── 4 Pilares de Confianza de Ingeniería ── */
+.welcome-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--sc-radius-md, 14px);
+  background: var(--sc-color-surface-2, var(--surface-2));
+  border: 1px solid var(--sc-color-border-soft, var(--border-soft));
+}
+
+.welcome-pillar-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.welcome-pillar-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 12%, var(--sc-color-surface-1));
+  color: var(--sc-color-action-primary, var(--accent));
+  flex-shrink: 0;
+}
+
+.welcome-pillar-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.welcome-pillar-item strong {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--sc-color-text-primary, var(--text));
+  line-height: 1.3;
+}
+
+.welcome-pillar-item small {
+  font-size: 10px;
+  color: var(--sc-color-text-secondary, var(--muted));
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .welcome-pillars-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .welcome-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 

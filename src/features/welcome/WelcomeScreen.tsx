@@ -193,11 +193,9 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
               </div>
             </section>
 
-            {/* `div`, no `section`: tres botones que se describen solos no necesitan
-                ser una región del documento, y etiquetarla obligaría a inventar un
-                nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
+            {/* Launcher Cards con jerarquía visual mejorada */}
             <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-              <button type="button" className="welcome-launcher-card" onClick={openBlankProject}>
+              <button type="button" className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
                 <span className="welcome-launcher-icon"><Compass size={22} /></span>
                 <span className="welcome-launcher-info">
                   <span className="welcome-launcher-header">
@@ -232,6 +230,38 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                 </span>
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
               </button>
+            </div>
+
+            {/* 4 Pilares de Confianza de Ingeniería */}
+            <div className="welcome-pillars-grid">
+              <div className="welcome-pillar-item">
+                <span className="welcome-pillar-icon"><Cpu size={18} /></span>
+                <div>
+                  <strong>Rigidez Directa 64-bit</strong>
+                  <small>Solución matricial analítica exacta IEEE 754</small>
+                </div>
+              </div>
+              <div className="welcome-pillar-item">
+                <span className="welcome-pillar-icon"><Layers size={18} /></span>
+                <div>
+                  <strong>Efectos P-Delta 2º Orden</strong>
+                  <small>Análisis no lineal geométrico por sub-pasos</small>
+                </div>
+              </div>
+              <div className="welcome-pillar-item">
+                <span className="welcome-pillar-icon"><GraduationCap size={18} /></span>
+                <div>
+                  <strong>Pedagogía & Hibbeler</strong>
+                  <small>Verificado contra ejemplos estándar de ingeniería</small>
+                </div>
+              </div>
+              <div className="welcome-pillar-item">
+                <span className="welcome-pillar-icon"><CheckCircle2 size={18} /></span>
+                <div>
+                  <strong>100% Local & Privado</strong>
+                  <small>Cero telemetría; tus cálculos se quedan en tu navegador</small>
+                </div>
+              </div>
             </div>
 
             <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">

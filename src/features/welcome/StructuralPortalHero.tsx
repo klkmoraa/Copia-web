@@ -3,29 +3,10 @@ import { buildPortal, projectIso, DEFAULT_PORTAL, type Face, type MaterialId } f
 import { formatFixed } from '../../utils/numberFormat';
 
 /**
- * Pórtico clay de la bienvenida.
- *
- * Pinta la geometría que `isometricPortal.ts` deriva. No hay WebGL: la escena
- * de la referencia es estática —cámara ortográfica fija, sin órbita, materiales
- * mate sin reflejos— así que un motor 3D costaría ~200 KB gzip y una segunda
- * implementación del mismo dibujo para producir el mismo fotograma. Aquí no
- * hay nada que pueda fallar, y por eso tampoco hay fallback que mantener.
- *
- * El color sale de tokens, nunca de literales: los mismos `<path>` dan marfil
- * y verde menta en Día, y gris cálido y verde luminoso en Noche, sin una sola
- * rama condicional.
- *
- * Decorativo a efectos de accesibilidad. Todo lo que comunica está en el texto
- * del hero y en los tres chips de confianza.
- *
- * `viewBox` y rejilla de suelo: calculados a partir del bounding box real de
- * `buildPortal()`, no copiados de un boceto. `buildPortal()` proyecta con
- * `+x` hacia la derecha de pantalla y `+z` hacia la izquierda (fijado en la
- * tarea 4); un encuadre calculado a mano para la orientación previa habría
- * dejado la figura descentrada o cortada.
+ * Pórtico clay de la bienvenida con iluminación volumétrica y nodos activos.
+ * Pinta la geometría derivada de isometricPortal.ts con halo volumétrico y vértices iluminados.
  */
 
-/** Token base de cada material. El sombreado modula su luminosidad en CSS. */
 const MATERIAL_TOKEN: Record<MaterialId, string> = {
   column: 'var(--sc-color-clay-ivory)',
   beam: 'var(--sc-color-clay-mint)',
@@ -33,41 +14,17 @@ const MATERIAL_TOKEN: Record<MaterialId, string> = {
   capital: 'var(--sc-color-clay-ivory-deep)',
 };
 
-/* `formatFixed`, no `toFixed` crudo: la política numérica única (ver
-   `numberFormat.ts`) la impone `numericPolicy.test.ts` sobre todo `features/**`,
-   coordenadas de un `<path>` decorativo incluidas. */
 const toPath = (face: Face) =>
   `${face.points
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${formatFixed(p.x, 2, 'canvas')} ${formatFixed(p.y, 2, 'canvas')}`)
     .join(' ')} Z`;
 
-/**
- * Rejilla del suelo: 9 líneas por eje (i de -4 a 4), igual densidad que el
- * boceto original, pero proyectadas en vivo con `projectIso` sobre un
- * rectángulo de mundo que rodea la huella real de las bases (más
- * `GRID_MARGIN`). Nada de coeficientes escritos a mano: si `ISO_X`/`ISO_Y`,
- * el signo de la proyección o la geometría del pórtico cambian en
- * `isometricPortal.ts`, la rejilla se recalcula sola en vez de quedar
- * desincronizada en silencio.
- */
 const GRID_INDICES = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
-
-/** Margen, en unidades de mundo, alrededor de la huella de las bases para la
- * rejilla de suelo — el plano se ve más grande que el objeto que sostiene. */
 const GRID_MARGIN = 20;
-
-/** Fracción del bounding-box en pantalla de cada pie que cubre su sombra de
- * contacto. Elegida por muestreo Monte Carlo (4000 puntos) contra las 4
- * esquinas proyectadas de cada pie: s=0.75 cubre el 85% del pie con sólo 3%
- * de fuga fuera de él (s=0.65 → 67%/0%, s=0.85 → 95%/16%, s=1.00 → 100%/36%).
- * Detalle completo en el informe de la ronda de corrección 1/5. */
 const CONTACT_SHADOW_SCALE = 0.75;
 
 interface FootprintBox { x: number; z: number; w: number; d: number }
 
-/** Huella en planta (y=0) de la base de una columna, con las mismas fórmulas
- * (`centreOffset`, `columnX`) que `buildPortal` usa para colocar la caja
- * `base-*-lower` — no números sueltos. */
 const footprintOf = (columnIndex: 0 | 1): FootprintBox => {
   const { baseWidth, columnWidth, span } = DEFAULT_PORTAL;
   const centreOffset = (baseWidth - columnWidth) / 2;
@@ -75,8 +32,6 @@ const footprintOf = (columnIndex: 0 | 1): FootprintBox => {
   return { x: columnX[columnIndex] - centreOffset, z: -centreOffset, w: baseWidth, d: baseWidth };
 };
 
-/** Proyecta las 4 esquinas de una huella y devuelve la elipse de sombra de
- * contacto que ajusta `CONTACT_SHADOW_SCALE` a su bounding-box en pantalla. */
 const contactEllipseOf = (footprint: FootprintBox) => {
   const corners = [
     projectIso({ x: footprint.x, y: 0, z: footprint.z }),
@@ -98,9 +53,6 @@ const contactEllipseOf = (footprint: FootprintBox) => {
   };
 };
 
-/** Umbral bajo el cual no se registra ningún listener de puntero: sin hover
- * fino (táctil) o con `prefers-reduced-motion`, la inclinación no debe
- * costar nada ni animarse nunca. */
 const canTilt = () =>
   Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) &&
   !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -108,7 +60,7 @@ const canTilt = () =>
 export const StructuralPortalHero = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const { faces, groundLines, footEllipses } = useMemo(() => {
+  const { faces, groundLines, footEllipses, nodes } = useMemo(() => {
     const faces = buildPortal();
     const footprints: [FootprintBox, FootprintBox] = [footprintOf(0), footprintOf(1)];
     const footEllipses = footprints.map(contactEllipseOf);
@@ -129,19 +81,18 @@ export const StructuralPortalHero = () => {
       };
     });
 
-    return { faces, groundLines, footEllipses };
+    // Puntos nodales clave proyectados (vértices superiores e inferiores)
+    const { span, columnHeight, beamDepth, columnWidth } = DEFAULT_PORTAL;
+    const nodes = [
+      projectIso({ x: columnWidth / 2, y: columnHeight + beamDepth / 2, z: 0 }),
+      projectIso({ x: span - columnWidth / 2, y: columnHeight + beamDepth / 2, z: 0 }),
+      projectIso({ x: columnWidth / 2, y: 0, z: 0 }),
+      projectIso({ x: span - columnWidth / 2, y: 0, z: 0 }),
+    ];
+
+    return { faces, groundLines, footEllipses, nodes };
   }, []);
 
-  /* Inclinación con el puntero: sin `setState`, cero re-render de React por
-     movimiento. Se escribe directamente en `node.style` vía la ref. Nunca se
-     registra un listener en táctil ni con `prefers-reduced-motion`, y el
-     `return` del efecto limpia ambos al desmontar.
-
-     La clase `portal-hero--returning` es lo único que decide si `transform`
-     tiene transición (ver `styles.css`): fuera mientras el puntero se mueve
-     —el pórtico debe seguir al cursor 1:1, sin persecución con retardo—,
-     puesta sólo en el instante de `pointerleave` para que el regreso a cero
-     se vea suave. */
   useEffect(() => {
     const node = svgRef.current;
     if (!node || !canTilt()) return undefined;
@@ -173,7 +124,7 @@ export const StructuralPortalHero = () => {
   return (
     <svg
       ref={svgRef}
-      className="portal-hero"
+      className="portal-hero portal-hero--enhanced"
       viewBox="-90 -190 290 325"
       preserveAspectRatio="xMidYMid meet"
       role="presentation"
@@ -181,8 +132,19 @@ export const StructuralPortalHero = () => {
       focusable="false"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Suelo cuadriculado. Una rejilla, no una textura: sitúa el objeto en un
-          plano sin competir con él. */}
+      <defs>
+        {/* Halo de luz volumétrica suave */}
+        <radialGradient id="portal-hero-halo" cx="50%" cy="40%" r="55%">
+          <stop offset="0%" stopColor="color-mix(in srgb, var(--sc-color-action-primary, #059669) 24%, transparent)" />
+          <stop offset="50%" stopColor="color-mix(in srgb, var(--sc-color-brand-secondary, #00a3b4) 10%, transparent)" />
+          <stop offset="100%" stopColor="transparent" />
+        </radialGradient>
+      </defs>
+
+      {/* Halo de fondo */}
+      <ellipse cx="55" cy="-35" rx="145" ry="115" fill="url(#portal-hero-halo)" className="portal-hero__halo" />
+
+      {/* Suelo cuadriculado proyectado */}
       <g className="portal-hero__ground">
         {groundLines.map(({ i, constX, constZ }) => (
           <g key={i}>
@@ -192,9 +154,7 @@ export const StructuralPortalHero = () => {
         ))}
       </g>
 
-      {/* Sombra de contacto: una elipse difuminada por pie, no una bajo todo
-          el pórtico — las dos zapatas están separadas por el vano y una sola
-          sombra caería en el hueco entre ambas. */}
+      {/* Sombras de contacto */}
       {footEllipses.map((ellipse, index) => (
         <ellipse
           key={index}
@@ -206,6 +166,7 @@ export const StructuralPortalHero = () => {
         />
       ))}
 
+      {/* Caras del pórtico 3D */}
       {faces.map((face) => (
         <path
           key={face.id}
@@ -215,6 +176,16 @@ export const StructuralPortalHero = () => {
           style={{ '--face-shade': formatFixed(face.shade, 3, 'canvas') } as CSSProperties}
         />
       ))}
+
+      {/* Nodos de vértice estructurales activos con resplandor */}
+      <g className="portal-hero__nodes">
+        {nodes.map((node, index) => (
+          <g key={index} transform={`translate(${node.x}, ${node.y})`}>
+            <circle r="4.5" className="portal-node-halo" fill="color-mix(in srgb, var(--sc-color-action-primary, #059669) 35%, transparent)" />
+            <circle r="2.5" className="portal-node-core" fill="var(--sc-color-action-primary, #059669)" />
+          </g>
+        ))}
+      </g>
     </svg>
   );
 };
