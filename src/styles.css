@@ -5630,3 +5630,652 @@ button:not(:disabled):active,.selection-card:active {
   transform: translateY(1px);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
+
+/* ====================================================================== */
+/* AG-017 · PHASE 2 — UI IMPROVEMENTS                                    */
+/* ====================================================================== */
+
+/* ── PHASE 1: Mobile Toolbar Grouped ──────────────────────────────────── */
+
+/* Fade gradient overlays on toolbar scroll edges */
+@media (max-width: 1023px) {
+  .toolbar {
+    position: relative;
+  }
+  .toolbar::before,
+  .toolbar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--sc-motion-fast, 0.15s) var(--sc-ease-standard, ease);
+  }
+  .toolbar::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--sc-color-surface-elevated, var(--surface)) 0%, transparent 100%);
+    border-radius: 13px 0 0 13px;
+  }
+  .toolbar::after {
+    right: 0;
+    background: linear-gradient(270deg, var(--sc-color-surface-elevated, var(--surface)) 0%, transparent 100%);
+    border-radius: 0 13px 13px 0;
+  }
+  /* Show fade gradients when toolbar is scrollable */
+  .toolbar.has-scroll-start::before,
+  .toolbar.has-scroll-end::after {
+    opacity: 1;
+  }
+
+  /* Toolbar group separators */
+  .tool-button[data-group-start]::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--sc-color-border-soft, var(--border-soft));
+    border-radius: 1px;
+    opacity: 0.6;
+  }
+
+  /* Active tool glow pulse */
+  .tool-button.active {
+    position: relative;
+  }
+  .tool-button.active::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--tool-color, var(--accent)) 8%, transparent);
+    animation: sc-tool-glow 2.4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+@keyframes sc-tool-glow {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 6px color-mix(in srgb, var(--tool-color, var(--accent)) 18%, transparent); }
+  50% { opacity: 1; box-shadow: 0 0 14px color-mix(in srgb, var(--tool-color, var(--accent)) 28%, transparent); }
+}
+
+/* Tool tooltip on long-press (mobile) */
+.tool-button[data-tooltip]::after {
+  content: attr(data-tooltip);
+}
+@media (pointer: coarse) {
+  .tool-button[aria-label] {
+    position: relative;
+  }
+  .tool-button .sc-tool-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    padding: 5px 10px;
+    border-radius: 7px;
+    background: var(--sc-color-surface-elevated, var(--surface));
+    color: var(--sc-color-text-primary, var(--text));
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: var(--sc-shadow-clay-sm);
+    border: 1px solid var(--sc-color-border, var(--border));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--sc-motion-fast, 0.15s) ease, transform var(--sc-motion-fast, 0.15s) ease;
+    z-index: 40;
+  }
+  .tool-button .sc-tool-tooltip.visible {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* ── PHASE 3: Dark Mode Premium ───────────────────────────────────────── */
+
+/* Deep surface gradients for dark mode panels */
+:root[data-theme='dark'] .topbar {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--sc-color-surface-elevated) 95%, var(--sc-color-action-primary)),
+    var(--sc-color-surface-elevated) 100%);
+}
+:root[data-theme='dark'] .inspector-panel {
+  background: linear-gradient(135deg,
+    var(--sc-color-surface-1) 0%,
+    color-mix(in srgb, var(--sc-color-surface-1) 96%, var(--sc-color-action-primary)) 100%);
+}
+:root[data-theme='dark'] .results-panel {
+  background: linear-gradient(0deg,
+    var(--sc-color-surface-1) 0%,
+    color-mix(in srgb, var(--sc-color-surface-1) 97%, var(--sc-color-brand-secondary)) 100%);
+}
+
+/* Interactive element emphasis glow in dark mode */
+:root[data-theme='dark'] .analyze-button:not(:disabled) {
+  box-shadow:
+    var(--sc-shadow-clay-sm),
+    0 0 18px color-mix(in srgb, var(--sc-color-action-primary) 20%, transparent),
+    0 0 6px color-mix(in srgb, var(--sc-color-action-primary) 10%, transparent);
+}
+:root[data-theme='dark'] .analyze-button:hover:not(:disabled) {
+  box-shadow:
+    var(--sc-shadow-clay-md),
+    0 0 28px color-mix(in srgb, var(--sc-color-action-primary) 30%, transparent),
+    0 0 10px color-mix(in srgb, var(--sc-color-action-primary) 15%, transparent);
+}
+
+/* Luminous borders for cards in dark mode */
+:root[data-theme='dark'] .selection-card {
+  border-color: color-mix(in srgb, var(--sc-color-border) 70%, var(--sc-color-action-primary));
+}
+:root[data-theme='dark'] .inspector-section {
+  border-color: color-mix(in srgb, var(--sc-color-divider) 80%, var(--sc-color-action-primary));
+}
+
+/* Canvas grid refinement in dark mode */
+:root[data-theme='dark'] .structural-canvas .grid-line {
+  opacity: 0.35;
+}
+:root[data-theme='dark'] .structural-canvas .grid-line-strong {
+  opacity: 0.55;
+}
+
+/* Dark mode floating toolbar glass effect */
+@media (max-width: 1023px) {
+  :root[data-theme='dark'] .toolbar {
+    background: color-mix(in srgb, var(--sc-color-surface-elevated) 88%, transparent);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid color-mix(in srgb, var(--sc-color-border) 50%, transparent);
+  }
+}
+
+/* Dark mode canvas controls glass effect */
+:root[data-theme='dark'] .canvas-controls {
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+}
+
+/* Dark mode popover depth */
+:root[data-theme='dark'] .popover {
+  background: color-mix(in srgb, var(--sc-color-surface-elevated) 94%, var(--sc-color-action-primary));
+  border: 1px solid color-mix(in srgb, var(--sc-color-border) 60%, var(--sc-color-action-primary));
+}
+
+/* Dark mode welcome screen subtle aurora boost */
+:root[data-theme='dark'] .welcome-screen {
+  background-image:
+    radial-gradient(118% 80% at 8% -14%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 62%),
+    radial-gradient(96% 64% at 98% -8%, color-mix(in srgb, var(--brand-secondary) 12%, transparent), transparent 58%),
+    linear-gradient(var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--welcome-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-fine) 1px, transparent 1px);
+}
+
+/* ── PHASE 4: Micro-animations & Transitions ──────────────────────────── */
+
+/* View enter animation (Welcome → Editor) */
+@keyframes sc-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.workspace {
+  animation: sc-view-enter var(--sc-motion-reveal, 300ms) var(--sc-ease-emphasized, cubic-bezier(0.2, 0, 0, 1)) both;
+}
+
+/* Tab content crossfade */
+@keyframes sc-tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.results-body > *,
+.inspector-scroll > * {
+  animation: sc-tab-enter var(--sc-motion-fast, 150ms) var(--sc-ease-standard, ease) both;
+}
+
+/* Analyze button bounce on click */
+@keyframes sc-analyze-bounce {
+  0% { transform: scale(1); }
+  20% { transform: scale(0.94); }
+  50% { transform: scale(1.03); }
+  75% { transform: scale(0.99); }
+  100% { transform: scale(1); }
+}
+.analyze-button:active:not(:disabled) {
+  animation: sc-analyze-bounce 400ms var(--sc-ease-press, ease-out);
+}
+
+/* Skeleton loading pulse for result placeholders */
+@keyframes sc-skeleton-pulse {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sc-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sc-color-surface-2, var(--surface-2)) 25%,
+    color-mix(in srgb, var(--sc-color-surface-2, var(--surface-2)) 70%, var(--sc-color-border, var(--border))) 50%,
+    var(--sc-color-surface-2, var(--surface-2)) 75%
+  );
+  background-size: 200% 100%;
+  animation: sc-skeleton-pulse 1.8s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* Result panel slide-up on open */
+@keyframes sc-panel-slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.results-panel {
+  animation: sc-panel-slide-up var(--sc-motion-standard, 250ms) var(--sc-ease-emphasized, cubic-bezier(0.2, 0, 0, 1)) both;
+}
+
+/* Inspector panel mobile slide-in */
+@media (max-width: 1023px) {
+  .inspector-panel.mobile-open {
+    animation: sc-sheet-slide-in var(--sc-motion-standard, 300ms) var(--sc-ease-emphasized, cubic-bezier(0.2, 0, 0, 1)) both;
+  }
+}
+@keyframes sc-sheet-slide-in {
+  from {
+    transform: translateY(30%);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Popover scale-in (override if needed) */
+@keyframes sc-popover-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Success badge pulse */
+@keyframes sc-success-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 40%, transparent); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--success) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.autosave-state.saved {
+  animation: sc-success-pulse 1.2s ease-out;
+}
+
+/* ── PHASE 5: Empty States Enhanced ───────────────────────────────────── */
+
+/* Checkmark drawing animation for all-clear */
+@keyframes sc-checkmark-draw {
+  0% { stroke-dashoffset: 32; }
+  100% { stroke-dashoffset: 0; }
+}
+.all-clear svg path {
+  stroke-dasharray: 32;
+  animation: sc-checkmark-draw 600ms var(--sc-ease-emphasized, cubic-bezier(0.2, 0, 0, 1)) 200ms both;
+}
+
+/* Empty state enhanced styling */
+.empty-results,
+.failed-results {
+  position: relative;
+  overflow: hidden;
+}
+.empty-results::before,
+.failed-results::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 30%,
+    color-mix(in srgb, var(--accent-soft) 60%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Empty results icon float animation */
+@keyframes sc-empty-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.empty-results > svg,
+.failed-results > svg {
+  animation: sc-empty-float 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── PHASE 6: Accessibility ───────────────────────────────────────────── */
+
+/* Skip navigation link */
+.sc-skip-nav {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 9999;
+  padding: 10px 18px;
+  border-radius: var(--sc-radius-sm, 8px);
+  background: var(--sc-color-action-primary, var(--accent));
+  color: var(--sc-color-action-foreground, var(--accent-foreground));
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+  box-shadow: var(--sc-shadow-clay-md);
+  transition: top var(--sc-motion-fast, 0.15s) ease;
+}
+.sc-skip-nav:focus {
+  top: 12px;
+}
+
+/* Unified focus ring for all interactive elements */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--sc-color-focus, var(--focus));
+  outline-offset: 2px;
+}
+
+/* High contrast labels for secondary text */
+@media (forced-colors: active) {
+  .sc-color-text-secondary,
+  .inspector-note,
+  .field-help,
+  .section-description {
+    color: CanvasText;
+  }
+}
+
+/* ── PHASE 8: Polish — Scrollbars, Selection, Print ───────────────────── */
+
+/* Custom scrollbars (webkit) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--sc-color-text-secondary, var(--muted)) 30%, transparent);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--sc-color-text-secondary, var(--muted)) 50%, transparent);
+}
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color:
+    color-mix(in srgb, var(--sc-color-text-secondary, var(--muted)) 30%, transparent)
+    transparent;
+}
+
+/* Text selection styling */
+::selection {
+  background: color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 22%, transparent);
+  color: var(--sc-color-text-primary, var(--text));
+}
+:root[data-theme='dark'] ::selection {
+  background: color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent);
+}
+
+/* Print stylesheet improvements */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .results-panel { box-shadow: none; border: 1px solid #ddd; }
+  .diagram-chart svg { height: auto !important; min-height: 200px; }
+  .summary-table-wrap { page-break-inside: avoid; }
+  .global-extrema-grid { page-break-inside: avoid; }
+  .global-extrema-grid > button { border: 1px solid #ccc; }
+  .result-summary-workspace { padding: 12px; }
+}
+
+/* Contextual cursor for canvas tools */
+.canvas-host[data-tool="node"] { cursor: crosshair; }
+.canvas-host[data-tool="member"] { cursor: crosshair; }
+.canvas-host[data-tool="support"] { cursor: cell; }
+.canvas-host[data-tool="select"] { cursor: default; }
+.canvas-host[data-tool="pan"] { cursor: grab; }
+.canvas-host[data-tool="pan"]:active { cursor: grabbing; }
+.canvas-host[data-tool="delete"] { cursor: not-allowed; }
+.canvas-host[data-tool="pointLoad"],
+.canvas-host[data-tool="distributedLoad"],
+.canvas-host[data-tool="moment"] { cursor: crosshair; }
+.canvas-host[data-tool="dimension"] { cursor: col-resize; }
+.canvas-host[data-tool="split"] { cursor: crosshair; }
+
+/* ── PHASE 2: Inspector Bottom Sheet Snap Points ──────────────────────── */
+
+/* Inspector snap states (peek / half / full) — controlled via CSS classes */
+@media (max-width: 1023px) {
+  /* Peek state: only tabs visible */
+  .inspector-panel.mobile-open.snap-peek {
+    height: 80px;
+    transition: height 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  /* Half state: partial content */
+  .inspector-panel.mobile-open.snap-half {
+    height: min(50vh, 420px);
+    transition: height 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  /* Full state (default mobile-open) */
+  .inspector-panel.mobile-open.snap-full,
+  .inspector-panel.mobile-open:not(.snap-peek):not(.snap-half) {
+    height: min(85vh, 720px);
+    transition: height 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Enhanced drag handle (tirador) */
+  .inspector-panel::before {
+    transition: width 200ms ease, background 200ms ease;
+  }
+  .inspector-panel:active::before,
+  .inspector-panel.dragging::before {
+    width: 64px;
+    background: var(--sc-color-action-primary, var(--accent));
+    opacity: 1;
+  }
+
+  /* Active tab dot indicators */
+  .inspector-tabs button {
+    position: relative;
+  }
+  .inspector-tabs button.has-content::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--sc-color-action-primary, var(--accent));
+    opacity: 0.7;
+  }
+  .inspector-tabs button.active.has-content::after {
+    opacity: 1;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--sc-color-action-primary, var(--accent)) 40%, transparent);
+  }
+}
+
+/* ── PHASE 7: Landscape & Tablets ─────────────────────────────────────── */
+
+/* Landscape mobile: side-by-side when space is too short for bottom sheet */
+@media (max-width: 1023px) and (max-height: 500px) and (orientation: landscape) {
+  .workspace {
+    grid-template-columns: 1fr min(320px, 40vw);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .center-stage {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .inspector-panel.mobile-open {
+    position: relative;
+    z-index: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    height: 100% !important;
+    border-radius: 0;
+    display: flex;
+    animation: none;
+  }
+  .inspector-panel.mobile-open::before {
+    display: none;
+  }
+  .mobile-inspector-backdrop {
+    display: none !important;
+  }
+  .mobile-inspector-toggle {
+    display: none !important;
+  }
+  /* Compress toolbar to vertical in landscape */
+  .toolbar {
+    position: absolute;
+    z-index: 25;
+    left: 8px;
+    right: auto;
+    bottom: 8px;
+    top: auto;
+    width: 48px;
+    height: auto;
+    max-height: calc(100% - 72px);
+    flex-direction: column;
+    border-radius: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 3px;
+  }
+  .tool-button {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+  .canvas-controls {
+    bottom: 8px;
+    left: 64px;
+  }
+  .canvas-status {
+    bottom: 8px;
+    left: auto;
+    right: 8px;
+  }
+  .results-panel {
+    min-height: 100px;
+    max-height: 38dvh;
+  }
+}
+
+/* Tablet portrait: 2-column layout with visible inspector */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .workspace {
+    grid-template-columns: 1fr min(340px, 38vw);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .center-stage {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .inspector-panel {
+    position: relative !important;
+    z-index: auto !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    border-radius: 0 !important;
+    padding-bottom: 0 !important;
+    grid-column: 2;
+    grid-row: 1;
+    border-left: 1px solid var(--sc-color-border-soft, var(--border-soft));
+  }
+  .inspector-panel::before {
+    display: none;
+  }
+  .mobile-inspector-toggle,
+  .mobile-inspector-backdrop,
+  .mobile-inspector-close {
+    display: none !important;
+  }
+  .inspector-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    padding-top: 6px !important;
+    height: 50px !important;
+    flex-basis: 50px !important;
+  }
+  .results-panel {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 160px;
+    max-height: 38dvh;
+  }
+  .toolbar {
+    bottom: calc(22px + env(safe-area-inset-bottom));
+    left: 10px;
+    right: auto;
+    width: auto;
+    max-width: calc(100vw - 360px - 28px);
+  }
+  .canvas-controls {
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    left: auto;
+    right: max(14px, calc(340px + 14px));
+  }
+}
+
+/* iPad safe area adjustments */
+@supports (padding: env(safe-area-inset-top)) {
+  @media (max-width: 1023px) {
+    .topbar {
+      padding-top: env(safe-area-inset-top);
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
+    }
+    .toolbar {
+      margin-bottom: env(safe-area-inset-bottom);
+    }
+    .inspector-panel.mobile-open {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
