@@ -216,7 +216,7 @@ const AnalysisModePanel = () => {
     <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={setCalculationMode} />
     {project.settings.calculationMode === 'classroom'
       ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
-      : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.completeModeDescription')}</div>}
+      : <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.completeModeDescription')}</div>}
   </section>;
 };
 
@@ -275,7 +275,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
         const id = `LC${index}`;
         draft.loadCases.push({ id, name: t('inspector.defaultLoadCaseName', { index }), category: 'other', active: true });
         return draft;
-      })}><Plus size={15} /></button></div>
+      })}><Plus size={16} /></button></div>
       <div className="load-case-list">{project.loadCases.map((loadCase) => <div className="load-case-row" key={loadCase.id}>
         <input aria-label={t('inspector.activateLoadCase', { name: loadCase.name })} type="checkbox" checked={loadCase.active} onChange={(event) => updateProject((draft) => {
           const item = draft.loadCases.find((candidate) => candidate.id === loadCase.id);
@@ -287,7 +287,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
           if (item) item.name = event.target.value;
           return draft;
         })} /><small>{loadCase.category}</small></div>
-        <ChevronRight size={15} aria-hidden="true" />
+        <ChevronRight size={16} aria-hidden="true" />
       </div>)}</div>
     </section>
     <section className="inspector-section">
@@ -297,7 +297,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
         const id = `COMB${index}`;
         draft.combinations.push({ id, name: t('inspector.defaultCombinationName', { index }), factors: Object.fromEntries(draft.loadCases.map((item) => [item.id, 1])) });
         return draft;
-      })}><Plus size={15} /></button></div>
+      })}><Plus size={16} /></button></div>
       <label className="select-field"><span>{t('inspector.analyze')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
       {project.combinations.map((combination) => <details className="combination-card" key={combination.id} open={combination.id === selectedCombinationId}>
         <summary>{combination.name}</summary>
@@ -309,7 +309,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
         {combination.source ? <div className="norm-source"><strong>{combination.jurisdiction} · {combination.edition}</strong><span>{combination.source}</span><small>{t('inspector.editableTemplateNote')}</small></div> : null}
       </details>)}
     </section>
-    <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.fullEffectsNote')}</div>
+    <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.fullEffectsNote')}</div>
   </>;
 };
 
@@ -327,7 +327,7 @@ const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMod
       <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={(value) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: value as 'classroom' | 'complete' } }))} />
       {project.settings.calculationMode === 'classroom'
         ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
-        : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.completeModeDescription')}</div>}
+        : <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.completeModeDescription')}</div>}
     </section> : null}
     <section className="inspector-section">
       <h3>{t('inspector.canvas')}</h3>

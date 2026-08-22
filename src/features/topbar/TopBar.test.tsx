@@ -68,7 +68,42 @@ describe('TopBar portable export', () => {
     expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="context"]')).not.toBeNull();
     expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="actions"]')).not.toBeNull();
     expect(bar.querySelector('[data-topbar-zone="status"]')).not.toBeNull();
-    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(4);
+    // Las cuatro decisiones ya no son cuatro campos rotulados en la barra: son
+    // UN ítem que las abre. La barra unificada del sistema no apila etiqueta
+    // sobre control, y apilarlas cuatro veces es lo que recortaba «Caso o
+    // com…» a 1280px. Lo que se cuenta aquí es que la barra publica un solo
+    // ítem de contexto; que detrás siguen estando las cuatro lo comprueba la
+    // prueba de abajo.
+    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(0);
+    expect(bar.querySelectorAll('.topbar-context-button')).toHaveLength(1);
+  });
+
+  /**
+   * La red que impide que la consolidación pierda una decisión por el camino:
+   * el ítem de la barra tiene que abrir las CUATRO, con sus nombres accesibles
+   * intactos, y el rótulo del propio ítem tiene que ser el caso activo — no la
+   * palabra «Análisis», que no dice en qué estado está el modelo.
+   */
+  it('opens the four analysis decisions from a single unified-toolbar item', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+    const bar = document.querySelector('.topbar')!;
+
+    const trigger = within(bar as HTMLElement).getByRole('button', { name: 'Análisis' });
+    expect(trigger.textContent).toContain('Casos activos');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(trigger);
+    const popover = await screen.findByRole('dialog', { name: 'Análisis' });
+    expect(popover.querySelectorAll('[data-context-control]')).toHaveLength(4);
+    expect(within(popover).getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
+    expect(within(popover).getByRole('combobox', { name: 'Modo de cálculo' })).toBeTruthy();
+    expect(within(popover).getByRole('combobox', { name: 'Orden del análisis' })).toBeTruthy();
+    expect(within(popover).getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Análisis' })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {

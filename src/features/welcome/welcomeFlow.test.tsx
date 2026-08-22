@@ -24,13 +24,30 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 /**
- * El carril de pasos. Se consulta acotado a `<nav>` porque los mismos rótulos
- * ("Por dónde", "Mesa") aparecen también en los enlaces de avance del panel:
- * son el mismo destino nombrado igual, que es justo lo que se quiere, y por
- * eso la prueba dice de cuál de los dos habla en vez de exigir que uno cambie
- * de nombre.
+ * POR QUÉ ESTE ARCHIVO CAMBIÓ DE CONTRATO
+ *
+ * Hasta aquí las cinco primeras pruebas describían un asistente de cuatro
+ * pasos: contaban los nodos del carril, comprobaban que los tres primeros
+ * cambiaban de panel y que el cuarto abría la Mesa. Ese recorrido se retiró —
+ * ninguna aplicación del sistema abre con un asistente— y con él se fue lo que
+ * esas pruebas vigilaban. Un gate no se afloja para dejar pasar un cambio; se
+ * reescribe cuando el contrato que defendía deja de existir, diciendo cuál es
+ * el nuevo. El nuevo es el de un LANZADOR:
+ *
+ *   1. UNA superficie por destino. El defecto que el asistente tenía y que
+ *      ninguna prueba veía era la duplicación: las mismas cinco puertas
+ *      aparecían en el carril de la etapa 1 y otra vez en la etapa 3, más
+ *      "Nuevo proyecto" en el centro. Ahora se cuenta.
+ *   2. Ninguna capacidad se pierde por el camino: proyecto nuevo, Aula,
+ *      plantillas, importación portátil, DXF, Space 3D y continuar siguen
+ *      todas alcanzables, y desde la primera pantalla.
+ *   3. Space 3D sigue siendo la ÚNICA superficie 3D de la bienvenida y sigue
+ *      marcada como experimental (contrato de CRI-104, que no cambió).
  */
-const stepRail = (container: HTMLElement) => within(container.querySelector('.welcome-steps') as HTMLElement);
+const actionList = (container: HTMLElement) => within(container.querySelector('.welcome-action-list') as HTMLElement);
+const actionRows = (container: HTMLElement) => [
+  ...container.querySelectorAll('.welcome-action-list > .welcome-launcher-card, .welcome-action-list > .welcome-import-card'),
+];
 
 const renderWelcome = (language: 'es' | 'en' = 'es') => {
   const project = createBlankProject();
@@ -46,82 +63,90 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
   return { ...result, onOpenWorkspace, onOpenSpace3D };
 };
 
-describe('WelcomeScreen · los cuatro pasos', () => {
-  it('publica exactamente cuatro pasos, en orden', () => {
+describe('WelcomeScreen · el lanzador', () => {
+  it('reúne las seis puertas en una sola lista, sin etapas que recorrer', async () => {
     const { container } = renderWelcome();
-    const steps = [...container.querySelectorAll('.welcome-steps .welcome-step')];
-    expect(steps.map((step) => step.textContent?.replace(/^\d/, '').trim()))
-      .toEqual(['Bienvenida', 'Cómo trabajas', 'Por dónde', 'Mesa']);
+    // El DXF llega en su propio chunk perezoso y se une a la misma lista.
+    await waitFor(() => expect(actionRows(container)).toHaveLength(6));
+
+    expect(actionList(container).getByRole('button', { name: /Nuevo proyecto/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /Nuevo ejercicio/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /Desde plantilla/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /Importar archivo/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /DXF/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /space 3d/i })).toBeTruthy();
   });
 
-  it('los tres primeros pasos son navegables y marcan el activo para lectores de pantalla', async () => {
-    const user = userEvent.setup();
-    const { container } = renderWelcome();
-
-    const rail = stepRail(container);
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('welcome');
-    expect(rail.getByRole('button', { name: 'Bienvenida' }).getAttribute('aria-current')).toBe('step');
-
-    await user.click(rail.getByRole('button', { name: 'Cómo trabajas' }));
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('how');
-    expect(rail.getByRole('button', { name: 'Cómo trabajas' }).getAttribute('aria-current')).toBe('step');
-    expect(rail.getByRole('button', { name: 'Bienvenida' }).getAttribute('aria-current')).toBeNull();
-
-    await user.click(rail.getByRole('button', { name: 'Por dónde' }));
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('where');
-  });
-
-  it('el cuarto paso ES la Mesa: la abre en vez de cambiar de panel', async () => {
-    const user = userEvent.setup();
-    const { onOpenWorkspace, container } = renderWelcome();
-
-    await user.click(stepRail(container).getByRole('button', { name: 'Mesa' }));
-    expect(onOpenWorkspace).toHaveBeenCalledOnce();
-    // La bienvenida no se reordena a sí misma: quien decide de pantalla es el shell.
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('welcome');
-  });
-
-  it('elegir un modo de trabajo lleva a la etapa 3 y ordena la vitrina', async () => {
-    const user = userEvent.setup();
-    const { container } = renderWelcome();
-
-    await user.click(stepRail(container).getByRole('button', { name: 'Cómo trabajas' }));
-    await user.click(screen.getByRole('button', { name: /Nuevo ejercicio/ }));
-
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('where');
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Académicos' }).getAttribute('aria-selected')).toBe('true'));
-  });
-});
-
-describe('WelcomeScreen · las puertas siguen alcanzables', () => {
-  it('mantiene continuar y nuevo proyecto en la primera etapa, con el hub de proyectos', async () => {
-    const { container } = renderWelcome();
-    expect(container.querySelector('.welcome-resume-card')).not.toBeNull();
-    expect(screen.getByRole('button', { name: /Nuevo proyecto/ })).toBeTruthy();
-    // El hub real llega en su chunk perezoso y se monta dentro de la etapa 1,
-    // no en una pantalla aparte: su encabezado tiene que aparecer aquí.
-    expect(await screen.findByRole('heading', { name: /Tus proyectos en este dispositivo/ })).toBeTruthy();
-  });
-
-  it('mantiene importación portátil, DXF, ejemplos, Aula y Space 3D en la etapa 3', async () => {
-    const user = userEvent.setup();
-    const { container } = renderWelcome();
-    await user.click(stepRail(container).getByRole('button', { name: 'Por dónde' }));
-
-    expect(screen.getByRole('button', { name: /Importar archivo/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Nuevo ejercicio/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Lienzo en blanco/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /space 3d/i })).toBeTruthy();
-    expect(container.querySelectorAll('.welcome-template-card').length).toBeGreaterThan(0);
-    // El DXF llega en su propio chunk perezoso, igual que antes.
+  /**
+   * La prueba que el asistente no tenía. Cada destino se nombra una vez en toda
+   * la pantalla: si alguien vuelve a añadir un atajo "extra" a un sitio que ya
+   * tiene su fila, esto lo dice. Se mide sobre la pantalla entera, no sobre la
+   * lista, porque la duplicación anterior estaba precisamente FUERA de ella.
+   */
+  it('no ofrece dos caminos al mismo destino', async () => {
+    renderWelcome();
     await waitFor(() => expect(screen.getByRole('button', { name: /DXF/ })).toBeTruthy());
+
+    for (const name of [/Nuevo proyecto/, /Nuevo ejercicio/, /Desde plantilla/, /Importar archivo/, /space 3d/i]) {
+      expect(screen.getAllByRole('button', { name }), String(name)).toHaveLength(1);
+    }
   });
 
-  it('marca Space 3D como experimental, no como una superficie más', async () => {
-    const user = userEvent.setup();
+  it('no deja rastro del recorrido por etapas', () => {
     const { container } = renderWelcome();
-    await user.click(stepRail(container).getByRole('button', { name: 'Por dónde' }));
-    expect(screen.getByRole('button', { name: /space 3d/i }).textContent).toMatch(/experimental/i);
+    expect(container.querySelector('.welcome-steps')).toBeNull();
+    expect(container.querySelector('.welcome-gate-rail')).toBeNull();
+    expect(container.querySelector('.welcome-panel-nav')).toBeNull();
+    expect(container.querySelector('.welcome-screen')?.hasAttribute('data-welcome-step')).toBe(false);
+  });
+
+  it('crea un proyecto en blanco y abre la Mesa desde la primera fila', async () => {
+    const user = userEvent.setup();
+    const { container, onOpenWorkspace } = renderWelcome();
+
+    await user.click(actionList(container).getByRole('button', { name: /Nuevo proyecto/ }));
+    expect(onOpenWorkspace).toHaveBeenCalledOnce();
+  });
+
+  it('abre la vitrina de plantillas como diálogo, y carga desde ahí', async () => {
+    const user = userEvent.setup();
+    const { container, onOpenWorkspace } = renderWelcome();
+
+    expect(document.querySelectorAll('.welcome-template-card')).toHaveLength(0);
+    await user.click(actionList(container).getByRole('button', { name: /Desde plantilla/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Plantillas/ });
+    const cards = [...dialog.querySelectorAll('.welcome-template-card')];
+    expect(cards.length).toBeGreaterThan(0);
+
+    await user.click(cards[0] as HTMLElement);
+    expect(onOpenWorkspace).toHaveBeenCalledOnce();
+    // Elegir cierra: la vitrina es una decisión, no un lugar donde se está.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Plantillas/ })).toBeNull());
+  });
+
+  it('marca Space 3D como experimental, no como una superficie más', () => {
+    const { container } = renderWelcome();
+    expect(actionList(container).getByRole('button', { name: /space 3d/i }).textContent).toMatch(/experimental/i);
+  });
+
+  it('abre Space 3D sin tocar el proyecto 2D', async () => {
+    const user = userEvent.setup();
+    const { container, onOpenSpace3D, onOpenWorkspace } = renderWelcome();
+
+    await user.click(actionList(container).getByRole('button', { name: /space 3d/i }));
+    expect(onOpenSpace3D).toHaveBeenCalledOnce();
+    expect(onOpenWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('pone continuar y la biblioteca en la columna de recientes', async () => {
+    const { container } = renderWelcome();
+    const recents = container.querySelector('.welcome-column--recents') as HTMLElement;
+
+    expect(recents.querySelector('.welcome-resume-card')).not.toBeNull();
+    // El hub real llega en su chunk perezoso y se monta DENTRO de esa columna,
+    // no en una banda aparte bajo toda la pantalla.
+    expect(await within(recents).findByRole('heading', { name: /Tus proyectos en este dispositivo/ })).toBeTruthy();
   });
 
   it('continuar abre la Mesa con el proyecto actual, sin sustituirlo', async () => {

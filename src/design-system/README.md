@@ -108,18 +108,63 @@ La monoespaciada existe para los **números** —valores, unidades, fórmulas y
 matrices— y para nada más. Rotular con ella una pestaña, una insignia o el nombre
 del proyecto era la voz del sistema anterior.
 
+## Disposición
+
+Las cuatro decisiones gobiernan la materia. Éstas gobiernan **dónde se pone
+cada cosa**, y salen de haber medido dónde el producto seguía delatándose como
+una página web maquillada de app.
+
+1. **El producto abre como un lanzador de documento, no como una página.** Una
+   ventana acotada y centrada, con lo que se puede crear a un lado y lo que ya
+   existe al otro. Sin asistente, sin etapas y sin espacio muerto bajo el
+   pliegue: un lanzador se acaba donde acaba su contenido.
+2. **Una superficie por destino.** Cada capacidad se alcanza desde exactamente
+   un sitio de la pantalla. Dos caminos al mismo lugar no son comodidad: son dos
+   estados que hay que mantener de acuerdo, y ninguno de los dos dice que el
+   otro existe. La excepción es la degradación responsive, donde sólo uno de los
+   dos es visible a la vez y los dos consumen la MISMA definición.
+3. **La barra superior no rotula sus ítems.** Un ítem de barra unificada enseña
+   su valor, no su categoría; apilar etiqueta sobre control multiplica el ancho
+   por el número de ítems y termina truncando la etiqueta, que es lo peor de los
+   dos mundos. Lo que necesita rótulo va en un popover, donde hay sitio.
+4. **Ninguna superficie flotante se solapa con otra.** Chrome de lienzo, barras
+   contextuales, lanzadores y paneles comparten esquinas; el que llega después
+   cede o se apila, nunca se superpone. Lo vigila
+   `verifyFloatingSurfacesDoNotOverlap` en `npm run qa`.
+5. **La ayuda se revela; no se apila ni se borra.** Una pista de campo vive en un
+   globo que aparece al apuntar o al enfocar, con `opacity`, nunca con `display`
+   ni `visibility`: sigue en el árbol de accesibilidad porque
+   `aria-describedby` la referencia. Un error no es una pista y no se recoge.
+
 ## Lo que este sistema no hace
 
 - **No dibuja volumen.** Ninguna pieza declara su propia fuente de luz. La única
   excepción es la figura isométrica de la bienvenida, que no es interfaz sino un
   dibujo, y lleva su luz entera en `graphics/isometricPortal.ts`.
 - **No usa el acento como luz.** Sin halos, sin brillos, sin degradados
-  construidos sobre el color de acción. El acento rellena; no modela.
+  construidos sobre el color de acción. El acento rellena; no modela. La regla
+  vale también para los consumidores, no sólo para los tokens: `tokens.test.ts`
+  recorre `styles.css`, `material.css`, `ui.css` y `phase1.css` buscando rampas
+  construidas sobre el acento, que es donde se habían quedado dos auroras de la
+  identidad anterior sin que ningún gate las viera.
+- **No colorea por variedad.** Un mosaico de icono, una flecha o una insignia
+  llevan color sólo cuando ese color significa algo: acción (acento), estado
+  (advertencia, error) o dominio técnico (cargas, diagramas, reacciones — §3 de
+  `tokens.css`, que es la codificación del lienzo). Todo lo demás es monocromo.
 - **No rotula en versalitas.** Una etiqueta pequeña se distingue por ser gris y
   semibold, no por gritar en mayúsculas trackeadas.
 - **No baja de 10 px.** Por debajo no hay tipografía, hay textura.
 - **No deja un token sin consumidor.** Un token que nadie lee no reserva un
-  significado: sólo viaja en el chunk de entrada.
+  significado: sólo viaja en el chunk de entrada. Lo mismo vale para una clase
+  CSS y para una clave de traducción.
+
+## Iconografía
+
+Seis escalones y ninguno más: **14** (leyenda) · **16** (fila y control) ·
+**18** (barra de herramientas) · **20** (acción principal y cabecera) · **22** y
+**28** (figura). Antes convivían catorce tamaños distintos entre 12 y 28 px,
+elegidos a ojo uno por uno: 13 y 14 no significan cosas distintas, sólo dicen
+que nadie llevaba la cuenta.
 
 ## Los gates
 
@@ -133,7 +178,7 @@ retirar la identidad anterior.
 | `surfaceGeometry.test.ts` | Radios por rol, elevación monótona, filete de medio píxel, ningún control que se eleve. |
 | `material.test.ts` | Los seis niveles, el material translúcido con su respaldo opaco, el pulsado como relleno. |
 | `typography.test.ts` | Cara del sistema primero, escala de escritorio, ninguna cara editorial. |
-| `npm run qa` | Los mismos contratos, compuestos por el navegador de verdad (145 checks). |
+| `npm run qa` | Los mismos contratos, compuestos por el navegador de verdad (149 checks), más los solapes de superficie flotante y la ayuda revelada del inspector. |
 
 ## Cómo añadir algo
 

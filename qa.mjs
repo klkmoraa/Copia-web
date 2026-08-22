@@ -3,8 +3,8 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-// CRI-116 · la navegación por los pasos de la bienvenida vive una sola vez.
-import { openResultsSurface, openWelcomeStep } from './scripts/qa-welcome.mjs';
+// CRI-116 · la navegación por la bienvenida vive una sola vez.
+import { openResultsSurface, openTemplateGallery } from './scripts/qa-welcome.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const assetsDir = path.join(root, 'dist', 'assets');
@@ -87,7 +87,7 @@ async function activateWelcomeLauncher(page, launcher) {
 }
 
 async function enterWorkspace(page, { example = false } = {}) {
-  if (example) await openWelcomeStep(page, 'Por dónde');
+  if (example) await openTemplateGallery(page);
   const launcher = example
     ? page.getByRole('button', { name: /pórtico de ejemplo/i }).first()
     : page.locator('.welcome-resume-card').first();
@@ -121,6 +121,27 @@ async function setOverflowSelect(page, fieldName, value) {
   await page.locator('.utility-more-button').click();
   await page.locator('.utility-actions-menu').getByLabel(fieldName).selectOption(value);
   await page.keyboard.press('Escape');
+}
+
+/**
+ * Lee una de las cuatro decisiones de análisis abriendo el ítem de la barra.
+ *
+ * El check leía `.units-select` a pelo justo después de cerrar el
+ * desbordamiento con Escape, y sólo pasaba porque la animación de salida de
+ * `AnimatePresence` deja el nodo montado unos milisegundos: estaba midiendo un
+ * elemento que se estaba desmontando. Abrir el ítem de contexto y leer ahí es
+ * determinista, y además demuestra el contrato que la consolidación introduce:
+ * que la barra y el desbordamiento consumen la MISMA definición del campo, no
+ * dos copias que pueden divergir.
+ */
+async function readAnalysisSetupValue(page, selector) {
+  const trigger = page.locator('.analysis-setup-button');
+  await trigger.click();
+  await page.locator('.analysis-setup-popover').waitFor({ state: 'visible' });
+  const value = await page.locator(`.analysis-setup-popover ${selector}`).inputValue();
+  await page.keyboard.press('Escape');
+  await page.locator('.analysis-setup-popover').waitFor({ state: 'hidden' });
+  return value;
 }
 
 async function toggleThemeFromOverflow(page, themeName) {
@@ -227,18 +248,23 @@ async function verifyWelcomeHeaderResponsive(page) {
 // diferido.
 //
 // CRI-116 · El check medía `.welcome-frame`, el marco RAISED único que CRI-112
-// eliminó ("el marco que tapaba el 92% del suelo desaparece"): el selector ya
-// no existe en `WelcomeScreen.tsx` y el gate entero moría esperándolo 30s. La
-// pieza que heredó el papel —materia propia apoyada sobre la mesa, y la
-// primera que se pinta en la etapa de bienvenida— es el carril de puertas, y
-// declara su materia en `styles.css`, que sí viaja en el chunk de entrada. El
-// riesgo que el check vigila es el mismo; sólo cambia dónde se mide.
+// eliminó, y después el carril de puertas que heredó ese papel. Los dos
+// selectores murieron con sus versiones. La pieza que lo hereda ahora —materia
+// propia apoyada sobre la mesa, y la primera que se pinta— es el MARCO DEL
+// LANZADOR, que declara su materia en `styles.css`, la hoja que sí viaja en el
+// chunk de entrada. El riesgo que el check vigila es el mismo desde el
+// principio: que la pieza dominante de la bienvenida se pinte sin materia
+// porque su hoja llega diferida. Sólo cambia dónde se mide.
+//
+// Los nombres decían `…HasClay…`: vocabulario de la identidad de arcilla, que
+// se retiró entera. Un check que afirma una materia que ya no existe miente
+// sobre lo que protege aunque pase en verde.
 async function verifyWelcomeFirstPaintMaterial() {
   const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
+  const frame = await page.locator('.welcome-launcher').evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       backgroundImage: style.backgroundImage,
@@ -248,12 +274,12 @@ async function verifyWelcomeFirstPaintMaterial() {
       borderRadius: style.borderRadius,
     };
   });
-  out.checks.welcomeRailFirstPaintHasClayBackground = rail.backgroundImage !== 'none' || rail.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  out.checks.welcomeRailFirstPaintHasClayShadow = rail.boxShadow !== 'none';
-  out.checks.welcomeRailFirstPaintHasClayBorder = rail.borderTopWidth !== '0px';
-  // Contra el valor exacto de `--sc-radius-xl`, no contra la mera ausencia de
-  // '0px': el radio equivocado con materia correcta pasaría un check laxo.
-  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '14px';
+  out.checks.welcomeFrameFirstPaintHasSurface = frame.backgroundImage !== 'none' || frame.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  out.checks.welcomeFrameFirstPaintHasElevation = frame.boxShadow !== 'none';
+  out.checks.welcomeFrameFirstPaintHasHairline = frame.borderTopWidth !== '0px';
+  // Contra el valor exacto de `--sc-radius-panel`, no contra la mera ausencia
+  // de '0px': el radio equivocado con materia correcta pasaría un check laxo.
+  out.checks.welcomeFrameFirstPaintHasPanelRadius = frame.borderRadius === '14px';
   await page.close();
 }
 
@@ -624,7 +650,7 @@ async function prepareResultsMaterialTargets(page) {
   }, resultsFlatFamilies);
 }
 
-async function verifyResultsClayMaterial(page) {
+async function verifyResultsPanelMaterial(page) {
   const checks = {};
   const panel = await readComposedMaterial(page, '.results-panel');
   checks.resultsDesktopPanelHasRaisedMaterial = hasRaisedMaterial(panel);
@@ -755,102 +781,111 @@ async function verifyResultsPhoneLandscapeMaterial() {
 async function verifyWelcomeSurfaceMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
-  // único que este check vigilaba lo eliminó CRI-112, y su papel de figura
-  // dominante de la bienvenida lo hereda el carril de puertas.
-  const railMaterial = await readComposedMaterial(page, '.welcome-gate-rail');
-  out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
+  // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: la pieza
+  // dominante de la bienvenida es hoy el marco del lanzador. Nivel RAISED —
+  // superficie opaca y filete, sin desenfoque: un panel apoyado sobre la mesa
+  // no tapa nada que merezca verse a través.
+  const frameMaterial = await readComposedMaterial(page, '.welcome-launcher');
+  out.checks.welcomeFrameHasNoBackdropFilter = frameMaterial.backdropFilter === 'none';
 
-  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
+  const frame = await page.locator('.welcome-launcher').evaluate((element) => {
     const style = getComputedStyle(element);
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
-  out.checks.welcomeRailHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  // Comparado contra el valor exacto esperado (--sc-radius-xl → panel, 14px),
-  // no contra una simple ausencia de '0px': un radio de otra escala pasaría el
+  out.checks.welcomeFrameHasSurface = frame.backgroundImage !== 'none' || frameMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  // Comparado contra el valor exacto esperado (--sc-radius-panel, 14px), no
+  // contra una simple ausencia de '0px': un radio de otra escala pasaría el
   // check laxo igual de verde que el correcto, que es exactamente como se coló
   // el Critical 2 sin que ningún check lo viera.
-  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '14px';
+  out.checks.welcomeFrameHasPanelRadius = frame.borderRadius === '14px';
 
-  // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
-  // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
-  await openWelcomeStep(page, 'Por dónde');
+  // Las tres materias que este check vigila viven en dos planos distintos: la
+  // fila de puerta y la zona de archivo están en el lanzador, y la tarjeta de
+  // ejemplo dentro del diálogo que ese lanzador abre. Con el diálogo abierto el
+  // lanzador queda debajo del velo y no acepta puntero, así que se miden en dos
+  // pasadas y no en una — medirlas juntas era esperar 30 s a un hover que el
+  // velo intercepta.
+  const readCardState = (locator) => locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+      borderColor: style.borderColor,
+      transform: style.transform,
+    };
+  });
 
-  const cardSelectors = {
-    launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card >> nth=0',
-    template: '.welcome-template-card >> nth=0',
-  };
+  const measureCards = async (cardSelectors) => {
+    for (const [key, selector] of Object.entries(cardSelectors)) {
+      const locator = page.locator(selector);
+      await locator.waitFor({ state: 'visible' });
 
-  for (const [key, selector] of Object.entries(cardSelectors)) {
-    const locator = page.locator(selector);
-    await locator.waitFor({ state: 'visible' });
-    const readState = () => locator.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return { boxShadow: style.boxShadow, borderColor: style.borderColor, transform: style.transform };
-    });
+      const resting = await readCardState(locator);
+      await locator.hover();
+      // `transition` da tiempo a que el navegador anime a los valores finales
+      // antes de leer los estilos computados; sin esta espera el `hover` se
+      // lee a mitad de camino y el check da falso negativo.
+      await page.waitForTimeout(220);
+      const hovered = await readCardState(locator);
 
-    const resting = await readState();
-    await locator.hover();
-    // `transition` da tiempo a que el navegador anime a los valores finales
-    // antes de leer los estilos computados; sin esta espera el `hover` se
-    // lee a mitad de camino y el check da falso negativo.
-    await page.waitForTimeout(220);
-    const hovered = await readState();
+      // Un control del sistema no se despega de la ventana al pasar por encima:
+      // se tiñe. Lo que este check exige ya no es que la SOMBRA cambie —ninguna
+      // lo hace— sino que el hover se note en el plano: relleno o canto.
+      //
+      // `readCardState` no leía `backgroundColor`: el predicado comparaba
+      // `undefined !== undefined` y quedaba colgando entero del canto, así que
+      // una fila que sólo tiñe su relleno —que es lo que hace la gramática de
+      // control del sistema— habría dado falso negativo. Se lee el relleno.
+      out.checks[`welcome${key}CardHoverTintChanges`] =
+        hovered.backgroundColor !== resting.backgroundColor || hovered.borderColor !== resting.borderColor;
+      // El desplazamiento en hover se retiró del sistema entero: era la firma de
+      // la identidad anterior y ningún control del sistema lo hace. Lo que este
+      // check afirma ahora es lo contrario — que la tarjeta NO se mueve al pasar
+      // el puntero, para que un `translateY` copiado de una regla vieja se vea.
+      out.checks[`welcome${key}CardHoverDoesNotLift`] = hovered.transform === resting.transform;
 
-    // Un control del sistema no se despega de la ventana al pasar por encima:
-    // se tiñe. Lo que este check exige ya no es que la SOMBRA cambie —ninguna
-    // lo hace— sino que el hover se note en el plano: relleno o canto.
-    out.checks[`welcome${key}CardHoverTintChanges`] =
-      hovered.backgroundColor !== resting.backgroundColor || hovered.borderColor !== resting.borderColor;
-    // El desplazamiento en hover se retiró del sistema entero: era la firma de
-    // la identidad anterior y ningún control del sistema lo hace. Lo que este
-    // check afirma ahora es lo contrario — que la tarjeta NO se mueve al pasar
-    // el puntero, para que un `translateY` copiado de una regla vieja se vea.
-    out.checks[`welcome${key}CardHoverDoesNotLift`] = hovered.transform === resting.transform;
-
-    const box = await locator.boundingBox();
-    if (box) {
+      const box = await locator.boundingBox();
+      if (!box) continue;
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
-      await page.waitForTimeout(80);
-      const pressed = await readState();
+      // Mismo plazo que el hover, no 80 ms: estas piezas tienen `transition`, y
+      // con 80 ms el relleno del pulsado se leía a mitad de camino. El check
+      // daba verde o rojo según qué hubiera avanzado la interpolación —una
+      // carrera, no un veredicto. Se espera a que el estado esté quieto.
+      await page.waitForTimeout(220);
+      const pressed = await readCardState(locator);
       // Estas tarjetas navegan al soltar el clic sobre ellas mismas (abren un
       // proyecto, un modal o un ejemplo). Mover el ratón fuera del elemento
       // antes de soltar cancela el `click` — se comprueba el estado `:active`
       // sin disparar de verdad el `onClick` y saltar de la bienvenida.
       await page.mouse.move(0, 0);
       await page.mouse.up();
-      out.checks[`welcome${key}CardActiveBoxShadowChanges`] = pressed.boxShadow !== hovered.boxShadow;
-      // Ronda 1/5: antes sólo se comparaba `boxShadow`, así que no veía que
-      // `transform` (launcher/import) o `borderColor` (template) en `:active`
-      // no se estaban aplicando de verdad — `button:not(:disabled):active
-      // { transform:scale(.975) }` (más específica) se comía el
-      // `translateY(1px)` de estas tarjetas en silencio, y ambos checks
-      // pasaban igual porque sólo miraban la sombra.
+
+      // El pulsado del sistema NO es una sombra que cambia: es el relleno que
+      // sube un grado en la jerarquía de fills y la pieza que encoge un 3 %
+      // (`design-system/README.md`, §Materia). El check medía `boxShadow`
+      // porque en la identidad de arcilla el pulsado era una cavidad; con
+      // piezas planas los dos valores son `none` y el predicado se quedaba
+      // afirmando que nada cambia. Se mide lo que de verdad marca el pulsado.
+      out.checks[`welcome${key}CardActiveFillChanges`] =
+        pressed.backgroundColor !== hovered.backgroundColor || pressed.boxShadow !== hovered.boxShadow;
+
       if (key === 'template') {
         // El `transform` de esta tarjeta lo posee `motion` (layout), así que
-        // aquí el indicador de `:active` distinto de la sombra es el borde,
+        // aquí el indicador de `:active` distinto del relleno es el borde,
         // no el desplazamiento — ver el comentario de `.welcome-template-card:active`.
         out.checks[`welcome${key}CardActiveBorderColorChanges`] = pressed.borderColor !== hovered.borderColor;
       } else {
         // Ronda 2/5: comparar contra el valor EXACTO esperado, no contra
         // "cambió y no es 'none'". Ese predicado laxo no veía el defecto
         // real: si `button:not(:disabled):active { transform:scale(.975) }`
-        // se come el `translateY(1px)` de esta tarjeta (p. ej. porque a
-        // alguien se le va el `:not(:disabled)` de `.welcome-launcher-card:active`
-        // en `styles.css`), el valor pulsado pasa a
-        // `matrix(0.975, 0, 0, 0.975, 0, 0)` — sigue siendo distinto del de
-        // `:hover` y sigue siendo distinto de `'none'`, así que el check
-        // laxo se quedaba en verde con el defecto reintroducido. El único
-        // valor que demuestra el hundimiento correcto es la matriz que
-        // produce `--sc-press-transform`.
-        //
-        // El token pasó de `translateY(1.5px) scale(0.985)` a `scale(0.97)`
-        // limpio: un control del sistema no desciende al pulsarse, encoge. Se
-        // actualiza el número que este check exige, no el criterio — sigue
-        // siendo el valor EXACTO de la matriz, y ahora además exige que NO
-        // haya traslación, que es justo la parte que se retiró.
+        // se come el `translateY(1px)` de esta tarjeta, el valor pulsado pasa a
+        // `matrix(0.975, …)` — sigue siendo distinto del de `:hover` y sigue
+        // siendo distinto de `'none'`, así que el check laxo se quedaba en
+        // verde con el defecto reintroducido. El único valor que demuestra el
+        // pulsado correcto es la matriz que produce `--sc-press-transform`:
+        // `scale(0.97)` limpio, sin traslación — un control del sistema no
+        // desciende al pulsarse, encoge.
         const values = pressed.transform.match(/^matrix\(([^)]+)\)$/)?.[1]
           .split(',')
           .map((value) => Number.parseFloat(value.trim())) ?? [];
@@ -862,39 +897,47 @@ async function verifyWelcomeSurfaceMaterial(page) {
           Math.abs(values[5]) < 0.001;
       }
     }
-  }
+  };
 
-  // El foco por teclado tiene que verse sobre las tres superficies
-  // nuevas, no sólo la primera: se llega con Tab de verdad (no `element.focus()`,
-  // que en Chromium no siempre dispara `:focus-visible`) y se sigue avanzando
-  // en el mismo recorrido (el orden del DOM es launcher x3 → filtros →
-  // import → plantillas) para comprobar las tres, en vez de resetear el foco
-  // tres veces.
-  // El recorrido de Tab arranca desde el principio del documento: la etapa 3
-  // ya está abierta por el bloque anterior, así que las tres materias están
-  // todas en el árbol y se alcanzan en el mismo barrido.
-  await page.locator('body').evaluate((body) => body.focus());
-  const capitalize = (s) => s[0].toUpperCase() + s.slice(1);
-  const focusChecks = [
-    ['launcher', 'welcome-launcher-card'],
-    ['import', 'welcome-import-card'],
-    ['template', 'welcome-template-card'],
-  ];
-  for (const [key, className] of focusChecks) {
-    let reached = false;
-    for (let i = 0; i < 30 && !reached; i += 1) {
-      await page.keyboard.press('Tab');
-      reached = await page.evaluate((cls) => document.activeElement?.classList.contains(cls) ?? false, className);
-    }
-    out.checks[`welcome${capitalize(key)}CardReachableByTab`] = reached;
-    if (reached) {
+  // El foco por teclado tiene que verse sobre cada superficie, y se llega con
+  // Tab de verdad (no `element.focus()`, que en Chromium no siempre dispara
+  // `:focus-visible`).
+  const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
+  const measureTabReach = async (focusChecks) => {
+    for (const [key, className] of focusChecks) {
+      let reached = false;
+      for (let i = 0; i < 30 && !reached; i += 1) {
+        await page.keyboard.press('Tab');
+        reached = await page.evaluate((cls) => document.activeElement?.classList.contains(cls) ?? false, className);
+      }
+      out.checks[`welcome${capitalize(key)}CardReachableByTab`] = reached;
+      if (!reached) continue;
       const outline = await page.evaluate(() => {
         const style = getComputedStyle(document.activeElement);
         return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
       });
       out.checks[`welcome${capitalize(key)}CardFocusVisibleOutline`] = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
     }
-  }
+  };
+
+  // Pasada 1 · el lanzador, con la vitrina cerrada.
+  await measureCards({
+    launcher: '.welcome-launcher-card >> nth=0',
+    import: '.welcome-import-card >> nth=0',
+  });
+  await page.locator('body').evaluate((body) => body.focus());
+  await measureTabReach([
+    ['launcher', 'welcome-launcher-card'],
+    ['import', 'welcome-import-card'],
+  ]);
+
+  // Pasada 2 · la vitrina. El diálogo atrapa el foco, así que el barrido de Tab
+  // de aquí se queda dentro de él, que es justo lo que hay que recorrer.
+  await openTemplateGallery(page);
+  await measureCards({ template: '.welcome-template-card >> nth=0' });
+  await measureTabReach([['template', 'welcome-template-card']]);
+  await page.keyboard.press('Escape');
+  await page.locator('.welcome-templates-dialog').waitFor({ state: 'hidden' });
 }
 
 // Ronda 2/5: el arreglo del Important 4 (el desplazamiento de `:active` se
@@ -911,8 +954,8 @@ async function verifyWelcomeReducedMotionActive() {
   await startWithEmptyLibrary(page);
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  // CRI-104 · la zona de archivo vive en la etapa 3 del recorrido.
-  await openWelcomeStep(page, 'Por dónde');
+  // La zona de archivo es una fila más del lanzador: está desde el primer
+  // pintado, sin nada que abrir.
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
@@ -948,6 +991,97 @@ async function verifyWelcomeReducedMotionActive() {
   await context.close();
 }
 
+
+/**
+ * Ninguna superficie flotante del lienzo tapa a otra.
+ *
+ * Éste es el gate de un contrato que hasta ahora sólo estaba escrito en el
+ * README del sistema de diseño, y una regla que nadie puede comprobar no es una
+ * regla. Cerraba dos defectos medidos en la evidencia del rediseño anterior:
+ *
+ *   · La barra de acciones contextuales y el lector de coordenadas y escala
+ *     compartían `left:50%` y `translateX(-50%)` a 12 y 16 px del fondo, así
+ *     que con una selección viva la barra tapaba la escala.
+ *   · El lanzador de superficies se posiciona contra `.workspace`, que incluye
+ *     la columna del Inspector, y flotaba encima de su contenido.
+ *
+ * Se mide con el modelo seleccionado, que es cuando las cuatro piezas coexisten
+ * — sin selección la barra contextual no existe y el solape no puede verse.
+ */
+async function verifyFloatingSurfacesDoNotOverlap(page) {
+  const boxes = await page.evaluate(() => {
+    const read = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    };
+    return {
+      status: read('.canvas-status'),
+      actions: read('.contextual-actions'),
+      launcher: read('.workspace-surface-launcher'),
+      camera: read('.canvas-controls'),
+      inspector: read('.inspector-panel'),
+    };
+  });
+  const overlaps = (a, b) => Boolean(a && b)
+    && !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+
+  // `null` en un lado significa "esa pieza no está en pantalla", y eso no
+  // demuestra nada: el check exige que las dos existan Y no se toquen.
+  const present = (a, b) => Boolean(boxes[a] && boxes[b]);
+  return {
+    canvasSelectionBarPresentForOverlapCheck: present('actions', 'status'),
+    canvasSelectionBarDoesNotCoverScale: !overlaps(boxes.actions, boxes.status),
+    surfaceLauncherDoesNotCoverInspector: present('launcher', 'inspector') && !overlaps(boxes.launcher, boxes.inspector),
+    surfaceLauncherDoesNotCoverCameraControls: present('launcher', 'camera') && !overlaps(boxes.launcher, boxes.camera),
+  };
+}
+
+
+/**
+ * La ayuda del inspector se REVELA; no se borra.
+ *
+ * Las pistas de campo («El dominio valida E > 0 al analizar», repetida bajo E,
+ * A e I, y «Aplica E, G y densidad del catálogo…» sobre el selector de
+ * material) apilaban un párrafo bajo cada control y triplicaban el alto de la
+ * fila. Se recogen en un globo que aparece al apuntar o al enfocar.
+ *
+ * Lo que este gate impide es que «recoger» degenere en «quitar»: la pista tiene
+ * que seguir EN el documento —`aria-describedby` la referencia— y tiene que
+ * volverse visible de verdad. `display:none` o `visibility:hidden` la sacarían
+ * del árbol de accesibilidad y este check no lo vería mirando sólo la opacidad,
+ * así que también se comprueban esas dos propiedades.
+ */
+async function verifyInspectorHintReveal(page) {
+  const field = page.locator('.inspector-numeric-field:has(.inspector-numeric-field__hint)').first();
+  if (!await field.count()) return { inspectorHintExists: false };
+  const hint = field.locator('.inspector-numeric-field__hint').first();
+
+  const read = () => hint.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { opacity: style.opacity, display: style.display, visibility: style.visibility };
+  });
+
+  // El puntero arranca lejos: sin esto la fila podría estar ya bajo el ratón de
+  // una interacción anterior y el estado "en reposo" sería el revelado.
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(200);
+  const resting = await read();
+  await field.hover();
+  await page.waitForTimeout(220);
+  const revealed = await read();
+  await page.mouse.move(0, 0);
+
+  return {
+    inspectorHintExists: true,
+    inspectorHintHiddenAtRest: Number.parseFloat(resting.opacity) === 0,
+    inspectorHintStaysInAccessibilityTree: resting.display !== 'none' && resting.visibility !== 'hidden',
+    inspectorHintRevealsOnHover: Number.parseFloat(revealed.opacity) === 1,
+  };
+}
+
 async function desktop() {
   const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`${msg.type()}: ${msg.text()}`); });
@@ -973,6 +1107,7 @@ async function desktop() {
     return Boolean(summary && !summary.classList.contains('is-empty'));
   });
   Object.assign(out.checks, await verifyInspectorSummaryContract(page, 'Selected'));
+  Object.assign(out.checks, await verifyInspectorHintReveal(page));
   const flatFamilies = await verifyInspectorFlatFamilies(page);
   Object.assign(out.checks, flatFamilies.checks);
   out.metrics.inspectorFlatFamilySources = flatFamilies.sources;
@@ -1022,7 +1157,7 @@ async function desktop() {
   // CRI-119 · Analizar ya no abre las salidas por su cuenta: son una
   // superficie invocada, hay que pedirlas.
   await openResultsSurface(page);
-  Object.assign(out.checks, await verifyResultsClayMaterial(page));
+  Object.assign(out.checks, await verifyResultsPanelMaterial(page));
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   out.checks.momentChart = await page.locator('.diagram-chart.moment .chart-line').count() === 1;
@@ -1060,6 +1195,9 @@ async function desktop() {
   await page.locator('.member-object').nth(1).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, shiftKey: true })));
   await page.waitForFunction(() => document.querySelectorAll('.member-object.selected').length >= 2);
   out.checks.multiSelection = await page.locator('.member-object.selected').count() >= 2;
+  // Con dos miembros seleccionados la barra contextual está viva: es el único
+  // momento en que las cuatro superficies flotantes coexisten.
+  Object.assign(out.checks, await verifyFloatingSurfacesDoNotOverlap(page));
   const membersBeforeSplit = await page.locator('.member-object').count();
   await page.locator('.desktop-tool-list').getByRole('button', { name: 'Dividir miembro (B)', exact: true }).click();
   const splitTarget = page.locator('.member-object').nth(1);
@@ -1070,7 +1208,7 @@ async function desktop() {
     document.querySelectorAll('.member-object').length === expected
   ), membersBeforeSplit + 1, { timeout: 2000 }).then(() => true, () => false);
   await setOverflowSelect(page, 'Unidades', 'N-mm');
-  out.checks.unitChanged = await page.locator('.units-select').inputValue() === 'N-mm';
+  out.checks.unitChanged = await readAnalysisSetupValue(page, '.units-select') === 'N-mm';
   await toggleThemeFromOverflow(page, 'Tema oscuro');
   out.checks.darkTheme = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
 
@@ -1127,9 +1265,9 @@ async function influenceWorkflow() {
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`influence ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`influence ${String(err)}`));
   await loadCleanApp(page);
-  // CRI-119 · las plantillas de ejemplo, «viga simplemente apoyada» incluida,
-  // viven en el tercer paso ("Por dónde") desde CRI-112.
-  await openWelcomeStep(page, 'Por dónde');
+  // Las plantillas de ejemplo, «viga simplemente apoyada» incluida, viven en la
+  // vitrina, que ahora es un diálogo del lanzador.
+  await openTemplateGallery(page);
   await activateWelcomeLauncher(page, page.getByRole('button', { name: /viga simplemente apoyada/i }).first());
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   // CRI-119 · «Influencia» tampoco es ya una pestaña residente (CRI-101): abrir

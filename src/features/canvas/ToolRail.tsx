@@ -165,9 +165,9 @@ const PaletteToolButton = ({
     data-tool-id={definition.id}
     data-tool-group={definition.group}
   >
-    <span className="mobile-palette-icon" aria-hidden="true"><ToolGlyph definition={definition} size={23} /></span>
+    <span className="mobile-palette-icon" aria-hidden="true"><ToolGlyph definition={definition} size={22} /></span>
     <span className="mobile-palette-copy"><strong>{label}</strong><small>{detail}</small></span>
-    <ChevronRight size={19} aria-hidden="true" />
+    <ChevronRight size={18} aria-hidden="true" />
     <kbd>{definition.shortcut}</kbd>
   </button>
 );
@@ -198,9 +198,9 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   aria-keyshortcuts="Control+K Meta+K"
   onClick={onOpen}
 >
-  <span className="mobile-palette-icon" aria-hidden="true"><Search size={23} strokeWidth={1.8} /></span>
+  <span className="mobile-palette-icon" aria-hidden="true"><Search size={22} strokeWidth={1.8} /></span>
   <span className="mobile-palette-copy"><strong>{label}</strong></span>
-  <ChevronRight size={19} aria-hidden="true" />
+  <ChevronRight size={18} aria-hidden="true" />
   <kbd>Ctrl K</kbd>
 </button>;
 
@@ -376,9 +376,9 @@ export const ToolRail = () => {
             onClick={openStructureGeneratorFromMobile}
             data-structure-generator-command
           >
-            <span className="mobile-palette-icon" aria-hidden="true"><Grid3x3 size={23} strokeWidth={1.8} /></span>
+            <span className="mobile-palette-icon" aria-hidden="true"><Grid3x3 size={22} strokeWidth={1.8} /></span>
             <span className="mobile-palette-copy"><strong>{t('generator.launcher')}</strong></span>
-            <ChevronRight size={19} aria-hidden="true" />
+            <ChevronRight size={18} aria-hidden="true" />
           </button> : null}
           {group.id === 'edit' && canEditSelection ? <button
             className="mobile-palette-tool tool-structural-edit"
@@ -388,9 +388,9 @@ export const ToolRail = () => {
             onClick={openStructuralEditFromMobile}
             data-structural-edit-command
           >
-            <span className="mobile-palette-icon" aria-hidden="true"><Move size={23} strokeWidth={1.8} /></span>
+            <span className="mobile-palette-icon" aria-hidden="true"><Move size={22} strokeWidth={1.8} /></span>
             <span className="mobile-palette-copy"><strong>{t('canvas.structuralEditLauncher')}</strong></span>
-            <ChevronRight size={19} aria-hidden="true" />
+            <ChevronRight size={18} aria-hidden="true" />
           </button> : null}
         </div>)}
       </div>

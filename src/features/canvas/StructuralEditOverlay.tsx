@@ -206,7 +206,7 @@ export const StructuralEditOverlay = ({
         <Button
           variant={pointerArmed ? 'primary' : 'secondary'}
           size="touch"
-          leadingIcon={<MousePointer2 size={17} />}
+          leadingIcon={<MousePointer2 size={16} />}
           aria-pressed={pointerArmed}
           onClick={onTogglePointer}
         >{t(pointerArmed ? 'canvas.structuralEditPointerActive' : 'canvas.structuralEditPointer')}</Button>

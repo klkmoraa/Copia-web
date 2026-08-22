@@ -231,7 +231,7 @@ export function TopBarConceptLab({ locale, onEvent }: TopBarConceptLabProps) {
           <div className="topbar-lab__identity">
             <span className="topbar-lab__brand-name">structureCo</span>
             <button className="topbar-lab__project" type="button" aria-label={t.openProjects} onClick={() => emit(t.eventProject)}>
-              <strong>{t.projectName}</strong><ChevronDown size={15} aria-hidden="true" />
+              <strong>{t.projectName}</strong><ChevronDown size={16} aria-hidden="true" />
             </button>
           </div>
           <button className="topbar-lab__storage" type="button" aria-label={`${t.local}. ${t.storageDetail}`} onClick={() => emit(t.eventStorage)}>
@@ -283,7 +283,7 @@ export function TopBarConceptLab({ locale, onEvent }: TopBarConceptLabProps) {
               aria-haspopup="dialog"
               aria-expanded={overflowOpen}
               onClick={() => setOverflowOpen((open) => !open)}
-            ><MoreHorizontal size={19} /></IconButton>
+            ><MoreHorizontal size={18} /></IconButton>
             {overflowOpen ? <div className="topbar-lab__overflow-menu" role="dialog" aria-label={t.more}>
               <div className="topbar-lab__overflow-context">
                 <LabSelect
@@ -314,7 +314,7 @@ export function TopBarConceptLab({ locale, onEvent }: TopBarConceptLabProps) {
               <button type="button" onClick={closeOverflow}>{t.close}</button>
             </div> : null}
           </div>
-          <Button className="topbar-lab__analyze" variant="primary" size="touch" aria-label={t.analyze} leadingIcon={<Play size={17} fill="currentColor" />} onClick={() => emit(t.analyze)}>
+          <Button className="topbar-lab__analyze" variant="primary" size="touch" aria-label={t.analyze} leadingIcon={<Play size={16} fill="currentColor" />} onClick={() => emit(t.analyze)}>
             {t.analyze}
           </Button>
         </div>

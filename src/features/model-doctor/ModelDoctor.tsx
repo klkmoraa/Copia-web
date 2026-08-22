@@ -462,7 +462,7 @@ export const ModelDoctor = ({
                 {isAcknowledged ? copy.unacknowledge : copy.acknowledge}
               </Button> : null}
             </footer>
-            {isAcknowledged ? <span className="model-doctor-acknowledged"><CheckCircle2 size={15} aria-hidden="true" /> {copy.acknowledged}</span> : null}
+            {isAcknowledged ? <span className="model-doctor-acknowledged"><CheckCircle2 size={16} aria-hidden="true" /> {copy.acknowledged}</span> : null}
           </article>;
         })}
       </div>

@@ -50,7 +50,7 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
       : view.blocker === 'unreliable' ? 'elastic.blockedUnreliable' : null;
     return <section className="inspector-narrative" data-status="unavailable" aria-label={t('elastic.unavailableTitle')}>
       <header>
-        <CircleSlash size={15} aria-hidden="true" />
+        <CircleSlash size={16} aria-hidden="true" />
         <strong>{t('elastic.unavailableTitle')}</strong>
       </header>
       {blockedKey ? <p className="inspector-narrative-body">{t(blockedKey)}</p> : null}
@@ -83,7 +83,7 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
     aria-label={t('inspector.narrativeTitle')}
   >
     <header>
-      <Gauge size={15} aria-hidden="true" />
+      <Gauge size={16} aria-hidden="true" />
       <strong>{t('inspector.narrativeTitle')}</strong>
     </header>
 
@@ -150,7 +150,7 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
           ratio: ratioText,
         })}</li>
       </ul>
-      <p className="elastic-how-reference"><Info size={13} aria-hidden="true" />{t('elastic.referenceNote')}</p>
+      <p className="elastic-how-reference"><Info size={14} aria-hidden="true" />{t('elastic.referenceNote')}</p>
     </details>
 
     <small className="inspector-narrative-basis">{t('elastic.envelopeNote')} {t('elastic.limitNote')}</small>

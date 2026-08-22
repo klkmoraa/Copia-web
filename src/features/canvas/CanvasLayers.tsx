@@ -101,7 +101,7 @@ export const CanvasLayers = ({
       aria-controls={panelId}
       onClick={() => setOpen((current) => !current)}
       data-canvas-chrome="layers-trigger"
-    ><Layers3 size={19} /></button>
+    ><Layers3 size={18} /></button>
     {open ? <section
       ref={panelRef}
       id={panelId}
@@ -111,7 +111,7 @@ export const CanvasLayers = ({
     >
       <header>
         <div><strong>{t('canvas.layers')}</strong><span>{t('canvas.layersDescription')}</span></div>
-        <button type="button" aria-label={t('canvas.layersClose')} onClick={() => close()}><X size={17} /></button>
+        <button type="button" aria-label={t('canvas.layersClose')} onClick={() => close()}><X size={16} /></button>
       </header>
       <div className="canvas-layer-presets" role="group" aria-label={t('canvas.layerPresets')}>
         {presetDefinitions.map(({ id, labelKey }) => <button

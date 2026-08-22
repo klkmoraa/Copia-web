@@ -153,7 +153,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     <div className="command-palette" data-workspace-surface="palette" role="dialog" aria-labelledby={titleId}>
       <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
       <div className="command-palette-search">
-        <Search size={17} aria-hidden="true" />
+        <Search size={16} aria-hidden="true" />
         <input
           ref={inputRef}
           data-surface-focus-key="command-query"

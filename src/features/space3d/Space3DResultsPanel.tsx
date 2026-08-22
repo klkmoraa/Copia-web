@@ -100,7 +100,7 @@ export const Space3DResultsPanel = ({
   return <section className="space3d-results" aria-label={t('space3d.tabResults')}>
     <header className="space3d-results-head">
       <span className={`space3d-state space3d-state--${meta.tone}`} data-testid="space3d-analysis-state-label">
-        <StateIcon size={15} aria-hidden="true" />{t(meta.key)}
+        <StateIcon size={16} aria-hidden="true" />{t(meta.key)}
       </span>
       {deformationScale !== null && analysisState === 'ready'
         ? <span className="space3d-chip">{t('space3d.deformationScale', { scale: engineering(deformationScale, 4) })}</span>

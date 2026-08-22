@@ -268,7 +268,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       }}>
         <i className={activeTab.color ?? ''} aria-hidden="true" />
         <strong>{mobileResultLabel}</strong>
-        <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
+        <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={18} />
       </button>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
         <button

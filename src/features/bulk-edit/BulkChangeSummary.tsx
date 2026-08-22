@@ -58,7 +58,7 @@ export const BulkChangeSummary = ({
               {formatAggregatedValue(state, row.current, context)}
               {/* La dirección del cambio no puede vivir sólo en el icono. */}
               <span className="sr-only">{t('changes.to')}</span>
-              <ArrowRight size={13} aria-hidden="true" />
+              <ArrowRight size={14} aria-hidden="true" />
               {row.status === 'clear' || row.next === undefined
                 ? t('changes.clear')
                 : formatBulkValue(state, row.next, context)}

@@ -123,7 +123,7 @@ export const Accordion = ({
             onClick={() => toggle(item.id)}
           >
             <span>{item.title}</span>
-            <ChevronDown size={17} aria-hidden="true" />
+            <ChevronDown size={16} aria-hidden="true" />
           </button>
         </h3>
         <div id={panelId} role="region" aria-labelledby={triggerId} hidden={!open} className="sc-accordion__panel">{item.content}</div>

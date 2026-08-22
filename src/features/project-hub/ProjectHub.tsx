@@ -134,8 +134,8 @@ export const ProjectHub = ({
         <small className="project-hub__revision">{t('hub.revision', { revision: record.revision })}</small>
         <div className="project-hub__actions">
           <button type="button" aria-label={t('hub.openLabel', { name: record.name })} onClick={() => onOpen(record)}><FolderOpen size={16} />{t('hub.open')}</button>
-          <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => setEditing({ id: record.id, name: record.name })}><Pencil size={15} /></button>
-          <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => void duplicate(record)}><Copy size={15} /></button>
+          <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => setEditing({ id: record.id, name: record.name })}><Pencil size={16} /></button>
+          <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => void duplicate(record)}><Copy size={16} /></button>
         </div>
       </article>)}
     </div> : null}
@@ -146,7 +146,7 @@ export const ProjectHub = ({
     {recoveries.length ? <details className="project-hub__recoveries" open>
       <summary>{t('hub.recoveries', { count: recoveries.length })}</summary>
       {recoveries.map((recovery) => <button key={recovery.id} type="button" onClick={() => void restore(recovery)}>
-        <RotateCcw size={15} /> {t('hub.restore', { name: recovery.project.name })}
+        <RotateCcw size={16} /> {t('hub.restore', { name: recovery.project.name })}
       </button>)}
     </details> : null}
   </section>;

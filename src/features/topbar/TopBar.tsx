@@ -20,6 +20,7 @@ import {
   Redo2,
   Save,
   Sheet,
+  SlidersHorizontal,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -73,7 +74,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     storageMessage,
     renameProject,
     updateProjectView,
-    updateProjectAnalysisSettings,
     replaceProject,
     undo,
     redo,
@@ -82,7 +82,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     analysis,
     isAnalyzing,
     selectedCombinationId,
-    setSelectedCombinationId,
     analyze,
     ensureEducationTrace,
   } = useProjectAnalysis();
@@ -102,6 +101,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showAnalysisSetup, setShowAnalysisSetup] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -112,7 +112,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const projectMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const menuOpen = showProjectMenu || showExportMenu || showMobileMenu;
+  const analysisSetupButtonRef = useRef<HTMLButtonElement>(null);
+  const menuOpen = showProjectMenu || showExportMenu || showMobileMenu || showAnalysisSetup;
 
   useEffect(() => {
     const syncConnectivity = () => setOnline(navigator.onLine !== false);
@@ -128,17 +129,21 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowProjectMenu(false);
     setShowExportMenu(false);
     setShowMobileMenu(false);
+    setShowAnalysisSetup(false);
   };
 
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest('.project-menu, .project-menu-toggle, .export-wrap, .mobile-actions-wrap')) closeMenus();
+      if (!target?.closest('.project-menu, .project-menu-toggle, .export-wrap, .mobile-actions-wrap, .analysis-setup-wrap')) closeMenus();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      const trigger = showProjectMenu ? projectMenuButtonRef.current : showExportMenu ? exportMenuButtonRef.current : mobileMenuButtonRef.current;
+      const trigger = showProjectMenu ? projectMenuButtonRef.current
+        : showExportMenu ? exportMenuButtonRef.current
+        : showAnalysisSetup ? analysisSetupButtonRef.current
+        : mobileMenuButtonRef.current;
       closeMenus();
       window.requestAnimationFrame(() => trigger?.focus());
     };
@@ -148,7 +153,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [menuOpen, showExportMenu, showMobileMenu, showProjectMenu]);
+  }, [menuOpen, showAnalysisSetup, showExportMenu, showMobileMenu, showProjectMenu]);
 
   useEffect(() => {
     const selector = showProjectMenu ? '.project-menu button:not(:disabled)' : showExportMenu ? '.export-menu button:not(:disabled)' : showMobileMenu ? '.mobile-actions-menu button:not(:disabled)' : null;
@@ -156,6 +161,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     const handle = window.requestAnimationFrame(() => topbarRef.current?.querySelector<HTMLButtonElement>(selector)?.focus());
     return () => window.cancelAnimationFrame(handle);
   }, [showExportMenu, showMobileMenu, showProjectMenu]);
+
+  /* El popover de análisis abre el foco en su primer campo, no en un botón: no
+     es un menú de acciones, es un formulario de cuatro decisiones. */
+  useEffect(() => {
+    if (!showAnalysisSetup) return undefined;
+    const handle = window.requestAnimationFrame(() => topbarRef.current?.querySelector<HTMLSelectElement>('.analysis-setup-popover select')?.focus());
+    return () => window.cancelAnimationFrame(handle);
+  }, [showAnalysisSetup]);
 
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
@@ -181,6 +194,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowMobileMenu((open) => !open);
     setShowProjectMenu(false);
     setShowExportMenu(false);
+    setShowAnalysisSetup(false);
+  };
+  const toggleAnalysisSetup = () => {
+    setShowAnalysisSetup((open) => !open);
+    setShowProjectMenu(false);
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
   };
 
   // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
@@ -207,6 +227,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     renameProject(next);
   };
   const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId);
+  /* El botón de la barra lleva el caso activo, no la palabra «Análisis»: un
+     ítem de barra unificada enseña su valor, no su categoría. */
+  const activeScenarioLabel = selectedCombination?.name ?? t('analysis.activeCases');
   const scenarioName = selectedCombination?.name
     ?? (project.loadCases.filter((item) => item.active).map((item) => item.name).join(' + ') || t('analysis.activeCases'));
   const scenarioFactors = selectedCombination?.factors ?? Object.fromEntries(
@@ -370,7 +393,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
               aria-haspopup="menu"
               onClick={toggleProjectMenu}
             >
-              <ChevronDown size={15} />
+              <ChevronDown size={16} />
             </button>
           </div>
         </div>
@@ -378,7 +401,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           {showProjectMenu ? (
             <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
               <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
-                <FilePlus2 size={17} /> {t('project.new')}
+                <FilePlus2 size={16} /> {t('project.new')}
               </button>
               {exampleProjects.map((example) => {
                 const copy = presentExample(example.name, example.description, t);
@@ -386,89 +409,72 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
                 </button>;
               })}
-              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
+              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={16} /> {t('project.importJson')}</button>
             </m.div>
           ) : null}
         </AnimatePresence>
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
-        <div className="topbar-context-zone" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
-          <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
-            <span>{t('analysis.caseOrCombination')}</span>
-            <select
-              className="compact-select combination-select"
-              aria-label={t('analysis.caseOrCombination')}
-              value={selectedCombinationId}
-              onChange={(event) => setSelectedCombinationId(event.target.value)}
+        <div className="topbar-context-zone" data-topbar-cluster="context">
+          {/* CUATRO decisiones, UN ítem de barra.
+              Antes eran cuatro `<select>` con su etiqueta encima, y a 1280 px
+              las etiquetas se recortaban a «Caso o com…», «Modo de cál…»,
+              «Orden del a…». Una barra unificada del sistema no rotula sus
+              ítems ni apila etiquetas sobre controles: enseña el valor activo y
+              abre el resto en un popover. Lo que se ve de un vistazo es el caso
+              en curso, que es el dato que cambia mientras se trabaja; los otros
+              tres se eligen una vez y se olvidan. */}
+          <div className="analysis-setup-wrap">
+            <button
+              type="button"
+              ref={analysisSetupButtonRef}
+              className="topbar-context-button analysis-setup-button"
+              aria-haspopup="dialog"
+              aria-expanded={showAnalysisSetup}
+              aria-label={t('menu.sectionAnalysis')}
+              title={t('analysis.setupHint')}
+              onClick={toggleAnalysisSetup}
             >
-              <option value="">{t('analysis.activeCases')}</option>
-              {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
-            </select>
-          </label>
-          <label className="topbar-context-control" data-context-control="mode">
-            <span>{t('analysis.mode')}</span>
-            <select
-              className="compact-select mode-select"
-              aria-label={t('analysis.mode')}
-              value={project.settings.calculationMode ?? 'complete'}
-              onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
-            >
-              <option value="classroom">{t('analysis.modeClassroom')}</option>
-              <option value="complete">{t('analysis.modeComplete')}</option>
-            </select>
-          </label>
-          <label className="topbar-context-control" data-context-control="order">
-            <span>{t('analysis.order')}</span>
-            <select
-              className="compact-select analysis-order-select"
-              aria-label={t('analysis.order')}
-              value={project.settings.analysisMode ?? 'first-order'}
-              onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
-            >
-              <option value="first-order">{t('analysis.orderFirst')}</option>
-              <option value="p-delta">{t('analysis.orderPDelta')}</option>
-            </select>
-          </label>
-          <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
-            <span>{t('units.label')}</span>
-            <select
-              className="compact-select units-select"
-              aria-label={t('units.label')}
-              value={project.settings.units}
-              onChange={(event) => updateProjectView((draft) => ({
-                ...draft,
-                settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
-              }))}
-            >
-              <option value="kN-m">kN · m</option>
-              <option value="N-mm">N · mm</option>
-              <option value="kgf-m">kgf · m</option>
-              <option value="kip-ft">kip · ft</option>
-            </select>
-          </label>
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              <span className="topbar-context-button__value">{activeScenarioLabel}</span>
+              <ChevronDown size={14} aria-hidden="true" />
+            </button>
+            <AnimatePresence>
+              {showAnalysisSetup ? (
+                <m.div {...popoverMotionProps} className="popover analysis-setup-popover" role="dialog" aria-label={t('menu.sectionAnalysis')}>
+                  <AnalysisContextFields />
+                </m.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
         </div>
         <div className="topbar-command-cluster" data-topbar-cluster="actions">
-        <IconButton
-          variant="secondary"
-          className="icon-button datasheet-launcher"
-          label={datasheetCommand.label}
-          title={datasheetCommand.hint}
-          onClick={datasheetCommand.run}
-        ><Sheet size={19} /></IconButton>
-        {onOpenSpace3D ? <IconButton
-          variant="secondary"
-          className="icon-button space3d-open-button"
-          label={t('space3d.open')}
-          title={t('space3d.open')}
-          onClick={onOpenSpace3D}
-        ><Box size={19} /></IconButton> : null}
-        <div className="history-controls" aria-label={t('history.label')}>
-          <IconButton variant="secondary" className="icon-button" label={undoCommand.label} onClick={undoCommand.run} disabled={undoCommand.disabled} title={undoCommand.label}><Undo2 size={19} /></IconButton>
-          <IconButton variant="secondary" className="icon-button" label={redoCommand.label} onClick={redoCommand.run} disabled={redoCommand.disabled} title={redoCommand.label}><Redo2 size={19} /></IconButton>
+        {/* Grupos, no una fila de seis iconos sueltos: superficies · historial ·
+            exportación · resto. El separador de medio píxel entre grupos lo pone
+            el CSS, que es donde vive el reparto visual. */}
+        <div className="topbar-tool-group" role="group" aria-label={t('menu.sectionViews')}>
+          <IconButton
+            variant="secondary"
+            className="icon-button datasheet-launcher"
+            label={datasheetCommand.label}
+            title={datasheetCommand.hint}
+            onClick={datasheetCommand.run}
+          ><Sheet size={18} /></IconButton>
+          {onOpenSpace3D ? <IconButton
+            variant="secondary"
+            className="icon-button space3d-open-button"
+            label={t('space3d.open')}
+            title={t('space3d.open')}
+            onClick={onOpenSpace3D}
+          ><Box size={18} /></IconButton> : null}
         </div>
-        <div className="export-wrap">
-          <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
+        <div className="history-controls topbar-tool-group" aria-label={t('history.label')}>
+          <IconButton variant="secondary" className="icon-button" label={undoCommand.label} onClick={undoCommand.run} disabled={undoCommand.disabled} title={undoCommand.label}><Undo2 size={18} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={redoCommand.label} onClick={redoCommand.run} disabled={redoCommand.disabled} title={redoCommand.label}><Redo2 size={18} /></IconButton>
+        </div>
+        <div className="export-wrap topbar-tool-group">
+          <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={18} /></IconButton>
           <AnimatePresence>
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
@@ -483,46 +489,45 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             ) : null}
           </AnimatePresence>
         </div>
-        <div className="mobile-actions-wrap utility-actions-wrap">
+        <div className="mobile-actions-wrap utility-actions-wrap topbar-tool-group">
           <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
           <AnimatePresence>
             {showMobileMenu ? (
               <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
                 <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={17} /> {undoCommand.label}</button>
-                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={17} /> {redoCommand.label}</button>
+                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={16} /> {undoCommand.label}</button>
+                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={16} /> {redoCommand.label}</button>
                 </div>
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
+                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
                   {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
                       de tocar Estado/Doctor (orden de degradación · CRI-95). */}
-                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
-                  <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
-                  <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
-                  {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
+                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
+                  {/* Los mismos campos que el popover de la barra, no una
+                      segunda copia: una sola definición consumida por las dos
+                      presentaciones. En el desbordamiento, elegir cierra. */}
+                  <AnalysisContextFields onCommit={() => setShowMobileMenu(false)} />
                 </div>
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
-                  <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
                   <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={17} /> {themeCommand.label}</button>
+                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
                 </div>
 
                 {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                   <div className="menu-section-title">{t('menu.sectionViews')}</div>
                   {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
-                    <Box size={17} /> {t('space3d.open')}
+                    <Box size={16} /> {t('space3d.open')}
                   </button> : null}
                   <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
-                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
+                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
                   </button>
                   <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
-                    {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                    {layoutActions.fullCanvas ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                     {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
                   </button>
                 </div> : null}
@@ -554,7 +559,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           onClick={analyzeCommand.run}
           loading={isAnalyzing}
           loadingLabel={t('analysis.runningLabel')}
-          leadingIcon={<Play size={17} fill="currentColor" />}
+          leadingIcon={<Play size={16} fill="currentColor" />}
           aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
         >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
         </div>
@@ -587,7 +592,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           aria-label={modelDoctorCommand.label}
           title={t('modelDoctor.description')}
         >
-          <Wrench size={17} aria-hidden="true" />
+          <Wrench size={16} aria-hidden="true" />
           <span>{modelDoctorCommand.label}</span>
         </button>
         <AnalysisStatus
@@ -610,6 +615,92 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       /></Suspense> : null}
     </header>
   );
+};
+
+/**
+ * Las cuatro decisiones de análisis —caso o combinación, modo de cálculo, orden
+ * y unidades—, definidas UNA vez.
+ *
+ * Vivían duplicadas: cuatro `<select>` rotulados en la barra para escritorio y
+ * otros cuatro idénticos dentro del menú de desbordamiento para compacto, cada
+ * juego con su propia copia del manejador. Dos definiciones de la misma
+ * decisión divergen en cuanto alguien toca una — y ya lo habían hecho: la
+ * versión de la barra no cerraba nada al cambiar y la del desbordamiento sí,
+ * sin que ninguna regla dijera por qué. Ahora la diferencia es un parámetro.
+ *
+ * `data-context-control` viaja con cada campo: es lo que `TopBar.test.tsx` usa
+ * para contar que las cuatro decisiones siguen alcanzables, esté donde esté el
+ * campo. Las clases `combination-select`/`mode-select`/`analysis-order-select`/
+ * `units-select` se conservan porque `qa.mjs` lee sus valores en Chromium real.
+ */
+const AnalysisContextFields = ({ onCommit }: { onCommit?: () => void }) => {
+  const { project, updateProjectView, updateProjectAnalysisSettings } = useProjectModel();
+  const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
+  const { t } = useI18n();
+  const analysisMode = project.settings.analysisMode ?? 'first-order';
+
+  return <>
+    <label className="mobile-menu-field topbar-context-field overflow-case" data-context-control="scenario">
+      <span>{t('analysis.caseOrCombination')}</span>
+      <select
+        className="combination-select"
+        value={selectedCombinationId}
+        onChange={(event) => setSelectedCombinationId(event.target.value)}
+      >
+        <option value="">{t('analysis.activeCases')}</option>
+        {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
+      </select>
+    </label>
+
+    <label className="mobile-menu-field topbar-context-field overflow-mode" data-context-control="mode">
+      <span>{t('analysis.mode')}</span>
+      <select
+        className="mode-select"
+        value={project.settings.calculationMode ?? 'complete'}
+        onChange={(event) => {
+          updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }));
+          onCommit?.();
+        }}
+      >
+        <option value="classroom">{t('analysis.modeClassroom')}</option>
+        <option value="complete">{t('analysis.modeComplete')}</option>
+      </select>
+    </label>
+
+    <label className="mobile-menu-field topbar-context-field overflow-analysis-order" data-context-control="order">
+      <span>{t('analysis.order')}</span>
+      <select
+        className="analysis-order-select"
+        value={analysisMode}
+        onChange={(event) => {
+          updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }));
+          onCommit?.();
+        }}
+      >
+        <option value="first-order">{t('analysis.orderFirst')}</option>
+        <option value="p-delta">{t('analysis.orderPDelta')}</option>
+      </select>
+    </label>
+
+    {analysisMode === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
+
+    <label className="mobile-menu-field topbar-context-field overflow-units" data-context-control="units">
+      <span>{t('units.label')}</span>
+      <select
+        className="units-select"
+        value={project.settings.units}
+        onChange={(event) => updateProjectView((draft) => ({
+          ...draft,
+          settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
+        }))}
+      >
+        <option value="kN-m">kN · m</option>
+        <option value="N-mm">N · mm</option>
+        <option value="kgf-m">kgf · m</option>
+        <option value="kip-ft">kip · ft</option>
+      </select>
+    </label>
+  </>;
 };
 
 const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; step?: number }> = [

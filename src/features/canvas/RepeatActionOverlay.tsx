@@ -49,7 +49,7 @@ export const RepeatActionOverlay = ({
       exit={{ opacity: 0 }}
       transition={reducedMotion ? { duration: 0.01 } : { duration: 0.16 }}
     >
-      <span className="repeat-preview__icon" aria-hidden="true"><Repeat2 size={17} strokeWidth={2.3} /></span>
+      <span className="repeat-preview__icon" aria-hidden="true"><Repeat2 size={16} strokeWidth={2.3} /></span>
       <div className="repeat-preview__copy">
         <strong>{previewLabel}</strong>
         <span>{instruction}</span>

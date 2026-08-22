@@ -106,7 +106,7 @@ export const ElasticDemandCard = () => {
           className="elastic-demand-action"
           data-testid="elastic-index-action"
           onClick={() => locate(firstGap.memberId)}
-        ><LocateFixed size={13} aria-hidden="true" />{t('elastic.actionAssign', { member: firstGap.memberId })}</button>
+        ><LocateFixed size={14} aria-hidden="true" />{t('elastic.actionAssign', { member: firstGap.memberId })}</button>
           : null}
       <small className="elastic-demand-limit">{t('elastic.limitNote')}</small>
     </section>;
@@ -184,7 +184,7 @@ export const ElasticDemandCard = () => {
             data-testid="elastic-index-locate"
             title={t('elastic.locateHint', { member: highest.memberId })}
             onClick={() => locate(highest.memberId)}
-          ><strong>{highest.memberId}</strong><LocateFixed size={13} aria-hidden="true" />{t('elastic.locate')}</button>
+          ><strong>{highest.memberId}</strong><LocateFixed size={14} aria-hidden="true" />{t('elastic.locate')}</button>
         </dd>
       </div>
       <div>
@@ -245,7 +245,7 @@ export const ElasticDemandCard = () => {
         })}</li>
       </ol>
       <p className="elastic-how-split">{`N* ${axialShare} % · M* ${100 - axialShare} % de σ*`}</p>
-      <p className="elastic-how-reference"><Info size={13} aria-hidden="true" />{t('elastic.referenceNote')}</p>
+      <p className="elastic-how-reference"><Info size={14} aria-hidden="true" />{t('elastic.referenceNote')}</p>
     </details>
 
     {view.gaps.length ? <div className="elastic-demand-skipped">

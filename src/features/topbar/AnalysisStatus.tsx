@@ -71,7 +71,7 @@ const AnalysisStatusComponent = ({ projectId, analysis, isAnalyzing, onOpenModel
   const actionable = status === 'warning' || status === 'error';
   const content = (
     <>
-      <Icon className={status === 'calculating' ? 'spin' : undefined} size={17} aria-hidden="true" />
+      <Icon className={status === 'calculating' ? 'spin' : undefined} size={16} aria-hidden="true" />
       <span className="analysis-status-label">{label}</span>
     </>
   );

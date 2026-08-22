@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider } from '../../store/ProjectContext';
@@ -38,7 +38,12 @@ describe('WelcomeScreen header', () => {
   it('changes the language from the welcome screen', async () => {
     const user = userEvent.setup();
     renderWelcome();
-    await user.selectOptions(screen.getByLabelText(/idioma|language/i), 'en');
+    // El idioma dejó de ser un `<select>` nativo: dos opciones fijas y
+    // excluyentes son un control segmentado del sistema, que enseña el estado
+    // sin abrir nada. La capacidad es la misma; lo que cambia es que ahora se
+    // alcanza con una pulsación en vez de con tres.
+    await user.click(within(screen.getByRole('radiogroup', { name: /idioma|language/i }))
+      .getByRole('radio', { name: /english|inglés/i }));
     // No basta con que exista *un* h1: eso pasaría igual si `updateProjectView`
     // fuera un no-op. Se afirma el contenido real tras el cambio de idioma
     // (mismo idiom que `App.test.tsx`: `.textContent).toContain(...)`).
@@ -93,9 +98,9 @@ describe('WelcomeScreen header', () => {
     await user.click(screen.getByRole('button', { name: /menú|menu/i }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     // `getByLabelText` no filtra por accesibilidad (ignora `aria-hidden`/`inert`
-    // en el ancestro), así que con el `<select>` se consulta por rol —
-    // `combobox` es su rol implícito— igual que el botón de tema.
+    // en el ancestro), así que se consulta por rol igual que el botón de tema:
+    // el control de idioma publica `radiogroup`.
     expect(screen.getAllByRole('button', { name: /tema|theme/i })).toHaveLength(1);
-    expect(screen.getAllByRole('combobox', { name: /idioma|language/i })).toHaveLength(1);
+    expect(screen.getAllByRole('radiogroup', { name: /idioma|language/i })).toHaveLength(1);
   });
 });

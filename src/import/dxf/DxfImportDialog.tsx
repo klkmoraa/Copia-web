@@ -162,10 +162,10 @@ export const DxfImportDialog = ({
         {geometry.map((segment) => <line key={segment.id} x1={segment.x1} y1={segment.y1} x2={segment.x2} y2={segment.y2} />)}
       </svg> : null}
       {inspection.diagnostics.length ? <ul className="dxf-diagnostics" aria-label={t('dxf.diagnostics')}>
-        {inspection.diagnostics.map((diagnostic, index) => <li className={diagnostic.severity} key={`${diagnostic.code}-${diagnostic.line ?? index}`}><AlertTriangle size={15} /><span>{diagnostic.message}</span></li>)}
+        {inspection.diagnostics.map((diagnostic, index) => <li className={diagnostic.severity} key={`${diagnostic.code}-${diagnostic.line ?? index}`}><AlertTriangle size={16} /><span>{diagnostic.message}</span></li>)}
       </ul> : null}
       {!project.members.length ? <p className="dxf-blocking-message" role="alert">{t('dxf.templateRequired')}</p> : null}
-      <div className="dxf-recovery-note"><ShieldCheck size={17} /><span>{t('dxf.recovery')}</span></div>
+      <div className="dxf-recovery-note"><ShieldCheck size={16} /><span>{t('dxf.recovery')}</span></div>
     </> : <div className="dxf-empty-state"><FileUp size={28} /><p>{t('dxf.chooseFile')}</p></div>}
     {error ? <p className="dxf-blocking-message" role="alert">{error}</p> : null}
   </Dialog>;

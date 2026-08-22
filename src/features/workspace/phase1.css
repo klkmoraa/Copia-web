@@ -74,6 +74,27 @@
   .workspace-surface-launcher { padding: 0; }
   .workspace-surface-launcher > button { min-height: var(--sc-control-height-touch); padding-inline: var(--sc-space-3); border-radius: var(--sc-radius-control); }
 }
+/* COLISIÓN · El lanzador se posiciona contra `.workspace`, que incluye la
+   columna del Inspector, así que con el Inspector acoplado flotaba ENCIMA de su
+   contenido: en la evidencia de resultados tapaba la fila de casillas del panel
+   de propiedades. Es chrome del LIENZO —abre superficies, no las contiene—, así
+   que se ancla al borde derecho del lienzo y deja el panel entero libre.
+   `--inspector-w` es la misma variable con la que `.workspace` reserva esa
+   columna, así que los dos no pueden desincronizarse. */
+.app-shell:has(.inspector-panel[data-surface-presentation='dock']) .workspace-surface-launcher {
+  right: calc(var(--inspector-w) + 16px);
+  /* Y una fila por encima de los controles de cámara, que ocupan esa misma
+     esquina del lienzo (`.canvas-controls`, 12 px de fondo). Se apila contra el
+     alto real del control en vez de contra un número copiado: si la escala de
+     controles cambia, las dos piezas se mueven juntas. */
+  bottom: calc(12px + var(--sc-control-height-sm) + var(--sc-space-2));
+}
+@media (pointer: coarse) {
+  .app-shell:has(.inspector-panel[data-surface-presentation='dock']) .workspace-surface-launcher {
+    bottom: calc(12px + var(--sc-control-height-touch) + var(--sc-space-2));
+  }
+}
+
 .workspace-surface-launcher > button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
 .workspace-surface-launcher > button[aria-expanded='true'],
 .workspace-surface-launcher > button.is-open {

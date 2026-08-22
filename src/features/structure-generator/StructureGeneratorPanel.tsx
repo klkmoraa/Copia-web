@@ -269,7 +269,7 @@ export const StructureGeneratorPanel = ({
       <Button
         variant={originPicking ? 'primary' : 'secondary'}
         size="touch"
-        leadingIcon={<Crosshair size={17} />}
+        leadingIcon={<Crosshair size={16} />}
         aria-pressed={originPicking}
         onClick={onToggleOriginPick}
       >{t(originPicking ? 'origin.picking' : 'origin.pick')}</Button>

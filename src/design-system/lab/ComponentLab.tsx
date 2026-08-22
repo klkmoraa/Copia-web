@@ -320,7 +320,7 @@ export function ComponentLab() {
     <main id="component-lab-main">
       <section className="component-lab__hero">
         <div>
-          <p className="component-lab__eyebrow"><Sparkles size={15} aria-hidden="true" />{t.eyebrow}</p>
+          <p className="component-lab__eyebrow"><Sparkles size={16} aria-hidden="true" />{t.eyebrow}</p>
           <h1>{t.title}</h1>
           <p>{t.intro}</p>
         </div>
@@ -559,7 +559,7 @@ export function ComponentLab() {
               label={t.popover}
               open={popoverOpen}
               onOpenChange={setPopoverOpen}
-              trigger={<><Grid3X3 size={17} aria-hidden="true" /><span>{t.popover}</span></>}
+              trigger={<><Grid3X3 size={16} aria-hidden="true" /><span>{t.popover}</span></>}
             >
               <div className="component-lab__popover-content">
                 <strong>{t.density}</strong>
@@ -616,7 +616,7 @@ export function ComponentLab() {
         </DemoBlock>
 
         <DemoBlock title="EmptyState · Spinner · Divider" wide>
-          <EmptyState title={t.emptyTitle} description={t.emptyBody} icon={<BarChart3 size={22} />} action={<Button size="sm" leadingIcon={<Plus size={15} />}>{t.create}</Button>} />
+          <EmptyState title={t.emptyTitle} description={t.emptyBody} icon={<BarChart3 size={22} />} action={<Button size="sm" leadingIcon={<Plus size={16} />}>{t.create}</Button>} />
           <Divider label="async" />
           <div className="component-lab__row component-lab__row--center">
             <Spinner size="sm" label={t.loadingLabel} /><Spinner label={t.loadingLabel} /><Spinner size="lg" label={t.loadingLabel} />

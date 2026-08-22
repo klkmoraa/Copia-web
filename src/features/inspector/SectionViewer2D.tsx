@@ -112,7 +112,7 @@ export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units
           className={view === 'dimensions' ? 'active' : ''}
           aria-pressed={view === 'dimensions'}
           onClick={() => setView('dimensions')}
-        ><Ruler size={13} aria-hidden="true" /> {t('inspector.sectionViewDimensions')}</button>
+        ><Ruler size={14} aria-hidden="true" /> {t('inspector.sectionViewDimensions')}</button>
         <button
           type="button"
           className={view === 'stress' ? 'active' : ''}
@@ -120,7 +120,7 @@ export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units
           disabled={!hasStress}
           title={hasStress ? undefined : t('inspector.sectionStressUnavailable')}
           onClick={() => setView('stress')}
-        ><Box size={13} aria-hidden="true" /> {t('inspector.sectionViewStress')}</button>
+        ><Box size={14} aria-hidden="true" /> {t('inspector.sectionViewStress')}</button>
       </div>
     </header>
 

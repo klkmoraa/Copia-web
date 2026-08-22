@@ -1,16 +1,17 @@
 /**
  * Navegación compartida por la bienvenida para los QA de Playwright.
  *
- * CRI-104 convirtió la bienvenida en un recorrido de cuatro pasos y CRI-112
- * terminó de mover los lanzadores de ejemplo del primer paso al tercero
- * ("Por dónde"). Cada script de QA llevaba su propia copia de la entrada a la
- * Mesa y todas asumían la pantalla anterior: el pórtico de ejemplo visible al
- * cargar. El síntoma era siempre el mismo —30s esperando un botón que existe
- * pero está en otro paso— y la causa una sola, así que la navegación vive aquí
- * una vez (CRI-116).
+ * Cada script de QA llevaba su propia copia de la entrada a la Mesa y todas
+ * asumían una pantalla distinta. El síntoma era siempre el mismo —30 s
+ * esperando un botón que existe pero está en otro sitio— y la causa una sola,
+ * así que la navegación vive aquí una vez (CRI-116).
+ *
+ * La bienvenida dejó de ser un recorrido de cuatro pasos y pasó a ser un
+ * lanzador de documento: las puertas están todas en la primera pantalla y la
+ * vitrina de ejemplos es un diálogo. `openWelcomeStep` no tiene ya ningún paso
+ * al que ir; lo que necesitan los scripts es abrir esa vitrina, y eso es lo que
+ * hace `openTemplateGallery`.
  */
-
-const STEP_ID = { 'Por dónde': 'where', 'Cómo trabajas': 'how' };
 
 /**
  * Borra la biblioteca ANTES de que arranque el código de la aplicación.
@@ -28,35 +29,35 @@ export const clearProjectLibraryOnBoot = (target) => target.addInitScript(() => 
 });
 
 /**
- * Pulsa un paso del carril igual que lo haría una persona, y espera al panel.
+ * Abre la vitrina de plantillas igual que lo haría una persona, y espera al
+ * diálogo.
  *
  * El reintento no es decorativo: la biblioteca de proyectos (`.project-hub`) se
  * resuelve por IndexedDB DESPUÉS del primer pintado y remonta el árbol de la
- * bienvenida, así que el botón del carril puede quedar desprendido justo entre
- * que Playwright lo resuelve y lo pulsa. El auto-wait de Playwright reintenta
- * sobre el mismo handle y se rinde a los 30s; aquí se vuelve a resolver el
- * localizador en cada vuelta y se comprueba el EFECTO —que el panel cambió de
- * paso— en vez de dar por bueno el clic.
+ * bienvenida, así que el botón puede quedar desprendido justo entre que
+ * Playwright lo resuelve y lo pulsa. El auto-wait de Playwright reintenta sobre
+ * el mismo handle y se rinde a los 30 s; aquí se vuelve a resolver el
+ * localizador en cada vuelta y se comprueba el EFECTO —que el diálogo está en
+ * pantalla— en vez de dar por bueno el clic.
  */
-export const openWelcomeStep = async (page, name, { attempts = 5 } = {}) => {
-  const step = STEP_ID[name];
-  if (!step) throw new Error(`Paso de bienvenida desconocido: ${name}`);
+export const openTemplateGallery = async (page, { attempts = 5 } = {}) => {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  const panel = page.locator(`.welcome-screen[data-welcome-step="${step}"]`);
+  const gallery = page.locator('.welcome-templates-dialog');
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    if (await panel.isVisible().catch(() => false)) return;
-    const button = page.locator('.welcome-steps').getByRole('button', { name, exact: true });
+    if (await gallery.isVisible().catch(() => false)) return gallery;
+    const button = page.getByRole('button', { name: /desde plantilla|from a template/i }).first();
     try {
       await button.click({ timeout: 5_000 });
-      await panel.waitFor({ state: 'visible', timeout: 5_000 });
-      return;
+      await gallery.waitFor({ state: 'visible', timeout: 5_000 });
+      return gallery;
     } catch (error) {
       if (attempt === attempts) throw error;
       // Deja que el remonte pendiente termine antes de volver a resolver.
       await page.waitForTimeout(400);
     }
   }
+  return gallery;
 };
 
 /**
@@ -64,7 +65,7 @@ export const openWelcomeStep = async (page, name, { attempts = 5 } = {}) => {
  * pulsado para que cada script siga esperando lo que le importe de la Mesa.
  */
 export const openExamplePortal = async (page, locator) => {
-  await openWelcomeStep(page, 'Por dónde');
+  await openTemplateGallery(page);
   const card = locator ?? page.getByRole('button', { name: /p.rtico de ejemplo/i }).first();
   await card.waitFor({ state: 'visible' });
   await card.click();

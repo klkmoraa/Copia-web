@@ -90,6 +90,6 @@ export const ClassroomGuide = ({
       <textarea id={conclusionId} rows={compact ? 2 : 3} value={session.conclusion} placeholder={t('classroom.conclusionPlaceholder')} onChange={(event) => session.setConclusion(event.currentTarget.value)} />
       <small>{session.conclusion.trim() ? t('classroom.conclusionSaved') : t('classroom.conclusionHint')}</small>
     </label> : null}
-    <p className="classroom-journey__notice"><Lightbulb size={15} /> <span>{t('classroom.defaultsWarning')}</span></p>
+    <p className="classroom-journey__notice"><Lightbulb size={16} /> <span>{t('classroom.defaultsWarning')}</span></p>
   </section>;
 };

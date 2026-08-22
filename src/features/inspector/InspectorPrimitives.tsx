@@ -65,7 +65,7 @@ export const InspectorPropertyGroup = ({
         {description ? <p>{description}</p> : null}
       </div>
       <span className="inspector-property-group__mode">
-        {mode === 'editable' ? <PencilLine size={13} aria-hidden="true" /> : <LockKeyhole size={13} aria-hidden="true" />}
+        {mode === 'editable' ? <PencilLine size={14} aria-hidden="true" /> : <LockKeyhole size={14} aria-hidden="true" />}
         {mode === 'editable' ? t('inspector.editable') : t('inspector.calculated')}
       </span>
     </header>

@@ -426,7 +426,7 @@ const WorkspaceBody = ({
       </div>
 
       <div className="space3d-tray space3d-tray--layers" role="group" aria-label={t('space3d.layers')}>
-        <Layers size={15} aria-hidden="true" />
+        <Layers size={16} aria-hidden="true" />
         {LAYER_TOGGLES.map(({ id, key, Icon }) => <button
           key={id}
           type="button"
@@ -435,7 +435,7 @@ const WorkspaceBody = ({
           onClick={() => setLayers((current) => ({ ...current, [id]: !current[id] }))}
           title={t(key)}
         >
-          <Icon size={15} aria-hidden="true" />
+          <Icon size={16} aria-hidden="true" />
           <span className="space3d-visually-hidden">{t(key)}</span>
         </button>)}
       </div>
@@ -555,12 +555,12 @@ const WorkspaceBody = ({
           <button type="button" className="space3d-tool" title={t('space3d.scaleHalve')}
             disabled={effectiveScaleFactor <= SCALE_FACTOR_MIN}
             onClick={() => setScaleFactor((current) => Math.max(SCALE_FACTOR_MIN, (current ?? 1) / 2))}>
-            <Minus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleHalve')}</span>
+            <Minus size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleHalve')}</span>
           </button>
           <button type="button" className="space3d-tool" title={t('space3d.scaleDouble')}
             disabled={effectiveScaleFactor >= SCALE_FACTOR_MAX}
             onClick={() => setScaleFactor((current) => Math.min(SCALE_FACTOR_MAX, (current ?? 1) * 2))}>
-            <Plus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleDouble')}</span>
+            <Plus size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleDouble')}</span>
           </button>
           <button type="button" className="space3d-tool" disabled={scaleFactor === null}
             onClick={() => setScaleFactor(null)}>{t('space3d.scaleAuto')}</button>

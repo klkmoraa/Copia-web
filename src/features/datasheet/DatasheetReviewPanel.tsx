@@ -129,7 +129,7 @@ export const DatasheetReviewPanel = ({
             {describe(change.before, change.fieldId)}
             {/* La dirección del cambio no puede vivir sólo en el icono. */}
             <span className="sr-only">{t('datasheet.review.to')}</span>
-            <ArrowRight size={13} aria-hidden="true" />
+            <ArrowRight size={14} aria-hidden="true" />
             {describe(change.after, change.fieldId)}
           </span>
           <small>{fieldLabel(change.fieldId)}</small>

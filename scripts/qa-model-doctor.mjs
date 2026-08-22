@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openWelcomeStep } from './qa-welcome.mjs';
+import { openTemplateGallery } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4183, strictPort: true }, logLevel: 'error' });
@@ -59,8 +59,8 @@ const enterWorkspace = async (example = false, reload = true) => {
   const autoEntered = await shell.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
   if (!autoEntered) {
     if (example) {
-      // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
-      await openWelcomeStep(page, 'Por dónde');
+      // CRI-116 · el pórtico de ejemplo vive en la vitrina de plantillas.
+      await openTemplateGallery(page);
       const exampleCard = page.getByRole('button', { name: /P.rtico de ejemplo/i }).first();
       await exampleCard.waitFor({ state: 'visible' });
       await exampleCard.click();

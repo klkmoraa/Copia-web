@@ -442,7 +442,7 @@ export const DatasheetPanel = ({
           </div>
 
           <label className="datasheet-search">
-            <Search size={15} aria-hidden="true" />
+            <Search size={16} aria-hidden="true" />
             <input
               type="search"
               value={query}

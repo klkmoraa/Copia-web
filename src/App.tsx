@@ -8,6 +8,12 @@ import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
 import './styles.css';
 import './design-system/material.css';
+/* La biblioteca de componentes viaja en el chunk de ENTRADA, no sólo con la
+   Mesa. La bienvenida monta `Drawer`, `Dialog` y `SegmentedControl`, y hasta
+   aquí su hoja llegaba únicamente por `WorkspaceShell` —que es diferido—, así
+   que esas tres superficies se pintaban sin materia hasta que ganaba la
+   carrera del precalentamiento. */
+import './design-system/components/ui.css';
 
 const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);

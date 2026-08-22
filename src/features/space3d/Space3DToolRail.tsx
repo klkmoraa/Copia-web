@@ -47,7 +47,7 @@ export const Space3DToolRail = ({
       onClick={onSelectTool}
       title={t('space3d.toolSelect')}
     >
-      <MousePointer2 size={19} aria-hidden="true" />
+      <MousePointer2 size={18} aria-hidden="true" />
       <span>{t('space3d.toolSelect')}</span>
     </button>
     <button
@@ -58,7 +58,7 @@ export const Space3DToolRail = ({
       aria-label={t('space3d.newNode')}
       title={t('space3d.newNode')}
     >
-      <CircleDot size={19} aria-hidden="true" />
+      <CircleDot size={18} aria-hidden="true" />
       <span aria-hidden="true">{t('space3d.node')}</span>
     </button>
     <button
@@ -70,7 +70,7 @@ export const Space3DToolRail = ({
       aria-label={t('space3d.newMember')}
       title={t('space3d.newMember')}
     >
-      <Spline size={19} aria-hidden="true" />
+      <Spline size={18} aria-hidden="true" />
       <span aria-hidden="true">{t('space3d.member')}</span>
     </button>
     <button
@@ -82,7 +82,7 @@ export const Space3DToolRail = ({
       aria-label={t('space3d.newLoad')}
       title={t('space3d.newLoad')}
     >
-      <Weight size={19} aria-hidden="true" />
+      <Weight size={18} aria-hidden="true" />
       <span aria-hidden="true">{t('space3d.load')}</span>
     </button>
     <button
@@ -93,7 +93,7 @@ export const Space3DToolRail = ({
       aria-label={t('space3d.newSupport')}
       title={canEditSupport ? t('space3d.newSupport') : t('space3d.newSupportHint')}
     >
-      <Triangle size={19} aria-hidden="true" />
+      <Triangle size={18} aria-hidden="true" />
       <span aria-hidden="true">{t('space3d.supports')}</span>
     </button>
     <button
@@ -102,7 +102,7 @@ export const Space3DToolRail = ({
       onClick={onCycleView}
       title={t('space3d.toolbarView')}
     >
-      <Box size={19} aria-hidden="true" />
+      <Box size={18} aria-hidden="true" />
       <span>{t('space3d.toolbarView')}</span>
     </button>
   </div>

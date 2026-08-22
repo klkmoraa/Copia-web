@@ -62,9 +62,25 @@ export const CanvasChrome = ({
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
     <CanvasLayers layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} />
+    {/* Estado de la vista. El acento está reservado a la acción (decisión 2 del
+        sistema) y snap/rejilla no accionan nada: son dos indicadores. Pintarlos
+        de azul los ponía al mismo nivel que «Analizar». Ahora son un grupo
+        segmentado monocromo —relleno para el activo, gris para el inactivo—,
+        con la misma materia que los controles de cámara de al lado.
+
+        Lo que se ve es el rótulo corto; lo que se anuncia sigue siendo el
+        estado completo («SNAP activo» / «SNAP inactivo»), que es lo que este
+        `role="status"` existe para decir. El indicador se acorta, la
+        información no. */}
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
-      <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
-      <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
+      <span data-active={snapEnabled || undefined}>
+        <span aria-hidden="true">{t('canvas.snapShort')}</span>
+        <span className="sr-only">{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
+      </span>
+      <span data-active={gridEnabled || undefined}>
+        <span aria-hidden="true">{t('canvas.gridShort')}</span>
+        <span className="sr-only">{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
+      </span>
     </div>
     <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
       <IconButton label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={onZoomIn}><Plus size={18} /></IconButton>

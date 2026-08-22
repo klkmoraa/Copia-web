@@ -110,17 +110,18 @@ afterEach(async () => {
 });
 
 /**
- * CRI-104 · El carril de los cuatro pasos. La Bienvenida ya no es una pantalla
- * plana con todas las puertas a la vez: es Bienvenida → Cómo trabajas → Por
- * dónde → Mesa, y cada puerta vive en su paso. Se consulta acotado al `<nav>`
- * porque los mismos rótulos aparecen también en los enlaces de avance del
- * panel — misma convención que `welcomeFlow.test.tsx`.
+ * La Bienvenida es un LANZADOR: una sola pantalla con las seis puertas en una
+ * lista y la biblioteca al lado. El recorrido de cuatro pasos que había aquí
+ * (Bienvenida → Cómo trabajas → Por dónde → Mesa) se retiró, y con él el
+ * helper que navegaba por su carril: ya no hay adónde navegar, las puertas
+ * están todas en la primera pantalla.
+ *
+ * La vitrina de plantillas sí cambió de forma —de etapa a diálogo—, y eso es
+ * lo único que sigue necesitando un paso previo.
  */
-const stepRail = () => within(document.querySelector('.welcome-steps') as HTMLElement);
-
-/** Navega a un paso de la Bienvenida por su rótulo en el carril. */
-const goToStep = async (user: ReturnType<typeof userEvent.setup>, step: string | RegExp) => {
-  await user.click(stepRail().getByRole('button', { name: step }));
+const openTemplates = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: /desde plantilla|from a template/i }));
+  return screen.findByRole('dialog', { name: /plantillas|templates/i });
 };
 
 const openWorkspace = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -199,9 +200,7 @@ describe('structureCo app shell', () => {
     // El grafo de Space 3D no debe estar evaluado antes del clic.
     expect(document.querySelector('.space3d-screen')).toBeNull();
 
-    // CRI-104 · su puerta desde Inicio vive en el paso «Por dónde», marcada
-    // como experimental. Sigue existiendo; lo que cambió es por dónde se llega.
-    await goToStep(user, 'Por dónde');
+    // Su puerta vive en la lista del lanzador, marcada como experimental.
     await user.click(screen.getByRole('button', { name: /space 3d/i }));
     expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
     expect(document.querySelector('.space3d-screen')).not.toBeNull();
@@ -212,10 +211,8 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /ir al inicio/i }));
     // Volver a Inicio lleva de verdad a Inicio: el salto directo a la Mesa se
-    // ofrece UNA vez por sesión, así que la Bienvenida vuelve a estar entera y
-    // con sus cuatro pasos (CRI-104).
+    // ofrece UNA vez por sesión, así que el lanzador vuelve entero.
     await screen.findByTestId('welcome-screen');
-    await goToStep(user, 'Por dónde');
     await user.click(await screen.findByRole('button', { name: /space 3d/i }));
     await user.click(await screen.findByRole('button', { name: 'Inicio' }));
     expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
@@ -227,7 +224,6 @@ describe('structureCo app shell', () => {
     render(<App />);
     const before = localStorage.getItem(PROJECT_STORAGE_KEY);
 
-    await goToStep(user, 'Por dónde');
     await user.click(screen.getByRole('button', { name: /space 3d/i }));
     await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
     await waitFor(() => expect(localStorage.getItem('structureco:space3d:v1')).toBeTruthy(), { timeout: 10_000 });
@@ -236,14 +232,12 @@ describe('structureCo app shell', () => {
   }, 40_000);
 
   /**
-   * CRI-104 sustituyó la Bienvenida plana —titular editorial a dos líneas y
-   * todas las puertas amontonadas— por cuatro pasos con el trabajo propio
-   * primero. Esta prueba comprueba ESA pantalla: que la marca es wordmark y una
-   * sola línea, que el peso lo tiene el trabajo, y que los cuatro pasos siguen
-   * siendo alcanzables. El titular `/analiza estructuras con claridad/i` no se
-   * «arregla»: se retiró a propósito y no debe volver.
+   * La Bienvenida abre como un lanzador de documento: marca a una línea, lo que
+   * se puede crear en una columna y lo que ya existe en la otra. Ni titular
+   * editorial (se retiró en CRI-104 y no debe volver) ni carril de etapas (se
+   * retiró después, y tampoco).
    */
-  it('presents the four-step welcome with work first, and no editorial headline', async () => {
+  it('opens as a document launcher: brand, actions and library, no wizard', async () => {
     render(<App />);
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
 
@@ -251,12 +245,12 @@ describe('structureCo app shell', () => {
     expect(screen.getByRole('heading', { name: /structureCo/i })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /analiza estructuras con claridad/i })).toBeNull();
 
-    // Los cuatro pasos, en orden y accesibles desde el carril.
-    expect([...document.querySelectorAll('.welcome-steps .welcome-step')]
-      .map((step) => step.textContent?.replace(/^\d/, '').trim()))
-      .toEqual(['Bienvenida', 'Cómo trabajas', 'Por dónde', 'Mesa']);
+    // Sin recorrido: ni carril de pasos, ni etapa publicada en el DOM.
+    expect(document.querySelector('.welcome-steps')).toBeNull();
+    expect(document.querySelector('.welcome-screen')?.hasAttribute('data-welcome-step')).toBe(false);
 
-    // Paso 1 · el trabajo propio manda: continuar, nuevo proyecto y el hub.
+    // Las dos columnas: crear a la izquierda, continuar y biblioteca a la derecha.
+    expect(document.querySelector('.welcome-action-list')).not.toBeNull();
     expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
     expect(screen.getByRole('button', { name: /nuevo proyecto/i })).toBeTruthy();
     expect(await screen.findByRole('heading', { name: /tus proyectos en este dispositivo/i })).toBeTruthy();
@@ -274,26 +268,25 @@ describe('structureCo app shell', () => {
   }, 10_000);
 
   /**
-   * Las puertas que CRI-104 prometió NO retirar, cada una por la suya. El
-   * reordenamiento del peso visual movió la entrada; no eliminó ninguna.
+   * Ninguna puerta se perdió al retirar el recorrido: las que vivían repartidas
+   * entre las etapas 2 y 3 están ahora todas en la lista del lanzador, y la
+   * vitrina de ejemplos a una pulsación de ella.
    */
-  it('keeps every existing gate reachable through its current step', async () => {
+  it('keeps every existing gate reachable from the launcher', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await goToStep(user, 'Cómo trabajas');
-    expect(screen.getByRole('button', { name: /proyecto completo/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /nuevo proyecto/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /nuevo ejercicio/i })).toBeTruthy();
-
-    await goToStep(user, 'Por dónde');
     expect(screen.getByRole('button', { name: /importar archivo/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /lienzo en blanco/i })).toBeTruthy();
-    expect(document.querySelectorAll('.welcome-template-card').length).toBeGreaterThan(0);
     // Space 3D sigue presente y sigue marcado como experimental, no como una
     // superficie más del producto.
     expect(screen.getByRole('button', { name: /space 3d/i }).textContent).toMatch(/experimental/i);
     // El DXF llega en su propio chunk perezoso.
     await waitFor(() => expect(screen.getByRole('button', { name: /DXF/ })).toBeTruthy());
+
+    await openTemplates(user);
+    expect(document.querySelectorAll('.welcome-template-card').length).toBeGreaterThan(0);
   }, 15_000);
 
   it('localizes built-in example cards and preserves English when an example opens', async () => {
@@ -301,16 +294,16 @@ describe('structureCo app shell', () => {
     const project = createDefaultProject();
     project.settings = { ...project.settings, language: 'en' };
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Los ejemplos viven en el paso «Por dónde» (CRI-104). El rótulo del carril
-    // también está traducido: la puerta no desapareció, se movió.
-    await goToStep(user, 'Where to start');
+    // Los ejemplos viven en la vitrina, que es un diálogo. El rótulo que la
+    // abre también está traducido: la puerta no desapareció, cambió de forma.
+    await openTemplates(user);
     const exampleFrame = screen.getByRole('button', { name: /Example frame.*6 × 4 m frame/ });
     expect(exampleFrame).toBeTruthy();
     expect(screen.getByRole('button', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Triangular truss.*statically determinate truss/i })).toBeTruthy();
-    const cards = [...container.querySelectorAll('.welcome-template-card')].map((card) => card.textContent).join(' ');
+    const cards = [...document.querySelectorAll('.welcome-template-card')].map((card) => card.textContent).join(' ');
     expect(cards).not.toMatch(/Pórtico de ejemplo|Viga simplemente apoyada|Armadura triangular/);
 
     await user.click(exampleFrame);
@@ -325,9 +318,7 @@ describe('structureCo app shell', () => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
     render(<App />);
 
-    // En «Cómo trabajas» el ejercicio guiado es una ELECCIÓN de modo que avanza
-    // a la etapa 3; quien abre el diálogo es su lanzador de «Por dónde».
-    await goToStep(user, 'Where to start');
+    // El ejercicio guiado es una fila del lanzador y abre su diálogo directamente.
     await user.click(screen.getByRole('button', { name: /new exercise/i }));
     await user.click(screen.getByRole('radio', { name: /simply supported beam/i }));
     await user.click(screen.getByRole('button', { name: /create exercise/i }));
@@ -497,7 +488,14 @@ describe('structureCo app shell', () => {
     expect(await screen.findByText('Model Doctor encontró problemas')).toBeTruthy();
     expect(screen.getByText(/Abre Model Doctor para revisarlos/i)).toBeTruthy();
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Unidades' }), { target: { value: 'N-mm' } });
+    // Un cambio cualquiera que fuerce un re-render del shell. Las unidades ya no
+    // son un `<select>` suelto en la barra: viven con las otras tres decisiones
+    // de análisis, dentro del ítem que las abre.
+    await user.click(screen.getByRole('button', { name: 'Análisis' }));
+    fireEvent.change(
+      within(await screen.findByRole('dialog', { name: 'Análisis' })).getByRole('combobox', { name: 'Unidades' }),
+      { target: { value: 'N-mm' } },
+    );
 
     await waitFor(() => expect(screen.getAllByText('Model Doctor encontró problemas')).toHaveLength(1));
   });
@@ -553,7 +551,6 @@ describe('structureCo app shell', () => {
   it('creates a guided classroom exercise and analyzes it without prediction gates', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await goToStep(user, 'Por dónde');
     await user.click(screen.getByRole('button', { name: /nuevo ejercicio/i }));
     await user.click(screen.getByRole('radio', { name: /viga simplemente apoyada/i }));
     await user.click(screen.getByRole('button', { name: /crear ejercicio/i }));
@@ -858,11 +855,12 @@ describe('structureCo app shell', () => {
       render(<App />);
 
       // El proyecto activo de `localStorage` NO es una biblioteca: sin
-      // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y la
-      // bienvenida se queda entera, con sus cuatro pasos.
+      // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y el
+      // lanzador se queda entero, con sus puertas y su biblioteca.
       expect(await readWelcomeEntry()).toEqual({ status: 'new', projects: 0, recoveries: 0 });
       expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
-      expect(document.querySelectorAll('.welcome-steps .welcome-step')).toHaveLength(4);
+      expect(document.querySelector('.welcome-action-list')).not.toBeNull();
+      expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
     });
 
     it('keeps Home reachable from the workspace', async () => {
@@ -873,7 +871,7 @@ describe('structureCo app shell', () => {
 
       const welcome = await screen.findByTestId('welcome-screen');
       expect(welcome).toBeTruthy();
-      // Inicio es Inicio de verdad: las puertas de la etapa 1 siguen ahí.
+      // Inicio es Inicio de verdad: el lanzador vuelve con sus puertas.
       expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
       expect(screen.getByRole('button', { name: /nuevo proyecto/i })).toBeTruthy();
     }, 15_000);

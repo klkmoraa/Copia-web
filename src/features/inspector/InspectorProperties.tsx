@@ -129,7 +129,7 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
   return <section className="inspector-inline-issues" aria-label={t('inspector.objectValidationRegion')}>
     <h3>{t('inspector.analysisValidationHeading')}</h3>
     {issues.map((issue) => <div key={issue.id} className={`is-${issue.severity}`} role={issue.severity === 'error' ? 'alert' : 'status'}>
-      <AlertTriangle size={15} aria-hidden="true" />
+      <AlertTriangle size={16} aria-hidden="true" />
       <span><strong>{issue.title}</strong>{issue.message}</span>
     </div>)}
   </section>;
@@ -377,7 +377,7 @@ export const InspectorProperties = () => {
           const component: PrescribedDisplacement['component'] = node?.support.type === 'roller' ? 'normal' : node?.support.type === 'custom' && !node.support.restrainX && node.support.restrainY ? 'uy' : node?.support.type === 'custom' && !node.support.restrainX && !node.support.restrainY ? 'rz' : 'ux';
           draft.prescribedDisplacements.push({ id: `PD${index}`, nodeId: selectedNode.id, caseId: draft.loadCases[0]?.id ?? 'LC1', component, value: 0 });
           return draft;
-        })}><Plus size={15} /></button>
+        })}><Plus size={16} /></button>
       </div>
       <div className="effect-list">{selectedNodePrescribed.map((item) => <div className="effect-card" key={item.id}>
         <SelectField label={t('inspector.case')} value={item.caseId} onChange={(value) => updatePrescribed(item.id, 'caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
@@ -424,7 +424,7 @@ export const InspectorProperties = () => {
             while (draft.memberInitialEffects.some((item) => item.id === `IE${index}`)) index += 1;
             draft.memberInitialEffects.push({ id: `IE${index}`, memberId: selectedMember.id, caseId: draft.loadCases[0]?.id ?? 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 0, gradient: 0 });
             return draft;
-        })}><Plus size={15} /></button>
+        })}><Plus size={16} /></button>
         </div>
         <div className="effect-list">{selectedMemberEffects.map((effect) => <div className="effect-card" key={effect.id}>
           <SelectField label={t('inspector.type')} value={effect.type} onChange={(value) => updateInitialEffect(effect.id, 'type', value)}><option value="temperature">{t('inspector.temperature')}</option><option value="initial-strain">{t('inspector.initialStrain')}</option></SelectField>
@@ -599,7 +599,7 @@ export const InspectorProperties = () => {
         <InspectorLockedState title={t('inspector.modelRelationship')}>{t('inspector.modelRelationshipBody')}</InspectorLockedState>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('nodal', selectedNodalLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
+      <button type="button" className="danger-button" onClick={() => deleteLoad('nodal', selectedNodalLoad.id)}><Trash2 size={16} /> {t('inspector.deleteLoad')}</button>
     </> : null}
 
     {selectedMemberLoad ? <>
@@ -636,7 +636,7 @@ export const InspectorProperties = () => {
         </InspectorPropertyGroup>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('member', selectedMemberLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
+      <button type="button" className="danger-button" onClick={() => deleteLoad('member', selectedMemberLoad.id)}><Trash2 size={16} /> {t('inspector.deleteLoad')}</button>
     </> : null}
   </div>;
 };

@@ -287,4 +287,33 @@ describe('contrato de los design tokens', () => {
     expect(rootTokens.declarations.has('--sc-gradient-clay-action')).toBe(false);
     expect(rootTokens.declarations.get('--sc-gradient-sheen')).toBe('none');
   });
+
+  /**
+   * El agujero que dejaba pasar el defecto: la comprobación de arriba mira los
+   * TOKENS, y la bienvenida pintaba dos auroras radiales escritas directamente
+   * en `styles.css` —`radial-gradient(… color-mix(in srgb, var(--accent) 22%,
+   * transparent) …)` y otra sobre `--brand-secondary`— sin pasar por ningún
+   * token. Sobrevivieron entero el rediseño de identidad porque nada las
+   * miraba. Una regla que sólo vigila la despensa no ve lo que se cocina.
+   */
+  it('ningún consumidor construye un degradado sobre el color de acción', () => {
+    const accentSources = /--(?:sc-color-action-\w+|accent(?:-\w+)?|brand-secondary|sc-color-brand-\w+|sc-color-aula\w*)\b/;
+    /**
+     * `linear-gradient(X, X)` con el MISMO color en las dos paradas no es un
+     * degradado: es el modo estándar de pintar un rectángulo sólido con
+     * `background-size`, y así se dibuja la cruz de la lupa táctil. Prohibirlo
+     * obligaría a dibujar una cruz de dos barras con dos pseudo-elementos que
+     * `::before`/`::after` ya tienen ocupados. Lo que este gate persigue es una
+     * RAMPA construida sobre el color de acción, así que se exige que las
+     * paradas difieran.
+     */
+    const isSolidFill = (stops: string) => {
+      const parts = stops.split(/,(?![^(]*\))/).map((part) => part.trim());
+      return parts.length === 2 && parts[0] === parts[1];
+    };
+    const gradients = [...componentCss.matchAll(/\b(?:linear|radial|conic)-gradient\(((?:[^()]|\([^()]*\))*)\)/g)]
+      .map((match) => match[1])
+      .filter((stops) => accentSources.test(stops) && !isSolidFill(stops));
+    expect(gradients).toEqual([]);
+  });
 });

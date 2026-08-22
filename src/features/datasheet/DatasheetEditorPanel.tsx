@@ -162,7 +162,7 @@ const Card = ({
   title: string;
   children: ReactNode;
 }) => <Surface as="section" level="raised" className="datasheet-card" aria-label={title}>
-  <h3 className="datasheet-card__title"><Icon size={15} aria-hidden="true" />{title}</h3>
+  <h3 className="datasheet-card__title"><Icon size={16} aria-hidden="true" />{title}</h3>
   {children}
 </Surface>;
 

@@ -370,7 +370,7 @@ export const ImportCenterDialog = ({
         <nav className="import-center-steps" aria-label={t('importCenter.progress')}>
           {stages.map((item, index) => (
             <span key={item.id} className={index === activeIndex ? 'active' : index < activeIndex ? 'complete' : ''} aria-current={index === activeIndex ? 'step' : undefined}>
-              <i>{index < activeIndex ? <Check size={12} /> : index + 1}</i><em>{t(item.labelKey)}</em>
+              <i>{index < activeIndex ? <Check size={14} /> : index + 1}</i><em>{t(item.labelKey)}</em>
             </span>
           ))}
         </nav>
@@ -386,7 +386,7 @@ export const ImportCenterDialog = ({
                 onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }}
                 onDrop={handleDrop}
               >
-                <span className="import-dropzone-icon"><Upload size={26} /></span>
+                <span className="import-dropzone-icon"><Upload size={28} /></span>
                 <strong>{t('importCenter.dropTitle')}</strong>
                 <span>{t('importCenter.dropHint')}</span>
                 <button type="button" data-import-stage-focus="select" onClick={() => fileInputRef.current?.click()}>{t('importCenter.chooseFile')}</button>
@@ -405,9 +405,9 @@ export const ImportCenterDialog = ({
                 />
               </div>
               <div className="import-format-grid" aria-label={t('importCenter.formatsLabel')}>
-                <article><FileJson size={19} /><div><strong>{t('importCenter.jsonTitle')}</strong><span>{t('importCenter.jsonDetail')}</span></div><b>{t('importCenter.available')}</b></article>
-                <article><FileText size={19} /><div><strong>{t('importCenter.pdfTitle')}</strong><span>{t('importCenter.pdfDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
-                <article><FileArchive size={19} /><div><strong>{t('importCenter.bundleTitle')}</strong><span>{t('importCenter.bundleDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
+                <article><FileJson size={18} /><div><strong>{t('importCenter.jsonTitle')}</strong><span>{t('importCenter.jsonDetail')}</span></div><b>{t('importCenter.available')}</b></article>
+                <article><FileText size={18} /><div><strong>{t('importCenter.pdfTitle')}</strong><span>{t('importCenter.pdfDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
+                <article><FileArchive size={18} /><div><strong>{t('importCenter.bundleTitle')}</strong><span>{t('importCenter.bundleDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
               </div>
             </section>
           ) : null}
@@ -423,7 +423,7 @@ export const ImportCenterDialog = ({
           {stage === 'content' && file && inspection ? (
             <section className="import-center-section" aria-labelledby="import-content-title">
               <div className="import-file-summary">
-                <span className="import-file-icon"><FileIcon size={26} /></span>
+                <span className="import-file-icon"><FileIcon size={28} /></span>
                 <div><strong>{file.name}</strong><span>{inspection.sourceLabel} · {formatBytes(file.size)}{inspection.version ? ` · ${t('importCenter.schema', { version: inspection.version })}` : ''}</span></div>
                 <span className={`import-confidence ${inspection.confidence >= 80 ? 'high' : inspection.confidence > 0 ? 'medium' : 'unknown'}`}>{inspection.confidence > 0 ? t('importCenter.confidence', { confidence: inspection.confidence }) : t('importCenter.reviewPending')}</span>
               </div>
@@ -470,7 +470,7 @@ export const ImportCenterDialog = ({
               {mode === 'replace' ? (
                 <label className={`import-save-option ${onSaveCurrent ? '' : 'disabled'}`}>
                   <input type="checkbox" checked={saveCurrent && Boolean(onSaveCurrent)} disabled={!onSaveCurrent} onChange={(event) => setSaveCurrent(event.currentTarget.checked)} />
-                  <Save size={19} />
+                  <Save size={18} />
                   <span><strong>{t('importCenter.saveCopyTitle')}</strong><small>{onSaveCurrent ? t('importCenter.saveCopyAvailable') : t('importCenter.saveCopyUnavailable')}</small></span>
                 </label>
               ) : null}
@@ -481,7 +481,7 @@ export const ImportCenterDialog = ({
             <section className="import-center-section" aria-labelledby="import-confirm-title">
               <div className="import-section-heading"><p>{t('importCenter.step', { step: 5 })}</p><h3 id="import-confirm-title" tabIndex={-1} data-import-stage-focus="confirm">{t('importCenter.confirmTitle')}</h3><span>{t('importCenter.confirmDescription')}</span></div>
               <div className="import-confirm-card">
-                <div><FileIcon size={24} /><span><strong>{file.name}</strong><small>{inspection.sourceLabel} · {formatBytes(file.size)}</small></span></div>
+                <div><FileIcon size={28} /><span><strong>{file.name}</strong><small>{inspection.sourceLabel} · {formatBytes(file.size)}</small></span></div>
                 <dl>
                   <div><dt>{t('importCenter.destinationTerm')}</dt><dd>{mode === 'new' ? t('importCenter.newProject') : t('importCenter.replaceProject', { name: currentProjectName })}</dd></div>
                   <div><dt>{t('importCenter.contentTerm')}</dt><dd>{t('importCenter.contentCount', { selected: selectedContent.length, total: inspection.contents.filter((item) => item.available).length })}</dd></div>
@@ -514,13 +514,13 @@ export const ImportCenterDialog = ({
             else if (stage === 'conflicts') setStage('content');
             else if (stage === 'confirm') setStage('conflicts');
           }} disabled={stage === 'inspect' && busyPhase !== 'inspecting'}>
-            {stage === 'select' || stage === 'result' || (stage === 'inspect' && busyPhase === 'inspecting') ? <X size={17} /> : <ArrowLeft size={17} />}
+            {stage === 'select' || stage === 'result' || (stage === 'inspect' && busyPhase === 'inspecting') ? <X size={16} /> : <ArrowLeft size={16} />}
             {stage === 'select' || (stage === 'inspect' && busyPhase === 'inspecting') ? t('importCenter.cancel') : stage === 'result' ? t('importCenter.closeAction') : t('importCenter.back')}
           </button>
-          {stage === 'content' ? <button type="button" className="import-button-primary" disabled={!inspection?.supported || selectedContent.length === 0} onClick={() => setStage('conflicts')}>{t('importCenter.continue')} <ArrowRight size={17} /></button> : null}
-          {stage === 'conflicts' ? <button type="button" className="import-button-primary" onClick={() => setStage('confirm')}>{t('importCenter.review')} <ArrowRight size={17} /></button> : null}
-          {stage === 'confirm' ? <button type="button" className="import-button-primary" onClick={() => void runImport()}><Upload size={17} /> {t('importCenter.importNow')}</button> : null}
-          {stage === 'result' ? <button type="button" className="import-button-primary" onClick={() => onImported(outcome!)}>{t('importCenter.openProject')} <ArrowRight size={17} /></button> : null}
+          {stage === 'content' ? <button type="button" className="import-button-primary" disabled={!inspection?.supported || selectedContent.length === 0} onClick={() => setStage('conflicts')}>{t('importCenter.continue')} <ArrowRight size={16} /></button> : null}
+          {stage === 'conflicts' ? <button type="button" className="import-button-primary" onClick={() => setStage('confirm')}>{t('importCenter.review')} <ArrowRight size={16} /></button> : null}
+          {stage === 'confirm' ? <button type="button" className="import-button-primary" onClick={() => void runImport()}><Upload size={16} /> {t('importCenter.importNow')}</button> : null}
+          {stage === 'result' ? <button type="button" className="import-button-primary" onClick={() => onImported(outcome!)}>{t('importCenter.openProject')} <ArrowRight size={16} /></button> : null}
         </footer>
       </div>
     </div>
