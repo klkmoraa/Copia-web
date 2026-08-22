@@ -502,7 +502,7 @@
   font-size: var(--sc-font-size-technical);
   font-weight: var(--sc-font-weight-semibold);
   letter-spacing: var(--sc-tracking-technical);
-  text-transform: uppercase;
+  text-transform:none;
   white-space: nowrap;
 }
 

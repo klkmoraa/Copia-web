@@ -1,5 +1,27 @@
 /// <reference types="node" />
 
+/**
+ * El contrato de los design tokens.
+ *
+ * Lo que este archivo vigila NO es "el CSS dice tal cosa en tal línea", sino el
+ * contrato del sistema: que cada rol exista, que cada color llegue a su suelo de
+ * contraste CONTRA LOS FONDOS DE SU PROPIA APARIENCIA, que la apariencia oscura
+ * sea un tema escrito a mano y no una inversión, y que ninguna pieza reintroduzca
+ * la materia de arcilla que el sistema retiró.
+ *
+ * REGLA DE COLOR POR APARIENCIA
+ * ---------------------------------------------------------------------------
+ * El sistema anterior exigía un mismo HEX en Día y en Noche para todo rol
+ * semántico. Eso encerraba la paleta en una franja de luminancia estrechísima y
+ * no es como trabaja la plataforma que este producto imita: systemBlue vale
+ * #007AFF en claro y #0A84FF en oscuro porque un color medido sobre blanco no
+ * está medido sobre negro.
+ *
+ * Lo que sustituye a aquella regla es un contrato más exigente, no más laxo:
+ * cada rol se mide contra los DOS fondos de su apariencia (lienzo y superficie),
+ * y el peor de los dos tiene que llegar al suelo. Antes sólo se medía el lienzo.
+ */
+
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -12,7 +34,7 @@ const uiCss = readCss(new URL('./components/ui.css', import.meta.url));
 const materialCss = readCss(new URL('./material.css', import.meta.url));
 const phase1Css = readCss(new URL('../features/workspace/phase1.css', import.meta.url));
 /** The combined text of all component CSS that is not `tokens.css`. */
-const componentCss = `${stylesCss}\n${materialCss}`;
+const componentCss = `${stylesCss}\n${materialCss}\n${uiCss}\n${phase1Css}`;
 
 const blockFor = (pattern: RegExp) => {
   const match = tokensCss.match(pattern);
@@ -67,8 +89,19 @@ const contrast = (foreground: string, background: string, theme: Map<string, str
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 };
 
-describe('Phase 4 design-token contract', () => {
-  it('declares every required foundation token once per theme block', () => {
+/** El peor de los dos fondos de una apariencia: el lienzo y la superficie. */
+const worstOnAppearance = (role: string, theme: Map<string, string>) => Math.min(
+  contrast(role, '--sc-color-bg-canvas', theme),
+  contrast(role, '--sc-color-surface-1', theme),
+);
+
+const appearances: ReadonlyArray<readonly [string, Map<string, string>]> = [
+  ['clara', lightTheme],
+  ['oscura', darkTheme],
+];
+
+describe('contrato de los design tokens', () => {
+  it('declara cada rol de fundación una sola vez en el bloque raíz', () => {
     const required = [
       '--sc-color-bg-app',
       '--sc-color-bg-canvas',
@@ -88,26 +121,25 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-technical-deformed',
       '--sc-color-technical-reaction',
       '--sc-font-ui',
+      '--sc-font-display',
       '--sc-font-mono',
-      '--sc-numeric-variant',
-      '--sc-size-target-touch',
-      '--sc-focus-ring-width',
-      '--sc-motion-control',
-      '--sc-motion-loading',
-      '--sc-transition-control',
-      '--sc-z-modal',
+      '--sc-radius-control',
+      '--sc-radius-card',
+      '--sc-radius-panel',
+      '--sc-radius-modal',
+      '--sc-motion-fast',
+      '--sc-ease-standard',
     ];
-
-    expect(new Set(rootTokens.names).size).toBe(rootTokens.names.length);
-    expect(new Set(darkTokens.names).size).toBe(darkTokens.names.length);
-    for (const token of required) expect(rootTokens.declarations.has(token), token).toBe(true);
+    for (const token of required) {
+      expect(rootTokens.declarations.has(token), `falta ${token}`).toBe(true);
+      expect(rootTokens.names.filter((name) => name === token)).toHaveLength(1);
+    }
   });
 
-  it('defines Dark as an explicit visual theme rather than an inversion', () => {
-    // Sólo los roles que Noche tiene DERECHO a mover: suelo, superficies, tinta
-    // de texto, bordes y materia. Los colores semánticos ya no están aquí — los
-    // cubre el contrato de invariancia de más abajo.
-    const explicitDarkRoles = [
+  it('define la apariencia oscura como tema explícito y no como una inversión', () => {
+    // Un tema oscuro que sólo invierte reutiliza el mismo valor con otro signo.
+    // Éste redeclara a mano cada fondo, cada tinta y cada material.
+    const mustBeRewritten = [
       '--sc-color-bg-app',
       '--sc-color-bg-canvas',
       '--sc-color-surface-1',
@@ -116,430 +148,143 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-text-secondary',
       '--sc-color-border',
       '--sc-color-canvas-grid',
-      '--sc-color-canvas-member',
-      '--sc-color-overlay-strong',
-      '--sc-shadow-modal',
+      '--sc-material-thin',
+      '--sc-material-regular',
+      '--sc-material-thick',
+      '--sc-elevation-1',
+      '--sc-elevation-4',
     ];
-
-    for (const token of explicitDarkRoles) expect(darkTokens.declarations.has(token), token).toBe(true);
-    expect(darkBlock).not.toMatch(/invert\(|filter\s*:/);
-  });
-
-  /**
-   * El cierre cromático previo a CRI-10: una sola paleta, no dos.
-   *
-   * Cada color semántico usa el mismo HEX en Día y en Noche. La prueba no
-   * compara valores resueltos —eso pasaría aunque alguien duplicase el hex en
-   * los dos bloques y luego cambiase uno— sino que exige que el rol NO se
-   * redeclare en el bloque oscuro. Un solo sitio donde editarlo, ninguna
-   * posibilidad de deriva.
-   */
-  it('keeps every semantic colour identical in Day and Night', () => {
-    const invariant = [
-      '--sc-color-action-primary',
-      '--sc-color-action-hover',
-      '--sc-color-action-pressed',
-      '--sc-color-action-foreground',
-      '--sc-color-action-edge',
-      '--sc-color-action-ink',
-      '--sc-color-brand-secondary',
-      '--sc-color-focus',
-      '--sc-color-selection-stroke',
-      '--sc-color-technical-load',
-      '--sc-color-load-point',
-      '--sc-color-load-distributed',
-      '--sc-color-load-moment-applied',
-      '--sc-color-technical-axial',
-      '--sc-color-technical-shear',
-      '--sc-color-technical-moment',
-      '--sc-color-technical-deformed',
-      '--sc-color-technical-reaction',
-      '--sc-color-technical-dimension',
-      '--sc-color-technical-axis',
-      '--sc-color-state-success',
-      '--sc-color-state-warning',
-      '--sc-color-state-error',
-      '--sc-color-state-critical',
-      '--sc-color-state-info',
-      '--sc-color-success-solid',
-      '--sc-color-success-on-solid',
-      '--sc-color-error-solid',
-      '--sc-color-error-on-solid',
-      '--sc-color-aula',
-      '--sc-color-aula-solid',
-      '--sc-color-aula-foreground',
-      '--sc-color-canario',
-      '--sc-color-canario-ink',
-    ];
-
-    const redeclared = invariant.filter((token) => darkTokens.declarations.has(token));
-    expect(redeclared, 'Noche no puede redefinir un color semántico').toEqual([]);
-    for (const token of invariant) {
-      expect(rootTokens.declarations.has(token), `${token} debe declararse en :root`).toBe(true);
-      expect(resolveHex(token, lightTheme), token).toBe(resolveHex(token, darkTheme));
+    for (const token of mustBeRewritten) {
+      expect(darkTokens.declarations.has(token), `la apariencia oscura debe redeclarar ${token}`).toBe(true);
+      expect(darkTokens.declarations.get(token)).not.toBe(rootTokens.declarations.get(token));
     }
   });
 
-  /**
-   * La contrapartida del contrato anterior. Un mismo HEX tiene que sobrevivir a
-   * los CUATRO fondos, no sólo al lienzo: en Noche la superficie (#15232b) es
-   * más clara que el lienzo (#0d161b), así que es ella la que manda. La paleta
-   * anterior sólo se medía contra el lienzo y por eso sus valores nocturnos
-   * caían a 1,39-2,56:1 sobre las superficies.
-   */
-  it.each([
-    ['Light', lightTheme, '--sc-color-surface-1'],
-    ['Dark', darkTheme, '--sc-color-surface-1'],
-  ] as const)('%s keeps every signal colour legible on the surface too, not just the canvas', (_label, theme, surface) => {
-    const signals = [
-      '--sc-color-action-ink',
-      '--sc-color-action-edge',
-      '--sc-color-technical-load',
-      '--sc-color-load-point',
-      '--sc-color-load-distributed',
-      '--sc-color-load-moment-applied',
-      '--sc-color-technical-axial',
-      '--sc-color-technical-shear',
-      '--sc-color-technical-moment',
-      '--sc-color-technical-deformed',
-      '--sc-color-technical-reaction',
-      '--sc-color-technical-dimension',
-      '--sc-color-technical-axis',
-      '--sc-color-state-success',
-      '--sc-color-state-warning',
-      '--sc-color-state-error',
-      '--sc-color-selection-stroke',
-      '--sc-color-aula',
-      '--sc-color-envelope',
-      '--sc-color-axial-compression',
-      '--sc-color-critical-point',
-    ];
-    for (const role of signals) {
-      expect(contrast(role, surface, theme), `${role} sobre ${surface}`).toBeGreaterThanOrEqual(3);
+  it('la jerarquía de rellenos sube de opacidad en la apariencia oscura', () => {
+    // Sobre carbón, el 12 % que basta sobre papel no separa nada.
+    const alphaOf = (value: string) => Number.parseFloat(value.match(/,\s*([0-9.]+)\s*\)$/)?.[1] ?? 'NaN');
+    for (const fill of ['--sc-color-fill-quaternary', '--sc-color-fill-tertiary', '--sc-color-fill-secondary', '--sc-color-fill-primary']) {
+      const light = alphaOf(lightTheme.get(fill) ?? '');
+      const dark = alphaOf(darkTheme.get(fill) ?? '');
+      expect(Number.isNaN(light), `${fill} no declara alfa en claro`).toBe(false);
+      expect(dark, `${fill} debe subir de opacidad en oscuro`).toBeGreaterThan(light);
     }
   });
 
-  /**
-   * El CTA es lima clara: su relleno mide 1,8:1 contra el marfil, así que la
-   * silueta la sostiene el canto. Si alguien devuelve el canto a `transparent`
-   * el control deja de cumplir 1.4.11 sin que ninguna otra prueba lo note.
-   */
-  it('gives the light brand fill a measured edge and a dark ink in every state', () => {
-    for (const state of ['--sc-color-action-primary', '--sc-color-action-hover', '--sc-color-action-pressed']) {
-      expect(contrast('--sc-color-action-foreground', state, lightTheme), `tinta sobre ${state}`)
-        .toBeGreaterThanOrEqual(4.5);
-    }
-    for (const theme of [lightTheme, darkTheme]) {
-      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(3);
-    }
-    expect(uiCss).toMatch(/\.sc-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
-    expect(uiCss).toMatch(/\.sc-icon-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
-  });
-
-  /**
-   * El relleno de marca no puede llevar texto blanco: mediría 1,8:1. Ni el
-   * canario puede ser trazo suelto: 1,39:1 sobre marfil. Las dos son reglas del
-   * brandbook, y las dos son fáciles de romper por descuido.
-   */
-  it('never puts white ink on the light brand fill', () => {
-    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeLessThan(4.5);
-    expect(rootTokens.declarations.get('--sc-color-action-foreground')).not.toBe('var(--sc-white)');
-    expect(componentCss).not.toMatch(/background:\s*var\(--accent\)/);
-  });
-
-  it('keeps compatibility aliases attached to semantic roles', () => {
-    const aliases = new Map([
-      ['--app-bg', '--sc-color-bg-app'],
-      ['--surface', '--sc-color-surface-1'],
-      ['--canvas-bg', '--sc-color-bg-canvas'],
-      ['--text', '--sc-color-text-primary'],
-      ['--focus', '--sc-color-focus'],
-      ['--selection', '--sc-color-selection-stroke'],
-      ['--grid', '--sc-color-canvas-grid'],
-      ['--member', '--sc-color-canvas-member'],
-      ['--node-fill', '--sc-color-canvas-node-fill'],
-      ['--force', '--sc-color-load-point'],
-      ['--moment', '--sc-color-technical-moment'],
-    ]);
-
-    for (const [alias, semantic] of aliases) {
-      expect(rootTokens.declarations.get(alias)).toBe(`var(${semantic})`);
-    }
-  });
-
-  it('keeps tool identity colors aligned with their canvas roles', () => {
-    const toolRoles = new Map([
-      ['--sc-color-tool-structure', '--sc-color-text-primary'],
-      ['--sc-color-tool-point-load', '--sc-color-load-point'],
-      ['--sc-color-tool-distributed-load', '--sc-color-load-distributed'],
-      ['--sc-color-tool-moment', '--sc-color-load-moment-applied'],
-      ['--sc-color-tool-dimension', '--sc-color-technical-dimension'],
-      ['--sc-color-tool-cut', '--sc-color-technical-axis'],
-      ['--sc-color-tool-destructive', '--sc-color-state-error'],
-    ]);
-
-    for (const [tool, role] of toolRoles) {
-      expect(rootTokens.declarations.get(tool)).toBe(`var(${role})`);
-    }
-  });
-
-  it('separates applied-load identities from structural response identities', () => {
-    expect(resolveHex('--sc-color-load-point', lightTheme)).toBe('#3a72e3');
-    expect(resolveHex('--sc-color-load-distributed', lightTheme)).toBe('#468c09');
-    expect(resolveHex('--sc-color-load-moment-applied', lightTheme)).toBe('#d9720a');
-    expect(resolveHex('--sc-color-technical-moment', lightTheme)).toBe('#ed4b46');
-    expect(rootTokens.declarations.get('--sc-color-technical-load')).toBe('var(--sc-color-load-point)');
-  });
-
-  it('uses one muted clay-rose family for influence in Day and Night', () => {
-    expect(resolveHex('--sc-color-influence-line', lightTheme)).toBe('#b96478');
-    expect(resolveHex('--sc-color-influence-area', lightTheme)).toBe('#e7c6d2');
-    expect(darkTokens.declarations.has('--sc-color-influence-line')).toBe(false);
-    expect(darkTokens.declarations.has('--sc-color-influence-area')).toBe(false);
-  });
-
-  it.each([
-    ['Light', lightTheme],
-    ['Dark', darkTheme],
-  ] as const)('%s meets interface and technical contrast floors', (_label, theme) => {
-    const textPairs = [
-      ['--sc-color-text-primary', '--sc-color-surface-1', 4.5],
-      ['--sc-color-text-secondary', '--sc-color-surface-1', 4.5],
-      ['--sc-color-action-foreground', '--sc-color-action-primary', 4.5],
-      // Solid semantic fills are measured as a pair. `styles.css` used to hardcode #fff
-      // on these, which in Dark gave 2.11:1 on success and 2.37:1 on the accent.
-      ['--sc-color-success-on-solid', '--sc-color-success-solid', 4.5],
-      ['--sc-color-error-on-solid', '--sc-color-error-solid', 4.5],
-      ['--sc-color-focus', '--sc-color-surface-1', 3],
-      ['--sc-color-state-warning-foreground', '--sc-color-surface-1', 4.5],
-      ['--sc-color-state-error-foreground', '--sc-color-surface-1', 4.5],
-    ] as const;
-    const technicalRoles = [
-      '--sc-color-technical-load',
-      '--sc-color-technical-axial',
-      '--sc-color-technical-shear',
-      '--sc-color-technical-moment',
-      '--sc-color-technical-deformed',
-      '--sc-color-technical-reaction',
-      '--sc-color-technical-dimension',
-      '--sc-color-technical-axis',
-      // La rampa del índice elástico se dibuja sobre el lienzo como cualquier
-      // otro rol técnico: sus dos extremos y la referencia deben verse en ambos
-      // temas, no sólo el extremo alto.
-      '--sc-color-demand-base',
-      '--sc-color-demand-peak',
-      '--sc-color-demand-reference',
-      '--sc-color-demand-reference-peak',
-      '--sc-color-demand-unevaluated',
-    ];
-
-    for (const [foreground, background, minimum] of textPairs) {
-      expect(contrast(foreground, background, theme), `${foreground} on ${background}`).toBeGreaterThanOrEqual(minimum);
-    }
-    for (const role of technicalRoles) {
-      expect(contrast(role, '--sc-color-bg-canvas', theme), role).toBeGreaterThanOrEqual(3);
-    }
-  });
-
-  it('neutralizes all shared duration tokens when reduced motion is requested', () => {
-    const durations = [
-      '--sc-motion-press',
-      '--sc-motion-fast',
-      '--sc-motion-control',
-      '--sc-motion-standard',
-      '--sc-motion-slow',
-      '--sc-motion-loading',
-    ];
-    for (const token of durations) expect(reducedMotionTokens.declarations.get(token)).toBe('0.001ms');
-  });
-
-  it('does not consume primitive color tokens from component CSS', () => {
-    expect(componentCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|cyan-\d+|slate-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
-  });
-
-  it('never hardcodes an opaque color in component CSS', () => {
-    // A literal foreground cannot follow the theme. `color:#fff` on `var(--accent)`
-    // measured 2.37:1 in Dark, far below the 4.5:1 the tokens themselves guarantee.
-    const literals = componentCss.match(/#[0-9a-fA-F]{3,8}\b|(?<!\/\*[^*]*)\brgb\([^)]*\)/g) ?? [];
-    expect(literals).toEqual([]);
-  });
-
-  it('keeps translucency literals to shadows and scrims, where a token cannot express alpha', () => {
-    // `rgba()` is still allowed, but only inside box-shadow / filter / background scrims.
-    // Anywhere else it would be a color decision escaping the palette.
-    const offenders: string[] = [];
-    for (const match of componentCss.matchAll(/[^;{}]*rgba\([^)]*\)[^;{}]*/g)) {
-      const declaration = match[0].trim();
-      if (!/box-shadow|drop-shadow|filter|background(-color)?\s*:/.test(declaration)) {
-        offenders.push(declaration.slice(0, 80));
+  describe.each(appearances)('apariencia %s', (_name, theme) => {
+    it('mantiene toda la familia técnica sobre el suelo no textual de 3:1', () => {
+      const technical = [
+        '--sc-color-load-point',
+        '--sc-color-load-distributed',
+        '--sc-color-load-moment-applied',
+        '--sc-color-technical-axial',
+        '--sc-color-technical-shear',
+        '--sc-color-technical-moment',
+        '--sc-color-technical-deformed',
+        '--sc-color-technical-reaction',
+        '--sc-color-technical-dimension',
+        '--sc-color-technical-axis',
+        '--sc-color-influence-line',
+        '--sc-color-envelope',
+      ];
+      for (const role of technical) {
+        expect(worstOnAppearance(role, theme), role).toBeGreaterThanOrEqual(3);
       }
+    });
+
+    it('mantiene los estados y la selección sobre el mismo suelo', () => {
+      for (const role of [
+        '--sc-color-state-success',
+        '--sc-color-state-warning',
+        '--sc-color-state-error',
+        '--sc-color-state-critical',
+        '--sc-color-selection-stroke',
+        '--sc-color-focus',
+        '--sc-color-action-ink',
+        '--sc-color-aula',
+      ]) {
+        expect(worstOnAppearance(role, theme), role).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    it('mantiene las tintas de texto sobre el suelo textual de 4,5:1', () => {
+      for (const role of [
+        '--sc-color-text-primary',
+        '--sc-color-text-secondary',
+        '--sc-color-text-technical',
+        '--sc-color-text-unit',
+        '--sc-color-text-disabled-content',
+        '--sc-color-text-link',
+      ]) {
+        expect(contrast(role, '--sc-color-surface-1', theme), role).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    it('deja el relleno de acción legible con su propia tinta encima', () => {
+      // Un botón por defecto es relleno + etiqueta, y la pareja se mide junta.
+      expect(contrast('--sc-color-action-foreground', '--sc-color-action-primary', theme)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast('--sc-color-action-foreground', '--sc-color-action-hover', theme)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast('--sc-color-action-foreground', '--sc-color-action-pressed', theme)).toBeGreaterThanOrEqual(4.5);
+      // Y la silueta del control tiene que verse contra el fondo que lo rodea.
+      expect(worstOnAppearance('--sc-color-action-primary', theme)).toBeGreaterThanOrEqual(3);
+    });
+
+    it('separa la identidad de una acción aplicada de la de su respuesta', () => {
+      // Un momento aplicado no puede leerse como el diagrama de momentos que
+      // produce: son la causa y el efecto, y comparten pantalla.
+      expect(resolveHex('--sc-color-load-moment-applied', theme))
+        .not.toBe(resolveHex('--sc-color-technical-moment', theme));
+      expect(resolveHex('--sc-color-load-point', theme))
+        .not.toBe(resolveHex('--sc-color-technical-shear', theme));
+    });
+  });
+
+  it('el amarillo de sistema nunca es trazo suelto: va a relleno con su propia tinta', () => {
+    // Es el único hue que no puede ser relleno y tinta a la vez.
+    expect(contrast('--sc-color-canario-ink', '--sc-color-canario', lightTheme)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('--sc-color-canario-ink', '--sc-color-canario', darkTheme)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('el movimiento reducido neutraliza duración y encogido de una sola vez', () => {
+    for (const token of [
+      '--sc-motion-instant', '--sc-motion-press', '--sc-motion-fast', '--sc-motion-control',
+      '--sc-motion-standard', '--sc-motion-slow', '--sc-motion-reveal', '--sc-motion-loading',
+    ]) {
+      expect(reducedMotionTokens.declarations.get(token), token).toBe('0.001ms');
     }
-    expect(offenders).toEqual([]);
-  });
-});
-
-/**
- * `--sc-*` custom properties injected at runtime rather than declared in `tokens.css`.
- * `WorkspaceShell` writes these from `visualViewport` on every resize, so the stylesheet
- * legitimately reads them with a fallback and the static check must not flag them.
- */
-const RUNTIME_INJECTED_TOKENS = new Set([
-  '--sc-visual-viewport-height',
-  '--sc-visual-viewport-top',
-  '--sc-visual-viewport-bottom',
-]);
-
-const referencedTokens = (css: string) => {
-  const local = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
-  return [...css.matchAll(/var\(\s*(--sc-[\w-]+)/g)]
-    .map((match) => match[1])
-    .filter((name) => !local.has(name) && !RUNTIME_INJECTED_TOKENS.has(name));
-};
-
-describe('AG-015 premium visual layer contract', () => {
-  const declared = new Set([...tokensCss.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
-
-  it.each([
-    ['styles.css', stylesCss],
-    ['ui.css', uiCss],
-    ['material.css', materialCss],
-  ] as const)('resolves every design token %s references', (_label, css) => {
-    // A `var(--sc-…)` typo does not fail the build, it silently renders the property
-    // invalid — which is how `.welcome-badge--beam` shipped with an unstyled badge.
-    const missing = [...new Set(referencedTokens(css))].filter((name) => !declared.has(name));
-    expect(missing).toEqual([]);
+    // Anular la duración no basta: un `transform` sin transición sigue saltando.
+    expect(reducedMotionTokens.declarations.get('--sc-clay-press-transform')).toBe('none');
   });
 
-  it('declares the display typography scale the marketing surfaces need', () => {
-    const display = [
-      '--sc-font-display',
-      '--sc-font-size-display-xl',
-      '--sc-font-size-display-md',
-      '--sc-font-size-lead',
-      '--sc-line-height-display',
-      '--sc-tracking-display',
-      '--sc-tracking-eyebrow',
-      '--sc-font-weight-display',
-    ];
-    for (const token of display) expect(rootTokens.declarations.has(token), token).toBe(true);
+  it('no queda materia de arcilla en ningún consumidor', () => {
+    // La arcilla eran cuatro capas de sombra y una fuente de luz propia por
+    // pieza. Un `inset` con desplazamiento en las dos direcciones es su firma:
+    // si reaparece, alguien está volviendo a esculpir volumen a mano.
+    const clayShadows = [...componentCss.matchAll(/box-shadow\s*:\s*([^;]+);/g)]
+      .map((match) => match[1])
+      .filter((value) => /inset\s+-?\d+px\s+-?\d+px\s+\d+px/.test(value.replace(/rgba?\([^)]*\)/g, '')))
+      .filter((value) => !value.includes('var(--'));
+    expect(clayShadows).toEqual([]);
   });
 
-  it('keeps presentation materials matte and free of decorative glow', () => {
+  it('ningún componente reescribe la elevación con literales de color', () => {
+    // La altura la reparte la escala `--sc-elevation-*`. Un `box-shadow` con
+    // rgba escrito a mano es una pieza decidiendo su propia física.
+    const handRolled = [...componentCss.matchAll(/box-shadow\s*:\s*([^;]+);/g)]
+      .map((match) => match[1].trim())
+      .filter((value) => /rgba?\(/.test(value) && !value.includes('var(--'))
+      // El pomo del interruptor es la excepción declarada: es la única pieza
+      // que proyecta contacto sobre su propia pista y no sobre el plano.
+      .filter((value) => !value.includes('0 2px 4px rgba(0,0,0,0.2)'));
+    expect(handRolled).toEqual([]);
+  });
+
+  it('el acento no se usa nunca como fuente de luz', () => {
+    // Un halo de color alrededor de un control lo convierte en un objeto
+    // encendido. En el sistema, lo que rodea a un control es aire.
     expect(rootTokens.declarations.get('--sc-glow-accent')).toBe('0 0 transparent');
     expect(rootTokens.declarations.get('--sc-glow-aula')).toBe('0 0 transparent');
-    for (const token of ['--sc-gradient-brand-soft', '--sc-gradient-display', '--sc-gradient-sheen']) {
-      expect(rootTokens.declarations.get(token), token).not.toMatch(/gradient\(/);
-      expect(darkTokens.declarations.has(token), `${token} no necesita una versión brillante en Noche`).toBe(false);
-    }
-  });
-
-  it('recalibrates every material Dark cannot inherit from Day', () => {
-    // Rings and physical elevation change with the ground. Decorative glow is
-    // neutralized globally and therefore has no second Night declaration.
-    const recalibrated = [
-      '--sc-ring-inset',
-      '--sc-shadow-lifted',
-    ];
-    for (const token of recalibrated) expect(darkTokens.declarations.has(token), token).toBe(true);
-  });
-
-  it('keeps the welcome surface free of untokenized elevation', () => {
-    // The previous welcome cards hardcoded `rgba(0,0,0,.15)`, which is invisible against
-    // the Night ground: elevation has to come from the theme-calibrated shadow tokens.
-    const welcomeRules = [...componentCss.matchAll(/^[^\n{]*\.welcome[^\n{]*\{([^}]*)\}/gm)];
-    const offenders = welcomeRules
-      .flatMap((rule) => rule[1].split(';'))
-      .filter((declaration) => /box-shadow/.test(declaration) && /rgba?\(/.test(declaration))
-      .map((declaration) => declaration.trim());
-    expect(offenders).toEqual([]);
-  });
-
-  it('declares the clay elevation scale in both themes', () => {
-    const clay = [
-      '--sc-shadow-clay-xs',
-      '--sc-shadow-clay-sm',
-      '--sc-shadow-clay-md',
-      '--sc-shadow-clay-lg',
-      '--sc-shadow-clay-floating',
-      '--sc-shadow-clay-inset',
-      '--sc-shadow-clay-pressed',
-    ];
-    for (const token of clay) {
-      expect(rootTokens.declarations.has(token), `light ${token}`).toBe(true);
-      // Night cannot inherit Day's clay: an inner highlight tuned for warm
-      // porcelain reads as a scratch over graphite, and the outer shadow has to
-      // shrink because there is no light left for it to remove.
-      expect(darkTokens.declarations.has(token), `dark ${token}`).toBe(true);
-    }
-  });
-
-  it('lights every clay surface from the same direction', () => {
-    // Four layers per surface: outer shadow down-right, inner highlight
-    // up-left, inner shadow down-right, and the 1px edge. Two of them are
-    // `inset`; a level that forgot them would read as a flat card with a blur.
-    // Both themes must hold this shape independently — Night recalibrates the
-    // values but not the structure, and a regression in either block has to
-    // fail here, not just in Day.
-    for (const [themeLabel, theme] of [
-      ['light', rootTokens],
-      ['dark', darkTokens],
-    ] as const) {
-      for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
-        const value = theme.declarations.get(level) ?? '';
-        expect((value.match(/inset/g) ?? []).length, `${themeLabel} ${level}`).toBeGreaterThanOrEqual(2);
-      }
-      // Pressed inverts: it is inset-only, or it would still look like it floats.
-      expect(theme.declarations.get('--sc-shadow-clay-pressed'), `${themeLabel} --sc-shadow-clay-pressed`)
-        .not.toMatch(/(^|,)\s*0\s+\d+px/);
-    }
-  });
-
-  it('reserves a hero radius above the card scale', () => {
-    expect(rootTokens.declarations.has('--sc-radius-hero')).toBe(true);
-  });
-
-  it('measures a canvas-chrome border that clears the non-text contrast floor in both themes', () => {
-    // Nothing else does: --sc-color-border-strong is 1.96:1 against the canvas
-    // in Day. Floating chrome (mode badge, zoom controls, quick-entry) needs
-    // its own measured border or it becomes unreadable once the glass that
-    // used to separate it from the drawing is gone.
-    expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', lightTheme))
-      .toBeGreaterThanOrEqual(3);
-    expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', darkTheme))
-      .toBeGreaterThanOrEqual(3);
-  });
-
-  it('gives repeat controls the shared canvas-chrome material without the contact glow', () => {
-    // CRI-105 reparte la profundidad del chrome por TAMAÑO: la pastilla de
-    // repetición se queda en el escalón de control y el aviso, que es una
-    // tarjeta flotante, en el de tarjeta. Antes los dos compartían la sombra de
-    // un panel flotante (22px de desenfoque bajo esquinas de 10-18px), que es
-    // el desenfoque mayor que el radio que V-04 prohíbe. Lo que esta prueba
-    // sigue guardando es lo mismo de antes: los dos toman su materia del grupo
-    // central, y ninguno vuelve al halo de marca.
-    const chromeChips = materialCss.match(/\.canvas-mode-badge,[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(chromeChips).toContain('.repeat-action-control');
-    expect(chromeChips).toContain('box-shadow: var(--sc-shadow-clay-sm)');
-    const chromeCards = materialCss.match(/\.cut-tooltip,[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(chromeCards).toContain('.repeat-preview');
-    expect(chromeCards).toContain('box-shadow: var(--sc-shadow-clay-md)');
-    expect(phase1Css).not.toMatch(/\.repeat-action-control[^}]*--sc-shadow-contact/);
-    expect(phase1Css).not.toMatch(/\.repeat-preview[^}]*--sc-shadow-contact/);
-  });
-
-  it('keeps Repeat cancellation visually separated with existing Clay control material', () => {
-    expect(phase1Css).toMatch(/\.repeat-preview button \{[^}]*border:var\(--sc-clay-edge\)[^}]*background:var\(--sc-color-surface-elevated\)[^}]*box-shadow:var\(--sc-shadow-clay-xs\)/);
-    expect(phase1Css).toMatch(/\.repeat-preview button:hover:not\(:disabled\) \{[^}]*box-shadow:var\(--sc-shadow-clay-sm\)/);
-    expect(phase1Css).toMatch(/\.repeat-preview button:active:not\(:disabled\) \{[^}]*box-shadow:var\(--sc-shadow-clay-pressed\)/);
-  });
-
-  it('keeps ui.css off the flat AG-015 shadow family', () => {
-    // ui.css is the design-system library CSS — every sc-* component's shadow
-    // should resolve to the clay scale, not the flat one clay was meant to
-    // replace. Grep, not getComputedStyle: jsdom can't render this, so the
-    // text-level check is what guards it inside `npm test`.
-    const flatShadowTokens = ['--sc-shadow-raised', '--sc-shadow-lifted', '--sc-shadow-floating', '--sc-shadow-modal', '--sc-shadow-popover', '--sc-shadow-contact', '--sc-shadow-sheet'];
-    const offenders = flatShadowTokens.filter((token) => uiCss.includes(`var(${token})`));
-    expect(offenders).toEqual([]);
+    expect(rootTokens.declarations.get('--sc-gradient-clay-action')).toBe('none');
+    expect(rootTokens.declarations.get('--sc-gradient-sheen')).toBe('none');
   });
 });

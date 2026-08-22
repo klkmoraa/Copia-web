@@ -104,7 +104,7 @@
 .model-doctor-finding__header { display: flex; align-items: flex-start; gap: var(--sc-space-3); }
 .model-doctor-finding__header > div { min-width: 0; }
 .model-doctor-finding__severity { width: 2rem; height: 2rem; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc-radius-pill); color: var(--doctor-severity); background: color-mix(in srgb, var(--doctor-severity) 12%, var(--sc-color-surface-1)); }
-.model-doctor-finding__eyebrow { display: block; color: var(--doctor-severity); font-size: var(--sc-font-size-caption); font-weight: var(--sc-font-weight-semibold); letter-spacing: var(--sc-tracking-wide); text-transform: uppercase; }
+.model-doctor-finding__eyebrow { display: block; color: var(--doctor-severity); font-size: var(--sc-font-size-caption); font-weight: var(--sc-font-weight-semibold); letter-spacing: var(--sc-tracking-wide); text-transform:none; }
 .model-doctor-finding h3 { margin: var(--sc-space-1) 0 0; font-size: var(--sc-font-size-control); line-height: var(--sc-line-height-tight); }
 .model-doctor-finding > p,
 .model-doctor-finding__detail p { margin: 0; color: var(--sc-color-text-secondary); line-height: var(--sc-line-height-relaxed); }

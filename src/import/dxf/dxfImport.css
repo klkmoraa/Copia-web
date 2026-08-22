@@ -9,7 +9,7 @@
   align-items: flex-start;
   gap: 9px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius:var(--sc-radius-card);
   background: color-mix(in srgb, var(--warning, #a76c00) 10%, var(--surface, #fff));
   color: var(--text, #282331);
   font-size: 0.84rem;
@@ -31,7 +31,7 @@
 .dxf-file-field input {
   padding: 12px;
   border: 1px dashed var(--border, #d7cfdf);
-  border-radius: 12px;
+  border-radius:var(--sc-radius-card);
 }
 
 .dxf-import-controls {
@@ -54,7 +54,7 @@
   width: 100%;
   min-height: 190px;
   background: var(--canvas-bg, #f8f5fb);
-  border-radius: 12px;
+  border-radius:var(--sc-radius-card);
 }
 
 .dxf-preview rect {

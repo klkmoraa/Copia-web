@@ -87,8 +87,8 @@
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-bold);
-  letter-spacing: var(--sc-tracking-eyebrow);
-  text-transform: uppercase;
+  letter-spacing:0;
+  text-transform:none;
   /* El canario del brandbook no admite tinta blanca: su pareja medida es
      #7a5a12 sobre relleno pleno. */
   color: #7a5a12;
@@ -120,8 +120,8 @@
 .space3d-project-picker-label {
   font-size: var(--sc-font-size-caption);
   color: var(--sc-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
   white-space: nowrap;
 }
 
@@ -206,7 +206,6 @@
 .space3d-tool:hover:not(:disabled),
 .space3d-button:hover:not(:disabled) {
   border-color: var(--sc-color-border-strong);
-  transform: translateY(-1px);
   box-shadow: var(--sc-shadow-clay-sm);
 }
 
@@ -343,7 +342,6 @@
 
 .space3d-rail-button:hover:not(:disabled) {
   color: var(--sc-color-text-primary);
-  transform: translateY(-1px);
   box-shadow: var(--sc-shadow-clay-sm);
 }
 
@@ -386,8 +384,8 @@
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-semibold);
-  letter-spacing: var(--sc-tracking-eyebrow);
-  text-transform: uppercase;
+  letter-spacing:0;
+  text-transform:none;
   color: var(--sc-color-text-muted);
 }
 
@@ -725,8 +723,8 @@
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-semibold);
-  letter-spacing: var(--sc-tracking-eyebrow);
-  text-transform: uppercase;
+  letter-spacing:0;
+  text-transform:none;
 }
 
 .space3d-table tbody th[scope='row'] {
@@ -964,7 +962,7 @@
   background: var(--sc-color-surface-1);
 }
 
-.space3d-metrics dt { font-size: var(--sc-font-size-caption); color: var(--sc-color-text-muted); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); }
+.space3d-metrics dt { font-size: var(--sc-font-size-caption); color: var(--sc-color-text-muted); text-transform:none; letter-spacing:0; }
 .space3d-metrics dd { margin: 2px 0 0; font-family: var(--sc-font-mono); font-size: var(--sc-font-size-body); font-variant-numeric: var(--sc-numeric-variant); }
 
 .space3d-issues { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sc-space-2); }

@@ -89,8 +89,8 @@
   margin: 0;
   color: var(--sc-color-text-muted);
   font-size: var(--sc-font-size-label);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
 }
 
 /* --- Revisión --- */
@@ -278,7 +278,7 @@
 
 .bulk-preview .section-viewer.bulk-preview__slot { margin: 0; min-width: 0; }
 .bulk-preview__slot-caption { display: grid; gap: 1px; min-width: 0; }
-.bulk-preview__slot-caption small { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); }
+.bulk-preview__slot-caption small { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); text-transform:none; letter-spacing:0; }
 .bulk-preview__slot-caption span { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); }
 
 .bulk-preview__canvas { min-height: 6rem; display: grid; place-items: center; }
@@ -308,7 +308,7 @@
   background: var(--sc-color-surface-2);
 }
 
-.bulk-changes__title { margin: 0; font-size: var(--sc-font-size-label); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); color: var(--sc-color-text-muted); }
+.bulk-changes__title { margin: 0; font-size: var(--sc-font-size-label); text-transform:none; letter-spacing:0; color: var(--sc-color-text-muted); }
 .bulk-changes__count { margin: 0; font-weight: var(--sc-font-weight-semibold); }
 .bulk-changes__list { display: grid; gap: var(--sc-space-2); margin: 0; }
 

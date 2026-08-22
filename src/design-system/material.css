@@ -1,9 +1,8 @@
-/* La materia clay componible.
+/* La materia del sistema, componible.
  *
  * Se declara UNA VEZ por rol de elevación, aplicada por lista de selectores.
  * Cambiar la materia es editar un bloque aquí, no perseguir siete reglas
- * repartidas por `styles.css`. Cada tarea de vestido añade sus propios
- * selectores al grupo que le corresponde.
+ * repartidas por `styles.css`.
  *
  * Se importa desde `App.tsx` DESPUÉS de `styles.css`, así que queda en el
  * chunk de entrada (nunca sufre el retraso del chunk lazy de `ui.css`) y
@@ -17,9 +16,28 @@
  * `Surface` (`design-system/components/surface.tsx`) emite `data-level` y
  * `data-pressed`. Cualquier otro selector puede sumarse a un grupo sin pasar
  * por `Surface`: por eso `[data-level='…']` genérico también engancha marcado
- * que no usa el componente React. */
+ * que no usa el componente React.
+ *
+ * LA GRAMÁTICA
+ * ---------------------------------------------------------------------------
+ * Antes cada pieza traía su propio volumen: cuatro capas de sombra, una fuente
+ * de luz a 145° y un canto de arcilla. Ahora ninguna pieza tiene volumen. Lo
+ * que hay son PLANOS que se apilan, y sólo tres cosas los distinguen:
+ *
+ *   1. El VALOR del fondo. Sobre una ventana gris, una superficie blanca ya es
+ *      una elevación. No hace falta gastar una sombra en decirlo.
+ *   2. El MATERIAL. Lo que se apoya sobre contenido —barras, barras laterales,
+ *      menús— es translúcido y desenfoca lo que tapa. Eso comunica "hay algo
+ *      debajo" mejor que cualquier sombra, porque de hecho se ve.
+ *   3. El FILETE de medio píxel. Es el canto. En claro es negro al 6-10 %; en
+ *      oscuro, blanco, porque sobre carbón un canto oscuro no existe.
+ *
+ * La proyección sólo aparece cuando una pieza está de verdad despegada del
+ * plano —un popover, un modal—, y siempre por debajo de lo que el ojo nota
+ * conscientemente.
+ */
 
-/* flat: sin volumen. Zonas técnicas densas — tablas, filas del inspector,
+/* flat: sin materia. Zonas técnicas densas — tablas, filas del inspector,
    el lienzo. Es el nivel por defecto en esas zonas, no una excepción. */
 .sc-surface[data-level='flat'],
 [data-level='flat'],
@@ -37,83 +55,104 @@
 .diagram-cursor-readout,
 .learning-toolbar,
 .learning-steps details {
-  background: var(--sc-color-surface-1);
-  border: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-fill-quaternary);
+  border: 0.5px solid transparent;
   box-shadow: none;
 }
 
-/* inset: una cavidad de interacción. Es una profundidad distinta de BASE,
-   nunca una tarjeta anidada.
-   `.toolbar` (la bandeja del riel) vive aquí a propósito: CRI-98 la hunde para
-   que las herramientas `RAISED` que se apoyan encima lean como piezas sobre
-   una mesa, en vez de un panel plano más. */
+/* inset: NO es una cavidad excavada. Es un relleno de la jerarquía de fills —
+   el mecanismo con el que el sistema pinta un campo, un segmento o una bandeja
+   sin inventar una fuente de luz. Se tiñe con lo que tiene detrás en vez de
+   imponer un gris propio, y por eso funciona igual sobre blanco que sobre un
+   material translúcido.
+   La bandeja del riel ya no vive aquí: pasó a ser barra lateral de cristal,
+   más abajo, junto a la barra superior. */
 .sc-surface[data-level='inset'],
 [data-level='inset'],
-/* CRI-104 · la bandeja de filtros de la vitrina es una cavidad de
-   interacción, no una pieza que flote sobre el panel: las pastillas se apoyan
-   DENTRO de ella. */
-.welcome-filter-tabs,
-.toolbar {
-  background: var(--sc-color-surface-inset);
-  border: 1px solid var(--sc-color-border-soft);
-  box-shadow: var(--sc-shadow-clay-inset);
+.welcome-filter-tabs {
+  background: var(--sc-color-fill-tertiary);
+  border: 0.5px solid transparent;
+  box-shadow: none;
 }
 
-.toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
-
-/* raised: la superficie normal — paneles, barras, tarjetas.
-   CRI-105 · `.inspector-summary` salió de este grupo: se renderiza DENTRO de
-   `.inspector-panel`, que ya es RAISED, así que estaba elevándose sobre una
-   elevación sin cambio de nivel entre las dos. Baja a BASE con el resto del
-   contenido del panel, más abajo. */
+/* raised: la superficie normal — paneles, barras, tarjetas. Es un plano opaco
+   con canto, sin proyección: un panel acoplado no está despegado de nada.
+   La topbar es la excepción de material y se resuelve más abajo. */
 .sc-surface[data-level='raised'],
 [data-level='raised'],
-.topbar,
-/* CRI-104 · la cabecera de la bienvenida es una barra de aplicación, igual que
-   `.topbar`: RAISED. Estaba en `floating`, que es la elevación de lo que se
-   despega del plano (popovers, menús) y no la de una barra fija. */
 .welcome-header,
 .inspector-panel,
 .results-panel {
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-md);
+  border: 0.5px solid var(--sc-color-border);
+  box-shadow: none;
 }
 
-/* CRI-104 · la cabecera va a sangre completa y pegada al borde superior del
-   viewport: sólo lleva el canto que de verdad separa, el de abajo. Vive aquí
-   —y no en `styles.css`— porque este archivo se importa después y su `border`
-   en atajo ganaría a cualquier longhand declarado antes. */
-.welcome-header { border-width: 0 0 1px; }
+/* Barra de herramientas unificada: material translúcido, no superficie opaca.
+   Es la pieza que más distingue una app del sistema de una página web — el
+   contenido se ve pasar por debajo, desenfocado y con el color devuelto por la
+   saturación. `-webkit-` sigue haciendo falta para Safari. */
+.topbar,
+.welcome-header {
+  background: var(--sc-material-regular);
+  -webkit-backdrop-filter: var(--sc-material-blur-regular);
+  backdrop-filter: var(--sc-material-blur-regular);
+  border: 0;
+  border-bottom: 0.5px solid var(--sc-color-border);
+  box-shadow: none;
+}
 
-.inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
-.results-panel { border-width: var(--results-clay-border-width, 1px 0 0); }
+/* Barra lateral: mismo material que la barra superior. En macOS la barra
+   lateral y la de herramientas son la misma pieza de cristal doblada, y por eso
+   comparten receta en vez de imitarse. */
+.toolbar,
+.toolbar-rail,
+.app-rail {
+  background: var(--sc-material-regular);
+  -webkit-backdrop-filter: var(--sc-material-blur-regular);
+  backdrop-filter: var(--sc-material-blur-regular);
+  border: 0;
+  border-right: 0.5px solid var(--sc-color-border);
+  box-shadow: none;
+}
 
-/* floating: lo que se despega del plano — popovers, hojas, menús. */
+.toolbar { border-right-width: var(--toolbar-clay-border-width, 0.5px); }
+
+.inspector-panel { border-width: var(--inspector-clay-border-width, 0.5px); }
+.results-panel { border-width: var(--results-clay-border-width, 0.5px 0 0); }
+
+/* floating: lo que se despega del plano — popovers, menús, avisos. Aquí sí
+   entra el material grueso: un menú tiene que poder leerse sin que el fondo
+   compita, y el anillo especular le da el grosor de cristal. */
 .sc-surface[data-level='floating'],
 [data-level='floating'],
 .popover,
 .sc-toast-card,
 .import-center-dialog,
 .mobile-tool-palette {
-  background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-lg);
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thick);
+  backdrop-filter: var(--sc-material-blur-thick);
+  border: 0;
+  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
 }
 
-.sc-toast-card--success { border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft)); }
-.sc-toast-card--info { border-color: color-mix(in srgb, var(--sc-color-info) 40%, var(--sc-color-border-soft)); }
-.sc-toast-card--warning { border-color: color-mix(in srgb, var(--sc-color-state-warning) 40%, var(--sc-color-border-soft)); }
-.sc-toast-card--error { border-color: color-mix(in srgb, var(--sc-color-state-error) 40%, var(--sc-color-border-soft)); }
+/* El aviso lleva el color en una barra lateral de 3px, no en el canto: teñir el
+   borde entero de un popover de cristal ensucia el material. */
+.sc-toast-card { border-left: 3px solid transparent; }
+.sc-toast-card--success { border-left-color: var(--sc-color-state-success); }
+.sc-toast-card--info { border-left-color: var(--sc-color-info); }
+.sc-toast-card--warning { border-left-color: var(--sc-color-state-warning); }
+.sc-toast-card--error { border-left-color: var(--sc-color-state-error); }
 
-/* sheet: un plano que nace de un borde. La sombra del token sube, porque la
-   fuente de luz sigue arriba-izquierda. El radio sólo queda del lado de
-   entrada; el borde que toca el viewport permanece recto. */
+/* sheet: un plano que nace de un borde. La proyección sube porque lo que la
+   separa del plano de trabajo es oclusión de contacto contra ese borde, no la
+   luz. El radio sólo queda del lado de entrada. */
 .sc-surface[data-level='sheet'],
 [data-level='sheet'],
 .sc-modal-surface.sc-modal-surface--drawer {
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
+  border: 0;
   box-shadow: var(--sc-shadow-sheet);
 }
 
@@ -126,28 +165,25 @@
 .sc-modal-surface--left { border-left-width: 0; }
 
 /* modal: sólo este nivel usa el velo que separa el contexto interrumpido del
-   espacio de trabajo. El token cambia por tema; no hay rgba local. */
+   espacio de trabajo. El token cambia por apariencia; no hay rgba local. */
 .sc-surface[data-level='modal'],
 [data-level='modal'],
 .sc-modal-surface.sc-modal-surface--dialog,
 .sc-modal-surface.sc-modal-surface--fullscreen {
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-modal);
+  border: 0;
+  box-shadow: var(--sc-elevation-4), var(--sc-ring-inset);
 }
 
-.sc-overlay { background: var(--sc-color-overlay-strong); }
+/* El velo de un modal del sistema no es sólo negro: también desenfoca lo que
+   hay detrás, y eso es lo que aparta el contexto sin borrarlo. */
+.sc-overlay {
+  background: var(--sc-color-overlay-strong);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
 
-/* BASE técnico: el borde suave sólo separa datos; no hay canto, gradiente ni
-   elevación. Cada selector se revisa en Día y Noche junto con su superficie. */
-/* CRI-104 · el contenido de la bienvenida vive DENTRO de `.welcome-frame`,
-   que ya es la superficie RAISED. Sus bloques interiores vuelven a BASE: el
-   ciclo de trabajo, los chips de método y el pie no son siete tarjetas
-   apiladas sobre una tarjeta, y darles materia propia es exactamente el
-   card-inside-card que la gramática prohíbe. */
-/* CRI-105 · el resumen de selección del Inspector es una agrupación dentro del
-   panel, no una tarjeta apoyada sobre él. Conserva su canto suave para que se
-   lea como grupo; lo que pierde es la elevación repetida. */
+/* BASE técnico: sin materia. Un dato no es una pieza. */
 .inspector-summary,
 .welcome-workflow,
 .welcome-highlight-item,
@@ -164,10 +200,10 @@
   box-shadow: none;
 }
 
-/* Una tabla dentro de una tarjeta va PLANA: la tarjeta ya es el marco (V-10).
-   Sin sombra, sin canto de volumen, sin celdas redondeadas y sin un segundo
-   borde alrededor del scroll. Comparar cuarenta posiciones sigue siendo
-   posible porque la rejilla no se convierte en fichas. */
+/* Una tabla dentro de una tarjeta va PLANA: la tarjeta ya es el marco. Sin
+   sombra, sin canto, sin celdas redondeadas y sin un segundo borde alrededor
+   del scroll. Comparar cuarenta posiciones sigue siendo posible porque la
+   rejilla no se convierte en fichas. */
 [data-level='raised'] > .table-wrap,
 [data-level='raised'] > .summary-table-wrap {
   border: 0;
@@ -186,7 +222,7 @@
   box-shadow: none;
 }
 
-/* El escalón cero de la escala V-05. Una celda comparable no es una pieza
+/* El escalón cero de la escala de radios. Una celda comparable no es una pieza
    independiente: redondearla rompe el barrido lineal de la columna. */
 .datasheet-grid tbody th,
 .datasheet-grid tbody td,
@@ -197,44 +233,42 @@
 [data-level='raised'] [data-level='raised'],
 [data-level='floating'] [data-level='floating'],
 [data-level='modal'] [data-level='modal'] {
-  background: var(--sc-color-surface-1);
-  border: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-fill-quaternary);
+  border: 0.5px solid transparent;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
-/* CRI-105 · radio por rol sobre el componente `Surface`, que es el único sitio
-   donde el nivel determina el rol por completo (V-05).
-   `flat` es rejilla técnica y se queda en el escalón cero; `inset` y `raised`
-   son tarjeta; `floating`, `sheet` y `modal` son las tres piezas grandes.
+/* Radio por rol sobre el componente `Surface`, que es el único sitio donde el
+   nivel determina el rol por completo. `flat` es rejilla técnica y se queda en
+   el escalón cero; `inset` y `raised` son tarjeta; `floating`, `sheet` y
+   `modal` son las tres piezas grandes.
    Las superficies de feature (`.topbar`, `.inspector-panel`, `.results-panel`)
-   NO entran: van a sangre contra el borde del viewport y CRI-90 les quita
-   deliberadamente el redondeo contra él. Ahí quien separa es el canto. */
+   NO entran: van a sangre contra el borde del viewport y ahí el redondeo
+   sobra. Quien separa es el canto. */
 .sc-surface[data-level='flat'] { border-radius: var(--sc-radius-data); }
 .sc-surface[data-level='inset'],
 .sc-surface[data-level='raised'] { border-radius: var(--sc-radius-card); }
 .sc-surface[data-level='floating'] { border-radius: var(--sc-radius-panel); }
 .sc-surface[data-level='modal'] { border-radius: var(--sc-radius-modal); }
 
-/* pressed: invierte la iluminación. Coexiste con cualquier nivel — por eso
-   va al final y sólo toca lo que un estado pulsado necesita cambiar. */
+/* pressed: no hunde. Sube el relleno un grado y encoge la pieza un 3 %, que es
+   como responde un control del sistema al dedo o al ratón. Coexiste con
+   cualquier nivel — por eso va al final y sólo toca lo que un pulsado cambia. */
 .sc-surface[data-pressed='true'],
 [data-pressed='true'] {
-  background: var(--sc-color-surface-pressed);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  background: var(--sc-color-fill-secondary);
+  box-shadow: none;
 }
 
-/* Chrome del lienzo — lo que flota sobre el dibujo técnico (badge de modo,
-   chips, controles de zoom, status, leyenda, quick-entry, tooltip de corte,
-   panel de capas). Su relleno opaco y borde medido sustituyen el vidrio sin
-   tocar el lienzo ni sus colores técnicos.
+/* Chrome del lienzo — lo que flota sobre el dibujo (badge de modo, chips,
+   controles de zoom, status, leyenda, quick-entry, tooltip de corte, panel de
+   capas). Es la pieza donde el material se gana el sueldo: al ser translúcido,
+   la estructura de debajo sigue viéndose a través del control en vez de quedar
+   tapada por una pastilla opaca.
    El lienzo en sí —miembros, nudos, cargas, diagramas, deformada, cotas— no
-   aparece aquí y no recibe materia: sólo la recibe lo que flota ENCIMA.
-
-   CRI-105 · la profundidad se reparte por TAMAÑO (V-04). El grupo entero usaba
-   `--sc-shadow-clay-floating`, la sombra de un panel grande, sobre pastillas de
-   28-40px cuyo radio ronda los 10px: 22px de desenfoque bajo una esquina de
-   10px es exactamente el halo que V-04 prohíbe. Las piezas grandes conservan
-   la sombra de flotante; las pastillas bajan al escalón que les corresponde. */
+   aparece aquí y no recibe materia: sólo la recibe lo que flota ENCIMA. */
 .canvas-mode-badge,
 .canvas-view-chips span,
 .canvas-controls,
@@ -247,27 +281,66 @@
 .selection-cycle-indicator,
 .canvas-layer-trigger,
 .repeat-action-control {
-  background: var(--sc-color-surface-2);
-  border: 1px solid var(--sc-color-border-canvas-chrome);
-  box-shadow: var(--sc-shadow-clay-sm);
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thin);
+  backdrop-filter: var(--sc-material-blur-thin);
+  border: 0;
+  box-shadow: var(--sc-elevation-2), var(--sc-ring-inset);
 }
 
-/* Piezas grandes del mismo chrome: una lectura de corte y un aviso de repetición
-   son tarjetas flotantes, no pastillas. */
+/* Piezas grandes del mismo chrome: una lectura de corte y un aviso de
+   repetición son tarjetas flotantes, no pastillas. */
 .cut-tooltip,
 .repeat-preview {
-  background: var(--sc-color-surface-2);
-  border: 1px solid var(--sc-color-border-canvas-chrome);
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thick);
+  backdrop-filter: var(--sc-material-blur-thick);
+  border: 0;
   border-radius: var(--sc-radius-card);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
 }
 
 /* El panel de capas es el único FLOATING de verdad del chrome. */
 .canvas-layer-panel {
-  background: var(--sc-color-surface-2);
-  border: 1px solid var(--sc-color-border-canvas-chrome);
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thick);
+  backdrop-filter: var(--sc-material-blur-thick);
+  border: 0;
   border-radius: var(--sc-radius-panel);
-  box-shadow: var(--sc-shadow-clay-lg);
+  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
+}
+
+/* Sin soporte de `backdrop-filter` el material se vuelve opaco: un fondo al
+   72 % sin desenfoque deja leer el contenido de debajo a través del texto. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .topbar,
+  .welcome-header,
+  .toolbar,
+  .toolbar-rail,
+  .app-rail,
+  .sc-surface[data-level='floating'],
+  [data-level='floating'],
+  .popover,
+  .sc-toast-card,
+  .import-center-dialog,
+  .mobile-tool-palette,
+  .canvas-mode-badge,
+  .canvas-view-chips span,
+  .canvas-controls,
+  .canvas-status,
+  .canvas-result-legend,
+  .canvas-feedback,
+  .canvas-hint,
+  .mobile-inspector-toggle,
+  .quick-entry-bar,
+  .selection-cycle-indicator,
+  .canvas-layer-trigger,
+  .repeat-action-control,
+  .cut-tooltip,
+  .repeat-preview,
+  .canvas-layer-panel {
+    background: var(--sc-color-surface-1);
+  }
 }
 
 @media print {

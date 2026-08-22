@@ -142,7 +142,7 @@ body:has(.component-lab),
 .component-lab__section-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sc-space-8) clamp(var(--sc-space-6), 4vw, 56px); }
 .component-lab__demo { min-width: 0; padding-top: var(--sc-space-4); border-top: var(--sc-border-width-strong) solid var(--sc-color-border); }
 .component-lab__demo--wide { grid-column: 1 / -1; }
-.component-lab__demo > h3 { margin: 0 0 var(--sc-space-5); font-size: var(--sc-font-size-label); color: var(--sc-color-text-muted); text-transform: uppercase; letter-spacing: .1em; }
+.component-lab__demo > h3 { margin: 0 0 var(--sc-space-5); font-size: var(--sc-font-size-label); color: var(--sc-color-text-muted); text-transform:none; letter-spacing:0; }
 .component-lab__demo-content { display: grid; gap: var(--sc-space-5); }
 .component-lab__row--center { justify-content: center; }
 .component-lab__stack { display: grid; gap: var(--sc-space-3); }

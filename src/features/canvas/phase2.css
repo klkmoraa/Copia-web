@@ -268,16 +268,20 @@
   left: 50%;
   bottom: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
   align-items: stretch;
-  gap: 8px;
-  width: min(520px, calc(100% - 32px));
-  padding: 8px;
+  gap: 2px;
+  width: min(380px, calc(100% - 32px));
+  padding: 3px;
   color: var(--text);
-  background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-lg);
-  box-shadow: var(--sc-shadow-clay-md);
+  /* Flota sobre el dibujo, así que es cristal: la estructura que hay debajo se
+     sigue viendo pasar por la barra en vez de quedar tapada por una tarjeta. */
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thick);
+  backdrop-filter: var(--sc-material-blur-thick);
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
   transform: translateX(-50%);
 }
 
@@ -285,30 +289,36 @@
 .contextual-actions__overflow-trigger,
 .contextual-actions__overflow-action {
   min-width: 0;
-  min-height: 44px;
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-md);
+  min-height: 28px;
+  border: 0;
+  border-radius: calc(var(--sc-radius-control) - 2px);
   color: inherit;
   font: inherit;
-  font-weight: 750;
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-medium);
 }
 
 .contextual-actions__action,
 .contextual-actions__overflow-trigger {
   overflow: hidden;
-  padding: 0 12px;
+  padding: 0 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: var(--sc-color-surface-1);
+  background: transparent;
 }
 
+.contextual-actions__action:hover,
+.contextual-actions__overflow-trigger:hover { background: var(--sc-color-fill-quaternary); }
+.contextual-actions__action:active,
+.contextual-actions__overflow-trigger:active { background: var(--sc-color-fill-tertiary); }
+
 .contextual-actions__action--danger { color: var(--danger); }
-.contextual-actions__overflow-trigger { padding: 0; font-size: 1.35rem; line-height: 1; }
+.contextual-actions__overflow-trigger { padding: 0; font-size: 1rem; line-height: 1; }
 
 .contextual-actions__action:focus-visible,
 .contextual-actions__overflow-trigger:focus-visible,
 .contextual-actions__overflow-action:focus-visible {
-  outline: var(--sc-focus-ring-width) solid var(--focus);
+  outline: var(--sc-focus-ring-width) solid color-mix(in srgb, var(--focus) 45%, transparent);
   outline-offset: var(--sc-focus-ring-offset);
 }
 

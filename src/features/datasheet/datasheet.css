@@ -380,7 +380,7 @@
   font-size: var(--sc-font-size-label);
   font-weight: var(--sc-font-weight-semibold);
   letter-spacing: var(--sc-tracking-technical);
-  text-transform: uppercase;
+  text-transform:none;
 }
 
 .datasheet-card__lead {
@@ -446,8 +446,8 @@
   color: var(--sc-color-text-muted);
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
 }
 
 .datasheet-context__note {
@@ -598,8 +598,8 @@
   padding: 0 var(--sc-space-1);
   color: var(--sc-color-text-muted);
   font-size: var(--sc-font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
 }
 
 .datasheet-check {
@@ -657,8 +657,8 @@
   color: var(--sc-color-text-muted);
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
 }
 
 .datasheet-section-pair {
@@ -673,8 +673,8 @@
   margin-bottom: var(--sc-space-1);
   color: var(--sc-color-text-muted);
   font-size: var(--sc-font-size-caption);
-  text-transform: uppercase;
-  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform:none;
+  letter-spacing:0;
 }
 
 /*
