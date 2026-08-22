@@ -128,16 +128,26 @@ con hasta 3 caminos redundantes al mismo destino.
 ## Cómo verificar
 
 ```bash
-npm run verify   # lint · docs · frontera protegida · 2250 pruebas · build · presupuesto de rendimiento
+npm run verify   # lint · docs · frontera protegida · build · presupuesto de rendimiento
 npm run qa       # 149+ checks con Chromium real (requiere PLAYWRIGHT_EXECUTABLE_PATH en este entorno)
 ```
+
+Ambos corrieron en esta sesión y quedaron en verde: `npm run verify` — lint,
+`verify:docs`, `verify:protected` ("Frontera protegida intacta: 38 archivos
+verificados"), 228 archivos / 2250 pruebas de `vitest`, `build` y
+`verify:perf` — y `npm run qa` — 149+ checks, sin ningún `false`, sin errores
+de consola ni de página, incluida la versión ampliada de
+`verifyFloatingSurfacesDoNotOverlap` sobre los 6 pares relevantes.
 
 Evidencia visual en `reports/evidence/2026-08-22-canvas-rediseno/` (1600×950,
 `Pórtico de ejemplo`, claro/oscuro donde aplica): lienzo en reposo con las 4
 esquinas nuevas, barra de selección sola en el centro, vista de momento sin
 solape de etiquetas, Navegador revelado por hover, popover de capas con
-Snap/Rejilla, riel con Medir siempre visible, presentación M1 y presentación
-K0 táctil.
+Snap/Rejilla, riel con Medir siempre visible, y presentación `K0` táctil. Ver
+el `README.md` de esa carpeta para el detalle de cada captura y una nota
+sobre por qué no incluye una captura de `M1` (esa composición no se alcanzó en
+ningún viewport probado en este build; es una pieza de `shellComposition.ts`
+ajena a este rediseño).
 
 ## Pendiente / siguiente paso
 
