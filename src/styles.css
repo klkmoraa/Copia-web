@@ -3271,9 +3271,15 @@ button:not(:disabled):active,.selection-card:active {
 .learning-level,
 .response-selector,
 .diagram-cursor-readout {
-  background:var(--sc-color-surface-2);
-  border:0;
-  box-shadow:inset 6px 7px 14px color-mix(in srgb, var(--sc-color-text-primary) 14%, transparent), inset -6px -6px 13px color-mix(in srgb, var(--sc-color-surface-elevated) 86%, transparent);
+  /* Nivel `inset` del sistema: un campo, un segmento y una bandeja son un
+     RELLENO de la jerarquía de fills, nunca un hueco excavado con sombra
+     interior. Aquí sobrevivía el bisel de dos lados del claymorphism —una
+     pieza con su propia fuente de luz— al rediseño de identidad, porque
+     `material.test.ts` sólo miraba `material.css` y nadie leía este bloque.
+     Misma gramática que `[data-level='inset']` en `material.css:70-76`. */
+  background:var(--sc-color-fill-tertiary);
+  border:0.5px solid transparent;
+  box-shadow:none;
 }
 
 .number-control,
@@ -3295,10 +3301,13 @@ button:not(:disabled):active,.selection-card:active {
 .effect-card,
 .combination-card,
 .norm-source {
-  background:var(--sc-color-surface-2);
-  border:0;
-  border-radius:var(--sc-radius-sm);
-  box-shadow:inset 6px 7px 14px color-mix(in srgb, var(--sc-color-text-primary) 14%, transparent), inset -6px -6px 13px color-mix(in srgb, var(--sc-color-surface-elevated) 86%, transparent);
+  /* Nivel `raised`: una tarjeta dentro de un panel es un plano opaco con
+     canto y SIN proyección — no está despegada de nada. Traía el mismo bisel
+     de dos lados que los campos de arriba, por la misma razón. */
+  background:var(--sc-color-surface-1);
+  border:0.5px solid var(--sc-color-border);
+  border-radius:var(--sc-radius-card);
+  box-shadow:none;
 }
 
 .popover,

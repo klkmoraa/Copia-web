@@ -15,6 +15,23 @@ import { describe, expect, it } from 'vitest';
 const css = readFileSync(new URL('./material.css', import.meta.url), 'utf8');
 const tokens = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
 
+/**
+ * Los CONSUMIDORES, no sólo la gramática.
+ *
+ * El gate de abajo miraba `material.css` y daba por buena la ausencia de
+ * materia esculpida. Mientras tanto `styles.css` embozaba trece superficies
+ * —`.number-control`, `.select-field select`, `.segmented-control`,
+ * `.inspector-summary`…— con un bisel interior de dos lados: sombra oscura
+ * arriba a la izquierda, luz clara abajo a la derecha. Eso es una pieza con su
+ * propia fuente de luz, que es exactamente la identidad que el rediseño retiró,
+ * y sobrevivió entera porque ningún gate leía este archivo.
+ *
+ * Es el mismo agujero que la fase 2 encontró con el acento: el contrato valía
+ * para el token y no para quien lo consume.
+ */
+const consumers = ['../styles.css', '../features/workspace/phase1.css', '../features/canvas/phase2.css', './components/ui.css']
+  .map((path) => ({ path, source: readFileSync(new URL(path, import.meta.url), 'utf8') }));
+
 const ruleFor = (selector: string): string => {
   const index = css.indexOf(selector);
   if (index < 0) return '';
@@ -66,6 +83,21 @@ describe('gramática de materia', () => {
     expect(inset).toContain('var(--sc-color-fill-tertiary)');
     expect(inset).toContain('box-shadow: none');
     expect(inset).not.toContain('inset');
+  });
+
+  it('no esculpe materia en ningún consumidor del sistema', () => {
+    // Un `box-shadow: inset` con desplazamiento en X o en Y y desenfoque es un
+    // bisel: modela volumen. Los `inset` que SÍ valen son el filete especular
+    // de medio píxel (`--sc-ring-inset`) y las líneas de 0 px de desplazamiento,
+    // que pintan un canto, no una luz.
+    const sculpted = /box-shadow:[^;}]*inset\s+-?(?!0[^0-9.])[0-9.]+px\s+-?[0-9.]+px\s+[0-9.]+px/;
+    for (const { path, source } of consumers) {
+      const offenders = source
+        .split('\n')
+        .map((line, index) => ({ line, number: index + 1 }))
+        .filter(({ line }) => sculpted.test(line));
+      expect(offenders.map(({ number, line }) => `${path}:${number} ${line.trim()}`)).toEqual([]);
+    }
   });
 
   it('mantiene las superficies técnicas densas sin materia', () => {
