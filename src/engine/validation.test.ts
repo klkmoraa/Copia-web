@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateProject } from './solver';
+import { getEvidentGroundingIssue, validateProject } from './solver';
 import type { ProjectModel } from '../types';
 
 const empty = (): ProjectModel => ({
@@ -9,6 +9,20 @@ const empty = (): ProjectModel => ({
 });
 
 describe('validación física del modelo', () => {
+  it('detecta la ausencia evidente de grounding antes de ensamblar y acepta un resorte de grounding', () => {
+    const model = empty();
+    model.nodes = [{ id: 'A', x: 0, y: 0, support: { type: 'none' } }, { id: 'B', x: 4, y: 0, support: { type: 'none' } }];
+    model.members = [{ id: 'AB', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.01, I: 8e-5 }];
+
+    expect(getEvidentGroundingIssue(model)).toMatchObject({ id: 'no-supports', severity: 'error' });
+
+    model.nodes.push({ id: 'ISOLATED', x: 10, y: 10, support: { type: 'fixed', spring: { kx: 1000 } } });
+    expect(getEvidentGroundingIssue(model)).toMatchObject({ id: 'no-supports', severity: 'error' });
+
+    model.nodes[0].support = { type: 'none', spring: { kx: 1000 } };
+    expect(getEvidentGroundingIssue(model)).toBeNull();
+  });
+
   it('detecta proyección horizontal nula en miembro vertical', () => {
     const model = empty();
     model.nodes = [{ id: 'A', x: 0, y: 0, support: { type: 'pin' } }, { id: 'B', x: 0, y: 4, support: { type: 'roller', angleDeg: 0 } }];

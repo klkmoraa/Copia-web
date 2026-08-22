@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
-import type { Tool } from '../../types';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
+import type { Selection, Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
-import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth } from '../workspace/useWorkspaceLayoutPreferences';
+import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
+import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
+import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 
 const NumberField = ({
   label,
@@ -46,84 +50,65 @@ const Segmented = ({ value, options, onChange }: { value: string; options: Array
   </div>
 );
 
-const focusableSelector = [
-  'button:not([disabled]):not([tabindex="-1"])',
-  'input:not([disabled]):not([tabindex="-1"])',
-  'select:not([disabled]):not([tabindex="-1"])',
-  'textarea:not([disabled]):not([tabindex="-1"])',
-  'a[href]:not([tabindex="-1"])',
-  'summary',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-const getFocusableElements = (panel: HTMLElement | null) => [
-  ...(panel?.querySelectorAll<HTMLElement>(focusableSelector) ?? []),
-].filter((element) => {
-  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
-  const closedDetails = element.closest('details:not([open])');
-  return !closedDetails || element.tagName === 'SUMMARY';
-});
-
-export const Inspector = ({
-  className = '',
-  desktopWidth = 320,
-  modal = false,
-  onClose,
-  onDesktopWidthChange,
-}: {
+type InspectorProps = {
   className?: string;
   desktopWidth?: number;
-  modal?: boolean;
+  presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
+  status?: SurfaceStatus;
   onClose?: () => void;
   onDesktopWidthChange?: (width: number) => void;
-}) => {
-  const { selection, activeTool, setActiveTool, selectedCombinationId, setSelectedCombinationId } = useProject();
+  mobileDetent?: InspectorDetent;
+  onMobileDetentChange?: (detent: InspectorDetent) => void;
+  /** In Workspace this makes the panel one independently brokered owner. */
+  surface?: 'detail' | 'analysisSetup' | 'view';
+  /** Injected by Workspace for a selection-independent analysis surface. */
+  activeTool?: Tool;
+  onActiveToolChange?: (tool: Tool) => void;
+};
+
+type InspectorContentProps = InspectorProps & {
+  selection: Selection;
+  activeTool: Tool;
+  setActiveTool: (tool: Tool) => void;
+};
+
+const InspectorContent = ({
+  className = '',
+  desktopWidth = 320,
+  presentation = 'dock',
+  status = 'active',
+  onClose,
+  onDesktopWidthChange,
+  mobileDetent = 'medium',
+  onMobileDetentChange,
+  surface,
+  selection,
+  activeTool,
+  setActiveTool,
+}: InspectorContentProps) => {
+  const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { t } = useI18n();
   const [tab, setTab] = useState<'inspector' | 'loads' | 'display'>('inspector');
   const panelRef = useRef<HTMLElement>(null);
+  const sheet = presentation === 'sheet';
   const [resizeOrigin, setResizeOrigin] = useState<{ clientX: number; width: number } | null>(null);
 
+  const forcedTab = surface === 'detail' ? 'inspector' : surface === 'analysisSetup' ? 'loads' : surface === 'view' ? 'display' : undefined;
+  const activeTab = forcedTab ?? tab;
   useEffect(() => {
-    if (selection) setTab('inspector');
-  }, [selection]);
+    if (!forcedTab && selection) setTab('inspector');
+  }, [forcedTab, selection]);
 
   useEffect(() => {
-    if (!modal) return undefined;
-    const panel = panelRef.current;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => getFocusableElements(panel)[0]?.focus());
+    if (!sheet || status !== 'active') return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose?.();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = getFocusableElements(panel);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        panel?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (event.defaultPrevented || event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose?.();
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [modal, onClose]);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose, sheet, status]);
 
   const chooseLoadTool = (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => {
     setActiveTool(tool);
@@ -169,14 +154,18 @@ export const Inspector = ({
   return (
     <aside
       ref={panelRef}
-      id="workspace-inspector"
+      id={surface ? `workspace-${surface}` : 'workspace-inspector'}
       className={`inspector-panel ${className}`.trim()}
-      role={modal ? 'dialog' : 'complementary'}
-      aria-modal={modal || undefined}
-      aria-label={t('inspector.tab')}
-      tabIndex={modal ? -1 : undefined}
+      role={sheet ? 'dialog' : 'complementary'}
+      aria-label={surface === 'analysisSetup' ? t('inspector.loadsTab') : surface === 'view' ? t('inspector.viewTab') : t('inspector.tab')}
+      tabIndex={sheet ? -1 : undefined}
+      data-workspace-surface={surface ?? 'detail'}
+      data-surface-presentation={presentation}
+      data-surface-status={status}
+      hidden={status !== 'active'}
+      data-mobile-detent={sheet ? mobileDetent : undefined}
     >
-      {!modal && onDesktopWidthChange ? <button
+      {presentation === 'dock' && onDesktopWidthChange ? <button
         type="button"
         className="inspector-resize-handle"
         role="separator"
@@ -194,36 +183,84 @@ export const Inspector = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
-      <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
+      {sheet && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
+        {(['compact', 'medium', 'large'] as const).map((detent) => <button
+          key={detent}
+          type="button"
+          aria-pressed={mobileDetent === detent}
+          onClick={() => onMobileDetentChange(detent)}
+        >{detent === 'compact' ? t('inspector.detentCompact') : detent === 'medium' ? t('inspector.detentMedium') : t('inspector.detentLarge')}</button>)}
+      </div> : null}
+      {!surface ? <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
         <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>
         <button id="inspector-tab-display" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'display'} tabIndex={tab === 'display' ? 0 : -1} className={tab === 'display' ? 'active' : ''} onClick={() => setTab('display')} onKeyDown={(event) => onTabKeyDown(event, 2)}>{t('inspector.viewTab')}</button>
         <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button>
-      </div>
+      </div> : null}
 
-      <div id="inspector-tabpanel" className="inspector-scroll" role="tabpanel" aria-labelledby={`inspector-tab-${tab}`}>
-        {tab === 'inspector' ? <InspectorProperties /> : null}
-        {tab === 'loads' ? <LoadsPanel activeTool={activeTool} onChooseTool={chooseLoadTool} selectedCombinationId={selectedCombinationId} setSelectedCombinationId={setSelectedCombinationId} /> : null}
-        {tab === 'display' ? <DisplayPanel /> : null}
+      <div id={surface ? `${surface}-tabpanel` : 'inspector-tabpanel'} className="inspector-scroll" role={surface ? undefined : 'tabpanel'} aria-labelledby={surface ? undefined : `inspector-tab-${activeTab}`}>
+        {activeTab === 'inspector' ? <InspectorProperties /> : null}
+        {activeTab === 'loads' ? <AnalysisSetupPanel activeTool={activeTool} onChooseTool={chooseLoadTool} selectedCombinationId={selectedCombinationId} setSelectedCombinationId={setSelectedCombinationId} /> : null}
+        {activeTab === 'display' ? <DisplayPanel includeCalculationMode={false} /> : null}
       </div>
     </aside>
   );
 };
 
-const LoadsPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelectedCombinationId }: {
+const AnalysisModePanel = () => {
+  const { project, updateProjectView } = useProjectModel();
+  const { t } = useI18n();
+  const setCalculationMode = (value: string) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: value as 'classroom' | 'complete' } }));
+  return <section className="inspector-section calculation-mode-section">
+    <h3>{t('inspector.calculationExperience')}</h3>
+    <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={setCalculationMode} />
+    {project.settings.calculationMode === 'classroom'
+      ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
+      : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.completeModeDescription')}</div>}
+  </section>;
+};
+
+const ConnectedInspector = (props: InspectorProps) => {
+  const { selection, activeTool, setActiveTool } = useWorkspaceUI();
+  return <InspectorContent {...props} selection={selection} activeTool={activeTool} setActiveTool={setActiveTool} />;
+};
+
+const SelectionIndependentInspector = memo(({
+  activeTool = 'select',
+  onActiveToolChange = () => undefined,
+  ...props
+}: InspectorProps) => <InspectorContent
+  {...props}
+  selection={null}
+  activeTool={activeTool}
+  setActiveTool={onActiveToolChange}
+/>);
+
+/**
+ * Detail subscribes to selection authority. Analysis setup and View deliberately
+ * do not: Workspace injects only the tool state analysis needs, allowing a
+ * selection change to leave their retained surface and drafts untouched.
+ */
+export const Inspector = (props: InspectorProps) => (
+  props.surface === 'analysisSetup' || props.surface === 'view'
+    ? <SelectionIndependentInspector {...props} />
+    : <ConnectedInspector {...props} />
+);
+
+const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelectedCombinationId }: {
   activeTool: Tool;
   onChooseTool: (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => void;
   selectedCombinationId: string;
   setSelectedCombinationId: (id: string) => void;
 }) => {
-  const { project, updateProject } = useProject();
+  const { project, updateProject } = useProjectModel();
   const { t } = useI18n();
   const loadToolOptions: Array<{ tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>; label: string; detail: string; icon: typeof MoveDown }> = [
     { tool: 'pointLoad', label: t('inspector.point'), detail: t('toolbar.pointLoadDetail'), icon: MoveDown },
     { tool: 'distributedLoad', label: t('inspector.distributed'), detail: t('toolbar.distributedLoadDetail'), icon: Sigma },
     { tool: 'moment', label: t('results.moment'), detail: t('toolbar.momentDetail'), icon: RotateCcw },
   ];
-  return <>
+  return <><AnalysisModePanel />
     <section className="inspector-section load-starter">
       <h3>{t('inspector.addLoadTitle')}</h3>
       <p>{t('inspector.addLoadDescription')}</p>
@@ -276,57 +313,58 @@ const LoadsPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelect
   </>;
 };
 
-const DisplayPanel = () => {
-  const { project, updateProjectView } = useProject();
+const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
+  const { project, updateProjectView } = useProjectModel();
   const { t } = useI18n();
   const units = project.settings.units;
+  const view = readCanvasViewSettings(project);
   const display = (value: number, quantity: UnitQuantity) => toDisplay(value, units, quantity);
   const base = (value: number, quantity: UnitQuantity) => fromDisplay(value, units, quantity);
-  const setSetting = (key: keyof typeof project.settings, value: unknown) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, [key]: value } }));
+  const setView = (patch: Partial<typeof view>) => updateProjectView((draft) => withCanvasViewSettings(draft, patch));
   return <>
-    <section className="inspector-section calculation-mode-section">
+    {includeCalculationMode ? <section className="inspector-section calculation-mode-section">
       <h3>{t('inspector.calculationExperience')}</h3>
-      <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={(value) => setSetting('calculationMode', value)} />
+      <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={(value) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: value as 'classroom' | 'complete' } }))} />
       {project.settings.calculationMode === 'classroom'
         ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
         : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.completeModeDescription')}</div>}
-    </section>
+    </section> : null}
     <section className="inspector-section">
       <h3>{t('inspector.canvas')}</h3>
-      <label className="toggle-row"><span>{t('inspector.grid')}</span><input type="checkbox" checked={project.settings.showGrid} onChange={(event) => setSetting('showGrid', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.snap')}</span><input type="checkbox" checked={project.settings.snap} onChange={(event) => setSetting('snap', event.target.checked)} /></label>
-      <NumberField label={t('inspector.spacing')} value={display(project.settings.gridSize, 'length')} unit={unitLabel(units, 'length')} resetKey={`grid-size:${units}`} onChange={(value) => setSetting('gridSize', Math.max(1e-6, base(value, 'length')))} />
-      <label className="toggle-row"><span>{t('inspector.nodeLabels')}</span><input type="checkbox" checked={project.settings.showNodeLabels} onChange={(event) => setSetting('showNodeLabels', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.memberLabels')}</span><input type="checkbox" checked={project.settings.showMemberLabels} onChange={(event) => setSetting('showMemberLabels', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.localAxes')}</span><input type="checkbox" checked={project.settings.showLocalAxes} onChange={(event) => setSetting('showLocalAxes', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.dimensions')}</span><input type="checkbox" checked={project.settings.showDimensions} onChange={(event) => setSetting('showDimensions', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.loadsTab')}</span><input type="checkbox" checked={project.settings.showLoads} onChange={(event) => setSetting('showLoads', event.target.checked)} /></label>
-      <label className="toggle-row"><span>{t('inspector.criticalValues')}</span><input type="checkbox" checked={project.settings.showResultValues} onChange={(event) => setSetting('showResultValues', event.target.checked)} /></label>
+      <label className="toggle-row"><span>{t('inspector.grid')}</span><input type="checkbox" checked={view.showGrid} onChange={(event) => setView({ showGrid: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.snap')}</span><input type="checkbox" checked={view.snap} onChange={(event) => setView({ snap: event.target.checked })} /></label>
+      <NumberField label={t('inspector.spacing')} value={display(view.gridSize, 'length')} unit={unitLabel(units, 'length')} resetKey={`grid-size:${units}`} onChange={(value) => setView({ gridSize: Math.max(1e-6, base(value, 'length')) })} />
+      <label className="toggle-row"><span>{t('inspector.nodeLabels')}</span><input type="checkbox" checked={view.showNodeLabels} onChange={(event) => setView({ showNodeLabels: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.memberLabels')}</span><input type="checkbox" checked={view.showMemberLabels} onChange={(event) => setView({ showMemberLabels: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.localAxes')}</span><input type="checkbox" checked={view.showLocalAxes} onChange={(event) => setView({ showLocalAxes: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.dimensions')}</span><input type="checkbox" checked={view.showDimensions} onChange={(event) => setView({ showDimensions: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.loadsTab')}</span><input type="checkbox" checked={view.showLoads} onChange={(event) => setView({ showLoads: event.target.checked })} /></label>
+      <label className="toggle-row"><span>{t('inspector.criticalValues')}</span><input type="checkbox" checked={view.showResultValues} onChange={(event) => setView({ showResultValues: event.target.checked })} /></label>
     </section>
     <section className="inspector-section">
       <h3>{t('inspector.cadPrecision')}</h3>
       <p className="section-description">{t('inspector.cadPrecisionDescription')}</p>
       <div className="compact-toggle-grid">
-        <label><input type="checkbox" checked={project.settings.snapTargets?.grid ?? true} onChange={(event) => setSetting('snapTargets', { ...project.settings.snapTargets, grid: event.target.checked })} /><span>{t('inspector.grid')}</span></label>
-        <label><input type="checkbox" checked={project.settings.snapTargets?.nodes ?? true} onChange={(event) => setSetting('snapTargets', { ...project.settings.snapTargets, nodes: event.target.checked })} /><span>{t('inspector.nodes')}</span></label>
-        <label><input type="checkbox" checked={project.settings.snapTargets?.midpoints ?? true} onChange={(event) => setSetting('snapTargets', { ...project.settings.snapTargets, midpoints: event.target.checked })} /><span>{t('inspector.midpoints')}</span></label>
-        <label><input type="checkbox" checked={project.settings.snapTargets?.intersections ?? true} onChange={(event) => setSetting('snapTargets', { ...project.settings.snapTargets, intersections: event.target.checked })} /><span>{t('inspector.intersections')}</span></label>
-        <label><input type="checkbox" checked={project.settings.snapTargets?.perpendicular ?? true} onChange={(event) => setSetting('snapTargets', { ...project.settings.snapTargets, perpendicular: event.target.checked })} /><span>{t('inspector.perpendicular')}</span></label>
+        <label><input type="checkbox" checked={view.snapTargets.grid} onChange={(event) => setView({ snapTargets: { ...view.snapTargets, grid: event.target.checked } })} /><span>{t('inspector.grid')}</span></label>
+        <label><input type="checkbox" checked={view.snapTargets.nodes} onChange={(event) => setView({ snapTargets: { ...view.snapTargets, nodes: event.target.checked } })} /><span>{t('inspector.nodes')}</span></label>
+        <label><input type="checkbox" checked={view.snapTargets.midpoints} onChange={(event) => setView({ snapTargets: { ...view.snapTargets, midpoints: event.target.checked } })} /><span>{t('inspector.midpoints')}</span></label>
+        <label><input type="checkbox" checked={view.snapTargets.intersections} onChange={(event) => setView({ snapTargets: { ...view.snapTargets, intersections: event.target.checked } })} /><span>{t('inspector.intersections')}</span></label>
+        <label><input type="checkbox" checked={view.snapTargets.perpendicular} onChange={(event) => setView({ snapTargets: { ...view.snapTargets, perpendicular: event.target.checked } })} /><span>{t('inspector.perpendicular')}</span></label>
       </div>
       <small className="field-help">{t('inspector.selectionDragHelp')}</small>
       <div className="filter-chip-row" role="group" aria-label={t('inspector.selectionFilters')}>
-        <button type="button" aria-pressed={project.settings.selectionFilter?.nodes ?? true} onClick={() => setSetting('selectionFilter', { ...(project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }), nodes: !(project.settings.selectionFilter?.nodes ?? true) })}>{t('inspector.nodes')}</button>
-        <button type="button" aria-pressed={project.settings.selectionFilter?.members ?? true} onClick={() => setSetting('selectionFilter', { ...(project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }), members: !(project.settings.selectionFilter?.members ?? true) })}>{t('inspector.members')}</button>
-        <button type="button" aria-pressed={project.settings.selectionFilter?.loads ?? true} onClick={() => setSetting('selectionFilter', { ...(project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }), loads: !(project.settings.selectionFilter?.loads ?? true) })}>{t('inspector.loadsTab')}</button>
+        <button type="button" aria-pressed={view.selectionFilter.nodes} onClick={() => setView({ selectionFilter: { ...view.selectionFilter, nodes: !view.selectionFilter.nodes } })}>{t('inspector.nodes')}</button>
+        <button type="button" aria-pressed={view.selectionFilter.members} onClick={() => setView({ selectionFilter: { ...view.selectionFilter, members: !view.selectionFilter.members } })}>{t('inspector.members')}</button>
+        <button type="button" aria-pressed={view.selectionFilter.loads} onClick={() => setView({ selectionFilter: { ...view.selectionFilter, loads: !view.selectionFilter.loads } })}>{t('inspector.loadsTab')}</button>
       </div>
     </section>
     <section className="inspector-section">
       <h3>{t('inspector.results')}</h3>
-      <label className="toggle-row"><span>{t('inspector.resultOverlay')}</span><input type="checkbox" checked={project.settings.showResultOverlay ?? true} onChange={(event) => setSetting('showResultOverlay', event.target.checked)} /></label>
-      <Segmented value={project.settings.diagramScaleMode ?? 'common'} options={[{ value: 'common', label: t('inspector.commonScale') }, { value: 'individual', label: t('inspector.perMemberScale') }]} onChange={(value) => setSetting('diagramScaleMode', value)} />
-      <NumberField label={t('inspector.visualFactor')} value={project.settings.diagramScale} resetKey="diagram-scale" onChange={(value) => setSetting('diagramScale', Math.max(0.1, value))} />
-      <NumberField label={t('inspector.deformedScale')} value={project.settings.deformedScale} resetKey="deformed-scale" onChange={(value) => setSetting('deformedScale', Math.max(1, value))} />
-      <Segmented value={project.settings.diagramSide} options={[{ value: 'positive', label: t('inspector.positiveLocalSide') }, { value: 'negative', label: t('inspector.negativeLocalSide') }]} onChange={(value) => setSetting('diagramSide', value)} />
+      <label className="toggle-row"><span>{t('inspector.resultOverlay')}</span><input type="checkbox" checked={view.showResultOverlay} onChange={(event) => setView({ showResultOverlay: event.target.checked })} /></label>
+      <Segmented value={view.diagramScaleMode} options={[{ value: 'common', label: t('inspector.commonScale') }, { value: 'individual', label: t('inspector.perMemberScale') }]} onChange={(value) => setView({ diagramScaleMode: value as 'common' | 'individual' })} />
+      <NumberField label={t('inspector.visualFactor')} value={view.diagramScale} resetKey="diagram-scale" onChange={(value) => setView({ diagramScale: Math.max(0.1, value) })} />
+      <NumberField label={t('inspector.deformedScale')} value={view.deformedScale} resetKey="deformed-scale" onChange={(value) => setView({ deformedScale: Math.max(1, value) })} />
+      <Segmented value={view.diagramSide} options={[{ value: 'positive', label: t('inspector.positiveLocalSide') }, { value: 'negative', label: t('inspector.negativeLocalSide') }]} onChange={(value) => setView({ diagramSide: value as 'positive' | 'negative' })} />
     </section>
     <section className="inspector-section"><h3>{t('inspector.semanticColors')}</h3><div className="legend-list"><span><i className="legend-dot axial" /> {t('inspector.axialForce')}</span><span><i className="legend-dot shear" /> {t('inspector.shearForce')}</span><span><i className="legend-dot moment" /> {t('inspector.bendingMoment')}</span><span><i className="legend-dot force" /> {t('inspector.loadsTab')}</span><span><i className="legend-dot dimension" /> {t('inspector.dimensions')}</span><span><i className="legend-dot axis" /> {t('inspector.axesCuts')}</span></div></section>
   </>;

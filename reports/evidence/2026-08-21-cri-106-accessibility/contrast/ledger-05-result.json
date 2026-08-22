@@ -1,0 +1,67 @@
+{
+  "sha": "c339af6fdd22e626baf8aa8a7eb60a42cb1d8cb6",
+  "day": {
+    "theme": "light",
+    "ground": {
+      "hex": "#bcb2a5",
+      "rgb": [
+        188,
+        178,
+        165
+      ]
+    },
+    "face": {
+      "hex": "#46b28f",
+      "rgb": [
+        70,
+        178,
+        143
+      ]
+    },
+    "bg": {
+      "hex": "#f7f4ee",
+      "rgb": [
+        247,
+        244,
+        238
+      ]
+    },
+    "contrastGroundVsBg": 1.9,
+    "contrastFaceVsBg": 2.38
+  },
+  "night": {
+    "theme": "dark",
+    "ground": {
+      "hex": "#546c75",
+      "rgb": [
+        84,
+        108,
+        117
+      ]
+    },
+    "face": {
+      "hex": "#178869",
+      "rgb": [
+        23,
+        136,
+        105
+      ]
+    },
+    "bg": {
+      "hex": "#091015",
+      "rgb": [
+        9,
+        16,
+        21
+      ]
+    },
+    "contrastGroundVsBg": 3.45,
+    "contrastFaceVsBg": 4.34
+  },
+  "verdicto": {
+    "portal_es_decorativo": true,
+    "razon": "`StructuralPortalHero.tsx` marca el SVG `role=\"presentation\" aria-hidden=\"true\"`; comentario propio del componente: \"Decorativo a efectos de accesibilidad. Todo lo que comunica está en el texto que la acompaña.\" WCAG 1.4.11 excluye explícitamente gráficos puramente decorativos del suelo de contraste no-textual.",
+    "piso_aplicable": "ninguno (decorativo) — se reporta la medición igualmente por transparencia",
+    "ground_noche_bajo_3_1": false
+  }
+}

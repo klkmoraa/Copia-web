@@ -2,13 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultProject } from './defaultProject';
 import {
   copyModelSelection,
+  createMemberAtPoint,
+  deleteStructuralSelection,
   duplicateModelSelection,
   ensureNodeAtPoint,
   pasteModelClipboard,
   repairProjectTopology,
+  splitMemberAt,
   structuralSelectionFromIds,
   toggleStructuralSelection,
 } from './modelOperations';
+
+const canvasMemberTemplate = {
+  type: 'frame' as const,
+  materialOrigin: 'custom' as const,
+  sectionOrigin: 'custom' as const,
+  E: 200e6,
+  A: 0.005,
+  I: 8.333e-6,
+  density: 7850,
+};
 
 describe('model clipboard operations', () => {
   it('duplicates a node and remaps its nodal loads without sharing references', () => {
@@ -34,6 +47,10 @@ describe('model clipboard operations', () => {
   it('copies a member as a detached snapshot and safely remaps endpoints and loads on paste', () => {
     const project = createDefaultProject();
     const source = project.members[0];
+    Object.assign(source as object, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     project.memberLoads.push({
       id: 'ML-copy', memberId: source.id, caseId: project.loadCases[0].id,
       type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1,
@@ -51,6 +68,10 @@ describe('model clipboard operations', () => {
     expect(copy.i).not.toBe(source.i);
     expect(copy.j).not.toBe(source.j);
     expect(copy.E).not.toBe(source.E);
+    expect(copy).toMatchObject({
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     const copiedLoad = project.memberLoads.find((load) => load.memberId === copy.id)!;
     expect(copiedLoad).toMatchObject({ type: 'point', px: 4, py: -9, position: 0.35 });
     expect(copiedLoad.id).not.toBe('ML-copy');
@@ -164,5 +185,118 @@ describe('model clipboard operations', () => {
     const crossing = ensureNodeAtPoint(project, { x: 0, y: 0 });
     expect(project.members).toHaveLength(4);
     expect(project.members.filter((member) => member.i === crossing.nodeId || member.j === crossing.nodeId)).toHaveLength(4);
+  });
+
+  it('creates one member through a crossing without reimplementing topology at the caller', () => {
+    const project = createDefaultProject();
+    project.nodes = [
+      { id: 'S', x: -3, y: -3, support: { type: 'none' } },
+      { id: 'L', x: -2, y: 0, support: { type: 'none' } },
+      { id: 'R', x: 2, y: 0, support: { type: 'none' } },
+      { id: 'T', x: 0, y: 2, support: { type: 'none' } },
+      { id: 'B', x: 0, y: -2, support: { type: 'none' } },
+    ];
+    project.members = [
+      { id: 'H', i: 'L', j: 'R', ...canvasMemberTemplate },
+      { id: 'V', i: 'T', j: 'B', ...canvasMemberTemplate },
+    ];
+    project.memberLoads = [{
+      id: 'ML-H', memberId: 'H', caseId: 'LC1', type: 'point', coordinateSystem: 'global',
+      lengthBasis: 'real', start: 0, end: 1, px: 0, py: -10, position: 0.75,
+    }];
+    project.memberInitialEffects = [{
+      id: 'IE-H', memberId: 'H', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0,
+    }];
+
+    const result = createMemberAtPoint(project, {
+      startNodeId: 'S', point: { x: 0, y: 0 }, template: canvasMemberTemplate,
+    });
+
+    expect(result.created).toBe(true);
+    expect(project.members.find((member) => member.id === result.memberId)).toMatchObject({ i: 'S', j: result.nodeId });
+    expect(project.members.filter((member) => member.i === result.nodeId || member.j === result.nodeId)).toHaveLength(5);
+    expect(project.memberLoads).toHaveLength(1);
+    expect(project.members.some((member) => member.id === project.memberLoads[0].memberId)).toBe(true);
+    expect(project.memberInitialEffects).toHaveLength(2);
+    expect(project.memberInitialEffects.every((effect) => project.members.some((member) => member.id === effect.memberId))).toBe(true);
+  });
+
+  it('splits a member preserving end mechanics while remapping loads and duplicating initial effects', () => {
+    const project = createDefaultProject();
+    project.nodes = [
+      { id: 'I', x: 0, y: 0, support: { type: 'none' } },
+      { id: 'J', x: 10, y: 0, support: { type: 'none' } },
+    ];
+    project.members = [{
+      id: 'M', i: 'I', j: 'J', ...canvasMemberTemplate,
+      releases: { iMoment: true, jMoment: true },
+      rotationalSpringI: 1200, rotationalSpringJ: 2400,
+      rigidOffsetI: 1, rigidOffsetJ: 2,
+    }];
+    project.memberLoads = [
+      { id: 'ML-L', memberId: 'M', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 0, py: -10, position: 0.25 },
+      { id: 'ML-R', memberId: 'M', caseId: 'LC1', type: 'moment', coordinateSystem: 'local', lengthBasis: 'real', start: 0, end: 1, moment: 5, position: 0.75 },
+      { id: 'ML-D', memberId: 'M', caseId: 'LC1', type: 'distributed', coordinateSystem: 'global', lengthBasis: 'real', start: 0.2, end: 0.8, qxStart: 0, qxEnd: 0, qyStart: -4, qyEnd: -8 },
+    ];
+    project.memberInitialEffects = [{ id: 'IE', memberId: 'M', caseId: 'LC1', type: 'initial-strain', axialStrain: 0.001, curvature: 0.002 }];
+
+    const result = splitMemberAt(project, 'M', 0.5);
+    const first = project.members.find((member) => member.id === result.firstMemberId)!;
+    const second = project.members.find((member) => member.id === result.secondMemberId)!;
+
+    expect(first).toMatchObject({ i: 'I', j: result.nodeId, releases: { iMoment: true }, rotationalSpringI: 1200, rigidOffsetI: 1, rigidOffsetJ: 0 });
+    expect(first.rotationalSpringJ).toBeUndefined();
+    expect(second).toMatchObject({ i: result.nodeId, j: 'J', releases: { jMoment: true }, rotationalSpringJ: 2400, rigidOffsetI: 0, rigidOffsetJ: 2 });
+    expect(second.rotationalSpringI).toBeUndefined();
+    expect(project.memberLoads.find((load) => load.id === 'ML-L')).toMatchObject({ memberId: first.id, position: 0.4375 });
+    expect(project.memberLoads.find((load) => load.id === 'ML-R')).toMatchObject({ memberId: second.id, position: 5 / 12 });
+    expect(project.memberLoads.filter((load) => load.type === 'distributed')).toHaveLength(2);
+    expect(project.memberInitialEffects!.map((effect) => effect.memberId).sort()).toEqual([first.id, second.id].sort());
+  });
+
+  it('deletes a node with its incident structure and leaves unrelated references intact', () => {
+    const project = createDefaultProject();
+    project.memberLoads.push({
+      id: 'ML-M1', memberId: 'M1', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 0, py: -10, position: 0.5,
+    });
+    project.memberInitialEffects = [
+      { id: 'IE-M1', memberId: 'M1', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0 },
+      { id: 'IE-M3', memberId: 'M3', caseId: 'LC1', type: 'initial-strain', axialStrain: 0.001, curvature: 0.002 },
+    ];
+    project.nodalLoads.push({ id: 'NL-N2', nodeId: 'N2', caseId: 'LC1', fx: 4, fy: 0, mz: 0 });
+    project.prescribedDisplacements = [
+      { id: 'PD-N3', nodeId: 'N3', caseId: 'LC1', component: 'ux', value: 0 },
+      { id: 'PD-N2', nodeId: 'N2', caseId: 'LC1', component: 'uy', value: 0 },
+    ];
+
+    deleteStructuralSelection(project, { kind: 'node', id: 'N3' });
+
+    expect(project.nodes.map((node) => node.id)).toEqual(['N1', 'N2', 'N4']);
+    expect(project.members.map((member) => member.id)).toEqual(['M3']);
+    expect(project.nodalLoads.map((load) => load.id)).toEqual(['NL2', 'NL-N2']);
+    expect(project.memberLoads).toEqual([]);
+    expect(project.memberInitialEffects).toEqual([{ id: 'IE-M3', memberId: 'M3', caseId: 'LC1', type: 'initial-strain', axialStrain: 0.001, curvature: 0.002 }]);
+    expect(project.prescribedDisplacements).toEqual([{ id: 'PD-N2', nodeId: 'N2', caseId: 'LC1', component: 'uy', value: 0 }]);
+  });
+
+  it('deletes the union of multi-selected structure without removing unrelated entities', () => {
+    const project = createDefaultProject();
+    project.nodes.push({ id: 'N5', x: 10, y: 0, support: { type: 'none' } });
+    project.members.push({ id: 'M4', i: 'N2', j: 'N5', ...canvasMemberTemplate });
+    project.memberLoads.push({ id: 'ML-M4', memberId: 'M4', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 3, py: 0, position: 0.5 });
+    project.memberInitialEffects = [
+      { id: 'IE-M2', memberId: 'M2', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0 },
+      { id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 },
+    ];
+    project.prescribedDisplacements = [{ id: 'PD-N3', nodeId: 'N3', caseId: 'LC1', component: 'ux', value: 0 }];
+
+    deleteStructuralSelection(project, { kind: 'multi', nodeIds: ['N3'], memberIds: ['M3'] });
+
+    expect(project.nodes.map((node) => node.id)).toEqual(['N1', 'N2', 'N4', 'N5']);
+    expect(project.members.map((member) => member.id)).toEqual(['M4']);
+    expect(project.memberLoads.map((load) => load.id)).toEqual(['ML-M4']);
+    expect(project.memberInitialEffects).toEqual([{ id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 }]);
+    expect(project.nodalLoads.map((load) => load.id)).toEqual(['NL2']);
+    expect(project.prescribedDisplacements).toEqual([]);
   });
 });

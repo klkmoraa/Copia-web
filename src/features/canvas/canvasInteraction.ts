@@ -30,6 +30,9 @@ export interface CanvasPointerProfile {
 
 export const MIN_CAMERA_SCALE = 15;
 export const MAX_CAMERA_SCALE = 260;
+export const LONG_PRESS_MS = 480;
+/** Smaller than the 9 px touch-pan threshold: any deliberate slow pan cancels long press. */
+export const LONG_PRESS_JITTER_PX = 3;
 
 export const clampCameraScale = (scale: number): number =>
   Math.min(MAX_CAMERA_SCALE, Math.max(MIN_CAMERA_SCALE, scale));
@@ -101,12 +104,24 @@ export const pendingDragIntent = (
 ): 'pan' | 'node-drag' =>
   !canvasPointerProfile(pointerType).canDragNode || tool !== 'select' || targetKind !== 'node' ? 'pan' : 'node-drag';
 
-/** Long-press opens details only while selecting; creation tools own the gesture. */
+/** Long-press is reserved for touch selection: targets open the picker and background starts marquee. */
 export const shouldArmLongPress = (
   pointerType: string,
   tool: string,
   targetKind: string,
-): boolean => canvasPointerProfile(pointerType).usesLongPress && tool === 'select' && targetKind !== 'background';
+): boolean => canvasPointerProfile(pointerType).usesLongPress && tool === 'select'
+  && ['node', 'member', 'nodalLoad', 'memberLoad', 'background'].includes(targetKind);
+
+/** A slow pan must cancel long press before it can open marquee or a picker. */
+export const shouldTriggerLongPress = (
+  pointerType: string,
+  tool: string,
+  targetKind: string,
+  elapsedMs: number,
+  movedPx: number,
+): boolean => shouldArmLongPress(pointerType, tool, targetKind)
+  && elapsedMs >= LONG_PRESS_MS
+  && movedPx <= LONG_PRESS_JITTER_PX;
 
 export const midpoint = (first: ScreenPoint, second: ScreenPoint): ScreenPoint => ({
   x: (first.x + second.x) / 2,

@@ -1,0 +1,379 @@
+/*
+ * Edición múltiple — capa visual.
+ *
+ * Todo el color, el espaciado y la materia salen de los tokens `--sc-*` del
+ * design system Clay: no hay literales de paleta ni un segundo sistema visual.
+ * El panel es de ancho fluido y se adapta por consulta de contenedor, así que
+ * sirve igual en el costado del Inspector que en una hoja móvil.
+ */
+
+.bulk-edit-panel {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-4);
+  padding: var(--sc-space-4);
+  color: var(--sc-color-text-primary);
+}
+
+/* --- Resumen de la selección --- */
+
+.bulk-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-3) var(--sc-space-4);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.bulk-summary__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--sc-control-height-touch);
+  height: var(--sc-control-height-touch);
+  border-radius: var(--sc-radius-md);
+  color: var(--sc-color-action-primary);
+  background: color-mix(in srgb, var(--sc-color-action-primary) 12%, var(--sc-color-surface-1));
+}
+
+.bulk-summary__body { display: grid; gap: var(--sc-space-1); min-width: 0; }
+.bulk-summary__body strong { font-size: var(--sc-font-size-control); }
+.bulk-summary__body small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); }
+
+.bulk-summary__counts { display: flex; flex-wrap: wrap; gap: var(--sc-space-2); }
+
+.bulk-summary__chip {
+  padding: 0 var(--sc-space-2);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-label);
+  line-height: calc(var(--sc-control-height-sm) - 2 * var(--sc-border-width));
+}
+
+/* El aviso de incompatibles viaja dentro de su propia ficha de familia: un
+   recuento suelto no dice a qué familia pertenece. */
+.bulk-summary__incompatible {
+  margin-inline-start: var(--sc-space-1);
+  color: var(--sc-color-state-warning-foreground);
+  font-style: normal;
+}
+
+.bulk-summary__chip:has(.bulk-summary__incompatible) { border-color: var(--sc-color-state-warning); }
+
+/* --- Filtro de alcance --- */
+
+.bulk-edit-panel__scope { display: grid; gap: var(--sc-space-1); }
+/* Mismo motivo y misma especificidad elevada que en el booleano. */
+.bulk-edit-panel__scope .bulk-edit-panel__scope-control { width: 100%; grid-auto-columns: minmax(0, 1fr); }
+
+.bulk-edit-panel__scope .bulk-edit-panel__scope-control button {
+  min-height: var(--sc-control-height-touch);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bulk-edit-panel__scope-hint { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
+
+/* --- Grupos de propiedades --- */
+
+.bulk-edit-panel__groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sc-space-4); }
+.bulk-edit-panel__group { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sc-space-3); }
+
+.bulk-edit-panel__group-title {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+/* --- Revisión --- */
+
+.bulk-review { display: grid; gap: var(--sc-space-3); }
+
+.bulk-review__title {
+  margin: 0;
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.bulk-review__incompatible {
+  margin: 0;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-inline-start: 3px solid var(--sc-color-state-warning);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-state-warning-foreground);
+  font-size: var(--sc-font-size-label);
+  line-height: var(--sc-line-height-compact);
+}
+
+
+/* --- Campos --- */
+
+/*
+ * Una rejilla dimensiona sus columnas al `min-content` de los hijos salvo que se
+ * le diga otra cosa, así que sin `minmax(0, 1fr)` el panel no puede encogerse
+ * por debajo del campo más ancho: en un Inspector acoplado de ~284 px eso
+ * desbordaba el panel en 33 px y aparecía una barra horizontal.
+ */
+.bulk-edit-panel__properties {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sc-space-3);
+}
+
+.bulk-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-1);
+}
+
+.bulk-field.is-staged { border-color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.bulk-field.is-partial { border-left: 3px solid var(--sc-color-state-warning); }
+
+.bulk-field__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+}
+
+.bulk-field__label { font-weight: var(--sc-font-weight-semibold); }
+
+.bulk-field__current {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-technical);
+  font-size: var(--sc-font-size-label);
+}
+
+.bulk-field__current small { color: var(--sc-color-text-muted); }
+
+/*
+ * Indicador tri-estado del valor actual de un booleano. No recibe foco ni
+ * puntero: informa, no decide. La marca de `mixed` es una barra —no un tick a
+ * medias—, porque «varios» no es «casi sí».
+ */
+.bulk-field__current-state {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 0.85em;
+  height: 0.85em;
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-surface-input);
+}
+
+.bulk-field__current-state[aria-checked='true'] {
+  border-color: var(--sc-color-action-edge);
+  background: var(--sc-color-action-primary);
+}
+
+.bulk-field__current-state[aria-checked='mixed'] { border-color: var(--sc-color-text-technical); }
+
+.bulk-field__current-state[aria-checked='mixed']::after {
+  content: '';
+  position: absolute;
+  inset: 35% 15%;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-text-technical);
+}
+
+.bulk-field__control { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-2); }
+
+.bulk-field__select,
+.bulk-field__input {
+  /* Sin `min-width: 0` el mínimo automático de un flex item es su min-content,
+     y el de un `select` es su opción (u `optgroup`) más ancha: a 320 px eso
+     desborda el panel. El design system resuelve lo mismo en `ui.css`. */
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--sc-control-height-touch);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-input);
+  color: var(--sc-color-text-primary);
+}
+
+.bulk-field__input::placeholder { color: var(--sc-color-text-muted); }
+.bulk-field__input[aria-invalid='true'] { border-color: var(--sc-color-state-error); }
+
+.bulk-field__segmented-wrap { flex: 1 1 100%; min-width: 0; }
+/*
+ * El control segmentado del design system reparte sus columnas por `max-content`
+ * y no deja que el texto salte de linea; su unica regla de encogido depende del
+ * ancho de la ventana, que no describe el ancho del Inspector. En un costado
+ * estrecho de una ventana ancha, los cuatro segmentos de un booleano
+ * («Sin cambios / Si / No / Borrar valor») desbordaban el panel. Aqui las
+ * columnas pueden encogerse y el texto se recorta, sin tocar el design system.
+ */
+/* Se sube la especificidad a propósito: la regla base del design system declara
+   `minmax(max-content, 1fr)` con la misma, y gana la que se cargue después. */
+.bulk-field__segmented-wrap .bulk-field__segmented { width: 100%; grid-auto-columns: minmax(0, 1fr); }
+/* El control segmentado del design system usa la altura `md`; en este panel,
+   pensado también para una hoja movil, sube al objetivo tactil. */
+.bulk-field__segmented-wrap .bulk-field__segmented button {
+  min-height: var(--sc-control-height-touch);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bulk-field__action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-control-height-touch);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-label);
+  transition: var(--sc-transition-control);
+}
+
+.bulk-field__action:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.bulk-field__action[aria-pressed='true'] { border-color: var(--sc-color-action-primary); background: var(--sc-color-surface-inset); }
+
+.bulk-field__compatibility { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }
+.bulk-field.is-partial .bulk-field__compatibility { color: var(--sc-color-state-warning-foreground); }
+/* El error entra en la misma fila flexible que los botones. Con `order` cae
+   siempre al final y en su propia linea, en vez de empujarlos mientras el
+   usuario hace clic. */
+.bulk-field__error {
+  order: 1;
+  flex: 1 1 100%;
+  color: var(--sc-color-state-error-foreground);
+  font-size: var(--sc-font-size-label);
+}
+
+.bulk-field__hint { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }
+
+/* --- Vista previa de sección --- */
+
+.bulk-preview {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.bulk-preview .section-viewer.bulk-preview__slot { margin: 0; min-width: 0; }
+.bulk-preview__slot-caption { display: grid; gap: 1px; min-width: 0; }
+.bulk-preview__slot-caption small { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); }
+.bulk-preview__slot-caption span { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); }
+
+.bulk-preview__canvas { min-height: 6rem; display: grid; place-items: center; }
+.bulk-preview__placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 4.5rem;
+  margin: 0;
+  border: var(--sc-border-width) dashed var(--sc-color-border);
+  border-radius: var(--sc-radius-sm);
+  /* CRI-117 · Es un mensaje que se lee («no hay cambios preparados»), no un
+     control inactivo: no le toca ninguna exención, le toca el piso de texto. */
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-control);
+}
+.bulk-preview__arrow { display: grid; place-items: center; color: var(--sc-color-text-muted); }
+
+/* --- Cambios preparados --- */
+
+.bulk-changes {
+  display: grid;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-3) var(--sc-space-4);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-2);
+}
+
+.bulk-changes__title { margin: 0; font-size: var(--sc-font-size-label); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); color: var(--sc-color-text-muted); }
+.bulk-changes__count { margin: 0; font-weight: var(--sc-font-weight-semibold); }
+.bulk-changes__list { display: grid; gap: var(--sc-space-2); margin: 0; }
+
+.bulk-changes__row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 40%) 1fr;
+  gap: var(--sc-space-2);
+  align-items: baseline;
+}
+
+.bulk-changes__row dt { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); }
+.bulk-changes__row dd { margin: 0; display: grid; gap: 1px; min-width: 0; }
+.bulk-changes__row dd small { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }
+.bulk-changes__row.is-unchanged dt,
+.bulk-changes__unchanged { color: var(--sc-color-text-muted); }
+
+.bulk-changes__transition { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-1); }
+
+.bulk-changes__untouched summary {
+  min-height: var(--sc-control-height-touch);
+  display: flex;
+  align-items: center;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  cursor: pointer;
+}
+
+.bulk-changes__untouched ul { display: grid; gap: var(--sc-space-1); margin: 0; padding: 0 0 var(--sc-space-2); list-style: none; }
+.bulk-changes__untouched li { display: flex; justify-content: space-between; gap: var(--sc-space-2); color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); }
+.bulk-changes__untouched li span { color: var(--sc-color-text-muted); }
+.bulk-changes__row.is-set .bulk-changes__transition,
+.bulk-changes__row.is-clear .bulk-changes__transition { color: var(--sc-color-text-primary); font-weight: var(--sc-font-weight-semibold); }
+
+/* --- Acciones --- */
+
+.bulk-edit-panel__note { margin: 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
+
+.bulk-edit-panel__actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-3) 0 calc(var(--sc-space-2) + env(safe-area-inset-bottom, 0px));
+  border-top: var(--sc-border-width) solid var(--sc-color-divider);
+  background: var(--sc-color-surface-1);
+}
+
+.bulk-edit-panel__apply-hint { margin: 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }
+.bulk-edit-panel__buttons { display: flex; flex-wrap: wrap; gap: var(--sc-space-2); justify-content: flex-end; }
+.bulk-edit-panel__buttons .sc-button { min-height: var(--sc-control-height-touch); flex: 1 1 auto; }
+
+/*
+ * Estrecho: dos secciones lado a lado dejan ~105 px utiles por columna, con el
+ * pie de cada una partido en seis lineas. La transicion se apila y la flecha
+ * gira para seguir leyendose de arriba abajo.
+ */
+@container (max-width: 26rem) {
+  .bulk-preview { grid-template-columns: 1fr; }
+  .bulk-preview__arrow { transform: rotate(90deg); }
+}
+
+/* Ancho: el par ACTUAL → OBJETIVO respira y la etiqueta de cada cambio deja de
+   comerse la mitad de la fila. */
+@container (min-width: 34rem) {
+  .bulk-edit-panel__buttons .sc-button { flex: 0 0 auto; }
+  .bulk-changes__row { grid-template-columns: minmax(8rem, 32%) 1fr; }
+  .bulk-preview { gap: var(--sc-space-4); }
+}

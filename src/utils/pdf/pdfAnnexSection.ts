@@ -48,8 +48,8 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     const columns = Math.min(trace.columns, MATRIX_LIMIT);
     const values = new Map(trace.entries.map((entry) => [`${entry.row}:${entry.column}`, entry.value]));
     // A stiffness matrix assembled from terms of order 1e5 carries entries of order 1e-13
-    // that are float residue, not stiffness. `matrixSummary` used to drop them with a fixed
-    // 1e-12 cut; collapsing against the matrix's own governing entry instead keeps the same
+    // that are float residue, not stiffness. A fixed 1e-12 cut was too coarse; collapsing
+    // against the matrix's own governing entry instead keeps the same
     // promise at any scale, and matches how the rest of the annex reads a number.
     const scale = Math.max(1e-12, ...trace.entries.map((entry) => Math.abs(entry.value)));
     layout.heading(label, 2);

@@ -1,4 +1,4 @@
-import type { AnalysisResult, ProjectModel } from '../types';
+import type { ProjectModel } from '../types';
 import { normalizeProject } from '../data/migrate';
 import { inspectPdf, type InspectPdfOptions } from './pdfImport';
 import { parsePortablePayload } from './portablePayload';
@@ -17,21 +17,6 @@ export type PortableFileInspection =
   | (PortableFileBase & { kind: 'bundle'; canRestoreProject: true; bundle: PortableBundleContents; payload: StructureCoPortablePayload })
   | (PortableFileBase & { kind: 'payload-json'; canRestoreProject: true; payload: StructureCoPortablePayload })
   | (PortableFileBase & { kind: 'project-json'; canRestoreProject: true; project: ProjectModel });
-
-export type PortableImportResult =
-  | {
-      kind: 'project';
-      source: 'native-pdf' | 'bundle' | 'payload-json' | 'project-json';
-      project: ProjectModel;
-      analysis?: AnalysisResult;
-      payload?: StructureCoPortablePayload;
-    }
-  | {
-      kind: 'reference';
-      source: 'external-pdf' | 'scanned-pdf';
-      file: File;
-      preview: PdfInspection;
-    };
 
 const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46] as const;
 const ZIP_SIGNATURE = [0x50, 0x4b] as const;
@@ -108,26 +93,4 @@ export const inspectPortableFile = async (
     return { ...base, kind: 'bundle', canRestoreProject: true, bundle, payload: bundle.payload };
   }
   return inspectJson(bytes, base);
-};
-
-/** External/scanned PDFs remain references; no model is inferred or silently trusted. */
-export const importPortableFile = async (
-  file: File,
-  options?: InspectPdfOptions,
-): Promise<PortableImportResult> => {
-  const inspection = await inspectPortableFile(file, options);
-  if (!inspection.canRestoreProject) {
-    return { kind: 'reference', source: inspection.kind, file, preview: inspection.pdf };
-  }
-  if (inspection.kind === 'project-json') {
-    return { kind: 'project', source: inspection.kind, project: inspection.project };
-  }
-  if ('payload' in inspection) return {
-    kind: 'project',
-    source: inspection.kind,
-    project: inspection.payload.project,
-    analysis: inspection.payload.analysis,
-    payload: inspection.payload,
-  };
-  throw new Error('El archivo no contiene un proyecto recuperable.');
 };

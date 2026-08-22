@@ -1,0 +1,89 @@
+{
+  "analysisSpace": "space-3d",
+  "schemaVersion": 1,
+  "id": "S3D-BENDING-Z-001",
+  "name": "Voladizo flexion plano x-y",
+  "units": "kN-m",
+  "nodes": [
+    {
+      "id": "I",
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraints": {
+        "ux": true,
+        "uy": true,
+        "uz": true,
+        "rx": true,
+        "ry": true,
+        "rz": true
+      }
+    },
+    {
+      "id": "J",
+      "x": 2.0,
+      "y": 0.0,
+      "z": 0.0,
+      "restraints": {
+        "ux": false,
+        "uy": false,
+        "uz": false,
+        "rx": false,
+        "ry": false,
+        "rz": false
+      }
+    }
+  ],
+  "members": [
+    {
+      "id": "M1",
+      "i": "I",
+      "j": "J",
+      "E": 200000000.0,
+      "G": 80000000.0,
+      "A": 0.01,
+      "Iy": 3e-05,
+      "Iz": 8e-05,
+      "J": 2e-05,
+      "orientation": {
+        "localYReferenceGlobal": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "rollRadians": 0.0
+      }
+    }
+  ],
+  "nodalLoads": [
+    {
+      "id": "L1",
+      "caseId": "LC1",
+      "nodeId": "J",
+      "fx": 0.0,
+      "fy": 10.0,
+      "fz": 0.0,
+      "mx": 0.0,
+      "my": 0.0,
+      "mz": 0.0
+    }
+  ],
+  "loadCases": [
+    {
+      "id": "LC1",
+      "name": "LC1"
+    }
+  ],
+  "loadCombinations": [
+    {
+      "id": "CO1",
+      "name": "CO1",
+      "terms": [
+        {
+          "caseId": "LC1",
+          "factor": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Official StructureCo CRI-12C Clay brand assets",
+  "assets": [
+    {
+      "path": "brandbook-clay.html",
+      "sourceName": "1-brandbook-clay.html",
+      "bytes": 64373,
+      "sha256": "8D5CD1B7B82075E13CD693D44B30F8E9506372B2B6C8FAB0EFF4318ABA8E90F9",
+      "revision": "2026-08-16 · CRI-91 renueva el unico Brandbook canonico con la direccion CRI-12C menta/esmeralda, gate WCAG reproducible, separacion perceptual CVD/grayscale y anatomia tecnica para cortante e influencia. Sustituye al hash 1B3D7C05...3A99."
+    },
+    {
+      "path": "logo.svg",
+      "sourceName": "2-Untitled-design-1.svg",
+      "bytes": 2554,
+      "sha256": "05B8C685F962780EE642D326CAC27FB40A50958B5C21D881B640BC705F691308"
+    }
+  ]
+}

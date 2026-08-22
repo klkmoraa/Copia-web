@@ -1,12 +1,8 @@
 # Gate rápido — structureCo
 #
-# Runs on every push and pull request. Mechanical checks only: lint, the protected
-# mathematical boundary, the deterministic test suite, and a production build. No AI model
-# is called from this workflow (no Anthropic, no OpenAI, no Claude, no Codex), no browser
-# automation, no deploy, no commit, no tag, no package publish.
-#
-# Preparado localmente el 2 de agosto de 2026 (programa 0.8.1). No se ha conectado a GitHub
-# ni ejecutado de forma remota — ver docs/releases/0.8.1/CI.md.
+# Se ejecuta en cada push a main y en cada pull request. Comprueba documentación, lint,
+# tipos, frontera matemática protegida, pruebas, build y presupuesto de rendimiento. No
+# llama modelos de IA, automatiza navegadores, despliega, commitea, etiqueta ni publica.
 
 name: Gate rápido
 
@@ -44,6 +40,9 @@ jobs:
 
       - name: Lint (oxlint)
         run: npm run lint
+
+      - name: Documentación canónica
+        run: npm run verify:docs
 
       - name: Comprobación de tipos
         run: npm run typecheck

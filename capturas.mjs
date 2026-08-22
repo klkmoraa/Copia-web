@@ -11,6 +11,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openExamplePortal } from './scripts/qa-welcome.mjs';
 import { execFileSync } from 'node:child_process';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -104,7 +105,8 @@ async function captureWelcome(page, theme) {
 }
 
 async function enterWorkspace(page) {
-  await page.getByRole('button', { name: /pórtico de ejemplo/i }).click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  await openExamplePortal(page);
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.waitForTimeout(300);
 }

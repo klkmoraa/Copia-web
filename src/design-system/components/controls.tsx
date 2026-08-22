@@ -187,6 +187,8 @@ export interface SegmentedControlProps {
   onValueChange: (value: string) => void;
   size?: 'sm' | 'md';
   className?: string;
+  /** Id(s) of the text that describes the group, for `aria-describedby`. */
+  describedBy?: string;
 }
 
 export const SegmentedControl = ({
@@ -196,6 +198,7 @@ export const SegmentedControl = ({
   onValueChange,
   size = 'md',
   className = '',
+  describedBy,
 }: SegmentedControlProps) => {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -214,7 +217,12 @@ export const SegmentedControl = ({
     window.requestAnimationFrame(() => buttonRefs.current[nextIndex]?.focus());
   };
 
-  return <div className={`sc-segmented sc-segmented--${size}${className ? ` ${className}` : ''}`} role="radiogroup" aria-label={label}>
+  return <div
+    className={`sc-segmented sc-segmented--${size}${className ? ` ${className}` : ''}`}
+    role="radiogroup"
+    aria-label={label}
+    aria-describedby={describedBy}
+  >
     {options.map((option, index) => {
       const selected = option.value === value;
       return <button

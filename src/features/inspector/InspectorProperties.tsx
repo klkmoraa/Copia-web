@@ -11,32 +11,34 @@ import {
   RotateCcw,
   Sigma,
   Trash2,
-  BookOpen,
 } from 'lucide-react';
+import { BulkEditInspectorPanel } from '../bulk-edit/BulkEditInspectorPanel';
 import { repairProjectTopology } from '../../data/modelOperations';
 import type { StandardMaterial } from '../../data/standardMaterials';
-import { standardSections, type StandardSection } from '../../data/standardSections';
+import type { StandardSection } from '../../data/standardSections';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type {
-  AnalysisResult,
   MemberInitialEffect,
   MemberLoad,
-  MemberModel,
   NodalLoad,
   PrescribedDisplacement,
   SupportType,
   UnitSystemId,
   ValidationIssue,
 } from '../../types';
+import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
+import { InspectorSelectionPreview } from './InspectorSelectionPreview';
+import { readExpandedSectionsForSurface, writeExpandedSectionsForSurface } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
-import { formatFixed } from '../../utils/numberFormat';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -47,116 +49,11 @@ import {
   type InspectorSummaryMetric,
 } from './InspectorPrimitives';
 
-/** P5 — Inspector Narrativo: genera un diagnóstico en lenguaje natural sobre el elemento seleccionado. */
-const MemberNarrativeCard = ({
-  member,
-  memberResult,
-  units,
-  language,
-}: {
-  member: MemberModel;
-  memberResult: AnalysisResult['memberResults'][number] | null | undefined;
-  units: UnitSystemId;
-  language: string;
-}) => {
-  if (!memberResult) return null;
-  if (member.type === 'rigid') return null;
-
-  const area = member.A > 0 ? member.A : 0.005;
-  const inertia = member.I > 0 ? member.I : 0.00008;
-  const depth = Math.sqrt((12 * inertia) / area) || 0.3;
-  const Wel = (inertia / (depth / 2)) || 0.0005;
-
-  const maxAxialAbs = Math.max(Math.abs(memberResult.maxAxial ?? 0), Math.abs(memberResult.minAxial ?? 0));
-  const maxMomentAbs = Math.max(Math.abs(memberResult.maxMoment ?? 0), Math.abs(memberResult.minMoment ?? 0));
-  const maxShearAbs = Math.max(Math.abs(memberResult.maxShear ?? 0), Math.abs(memberResult.minShear ?? 0));
-
-  const sigmaAxial = (maxAxialAbs / area) / 1000;   // MPa
-  const sigmaBending = Wel > 0 ? (maxMomentAbs / Wel) / 1000 : 0; // MPa
-  const sigmaTotal = sigmaAxial + sigmaBending;
-
-  const fy = 250; // MPa, acero S275 típico
-  const ratio = fy > 0 ? sigmaTotal / fy : 0;
-  const utilizationPct = Math.round(ratio * 100);
-
-  const totalStress = sigmaAxial + sigmaBending;
-  const bendingFraction = totalStress > 0 ? sigmaBending / totalStress : 0;
-  const axialFraction = 1 - bendingFraction;
-
-  const dominantMode = bendingFraction > 0.6 ? 'flexión' : axialFraction > 0.6 ? 'axial' : 'combinado';
-  const dominantModeEn = bendingFraction > 0.6 ? 'bending' : axialFraction > 0.6 ? 'axial' : 'combined';
-
-  const safetyLevel =
-    ratio > 1.0 ? (language === 'es' ? 'SOBRE-ESFORZADO' : 'OVERSTRESSED')
-    : ratio > 0.85 ? (language === 'es' ? 'Carga elevada' : 'High demand')
-    : ratio > 0.5 ? (language === 'es' ? 'Régimen moderado' : 'Moderate')
-    : (language === 'es' ? 'Régimen seguro' : 'Safe');
-
-  const safetyTone: 'overstressed' | 'warning' | 'ok' =
-    ratio > 1.0 ? 'overstressed' : ratio > 0.85 ? 'warning' : 'ok';
-
-  const maxAxialDisp = toDisplay(maxAxialAbs, units, 'force');
-  const maxMomentDisp = toDisplay(maxMomentAbs, units, 'moment');
-  const maxShearDisp = toDisplay(maxShearAbs, units, 'force');
-  const forceUnit = unitLabel(units, 'force');
-  const momentUnit = unitLabel(units, 'moment');
-
-  const isEs = language === 'es';
-
-  let narrative: string;
-  if (isEs) {
-    narrative = `Esta barra trabaja principalmente a ${dominantMode} (${Math.round(bendingFraction * 100)}% de la demanda). `
-      + (member.type === 'frame'
-        ? `El momento máximo es ${formatFixed(maxMomentDisp, 2, 'inspector')} ${momentUnit} y el cortante máximo ${formatFixed(maxShearDisp, 2, 'inspector')} ${forceUnit}. `
-        : `La fuerza axial máxima es ${formatFixed(maxAxialDisp, 2, 'inspector')} ${forceUnit}. `)
-      + `La sección trabaja al ${utilizationPct}% de su capacidad elástica estimada — ${safetyLevel}.`;
-  } else {
-    narrative = `This member works primarily in ${dominantModeEn} (${Math.round(bendingFraction * 100)}% of demand). `
-      + (member.type === 'frame'
-        ? `Peak moment: ${formatFixed(maxMomentDisp, 2, 'inspector')} ${momentUnit}, peak shear: ${formatFixed(maxShearDisp, 2, 'inspector')} ${forceUnit}. `
-        : `Peak axial: ${formatFixed(maxAxialDisp, 2, 'inspector')} ${forceUnit}. `)
-      + `Section utilization is estimated at ${utilizationPct}% of elastic capacity — ${safetyLevel}.`;
-  }
-
-  return (
-    <div className={`member-narrative-card member-narrative-card--${safetyTone}`} aria-label={isEs ? 'Diagnóstico del elemento' : 'Member diagnosis'}>
-      <div className="member-narrative-header">
-        <BookOpen size={13} aria-hidden="true" />
-        <span>{isEs ? 'Diagnóstico' : 'Diagnosis'}</span>
-        <span className="member-narrative-badge" data-tone={safetyTone}>
-          {utilizationPct}%
-        </span>
-      </div>
-      <div className="member-narrative-bar-wrap" aria-hidden="true">
-        <div className="member-narrative-bar" style={{ width: `${Math.min(utilizationPct, 100)}%` }} data-tone={safetyTone} />
-        {ratio > 0 && <div className="member-narrative-bar-threshold" style={{ left: '85%' }} title="85%" />}
-      </div>
-      <p className="member-narrative-text">{narrative}</p>
-    </div>
-  );
-};
-
-const ACCORDION_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
-
-const readExpandedSections = (): string[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(ACCORDION_STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-  } catch {
-    return [];
-  }
-};
-
 const usePersistentInspectorSections = () => {
-  const [expanded, setExpanded] = useState<string[]>(readExpandedSections);
+  const [expanded, setExpanded] = useState<string[]>(() => readExpandedSectionsForSurface('detail'));
   const updateExpanded = useCallback((next: string[]) => {
     setExpanded(next);
-    try {
-      window.localStorage.setItem(ACCORDION_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // UI preference persistence must never block property editing.
-    }
+    writeExpandedSectionsForSurface('detail', next);
   }, []);
   return [expanded, updateExpanded] as const;
 };
@@ -239,7 +136,9 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
 };
 
 export const InspectorProperties = () => {
-  const { project, analysis, selection, setSelection, updateProject } = useProject();
+  const { project, executeProjectCommand, updateProject } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { selection, setSelection } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { resultsVisible } = useClassroomSession();
   const [expandedSections, setExpandedSections] = usePersistentInspectorSections();
@@ -311,9 +210,9 @@ export const InspectorProperties = () => {
     if (resultingNodeId && resultingNodeId !== selectedNode?.id) setSelection({ kind: 'node', id: resultingNodeId });
   };
 
-  const updateMember = (key: string, value: unknown) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
+  const updateMember = (key: string, value: unknown) => {
+    if (!selectedMember) return;
+    const member = structuredClone(selectedMember);
     if (key === 'type') member.type = value as typeof member.type;
     else if (key === 'E') member.E = Number(value);
     else if (key === 'A' || key === 'I' || key === 'density' || key === 'G' || key === 'shearArea' || key === 'rotationalSpringI' || key === 'rotationalSpringJ') member[key] = Number(value);
@@ -327,25 +226,32 @@ export const InspectorProperties = () => {
       member.releases ??= {};
       member.releases[key] = Boolean(value);
     }
-    return draft;
-  });
+    void executeProjectCommand({
+      kind: 'member.update', description: `Editar miembro ${member.id}`, memberId: member.id, changes: member,
+    });
+  };
 
-  const applyMaterialPreset = (material: StandardMaterial) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
-    member.E = material.elasticModulus;
-    member.G = material.shearModulus;
-    member.density = material.density;
-    return draft;
-  });
+  const applyMaterialPreset = (material: StandardMaterial) => {
+    if (!selectedMember) return;
+    void executeProjectCommand({
+      kind: 'member.material.apply',
+      description: `Aplicar material a ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      materialId: material.id,
+      properties: { E: material.elasticModulus, G: material.shearModulus, density: material.density },
+    });
+  };
 
-  const applySectionPreset = (section: StandardSection) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
-    member.A = section.area;
-    member.I = section.inertiaX;
-    return draft;
-  });
+  const applySectionPreset = (section: StandardSection) => {
+    if (!selectedMember) return;
+    void executeProjectCommand({
+      kind: 'member.section.apply',
+      description: `Aplicar sección a ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      sectionId: section.id,
+      properties: { A: section.area, I: section.inertiaX },
+    });
+  };
 
   const updateNodalLoad = (key: keyof NodalLoad, value: string | number) => updateProject((draft) => {
     const load = draft.nodalLoads.find((item) => item.id === selectedNodalLoad?.id);
@@ -566,6 +472,12 @@ export const InspectorProperties = () => {
         metrics={summaryMetrics}
         empty={selection === null}
       />
+      {selection && selection.kind !== 'multi' ? <InspectorSelectionPreview
+        project={project}
+        selection={selection}
+        label={t('inspector.selectionPreview')}
+        caption={t('inspector.selectionPreviewCaption')}
+      /> : null}
     </div>
 
     {selection === null ? <div className="inspector-empty-state">
@@ -580,7 +492,7 @@ export const InspectorProperties = () => {
           { label: t('inspector.total'), value: multiCount },
         ]} />
       </InspectorPropertyGroup>
-      <InspectorLockedState title={t('inspector.bulkEditingLocked')}>{t('inspector.bulkEditingLockedBody')}</InspectorLockedState>
+      <BulkEditInspectorPanel selection={selection} />
     </> : null}
 
     {selectedNode ? <>
@@ -621,24 +533,14 @@ export const InspectorProperties = () => {
       const nj = nodeMap.get(selectedMember.j);
       const length = ni && nj ? Math.hypot(nj.x - ni.x, nj.y - ni.y) : Number.NaN;
       const angle = ni && nj ? Math.atan2(nj.y - ni.y, nj.x - ni.x) * 180 / Math.PI : Number.NaN;
-      const activeSection = standardSections.find((s) => s.area === selectedMember.A && s.inertiaX === selectedMember.I);
       return <>
         <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberFrequentDescription')}>
           <SelectField label={t('inspector.element')} value={selectedMember.type} onChange={(value) => updateMember('type', value)}>
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
-            {/* `key` remonta los selectores al cambiar de miembro: el preset elegido pertenece al miembro activo, no al panel. */}
-            <MaterialPresetSelector key={`${selectionKey}:material`} units={units} current={{ E: selectedMember.E, G: selectedMember.G, density: selectedMember.density }} onSelect={applyMaterialPreset} />
-            <SectionPresetSelector key={`${selectionKey}:section`} units={units} current={{ A: selectedMember.A, I: selectedMember.I }} onSelect={applySectionPreset} />
-            <SectionViewer2D
-              section={activeSection}
-              area={selectedMember.A}
-              inertia={selectedMember.I}
-              units={units}
-              axialForce={memberResult?.maxAxial}
-              bendingMoment={memberResult?.maxMoment}
-            />
+            <MaterialPresetSelector units={units} selectedId={selectedMember.materialId} origin={selectedMember.materialOrigin} onSelect={applyMaterialPreset} />
+            <SectionPresetSelector units={units} selectedId={selectedMember.sectionId} origin={selectedMember.sectionOrigin} onSelect={applySectionPreset} />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
@@ -650,6 +552,21 @@ export const InspectorProperties = () => {
             <label><input type="checkbox" checked={selectedMember.releases?.jMoment ?? false} onChange={(event) => updateMember('jMoment', event.target.checked)} /> {t('inspector.momentJ')}</label>
           </div> : null}
         </InspectorPropertyGroup>
+        {selectedMember.type !== 'rigid' && selectedMember.A > 0 && selectedMember.I > 0 ? <SectionViewer2D
+          area={selectedMember.A}
+          inertia={selectedMember.I}
+          sectionId={selectedMember.sectionId}
+          sectionOrigin={selectedMember.sectionOrigin}
+          units={units}
+          axialForce={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxAxial : 0}
+          bendingMoment={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxMoment : 0}
+        /> : null}
+        {memberResult && (!classroomMode || resultsVisible) ? <InspectorNarrativeCard
+          member={selectedMember}
+          result={memberResult}
+          analysis={analysis}
+          units={units}
+        /> : null}
         <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.memberDerivedDescription')}>
           <InspectorDerivedList rows={[
             { label: t('inspector.nodeI'), value: selectedMember.i },
@@ -663,7 +580,6 @@ export const InspectorProperties = () => {
             ] : []),
           ]} />
         </InspectorPropertyGroup>
-        {memberResult && (!classroomMode || resultsVisible) ? <MemberNarrativeCard member={selectedMember} memberResult={memberResult} units={units} language={language} /> : null}
         <InspectorAdvancedProperties id="advanced-member" expanded={expandedSections} onExpandedChange={setExpandedSections}>{renderMemberAdvanced}</InspectorAdvancedProperties>
         <InspectorIssues issues={selectedIssues} />
       </>;

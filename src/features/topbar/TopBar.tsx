@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
+  Box,
   ChevronDown,
   CloudOff,
   Copy,
@@ -12,22 +13,21 @@ import {
   FolderOpen,
   Maximize2,
   Minimize2,
-  Moon,
   MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
   Play,
   Redo2,
   Save,
-  Search,
-  Sun,
+  Sheet,
   Undo2,
+  Wrench,
 } from 'lucide-react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { usePhase2I18n } from '../../i18n/usePhase2I18n';
+import { useProjectAnalysis, useProjectModel } from '../../store/ProjectContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { exportProjectJson } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
 import { AnalysisStatus } from './AnalysisStatus';
@@ -37,44 +37,58 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { PDeltaConfig } from '../../types';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
+/**
+ * La compacidad del riel salió de aquí en CRI-89: la decide la clase de
+ * composición, no el usuario, así que su conmutador dejó de tener un estado que
+ * conmutar. El resto de acciones de vista —inspector y lienzo completo— siguen
+ * siendo intenciones del usuario y no cambian.
+ */
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
-  toolRailCompact: boolean;
   onToggleInspector: () => void;
   onToggleFullCanvas: () => void;
-  onToggleToolRail: () => void;
 }
 
-export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void; layoutActions?: TopBarLayoutActions }) => {
+export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
+  // Split across the three focused contexts (CRI-100): `project`/`analysis` come
+  // from the model/analysis contexts, and only `theme` is read off the UI context
+  // here — `resultTab` and the diagram cursor live in that same context too but
+  // are never destructured. `AnalysisStatus` below is additionally memoized with
+  // stable props, so even the pointer-driven changes this component *does* still
+  // receive (selection, the diagram cursor) never reach its state/reliability
+  // subtree.
   const {
     project,
-    analysis,
-    theme,
     canUndo,
     canRedo,
-    selectedCombinationId,
-    isAnalyzing,
     storageIssue,
     storageMessage,
     renameProject,
     updateProjectView,
+    updateProjectAnalysisSettings,
     replaceProject,
-    setTheme,
-    setResultTab,
     undo,
     redo,
-    analyze,
+  } = useProjectModel();
+  const {
+    analysis,
+    isAnalyzing,
+    selectedCombinationId,
     setSelectedCombinationId,
+    analyze,
     ensureEducationTrace,
-  } = useProject();
+  } = useProjectAnalysis();
+  const { theme, setTheme } = useWorkspaceUI();
   const { language, t } = useI18n();
+  const { t: phase2T } = usePhase2I18n(language);
   const classroomSession = useClassroomSession();
   const reducedMotion = useReducedMotion();
   const popoverMotionProps = reducedMotion
@@ -98,7 +112,6 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   const projectMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const storageDescriptionId = useId();
   const menuOpen = showProjectMenu || showExportMenu || showMobileMenu;
 
   useEffect(() => {
@@ -169,6 +182,18 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     setShowProjectMenu(false);
     setShowExportMenu(false);
   };
+
+  // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
+  // just because the TopBar itself re-rendered for an unrelated reason. Its
+  // body is the same `emitWorkspaceCommand('open-model-doctor')` the registry's
+  // `analysis:model-doctor` command runs — kept as its own `useCallback` (rather
+  // than `modelDoctorCommand.run`, a fresh closure every render) only because
+  // `AnalysisStatus` is itself a protected, re-render-sensitive component
+  // (CRI-100); the visible "Model Doctor" buttons below read straight off
+  // `modelDoctorCommand` instead.
+  const openModelDoctor = useCallback(() => {
+    emitWorkspaceCommand('open-model-doctor');
+  }, []);
   const closeImportCenter = () => {
     setImportCenterOpen(false);
     window.requestAnimationFrame(() => projectMenuButtonRef.current?.focus());
@@ -191,16 +216,24 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     ? 'load-error'
     : storageIssue === 'save-failed'
       ? 'save-error'
+      : storageIssue === 'conflict'
+        ? 'conflict'
+        : storageIssue === 'repository-degraded'
+          ? 'repository-error'
       : !online
         ? 'offline'
         : storageIssue === 'recovered'
           ? 'recovered'
           : 'local';
-  const storageHasError = storageState === 'load-error' || storageState === 'save-error';
+  const storageHasError = ['load-error', 'save-error', 'repository-error', 'conflict'].includes(storageState);
   const storageLabel = storageState === 'load-error'
     ? t('storage.loadFailedShort')
     : storageState === 'save-error'
       ? t('storage.failedShort')
+    : storageState === 'conflict'
+      ? phase2T('storage.conflictShort')
+    : storageState === 'repository-error'
+      ? phase2T('storage.repositoryShort')
     : storageState === 'recovered'
       ? t('storage.recoveredShort')
       : storageState === 'offline'
@@ -210,6 +243,10 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     ? t('storage.loadFailed')
     : storageState === 'save-error'
       ? t('storage.failed')
+    : storageState === 'conflict'
+      ? (storageMessage ?? phase2T('storage.conflict'))
+    : storageState === 'repository-error'
+      ? (storageMessage ?? phase2T('storage.repository'))
     : storageState === 'recovered'
       ? t('storage.recovered')
       : storageState === 'offline'
@@ -222,15 +259,20 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   };
   const requestAnalysis = () => {
     if (project.settings.calculationMode === 'classroom') {
-      if (!classroomSession.hasPredictions) {
-        classroomSession.startPredicting();
-        emitWorkspaceCommand('expand-mobile-results');
-        return;
-      }
       classroomSession.markAnalysisRequested();
     }
     analyze();
   };
+
+  // Single source for undo/redo, datasheet, Model Doctor, analyze, theme and
+  // the plain-export controls (CRI-103): the button below reads label/disabled/run
+  // straight off `commandRegistry` instead of recomputing them, so it can never
+  // drift from the same command's Palette entry. `analyze` here is
+  // `requestAnalysis` (this button's own classroom-session bookkeeping), not the
+  // raw `analyze` — the registry only fixes *which* command runs and how its
+  // enabled state is computed, not which concrete callback a surface supplies.
+  const topBarCommandContext: TopBarCommandContext = { t, project, isAnalyzing, canUndo, canRedo, theme, setTheme, analyze: requestAnalysis, undo, redo };
+  const command = (id: Parameters<typeof resolveTopBarCommand>[0]) => resolveTopBarCommand(id, topBarCommandContext);
 
   const exportPortable = async (kind: 'pdf' | 'bundle') => {
     setPortableExport(kind);
@@ -238,8 +280,8 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     try {
       let exportAnalysis = analysis;
       if (!exportAnalysis) {
-        const { analyzeProject } = await import('../../engine/solver');
-        exportAnalysis = analyzeProject(project, selectedCombination ?? null);
+        const { analyzeForPortableExport } = await import('./portableExportAnalysis');
+        exportAnalysis = analyzeForPortableExport(project, selectedCombination ?? null);
       } else if (!exportAnalysis.educationTrace) {
         // The interactive analysis run skips the matrix trace for speed
         // (AG-013); the report annex needs it, so fetch it here on demand.
@@ -282,9 +324,21 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     setShowMobileMenu(false);
   };
 
+  const analyzeCommand = command('analysis:run');
+  const undoCommand = command('analysis:undo');
+  const redoCommand = command('analysis:redo');
+  const datasheetCommand = command('tool:datasheet');
+  const modelDoctorCommand = command('analysis:model-doctor');
+  const themeCommand = command('view:theme');
+  const ThemeIcon = themeCommand.icon;
+  const exportJsonCommand = command('export:json');
+  const exportSvgCommand = command('export:svg');
+  const exportPngCommand = command('export:png');
+  const exportPrintCommand = command('export:print');
+
   return (
     <header ref={topbarRef} className="topbar">
-      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
+      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document" data-topbar-cluster="document">
         <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
           <BrandMark size={46} />
         </button>
@@ -320,17 +374,6 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
             </button>
           </div>
         </div>
-        <span
-          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''}`}
-          data-storage-state={storageState}
-          data-storage-diagnostic={storageMessage ?? undefined}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          aria-describedby={storageDescriptionId}
-          tabIndex={0}
-          title={storageDescription}
-        >{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />} <span>{storageLabel}</span><small id={storageDescriptionId} className="autosave-state__description">{storageDescription}</small></span>
         <AnimatePresence>
           {showProjectMenu ? (
             <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
@@ -349,105 +392,116 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         </AnimatePresence>
       </div>
 
-      <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" aria-label={t('analysis.caseOrCombination')}>
-        <select
-          className="compact-select combination-select"
-          aria-label={t('analysis.caseOrCombination')}
-          value={selectedCombinationId}
-          onChange={(event) => setSelectedCombinationId(event.target.value)}
-        >
-          <option value="">{t('analysis.activeCases')}</option>
-          {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
-        </select>
-        <select
-          className="compact-select mode-select"
-          aria-label={t('analysis.mode')}
-          value={project.settings.calculationMode ?? 'complete'}
-          onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
-        >
-          <option value="classroom">{t('analysis.modeClassroom')}</option>
-          <option value="complete">{t('analysis.modeComplete')}</option>
-        </select>
-        <select
-          className="compact-select analysis-order-select"
-          aria-label={t('analysis.order')}
-          value={project.settings.analysisMode ?? 'first-order'}
-          onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } }))}
-        >
-          <option value="first-order">{t('analysis.orderFirst')}</option>
-          <option value="p-delta">{t('analysis.orderPDelta')}</option>
-        </select>
-        <select
-          className="compact-select units-select"
-          aria-label={t('units.label')}
-          value={project.settings.units}
-          onChange={(event) => updateProjectView((draft) => ({
-            ...draft,
-            settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
-          }))}
-        >
-          <option value="kN-m">kN · m</option>
-          <option value="N-mm">N · mm</option>
-          <option value="kgf-m">kgf · m</option>
-          <option value="kip-ft">kip · ft</option>
-        </select>
-      </div>
-
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
-        <button
-          type="button"
-          className="topbar-search-btn"
-          onClick={() => emitWorkspaceCommand('open-command-palette')}
-          title="Buscar comandos, plantillas y herramientas (Ctrl+K)"
-        >
-          <Search size={14} />
-          <span>Comandos</span>
-          <kbd>Ctrl K</kbd>
-        </button>
-        <div className="history-controls" aria-label={t('history.label')}>
-          <IconButton className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
-          <IconButton className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
+        <div className="topbar-context-zone" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
+          <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
+            <span>{t('analysis.caseOrCombination')}</span>
+            <select
+              className="compact-select combination-select"
+              aria-label={t('analysis.caseOrCombination')}
+              value={selectedCombinationId}
+              onChange={(event) => setSelectedCombinationId(event.target.value)}
+            >
+              <option value="">{t('analysis.activeCases')}</option>
+              {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
+            </select>
+          </label>
+          <label className="topbar-context-control" data-context-control="mode">
+            <span>{t('analysis.mode')}</span>
+            <select
+              className="compact-select mode-select"
+              aria-label={t('analysis.mode')}
+              value={project.settings.calculationMode ?? 'complete'}
+              onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
+            >
+              <option value="classroom">{t('analysis.modeClassroom')}</option>
+              <option value="complete">{t('analysis.modeComplete')}</option>
+            </select>
+          </label>
+          <label className="topbar-context-control" data-context-control="order">
+            <span>{t('analysis.order')}</span>
+            <select
+              className="compact-select analysis-order-select"
+              aria-label={t('analysis.order')}
+              value={project.settings.analysisMode ?? 'first-order'}
+              onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
+            >
+              <option value="first-order">{t('analysis.orderFirst')}</option>
+              <option value="p-delta">{t('analysis.orderPDelta')}</option>
+            </select>
+          </label>
+          <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
+            <span>{t('units.label')}</span>
+            <select
+              className="compact-select units-select"
+              aria-label={t('units.label')}
+              value={project.settings.units}
+              onChange={(event) => updateProjectView((draft) => ({
+                ...draft,
+                settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
+              }))}
+            >
+              <option value="kN-m">kN · m</option>
+              <option value="N-mm">N · mm</option>
+              <option value="kgf-m">kgf · m</option>
+              <option value="kip-ft">kip · ft</option>
+            </select>
+          </label>
         </div>
-        <AnalysisStatus
-          projectId={project.id}
-          analysis={analysis}
-          isAnalyzing={isAnalyzing}
-          onOpenIssues={() => {
-            setResultTab('issues');
-            emitWorkspaceCommand('expand-mobile-results');
-          }}
-        />
+        <div className="topbar-command-cluster" data-topbar-cluster="actions">
+        <IconButton
+          variant="secondary"
+          className="icon-button datasheet-launcher"
+          label={datasheetCommand.label}
+          title={datasheetCommand.hint}
+          onClick={datasheetCommand.run}
+        ><Sheet size={19} /></IconButton>
+        {onOpenSpace3D ? <IconButton
+          variant="secondary"
+          className="icon-button space3d-open-button"
+          label={t('space3d.open')}
+          title={t('space3d.open')}
+          onClick={onOpenSpace3D}
+        ><Box size={19} /></IconButton> : null}
+        <div className="history-controls" aria-label={t('history.label')}>
+          <IconButton variant="secondary" className="icon-button" label={undoCommand.label} onClick={undoCommand.run} disabled={undoCommand.disabled} title={undoCommand.label}><Undo2 size={19} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={redoCommand.label} onClick={redoCommand.run} disabled={redoCommand.disabled} title={redoCommand.label}><Redo2 size={19} /></IconButton>
+        </div>
         <div className="export-wrap">
-          <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
+          <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           <AnimatePresence>
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-                <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
+                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                 <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
-                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
-                <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
+                <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
               </m.div>
             ) : null}
           </AnimatePresence>
         </div>
         <div className="mobile-actions-wrap utility-actions-wrap">
-          <IconButton ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
+          <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
           <AnimatePresence>
             {showMobileMenu ? (
               <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
                 <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                  <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
-                  <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
+                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={17} /> {undoCommand.label}</button>
+                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={17} /> {redoCommand.label}</button>
                 </div>
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
+                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
+                  {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
+                      de tocar Estado/Doctor (orden de degradación · CRI-95). */}
+                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
+                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
                   {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
                 </div>
 
@@ -455,11 +509,14 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                   <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
                   <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
                   <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
+                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={17} /> {themeCommand.label}</button>
                 </div>
 
                 {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                   <div className="menu-section-title">{t('menu.sectionViews')}</div>
+                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
+                    <Box size={17} /> {t('space3d.open')}
+                  </button> : null}
                   <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
@@ -468,24 +525,23 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                     {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
                     {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
                   </button>
-                  <button className="overflow-toolrail-action" onClick={() => { layoutActions.onToggleToolRail(); setShowMobileMenu(false); }}>
-                    {layoutActions.toolRailCompact ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-                    {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
-                  </button>
                 </div> : null}
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionExport')}</div>
-                  <button onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
+                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                   <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                  <button onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
-                  <button onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
-                  <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
+                  <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
+                  <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
+                  <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
                 </div>
 
-                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+                {/* El chip de persistencia de la Cinta (zona `status`) ya es la
+                    única región `aria-live` de este estado; este es su duplicado
+                    visible del desbordamiento y no vuelve a anunciarse solo. */}
+                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
                 {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
               </m.div>
             ) : null}
@@ -495,12 +551,51 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
           variant="primary"
           size="touch"
-          onClick={requestAnalysis}
+          onClick={analyzeCommand.run}
           loading={isAnalyzing}
           loadingLabel={t('analysis.runningLabel')}
           leadingIcon={<Play size={17} fill="currentColor" />}
-          aria-label={isAnalyzing ? t('analysis.runningLabel') : t('analysis.run')}
-        >{isAnalyzing ? t('analysis.running') : t('analysis.run')}</Button>
+          aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
+        >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
+        </div>
+      </div>
+
+      <div className="topbar-zone topbar-status-zone" data-topbar-zone="status" data-topbar-cluster="status">
+        <div
+          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''} topbar-persistence`}
+          data-storage-state={storageState}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
+          <span className="autosave-state__label">{storageLabel}</span>
+          {/* La descripción sobrevive al icono-only del piso Compact: no es un
+              `span` genérico, así que la regla que oculta la etiqueta corta no
+              se la lleva por delante (GAP-1 · CRI-95). */}
+          <span className="sr-only">{storageDescription}</span>
+        </div>
+        {/* En pantallas anchas el botón lleva texto; por debajo de 1536px
+            colapsa a icono en CSS y libera el ancho que la zona necesita. Estado
+            y Doctor son la afirmación más crítica del producto (D-14 · CRI-95):
+            nunca desaparecen ni pierden su etiqueta accesible, sea cual sea la
+            clase de composición. */}
+        <button
+          type="button"
+          className="topbar-command-button model-doctor-launcher"
+          onClick={modelDoctorCommand.run}
+          aria-label={modelDoctorCommand.label}
+          title={t('modelDoctor.description')}
+        >
+          <Wrench size={17} aria-hidden="true" />
+          <span>{modelDoctorCommand.label}</span>
+        </button>
+        <AnalysisStatus
+          projectId={project.id}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          onOpenModelDoctor={openModelDoctor}
+        />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
@@ -527,14 +622,14 @@ const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; 
 ];
 
 const PDeltaAdvancedConfig = () => {
-  const { project, updateProjectView } = useProject();
+  const { project, updateProjectAnalysisSettings } = useProjectModel();
   const { t } = useI18n();
   const config = { ...DEFAULT_PDELTA_CONFIG, ...project.settings.pDeltaConfig };
   const setField = (key: keyof PDeltaConfig, value: number) => {
     if (!Number.isFinite(value)) return;
-    updateProjectView((draft) => ({
-      ...draft,
-      settings: { ...draft.settings, pDeltaConfig: { ...draft.settings.pDeltaConfig, [key]: value } },
+    updateProjectAnalysisSettings((settings) => ({
+      ...settings,
+      pDeltaConfig: { ...settings.pDeltaConfig, [key]: value },
     }));
   };
   return (

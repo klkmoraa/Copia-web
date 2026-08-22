@@ -223,6 +223,26 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
     const rigidOffsetJ = optionalFiniteAt(raw.rigidOffsetJ, `${path}.rigidOffsetJ`);
     const rotationalSpringI = optionalFiniteAt(raw.rotationalSpringI, `${path}.rotationalSpringI`);
     const rotationalSpringJ = optionalFiniteAt(raw.rotationalSpringJ, `${path}.rotationalSpringJ`);
+    const materialId = optionalStringAt(raw.materialId, `${path}.materialId`);
+    const sectionId = optionalStringAt(raw.sectionId, `${path}.sectionId`);
+    const materialOrigin = enumAt(
+      raw.materialOrigin,
+      `${path}.materialOrigin`,
+      ['catalog', 'custom', 'imported', 'legacy'] as const,
+      'legacy',
+    );
+    const sectionOrigin = enumAt(
+      raw.sectionOrigin,
+      `${path}.sectionOrigin`,
+      ['catalog', 'custom', 'imported', 'legacy'] as const,
+      'legacy',
+    );
+    if (materialOrigin === 'catalog' && materialId === undefined) {
+      fail(`${path}.materialId`, 'es obligatorio cuando materialOrigin es catalog.');
+    }
+    if (sectionOrigin === 'catalog' && sectionId === undefined) {
+      fail(`${path}.sectionId`, 'es obligatorio cuando sectionOrigin es catalog.');
+    }
     if (rigidOffsetI !== undefined && rigidOffsetI < 0) fail(`${path}.rigidOffsetI`, 'no puede ser negativo.');
     if (rigidOffsetJ !== undefined && rigidOffsetJ < 0) fail(`${path}.rigidOffsetJ`, 'no puede ser negativo.');
     if (rotationalSpringI !== undefined && rotationalSpringI < 0) fail(`${path}.rotationalSpringI`, 'no puede ser negativo.');
@@ -232,6 +252,10 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
       i,
       j,
       type,
+      ...(materialId === undefined ? {} : { materialId }),
+      materialOrigin,
+      ...(sectionId === undefined ? {} : { sectionId }),
+      sectionOrigin,
       E: finiteAt(raw.E, `${path}.E`, 200e6),
       A: finiteAt(raw.A, `${path}.A`, 0.01),
       I: finiteAt(raw.I, `${path}.I`, type === 'truss' ? 0 : 8e-5),

@@ -7,6 +7,7 @@ import {
   toolFromShortcut,
   toolsInGroup,
 } from './toolRegistry';
+import * as registry from './toolRegistry';
 
 const expectedTools: Tool[] = [
   'select', 'pan', 'node', 'member', 'support', 'pointLoad',
@@ -14,6 +15,10 @@ const expectedTools: Tool[] = [
 ];
 
 describe('tool registry', () => {
+  it('does not expose an unused lookup map', () => {
+    expect('TOOL_BY_ID' in registry).toBe(false);
+  });
+
   it('contains every existing tool exactly once', () => {
     expect(TOOL_REGISTRY.map((tool) => tool.id)).toEqual(expectedTools);
     expect(new Set(TOOL_REGISTRY.map((tool) => tool.id)).size).toBe(expectedTools.length);

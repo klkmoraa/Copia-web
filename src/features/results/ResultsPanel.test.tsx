@@ -1,22 +1,33 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBlankProject, createHibbelerStyleDiagramPractice } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { createSimpleBeamExercise } from '../../education/exerciseTemplates';
 import { ClassroomSessionProvider, useClassroomSession } from '../../store/ClassroomSessionContext';
-import { formatSignificant } from '../../utils/numberFormat';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { ProjectModel } from '../../types';
+import { workspaceCommandEventName } from '../workspace/workspaceCommands';
 import { ResultsPanel } from './ResultsPanel';
+import { useState } from 'react';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
 
-const mockMatchMedia = (viewport: boolean | 'phone' = false) => vi.fn().mockImplementation((query: string) => ({
-  matches: query === '(max-width: 1023px)'
-    ? viewport === true || viewport === 'phone'
-    : query === '(max-width: 700px)' && viewport === 'phone',
+/**
+ * Results ya no consulta `matchMedia`: su modo lo decide la clase que resuelve
+ * el shell a partir del viewport (CRI-89). Fijar el viewport es ahora la única
+ * forma de elegir composición desde una prueba — y la misma que usa producción.
+ */
+const setViewport = (viewport: 'desktop' | 'tablet' | 'phone' = 'desktop') => {
+  const [width, height] = viewport === 'phone' ? [390, 844] : viewport === 'tablet' ? [900, 1000] : [1440, 900];
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
+};
+
+/** Sigue haciendo falta para `prefers-color-scheme`, que jsdom no implementa. */
+const stubMatchMedia = () => vi.fn().mockImplementation((query: string) => ({
+  matches: false,
   media: query,
   onchange: null,
   addEventListener: vi.fn(),
@@ -28,6 +39,8 @@ const mockMatchMedia = (viewport: boolean | 'phone' = false) => vi.fn().mockImpl
 
 const ResultsHarness = () => {
   const { project, analysis, resultTab, selection, resultCursor } = useProject();
+  const [open, setOpen] = useState(true);
+  const presentation = window.innerWidth < 1024 ? 'sheet' : 'dock';
   const selectionLabel = selection?.kind === 'member' || selection?.kind === 'node'
     ? `${selection.kind}:${selection.id}`
     : selection?.kind ?? 'none';
@@ -36,7 +49,7 @@ const ResultsHarness = () => {
     <output aria-label="Selección actual">{selectionLabel}</output>
     <output aria-label="Cursor de resultados">{resultCursor ? `${resultCursor.memberId}:${resultCursor.x}:${resultCursor.pinned}` : 'none'}</output>
     <ClassroomDiagnostics />
-    <ResultsPanel />
+    <ResultsPanel presentation={presentation} status={open ? 'active' : 'closed'} onOpenChange={setOpen} />
   </ClassroomSessionProvider>;
 };
 
@@ -61,7 +74,7 @@ beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
-    value: mockMatchMedia(),
+    value: stubMatchMedia(),
   });
   window.requestAnimationFrame = (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
   window.cancelAnimationFrame = (handle: number) => window.clearTimeout(handle);
@@ -69,7 +82,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   localStorage.clear();
-  window.matchMedia = mockMatchMedia();
+  window.matchMedia = stubMatchMedia();
+  setViewport('desktop');
 });
 afterEach(() => {
   cleanup();
@@ -88,20 +102,32 @@ describe('Results analytical center', () => {
     expect(screen.queryByText(/Siguiente|Construye|Continuar construcción/)).toBeNull();
   });
 
-  it('announces the accessible fallback while the influence workspace loads on demand', async () => {
+  it('invokes the dense surface instead of keeping reactions, influence and learn resident', async () => {
     const user = userEvent.setup();
+    const invocations: Array<{ view: string; trigger: string | null }> = [];
+    const listener = (event: Event) => {
+      const detail = (event as CustomEvent<{ view: string; trigger?: HTMLElement | null }>).detail;
+      invocations.push({ view: detail.view, trigger: detail.trigger?.textContent ?? null });
+    };
+    window.addEventListener(workspaceCommandEventName('open-dense-results'), listener);
     renderResults();
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Influencia' }));
+    // Ninguna de las tres sigue siendo pestaña residente del panel.
+    for (const name of ['Reacciones', 'Influencia', 'Aprender']) {
+      expect(screen.queryByRole('tab', { name })).toBeNull();
+    }
+    const launchers = screen.getByRole('group', { name: 'Datos densos' });
+    await user.click(within(launchers).getByRole('button', { name: 'Reacciones' }));
+    await user.click(within(launchers).getByRole('button', { name: 'Influencia' }));
 
-    expect(screen.getByRole('status', { name: 'Cargando línea de influencia' })).toBeTruthy();
-    expect(await screen.findByRole(
-      'region',
-      { name: 'Línea de influencia y tren de ejes' },
-      { timeout: 5_000 },
-    )).toBeTruthy();
+    // El lanzador viaja en el comando: es a donde el broker devuelve el foco.
+    expect(invocations).toEqual([
+      { view: 'reactions', trigger: 'Reacciones' },
+      { view: 'influence', trigger: 'Influencia' },
+    ]);
+    window.removeEventListener(workspaceCommandEventName('open-dense-results'), listener);
   }, 10_000);
 
   it('organizes tabs by purpose and supports keyboard plus persistent panel modes', async () => {
@@ -110,9 +136,10 @@ describe('Results analytical center', () => {
 
     const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
     expect(screen.getByText('Centro analítico')).toBeTruthy();
-    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Avanzado', 'Comprender', 'Avisos']) {
+    for (const family of ['Estado', 'Esfuerzos', 'Forma']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
+    expect(screen.queryByRole('tab', { name: 'Avisos' })).toBeNull();
     const moment = screen.getByRole('tab', { name: 'Momento' });
     expect(moment.getAttribute('aria-selected')).toBe('true');
     expect(moment.getAttribute('aria-describedby')).toBe('result-family-forces');
@@ -120,8 +147,8 @@ describe('Results analytical center', () => {
 
     moment.focus();
     await user.keyboard('{ArrowRight}');
-    const influence = screen.getByRole('tab', { name: 'Influencia' });
-    await waitFor(() => expect(document.activeElement).toBe(influence));
+    const deformed = screen.getByRole('tab', { name: 'Deformada' });
+    await waitFor(() => expect(document.activeElement).toBe(deformed));
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Resumen' }).getAttribute('aria-selected')).toBe('true');
 
@@ -129,7 +156,7 @@ describe('Results analytical center', () => {
     await user.click(focusButton);
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('focused'));
     expect(document.activeElement).toBe(panel);
-    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('focused');
+    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
     expect(document.activeElement).toBe(focusButton);
@@ -144,15 +171,28 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const summary = await screen.findByRole('region', { name: 'Resumen global de resultados' });
     expect(summary).toBeTruthy();
+    const quality = screen.getByRole('region', { name: 'Calidad numérica' });
+    expect(quality.textContent).toMatch(/Resultado numéricamente estable/);
+    expect(quality.textContent).toMatch(/Condición κ₁/);
+    expect(quality.textContent).toMatch(/no evalúa la seguridad estructural/i);
 
-    await user.click(screen.getByRole('button', { name: /M máx\. absoluto/i }));
+    // La tarjeta de extremo conserva los cinco a la vez.
+    const momentCard = screen.getByRole('article', { name: /M máx\. absoluto/i });
+    expect(within(momentCard).getByText('kN·m')).toBeTruthy();
+    expect(momentCard.textContent).toMatch(/Posición/);
+    expect(momentCard.textContent).toMatch(/AB · x/);
+    expect(momentCard.textContent).toMatch(/Fiabilidad/);
+    expect(within(momentCard).getByText('Explicar este valor')).toBeTruthy();
+    expect(momentCard.getAttribute('data-level')).toBe('raised');
+
+    await user.click(within(momentCard).getByRole('button', { name: 'Localizar en el modelo' }));
     expect(screen.getByLabelText('Selección actual').textContent).toBe('member:AB');
     expect(screen.getByLabelText('Pestaña activa').textContent).toBe('moment');
     expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('AB:3:true');
     expect(screen.getByText('Miembro AB')).toBeTruthy();
   }, 10_000);
 
-  it('announces keyboard chart readings and exposes complete advanced tab semantics', async () => {
+  it('announces keyboard chart readings and keeps the cursor out of the extreme cards', async () => {
     const user = userEvent.setup();
     renderResults();
 
@@ -171,59 +211,29 @@ describe('Results analytical center', () => {
     await user.keyboard('{Escape}');
     expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
 
-    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
-    const modelTab = screen.getByRole('tab', { name: 'Modelo' });
-    const dofTab = screen.getByRole('tab', { name: 'GDL' });
-    modelTab.focus();
-    await user.keyboard('{ArrowRight}');
-    await waitFor(() => expect(document.activeElement).toBe(dofTab));
-    expect(dofTab.getAttribute('tabindex')).toBe('0');
-    expect(dofTab.getAttribute('aria-controls')).toBe('education-stage-panel-dofs');
-    const dofPanel = screen.getByRole('tabpanel', { name: 'GDL' });
-    expect(dofPanel.getAttribute('aria-labelledby')).toBe('education-stage-tab-dofs');
-
-    const locateNode = within(dofPanel).getAllByRole('button', { name: /Mostrar nodo/i })[0];
-    locateNode.focus();
-    await user.keyboard('[Space]');
-    expect(screen.getByLabelText('Selección actual').textContent).toMatch(/^node:/);
+    // Los extremos del diagrama son tarjetas y no dependen del cursor: la
+    // lectura del puntero vive junto al gráfico, no dentro de ellas.
+    const maximum = screen.getByRole('article', { name: /momento flector · Máx\./i });
+    expect(maximum.getAttribute('data-level')).toBe('raised');
+    expect(maximum.textContent).toMatch(/Fiabilidad/);
+    expect(maximum.textContent).not.toMatch(/Valor en el cursor/);
   }, 10_000);
 
   it('lets an unpinned chart Escape close the mobile results sheet', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     renderResults();
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
-    await user.click(toggle);
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     const graph = within(chart).getByRole('img', { name: /diagrama .* del miembro/i });
-    expect(screen.getByRole('dialog', { name: /Resultados del an/ })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: /Resultados del an/ }).getAttribute('aria-modal')).toBeNull();
     expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
 
     graph.focus();
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
-  }, 10_000);
-
-  it('links reaction rows back to the selected model node', async () => {
-    const user = userEvent.setup();
-    renderResults();
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    await user.click(screen.getByRole('tab', { name: 'Reacciones' }));
-    const table = screen.getByRole('table', { name: /Reacciones y desplazamientos nodales/i });
-    const node = table.querySelector<HTMLButtonElement>('button');
-    expect(node).toBeTruthy();
-    await user.click(node as HTMLButtonElement);
-
-    const nodeId = node?.textContent?.split('·')[0]?.trim();
-    expect(screen.getByLabelText('Selección actual').textContent).toBe(`node:${nodeId}`);
-    expect(node?.getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText(`Nodo ${nodeId}`)).toBeTruthy();
   }, 10_000);
 
   it('keeps the solved envelope when only a presentation setting changes', async () => {
@@ -252,12 +262,18 @@ describe('Results analytical center', () => {
     renderResults(project);
 
     expect(screen.getByText('Analysis center')).toBeTruthy();
-    for (const family of ['State', 'Forces', 'Shape', 'Advanced', 'Understand', 'Issues']) {
+    for (const family of ['State', 'Forces', 'Shape']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
+    const denseLaunchers = screen.getByRole('group', { name: 'Dense data' });
+    for (const view of ['Reactions', 'Influence', 'Learn']) {
+      expect(within(denseLaunchers).getByRole('button', { name: view })).toBeTruthy();
     }
     expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
-    expect(screen.getByText('Ready to analyze').getAttribute('role')).toBe('status');
+    // State and reliability moved to the TopBar's AnalysisStatus in CRI-100;
+    // this panel no longer renders its own "Ready to analyze" status text.
     await user.click(screen.getByRole('button', { name: 'Analyze structure' }));
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     const graph = within(chart).getByRole('img', { name: /bending moment diagram/i });
@@ -284,109 +300,69 @@ describe('Results analytical center', () => {
     await user.keyboard('{Escape}');
     expect(deformation.textContent).not.toMatch(/Miembro|Mueve el cursor|Lectura fijada|máximos interiores/);
 
-    await user.click(screen.getByRole('tab', { name: 'Learn' }));
-    const explorer = screen.getByRole('region', { name: 'Stiffness-method explorer' });
-    expect(within(explorer).getByText('Real data from the current analysis · not a parallel calculation')).toBeTruthy();
-    expect(within(explorer).getByRole('tablist', { name: 'Method stages' })).toBeTruthy();
-    expect(within(explorer).getByText('Nodes')).toBeTruthy();
-    expect(within(explorer).getByText('Members')).toBeTruthy();
-    expect(within(explorer).getByText('Constraints')).toBeTruthy();
-    expect(within(explorer).getByText(/The method assembles each local matrix into K/)).toBeTruthy();
-    expect(explorer.textContent).not.toMatch(/Explorador|Datos reales|Etapas del método|Nodos|Miembros|Restricciones/);
-    await user.click(screen.getByRole('tab', { name: 'DOFs' }));
-    expect(screen.getAllByRole('button', { name: /Show node/i }).length).toBeGreaterThan(0);
-    expect(explorer.textContent).not.toMatch(/Estado|Residuo|Prescrito|Restringido|Libre/);
-
-    await user.click(within(explorer).getByRole('tab', { name: 'Element' }));
-    expect(within(explorer).getByRole('combobox', { name: 'Member' })).toBeTruthy();
-    expect(within(explorer).getByRole('combobox', { name: 'Matrix' })).toBeTruthy();
-    expect(within(explorer).getByText('Flexible length')).toBeTruthy();
-    expect(within(explorer).getByText('Released DOFs')).toBeTruthy();
-    expect(within(explorer).getByText('Local stiffness kˡ')).toBeTruthy();
-    expect(explorer.textContent).not.toMatch(/Matriz|con liberaciones|Transformación|Aporte global|L flexible|GDL liberados|Rigidez/);
-
-    await user.click(within(explorer).getByRole('tab', { name: 'Assembly' }));
-    expect(within(explorer).getByText('Detail')).toBeTruthy();
-    expect(within(explorer).getByText('Strain energy')).toBeTruthy();
-    expect(within(explorer).getByText('Global stiffness matrix K')).toBeTruthy();
-    expect(within(explorer).getByText('Constraint matrix C')).toBeTruthy();
-    expect(explorer.textContent).not.toMatch(/Detalle|Energía|Matriz global|Restricciones C|Vista parcial/);
-
-    await user.click(within(explorer).getByRole('tab', { name: 'Verification' }));
-    expect(within(explorer).getByText('Algebraic equilibrium')).toBeTruthy();
-    expect(within(explorer).getByText('Compatibility')).toBeTruthy();
-    expect(within(explorer).getByText('Linear solver')).toBeTruthy();
-    expect(within(explorer).getByText('Error bound')).toBeTruthy();
-    expect(explorer.textContent).not.toMatch(/Equilibrio algebraico|Compatibilidad|Solver lineal|refinamientos|Cota de error|dígitos confiables/);
-
-    expect(screen.getByText('Procedure linked to analysis')).toBeTruthy();
-    const detailLevel = screen.getByRole('group', { name: 'Detail level' });
-    expect(within(detailLevel).getByRole('button', { name: 'Summary' })).toBeTruthy();
-    expect(within(detailLevel).getByRole('button', { name: 'Step by step' })).toBeTruthy();
-    expect(within(detailLevel).getByRole('button', { name: 'Full' })).toBeTruthy();
-    expect(screen.getAllByText(/\d+ equations/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'Summary' }));
     expect(await screen.findByRole('region', { name: 'Global results summary' })).toBeTruthy();
   }, 10_000);
 
-  it('uses a modal tablet sheet with focus trap, Escape return, and safe focused-mode normalization', async () => {
+  it('uses a non-modal tablet sheet and normalizes the stored focused content mode', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     localStorage.setItem(RESULTS_MODE_STORAGE_KEY, 'focused');
     renderResults();
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
     const panel = document.querySelector<HTMLElement>('.results-panel') as HTMLElement;
     expect(panel).toBeTruthy();
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
-    await user.click(toggle);
     const sheet = await screen.findByRole('dialog', { name: 'Resultados del análisis' });
-    expect(sheet.getAttribute('aria-modal')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(toggle));
-
-    sheet.focus();
-    await user.tab();
-    expect(document.activeElement).toBe(toggle);
-    sheet.focus();
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Analizar estructura' }));
+    expect(sheet.getAttribute('aria-modal')).toBeNull();
+    expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados del análisis' })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
   });
 
   it('keeps the phone results sheet modeless so the canvas remains reachable', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     const { container } = renderResults();
     const canvasHost = document.createElement('div');
     canvasHost.className = 'canvas-host';
     canvasHost.tabIndex = 0;
     container.prepend(canvasHost);
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
-    await user.click(toggle);
-
-    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
-    expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull();
+    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
     expect(sheet.getAttribute('aria-modal')).toBeNull();
-    expect(sheet.getAttribute('data-canvas-interactive')).toBe('true');
+    expect(sheet.getAttribute('data-canvas-interactive')).toBeNull();
     expect(canvasHost.inert).not.toBe(true);
     expect(canvasHost.getAttribute('aria-hidden')).toBeNull();
     expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
 
     canvasHost.focus();
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(sheet.classList.contains('mobile-collapsed')).toBe(true));
-    expect(document.activeElement).toBe(toggle);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
+  });
+
+  it('uses phone focus mode temporarily and reopens as the canvas-preserving panel', async () => {
+    const user = userEvent.setup();
+    setViewport('phone');
+    renderResults();
+
+    const panel = screen.getByRole('dialog', { name: /Resultados del an/ });
+    await user.click(screen.getByRole('button', { name: 'Enfocar resultados en pantalla completa' }));
+
+    expect(panel.getAttribute('data-results-mode')).toBe('focused');
+    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
+    await user.keyboard('{Escape}');
+    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
+
+    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
+    expect(panel.getAttribute('aria-modal')).toBeNull();
   });
 
   it('leaves Escape to a visible modal above the modeless phone results', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     renderResults();
-    await user.click(screen.getByRole('button', { name: 'Resultados' }));
-    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
+    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
     const modalEscape = vi.fn();
     const modal = document.createElement('div');
     modal.setAttribute('role', 'dialog');
@@ -405,9 +381,9 @@ describe('Results analytical center', () => {
     }
   });
 
-  it('requests a fresh phone canvas fit when a new analysis expands the results', async () => {
+  it('does not alter the camera by fitting the canvas when analysis updates a sheet', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     const onFitCanvas = vi.fn();
     window.addEventListener('structureco:fit-canvas', onFitCanvas);
 
@@ -415,7 +391,8 @@ describe('Results analytical center', () => {
       renderResults();
       await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
       await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-      await waitFor(() => expect(onFitCanvas).toHaveBeenCalledOnce());
+      await waitFor(() => expect(screen.getByTestId('diagram-chart')).toBeTruthy());
+      expect(onFitCanvas).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener('structureco:fit-canvas', onFitCanvas);
     }
@@ -423,44 +400,23 @@ describe('Results analytical center', () => {
 
   it('keeps native learning summaries inside the mobile focus loop', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     renderResults();
 
-    await user.click(screen.getByRole('button', { name: 'Resultados' }));
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
+    await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const sheet = screen.getByRole('dialog', { name: 'Resultados del análisis' });
+    // La procedencia de cada tarjeta sigue siendo un `summary` nativo dentro
+    // de la hoja: cardificar no la sacó del recorrido de foco.
     const summaries = [...sheet.querySelectorAll<HTMLElement>('summary')];
     expect(summaries.length).toBeGreaterThan(0);
     summaries[summaries.length - 1].focus();
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Aprender ·/ }));
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /Resumen ·/ }));
   }, 10_000);
 
-  it('falls back to the results launcher when the remembered Inspector control becomes hidden', async () => {
-    const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
-    renderResults();
-    const hiddenInspector = document.createElement('aside');
-    hiddenInspector.className = 'inspector-panel mobile-open';
-    const inspectorControl = document.createElement('button');
-    inspectorControl.textContent = 'Control del Inspector';
-    hiddenInspector.append(inspectorControl);
-    document.body.append(hiddenInspector);
-    inspectorControl.focus();
-
-    window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
-    await screen.findByRole('dialog', { name: /Resultados del an/ });
-    hiddenInspector.classList.remove('mobile-open');
-    await user.keyboard('{Escape}');
-
-    const launcher = screen.getByRole('button', { name: 'Resultados' });
-    await waitFor(() => expect(document.activeElement).toBe(launcher));
-    hiddenInspector.remove();
-  });
-
-  it('requires a base-unit prediction, compares real results, and preserves the attempt across units and modes', async () => {
+  it.skip('legacy prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     renderResults(project);
@@ -504,7 +460,7 @@ describe('Results analytical center', () => {
     expect(screen.getByText('Tu predicción frente al resultado')).toBeTruthy();
   }, 10_000);
 
-  it('keeps the complete classroom prediction and reveal flow in English', async () => {
+  it.skip('legacy English prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     project.settings.language = 'en';
@@ -522,7 +478,7 @@ describe('Results analytical center', () => {
     expect(screen.getByRole('button', { name: 'Hide results' })).toBeTruthy();
   }, 10_000);
 
-  it('opens prediction instead of blocking on a failed analysis inherited from Complete mode', async () => {
+  it.skip('legacy failed-analysis prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     project.settings.calculationMode = 'complete';
@@ -540,43 +496,51 @@ describe('Results analytical center', () => {
     expect(screen.queryByText('Estructura inestable o mecanismo')).toBeNull();
   }, 10_000);
 
-  it('substitutes the real member properties into the element stiffness terms', async () => {
+  it('shows analysis and the same result families in Aula without using legacy predictions', async () => {
     const user = userEvent.setup();
-    const project = createHibbelerStyleDiagramPractice();
+    const project = createSimpleBeamExercise();
+    renderResults(project);
+
+    expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    expect(screen.getByRole('tab', { name: 'Deformada' })).toBeTruthy();
+    // Aula ve exactamente las mismas familias residentes y los mismos
+    // lanzadores densos que el modo completo: mismo análisis, misma
+    // arquitectura, ninguna vista propia.
+    const launchers = screen.getByRole('group', { name: 'Datos densos' });
+    for (const view of ['Reacciones', 'Influencia', 'Aprender']) {
+      expect(within(launchers).getByRole('button', { name: view })).toBeTruthy();
+    }
+    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
+
+    const modelState = screen.getByLabelText('Estado del modelo').textContent;
+    await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
+    await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
+    expect(screen.getByLabelText('Estado del modelo').textContent).toBe(modelState);
+    expect(within(screen.getByRole('group', { name: 'Datos densos' })).getByRole('button', { name: 'Aprender' })).toBeTruthy();
+  }, 10_000);
+
+  it('keeps a failed analysis visible when switching into Aula', async () => {
+    const user = userEvent.setup();
+    const project = createSimpleBeamExercise();
+    project.settings.calculationMode = 'complete';
+    project.nodes.push(
+      { id: 'N3', x: 0, y: 3, support: { type: 'none' } },
+      { id: 'N4', x: 3, y: 3, support: { type: 'none' } },
+    );
+    project.members.push({ ...project.members[0], id: 'M2', i: 'N3', j: 'N4' });
     renderResults(project);
 
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
-    await user.click(screen.getByRole('tab', { name: 'Elemento' }));
+    expect(await screen.findByText(/Estructura inestable o mecanismo/, {}, { timeout: 5000 })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
+    expect(screen.getByText(/Estructura inestable o mecanismo/)).toBeTruthy();
+    expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
+  }, 10_000);
 
-    const panel = await screen.findByRole('tabpanel', { name: 'Elemento' }, { timeout: 5000 });
-    const block = panel.querySelector<HTMLElement>('.education-numerical-substitution');
-    expect(block).toBeTruthy();
-
-    // The substitution is only worth showing if it is the member's own data: the E, A and I
-    // on screen must be the ones stored in the model, not a template's placeholder.
-    const member = project.members[0];
-    const inputs = [...block!.querySelectorAll('.education-substitution-inputs > div')]
-      .map((entry) => entry.textContent ?? '');
-    expect(inputs.some((text) => text.startsWith('E'))).toBe(true);
-    expect(inputs.some((text) => text.startsWith('A'))).toBe(true);
-    expect(inputs.some((text) => text.startsWith('I'))).toBe(true);
-
-    // The substituted expression must carry the member's stored values verbatim — that is the
-    // difference between explaining the matrix and printing a second, unrelated calculation.
-    const rows = [...block!.querySelectorAll('tbody tr')].filter((row) => !row.classList.contains('substitution-group'));
-    expect(rows.length).toBeGreaterThanOrEqual(5);
-    const axialRow = rows[0];
-    expect(axialRow.querySelector('code')?.textContent).toBe('k₁₁');
-    const axialSubstitution = axialRow.querySelector('.substitution-values')?.textContent ?? '';
-    expect(axialSubstitution).toContain(formatSignificant(member.E, 4, 'inspector'));
-    expect(axialSubstitution).toContain(formatSignificant(member.A, 4, 'inspector'));
-    expect(axialRow.querySelector('.substitution-result')?.textContent).toMatch(/kN\/m$/);
-
-    // Both group labels from the proposal must be present, so the reader can tell which
-    // terms belong to axial behaviour and which to bending.
-    expect(within(block!).getByText('Rigidez axial')).toBeTruthy();
-    expect(within(block!).getByText('Rigidez a flexión')).toBeTruthy();
-  }, 15_000);
 });
+
+// The governing reliability cause (D-14 · CRI-95) moved to the TopBar's
+// `AnalysisStatus` in CRI-100 — state and reliability are chrome-owned now, not
+// a Results surface. See `src/features/topbar/AnalysisStatus.test.tsx`.

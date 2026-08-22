@@ -1,6 +1,6 @@
 # Gate completo — structureCo
 #
-# Candidato de release. Ejecuta el Gate rápido más los recorridos de extremo a extremo en
+# Candidato de release. Ejecuta las comprobaciones del Gate rápido más los recorridos de extremo a extremo en
 # Chromium y WebKit: bienvenida responsive, importación/exportación .structureco, PDF nativo
 # reimportable, edición táctil, Aula móvil y objetivos táctiles ≥44px en dispositivos reales
 # emulados. Sólo se dispara manualmente — no hay trigger automático en push/PR, porque instala
@@ -8,9 +8,6 @@
 #
 # Sin IA (nada de Anthropic, OpenAI, Claude ni Codex), sin FTool gráfico, sin deploy, sin
 # commits, sin tags, sin publicación de paquetes. Permisos mínimos.
-#
-# Preparado localmente el 2 de agosto de 2026 (programa 0.8.1). No se ha conectado a GitHub
-# ni ejecutado de forma remota — ver docs/releases/0.8.1/CI.md.
 
 name: Gate completo
 
@@ -42,15 +39,19 @@ jobs:
       - name: Instalar dependencias exactas
         run: npm ci
 
-      - name: Gate rápido (lint, tipos, frontera protegida, pruebas)
+      - name: Gate rápido (documentación, lint, tipos, frontera protegida, pruebas)
         run: |
           npm run lint
+          npm run verify:docs
           npm run typecheck
           npm run verify:protected
           npm test
 
       - name: Instalar navegadores de Playwright
         run: npx playwright install --with-deps chromium webkit
+
+      - name: QA de geometría TopBar
+        run: npm run qa:topbar
 
       - name: QA Chromium (desktop, móvil, Aula, importación)
         run: npm run qa

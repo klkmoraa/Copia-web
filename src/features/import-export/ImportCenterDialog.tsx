@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { translate, type TranslationKey } from '../../i18n/catalogs';
+import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import type { AnalysisResult, ProjectModel } from '../../types';
 import { useModalFocus } from '../../design-system/components/modalFocus';
@@ -194,10 +194,7 @@ const createJsonImportCenterAdapter = (t: Translate): ImportCenterAdapter => ({
   },
 });
 
-// oxlint-disable-next-line react/only-export-components
-export const jsonImportCenterAdapter = createJsonImportCenterAdapter((key, variables) => translate('es', key, variables));
-
-const formatBytes = (bytes: number) => {
+const formatBytes =(bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${formatFixed((bytes / 1024), 1)} KB`;
   return `${formatFixed((bytes / (1024 * 1024)), 1)} MB`;

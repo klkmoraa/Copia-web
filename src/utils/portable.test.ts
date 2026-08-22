@@ -30,6 +30,11 @@ describe('expediente portable structureCo', () => {
 
     expect(payload.project).toEqual(JSON.parse(JSON.stringify(project)));
     expect(payload.analysis).toEqual(JSON.parse(JSON.stringify(analysis)));
+    expect(payload.metadata).toMatchObject({
+      numericQuality: 'stable',
+      analysisMode: 'first-order',
+      pDeltaExperimental: false,
+    });
     expect(payload.checksum.value).toMatch(/^[a-f0-9]{64}$/);
     expect(await verifyPortablePayload(payload)).toBe(true);
     await expect(parsePortablePayload(serializePortablePayload(payload))).resolves.toEqual(payload);
@@ -94,6 +99,10 @@ describe('expediente portable structureCo', () => {
 
   it('crea y relee un paquete .structureco con manifest, datos y reporte', async () => {
     const { project, analysis } = analyzedFixture();
+    Object.assign(project.members[0] as object, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     const bundle = await createPortableBundle(project, analysis, { generatedAt: '2026-07-12T12:00:00.000Z' });
     expect(bundle.filename).toMatch(/\.structureco$/);
     expect(Array.from(bundle.bytes.slice(0, 2))).toEqual([0x50, 0x4B]);
@@ -101,6 +110,10 @@ describe('expediente portable structureCo', () => {
     const restored = await readPortableBundle(bundle.bytes);
     expect(restored.manifest.payloadChecksum).toBe(bundle.payload.checksum.value);
     expect(restored.payload.project).toEqual(bundle.payload.project);
+    expect(restored.payload.project.members[0]).toMatchObject({
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     expect(restored.payload.analysis).toEqual(bundle.payload.analysis);
     expect(new TextDecoder().decode(restored.reportBytes.slice(0, 8))).toContain('%PDF');
   }, 30_000);

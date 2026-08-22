@@ -42,8 +42,24 @@ describe('WelcomeScreen header', () => {
     // No basta con que exista *un* h1: eso pasaría igual si `updateProjectView`
     // fuera un no-op. Se afirma el contenido real tras el cambio de idioma
     // (mismo idiom que `App.test.tsx`: `.textContent).toContain(...)`).
+    //
+    // CRI-104: el h1 es el wordmark —"structureCo", que no se traduce— y la
+    // marca la completa UNA línea debajo. Es esa línea la que tiene que
+    // cambiar de idioma, así que es la que se afirma.
     const heading = await screen.findByRole('heading', { level: 1 });
-    expect(heading.textContent).toContain('Analyze structures with');
+    expect(heading.textContent).toContain('structureCo');
+    expect((await screen.findByText(/2D structural analysis/i)).textContent)
+      .toContain('Classroom Mode');
+  });
+
+  it('keeps the brand to a wordmark and a single line — no editorial headline', () => {
+    const { container } = renderWelcome();
+    expect(container.querySelectorAll('.welcome-brand-line')).toHaveLength(1);
+    expect(container.querySelector('.welcome-brand-line')?.textContent?.trim())
+      .toBe('Análisis estructural 2D y Modo Aula, local en este dispositivo.');
+    // El titular editorial a dos líneas de la versión anterior desapareció.
+    expect(container.querySelector('.welcome-title-accent')).toBeNull();
+    expect(container.querySelector('.welcome-hero-subtitle')).toBeNull();
   });
 
   it('keeps every header action reachable, and returns focus when the drawer closes', async () => {

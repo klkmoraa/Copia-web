@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { analyzeProjectScenarios, type AnalysisScenario } from './envelope';
+import type { AnalysisScenario } from './envelope';
 import { analysisSignature } from './projectSignature';
 import type { ProjectModel } from '../types';
-
-interface ScenarioWorkerResponse {
-  requestId: number;
-  scenarios?: AnalysisScenario[];
-  error?: string;
-}
+import { handleScenarioEnvelope } from '../runtime/workerHandlers';
+import { WORKER_PROTOCOL_VERSION, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 
 export const useScenarioAnalysis = (project: ProjectModel) => {
   const [scenarios, setScenarios] = useState<AnalysisScenario[] | null>(null);
@@ -56,13 +52,10 @@ export const useScenarioAnalysis = (project: ProjectModel) => {
       fallbackTimerRef.current = window.setTimeout(() => {
         fallbackTimerRef.current = null;
         if (requestRef.current !== requestId) return;
-        try {
-          setScenarios(analyzeProjectScenarios(project));
-        } catch (caught) {
-          setError(caught instanceof Error ? caught.message : 'No se pudieron comparar los escenarios.');
-        } finally {
-          setBusy(false);
-        }
+        const response = handleScenarioEnvelope({ protocolVersion: 1, type: 'run', domain: 'scenarios', requestId, payload: { project } });
+        if (response.type === 'success') setScenarios(response.result);
+        else setError(response.error.message);
+        setBusy(false);
       }, 0);
     };
     if (typeof Worker === 'undefined') {
@@ -80,17 +73,20 @@ export const useScenarioAnalysis = (project: ProjectModel) => {
         if (workerRef.current === worker) workerRef.current = null;
         fallback();
       };
-      worker.onmessage = (event: MessageEvent<ScenarioWorkerResponse>) => {
+      worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'scenarios', AnalysisScenario[]>>) => {
         if (settled || event.data.requestId !== requestId || requestRef.current !== requestId) return;
         settled = true;
         worker.terminate();
         if (workerRef.current === worker) workerRef.current = null;
-        if (event.data.scenarios) setScenarios(event.data.scenarios);
-        else setError(event.data.error ?? 'No se pudieron comparar los escenarios.');
+        if (event.data.type === 'success') setScenarios(event.data.result);
+        else setError(event.data.error.message);
         setBusy(false);
       };
       worker.onerror = fallbackOnce;
-      worker.postMessage({ requestId, project });
+      const request: WorkerRequestEnvelope<'scenarios', { project: ProjectModel }> = {
+        protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'scenarios', requestId, payload: { project },
+      };
+      worker.postMessage(request);
     } catch {
       fallback();
     }

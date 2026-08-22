@@ -1,7 +1,9 @@
 import type { ProjectModel, ProjectSettings } from '../types';
 import { createId } from '../utils/id';
 
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
+
+const CUSTOM_MEMBER_IDENTITY = { materialOrigin: 'custom', sectionOrigin: 'custom' } as const;
 
 export const createDefaultSettings = (): ProjectSettings => ({
   units: 'kN-m',
@@ -53,9 +55,9 @@ export const createDefaultProject = (): ProjectModel => ({
     { id: 'N4', x: 6, y: 4, support: { type: 'none' } },
   ],
   members: [
-    { id: 'M1', i: 'N1', j: 'N3', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
-    { id: 'M2', i: 'N3', j: 'N4', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
-    { id: 'M3', i: 'N2', j: 'N4', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
+    { id: 'M1', i: 'N1', j: 'N3', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
+    { id: 'M2', i: 'N3', j: 'N4', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
+    { id: 'M3', i: 'N2', j: 'N4', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 },
   ],
   loadCases: [
     { id: 'LC1', name: 'Carga de servicio', category: 'variable', active: true, selfWeightFactor: 0 },
@@ -115,7 +117,7 @@ export const createHibbelerTributaryBeam = (): ProjectModel => {
       { id: 'B', x: length, y: 0, support: { type: 'roller', angleDeg: 90 } },
     ],
     members: [
-      { id: 'AB', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.01, I: 8e-5, releases: { iMoment: true, jMoment: true } },
+      { id: 'AB', i: 'A', j: 'B', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.01, I: 8e-5, releases: { iMoment: true, jMoment: true } },
     ],
     loadCases: [{ id: 'LC1', name: 'Carga tributaria', category: 'variable', active: true }],
     combinations: [],
@@ -149,7 +151,7 @@ export const createHibbelerStyleDiagramPractice = (): ProjectModel => ({
     { id: 'A', x: 0, y: 0, support: { type: 'pin' } },
     { id: 'B', x: 8, y: 0, support: { type: 'roller', angleDeg: 90 } },
   ],
-  members: [{ id: 'AB', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.01, I: 8e-5, releases: { iMoment: true, jMoment: true } }],
+  members: [{ id: 'AB', i: 'A', j: 'B', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.01, I: 8e-5, releases: { iMoment: true, jMoment: true } }],
   loadCases: [{ id: 'LC1', name: 'Servicio', category: 'variable', active: true }],
   combinations: [],
   nodalLoads: [],
@@ -182,9 +184,9 @@ export const createHibbelerStyleTrussPractice = (): ProjectModel => ({
     { id: 'C', x: 3, y: 4, support: { type: 'none' } },
   ],
   members: [
-    { id: 'AB', i: 'A', j: 'B', type: 'truss', E: 200e6, A: 0.003, I: 0 },
-    { id: 'AC', i: 'A', j: 'C', type: 'truss', E: 200e6, A: 0.003, I: 0 },
-    { id: 'BC', i: 'B', j: 'C', type: 'truss', E: 200e6, A: 0.003, I: 0 },
+    { id: 'AB', i: 'A', j: 'B', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
+    { id: 'AC', i: 'A', j: 'C', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
+    { id: 'BC', i: 'B', j: 'C', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
   ],
   loadCases: [{ id: 'LC1', name: 'Carga vertical', category: 'variable', active: true }],
   combinations: [],
@@ -240,7 +242,7 @@ export const exampleProjects: Array<{ name: string; description: string; build: 
         { id: 'N2', x: 8, y: 0, support: { type: 'roller', angleDeg: 90 } },
       ],
       members: [
-        { id: 'M1', i: 'N1', j: 'N2', type: 'frame', E: 200e6, A: 0.01, I: 8e-5, density: 7850, releases: { iMoment: true, jMoment: true } },
+        { id: 'M1', i: 'N1', j: 'N2', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.01, I: 8e-5, density: 7850, releases: { iMoment: true, jMoment: true } },
       ],
       nodalLoads: [],
       memberLoads: [
@@ -264,9 +266,9 @@ export const exampleProjects: Array<{ name: string; description: string; build: 
         { id: 'N3', x: 3, y: 4, support: { type: 'none' } },
       ],
       members: [
-        { id: 'M1', i: 'N1', j: 'N2', type: 'truss', E: 200e6, A: 0.003, I: 0 },
-        { id: 'M2', i: 'N1', j: 'N3', type: 'truss', E: 200e6, A: 0.003, I: 0 },
-        { id: 'M3', i: 'N2', j: 'N3', type: 'truss', E: 200e6, A: 0.003, I: 0 },
+        { id: 'M1', i: 'N1', j: 'N2', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
+        { id: 'M2', i: 'N1', j: 'N3', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
+        { id: 'M3', i: 'N2', j: 'N3', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0 },
       ],
       nodalLoads: [{ id: 'NL1', nodeId: 'N3', caseId: 'LC1', fx: 0, fy: -60, mz: 0 }],
       memberLoads: [],

@@ -12,6 +12,7 @@ import {
   pointDistance,
   screenToModelPoint,
   shouldArmLongPress,
+  shouldTriggerLongPress,
   zoomCameraAt,
 } from './canvasInteraction';
 
@@ -83,12 +84,20 @@ describe('canvas interaction geometry', () => {
     expect(canvasPointerProfile('')).toMatchObject({ kind: 'mouse', canDragNode: true });
   });
 
-  it('reserves long-press for touch selection instead of intercepting creation tools', () => {
+  it('reserves long-press for touch selection, including the background marquee, instead of intercepting creation tools', () => {
     expect(shouldArmLongPress('touch', 'select', 'node')).toBe(true);
+    expect(shouldArmLongPress('touch', 'select', 'background')).toBe(true);
     expect(shouldArmLongPress('touch', 'pointLoad', 'node')).toBe(false);
     expect(shouldArmLongPress('touch', 'member', 'node')).toBe(false);
     expect(shouldArmLongPress('mouse', 'select', 'node')).toBe(false);
-    expect(shouldArmLongPress('touch', 'select', 'background')).toBe(false);
+  });
+
+  it('requires exactly 480 ms and a stationary touch so a slow pan cannot arm marquee or a picker', () => {
+    expect(shouldTriggerLongPress('touch', 'select', 'node', 479, 0)).toBe(false);
+    expect(shouldTriggerLongPress('touch', 'select', 'node', 480, 0)).toBe(true);
+    expect(shouldTriggerLongPress('touch', 'select', 'background', 480, 0)).toBe(true);
+    expect(shouldTriggerLongPress('touch', 'select', 'node', 480, 4)).toBe(false);
+    expect(shouldTriggerLongPress('pen', 'select', 'node', 480, 0)).toBe(false);
   });
 
   it('uses input-specific movement thresholds', () => {

@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo } from 'react';
 import type { AnalysisResult, DiagramQuantity, MemberModel, NodeModel, ProjectModel } from '../../types';
 import type { InfluenceCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
 import type { CanvasCamera } from './canvasInteraction';
@@ -7,6 +7,7 @@ import { toDisplay, unitLabel } from '../../engine/units';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type NodeResult = AnalysisResult['nodeResults'][number];
@@ -41,8 +42,6 @@ export interface CanvasResultLayerProps {
   showDiagnostics: boolean;
   size: { width: number; height: number };
   t: Translate;
-  /** P12: Dynamic harmonic scale factor in [-1, 1] for deformed shape oscillation. Defaults to 1. */
-  oscillationFactor?: number;
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -54,30 +53,60 @@ export const reactionClearanceFor = (type: NodeModel['support']['type']): { bott
 /** Pixel scale for a diagram ordinate: shared global scale, or per-member when `diagramScaleMode` is `individual`. */
 // oxlint-disable-next-line react/only-export-components
 export const diagramPixelScaleFor = (project: ProjectModel, resultTab: ResultTab, globalDiagramMax: number, result: MemberResult) => {
-  if (project.settings.diagramScaleMode !== 'individual') return (68 * project.settings.diagramScale) / globalDiagramMax;
+  const view = readCanvasViewSettings(project);
+  if (view.diagramScaleMode !== 'individual') return (68 * view.diagramScale) / globalDiagramMax;
   const key = resultTab === 'axial' ? 'axial' : resultTab === 'shear' ? 'shear' : 'moment';
   let maximum = 1e-9;
   for (const point of result.criticalPoints) {
     if (point.quantity === key) maximum = Math.max(maximum, Math.abs(point.value));
   }
-  return (68 * project.settings.diagramScale) / maximum;
+  return (68 * view.diagramScale) / maximum;
+};
+
+/**
+ * Un extremo sólo se sella si vale al menos esta fracción del máximo global del
+ * diagrama. Sin el filtro, una estructura de treinta barras se cubre de
+ * etiquetas —incluidas las de los tramos que apenas trabajan— y el sello deja
+ * de señalar nada. Con él quedan los picos que de verdad gobiernan.
+ */
+const CRITICAL_MARKER_MIN_SHARE = 0.15;
+
+/** Extremos M/V ya resueltos por el análisis, listos para sellar sobre la barra. */
+// oxlint-disable-next-line react/only-export-components
+export const criticalExtremesFor = (
+  points: ReadonlyArray<MemberResult['criticalPoints'][number]>,
+  quantity: DiagramQuantity,
+  floor: number,
+): Array<{ point: MemberResult['criticalPoints'][number]; extreme: 'max' | 'min' }> => {
+  const candidates = points.filter((point) => point.quantity === quantity);
+  if (candidates.length === 0) return [];
+  const highest = candidates.reduce((best, point) => (point.value > best.value ? point : best));
+  const lowest = candidates.reduce((best, point) => (point.value < best.value ? point : best));
+  const marks: Array<{ point: MemberResult['criticalPoints'][number]; extreme: 'max' | 'min' }> = [];
+  if (Math.abs(highest.value) >= floor) marks.push({ point: highest, extreme: 'max' });
+  // Un diagrama de signo constante tiene un solo extremo interesante: sellarlo
+  // dos veces apilaría dos etiquetas idénticas sobre el mismo punto.
+  if (Math.abs(lowest.value) >= floor && Math.abs(lowest.value - highest.value) > 1e-9) {
+    marks.push({ point: lowest, extreme: 'min' });
+  }
+  return marks;
 };
 
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
   units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
-  oscillationFactor = 1,
 }: CanvasResultLayerProps) => {
+  const view = readCanvasViewSettings(project);
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);
 
   const diagramPath = (member: MemberModel) => {
     const result = resultMap.get(member.id);
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
-    if (!resultsAllowed || !project.settings.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
+    if (!resultsAllowed || !view.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
     const axis = memberAxis(member, ni, nj);
     const tx = axis.c; const ty = axis.s;
-    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+    const side = view.diagramSide === 'negative' ? -1 : 1;
     const nx = axis.normal.x * side; const ny = axis.normal.y * side;
     const key = resultTab as DiagramQuantity;
     const diagramPixelScale = scaleFor(result);
@@ -120,59 +149,10 @@ const CanvasResultLayerImpl = ({
     });
     fillCommands.push(`L ${baselineEnd.x} ${baselineEnd.y}`, 'Z');
     jumpCommands.push(`M ${lastPoint.x} ${lastPoint.y} L ${baselineEnd.x} ${baselineEnd.y}`);
-
-    // P2: Mohr Slice Hatching (rebanadas transversales equidistantes con relieve técnico)
-    const hatchLines: ReactNode[] = [];
-    const numSlices = Math.max(8, Math.min(22, Math.round(result.length * 3.5)));
-    for (let sIdx = 1; sIdx < numSlices; sIdx++) {
-      const xSlice = (result.length / numSlices) * sIdx;
-      const point = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, xSlice, 'right');
-      const vSlice = point ? point[key] : 0;
-      if (Math.abs(vSlice) > 1e-6) {
-        const basePt = toScreen(ni.x + tx * ((result.startOffset ?? 0) + xSlice), ni.y + ty * ((result.startOffset ?? 0) + xSlice));
-        const diagPt = locate(xSlice, vSlice);
-        hatchLines.push(
-          <line
-            key={`hatch-${member.id}-${sIdx}`}
-            x1={basePt.x}
-            y1={basePt.y}
-            x2={diagPt.x}
-            y2={diagPt.y}
-            className="diagram-hatch-line"
-          />
-        );
-      }
-    }
-
-    // P2: Sellos flotantes de puntos notables (Mmax, Vmax, V=0)
-    const criticalBadges: ReactNode[] = [];
-    const activePoints = result.criticalPoints.filter((pt) => pt.quantity === key && Math.abs(pt.value) > 1e-5);
-    activePoints.forEach((pt, idx) => {
-      const ptScreen = locate(pt.x, pt.value);
-      const isMax = pt.kind === 'maximum' || pt.kind === 'minimum';
-      if (isMax) {
-        const unit = key === 'moment' ? momentLabel : forceLabel;
-        const valFormatted = formatFixed(toDisplay(pt.value, units, key === 'moment' ? 'moment' : 'force'), 2);
-        criticalBadges.push(
-          <g key={`crit-${member.id}-${idx}`} transform={`translate(${ptScreen.x} ${ptScreen.y})`} className="diagram-critical-seal">
-            <circle cx="0" cy="0" r="3.5" className="diagram-critical-seal-dot" />
-            <g transform="translate(0, -14)">
-              <rect x="-26" y="-8" width="52" height="16" rx="4" className="diagram-critical-seal-bg" />
-              <text x="0" y="3" textAnchor="middle" className="diagram-critical-seal-text">
-                {valFormatted} {unit}
-              </text>
-            </g>
-          </g>
-        );
-      }
-    });
-
     return <g key={member.id} className={`diagram-shape ${key}`}>
       <path d={fillCommands.join(' ')} className="diagram-fill" />
-      <g className="diagram-hatch-group">{hatchLines}</g>
       <path d={lineCommands.join(' ')} className="diagram-line-exact" />
       <path d={jumpCommands.join(' ')} className="diagram-jumps" />
-      <g className="diagram-critical-group">{criticalBadges}</g>
     </g>;
   };
 
@@ -181,7 +161,7 @@ const CanvasResultLayerImpl = ({
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
     const { c, s } = memberAxis(member, ni, nj);
-    const scale = project.settings.deformedScale * oscillationFactor;
+    const scale = view.deformedScale;
     const curved = result.deformation.map((point) => {
       const grossX = (result.startOffset ?? 0) + point.x;
       const gx = ni.x + c * grossX + scale * (c * point.u - s * point.v);
@@ -215,7 +195,7 @@ const CanvasResultLayerImpl = ({
     if (['axial', 'shear', 'moment'].includes(resultTab)) {
       const quantity = resultTab as DiagramQuantity;
       const value = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'right')?.[quantity] ?? 0;
-      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+      const side = view.diagramSide === 'negative' ? -1 : 1;
       const nx = axis.normal.x * side;
       const ny = axis.normal.y * side;
       const offsetModel = value * scaleFor(result) / camera.scale;
@@ -225,12 +205,76 @@ const CanvasResultLayerImpl = ({
     } else if (resultTab === 'deformed' && result.deformationSegments.length) {
       const response = evaluateDeformationAt(result.deformationSegments, x);
       if (response) {
-        const scale = project.settings.deformedScale;
+        const scale = view.deformedScale;
         screen = toScreen(base.x + scale * (c * response.u - s * response.v), base.y + scale * (s * response.u + c * response.v));
         label = `v ${formatScientific(toDisplay(response.v, units, 'length'), 2)} ${lengthLabel}`;
       }
     }
     return <g className="result-cursor-marker" transform={`translate(${screen.x} ${screen.y})`} pointerEvents="none"><circle r="6" /><path d="M-13 0H13M0-13V13" /><g transform="translate(10 -31)"><rect width={Math.max(90, label.length * 5.5)} height="22" rx="7" /><text x="8" y="15">{label}</text></g></g>;
+  };
+
+  /**
+   * Sellos de Mmax/Mmin y Vmax/Vmin sobre la propia barra.
+   *
+   * Los valores y sus estaciones ya vienen resueltos en `criticalPoints`: aquí
+   * no se recalcula ni se re-muestrea nada, sólo se llevan a pantalla con la
+   * misma escala y el mismo lado que el diagrama que se está mirando. Antes el
+   * pico había que cazarlo moviendo el cursor sobre la curva o buscándolo en la
+   * tabla; ahora está donde ocurre.
+   */
+  const renderCriticalPoints = () => {
+    if (!resultsAllowed || !analysis?.success || !view.showResultOverlay) return null;
+    if (resultTab !== 'shear' && resultTab !== 'moment') return null;
+    const key = resultTab as DiagramQuantity;
+    const symbol = key === 'shear' ? 'V' : 'M';
+    const displayQuantity = key === 'moment' ? 'moment' as const : 'force' as const;
+    const valueUnit = key === 'moment' ? momentLabel : forceLabel;
+    const floor = Math.max(globalDiagramMax * CRITICAL_MARKER_MIN_SHARE, 1e-9);
+    const side = view.diagramSide === 'negative' ? -1 : 1;
+
+    const stamps = project.members.flatMap((member) => {
+      const result = resultMap.get(member.id);
+      const ni = nodeMap.get(member.i);
+      const nj = nodeMap.get(member.j);
+      if (!result || !ni || !nj || !result.criticalPoints.length) return [];
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) return [];
+      const nx = axis.normal.x * side;
+      const ny = axis.normal.y * side;
+      const diagramPixelScale = scaleFor(result);
+      return criticalExtremesFor(result.criticalPoints, key, floor).map(({ point, extreme }) => {
+        const grossX = (result.startOffset ?? 0) + point.x;
+        const baseX = ni.x + axis.c * grossX;
+        const baseY = ni.y + axis.s * grossX;
+        const offsetModel = (point.value * diagramPixelScale) / camera.scale;
+        const base = toScreen(baseX, baseY);
+        const tip = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
+        const value = `${symbol}${extreme === 'max' ? 'max' : 'min'} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${valueUnit}`;
+        const station = `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}`;
+        // El sello se aparta hacia el lado libre del diagrama, nunca hacia la
+        // barra: ahí es donde ya hay geometría y etiquetas de modelo.
+        const away = Math.sign(offsetModel) || 1;
+        const width = Math.max(value.length, station.length) * 5.1 + 11;
+        const anchorX = Math.min(Math.max(tip.x + nx * away * 9, 4), Math.max(size.width - width - 4, 4));
+        const anchorY = Math.min(Math.max(tip.y + ny * away * 9 - 11, 4), Math.max(size.height - 30, 4));
+        return <g
+          key={`${member.id}-${key}-${extreme}`}
+          className={`critical-point-marker is-${extreme}`}
+          data-critical-point={`${member.id}:${key}:${extreme}`}
+          pointerEvents="none"
+        >
+          <title>{`${member.id} · ${value} · ${station}`}</title>
+          <line className="critical-point-stem" x1={base.x} y1={base.y} x2={tip.x} y2={tip.y} />
+          <circle className="critical-point-dot" cx={tip.x} cy={tip.y} r="3.2" />
+          <g transform={`translate(${anchorX} ${anchorY})`}>
+            <rect className="critical-point-stamp" width={width} height="25" rx="6" />
+            <text className="critical-point-value" x="6" y="11">{value}</text>
+            <text className="critical-point-station" x="6" y="20">{station}</text>
+          </g>
+        </g>;
+      });
+    });
+    return stamps.length ? <g className={`critical-point-layer is-${key}`} aria-hidden="true">{stamps}</g> : null;
   };
 
   const renderInfluenceOverlay = () => {
@@ -382,6 +426,7 @@ const CanvasResultLayerImpl = ({
 
   return <>
     {showResults ? renderInfluenceOverlay() : null}
+    {showResults ? renderCriticalPoints() : null}
     {showResults ? <g className="reaction-layer">{project.nodes.map(renderReaction)}</g> : null}
   </>;
 };

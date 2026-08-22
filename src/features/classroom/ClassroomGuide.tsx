@@ -20,7 +20,6 @@ export interface ClassroomGuideProps {
 const stepCopy: Record<ClassroomJourneyStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
   build: { title: 'classroom.buildTitle', description: 'classroom.buildBody', action: 'classroom.buildAction' },
   define: { title: 'classroom.defineTitle', description: 'classroom.defineBody', action: 'classroom.defineAction' },
-  predict: { title: 'classroom.predictTitle', description: 'classroom.predictBody', action: 'classroom.predictAction' },
   analyze: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
   compare: { title: 'classroom.compareTitle', description: 'classroom.compareBody', action: 'classroom.compareAction' },
   conclude: { title: 'classroom.concludeTitle', description: 'classroom.concludeBody', action: 'classroom.concludeAction' },
@@ -39,9 +38,7 @@ export const ClassroomGuide = ({
   const session = useClassroomSession();
   const conclusionId = useId();
   const progress = suppliedProgress ?? deriveClassroomJourney(project, analysis, {
-    hasPredictions: session.hasPredictions,
     analysisRequested: session.analysisRequested,
-    resultsVisible: session.resultsVisible,
     conclusion: session.conclusion,
   });
   const visibleSteps = compact ? [progress.currentStep] : progress.steps;
@@ -50,19 +47,11 @@ export const ClassroomGuide = ({
     const step = progress.steps.find((candidate) => candidate.id === stepId);
     if (!step) return;
     if (step.action.kind === 'tool') onChooseTool?.(step.action.tool);
-    else if (step.action.kind === 'predict') {
-      session.startPredicting();
-      emitWorkspaceCommand('expand-mobile-results');
-      window.requestAnimationFrame(() => document.getElementById('classroom-prediction-title')?.focus());
-    } else if (step.action.kind === 'analyze') {
-      if (session.hasPredictions) {
-        session.markAnalysisRequested();
-        onAnalyze?.();
-      }
-      else session.startPredicting();
+    else if (step.action.kind === 'analyze') {
+      session.markAnalysisRequested();
+      onAnalyze?.();
     } else if (step.action.kind === 'compare') {
-      session.revealResults();
-      emitWorkspaceCommand('expand-mobile-results');
+      emitWorkspaceCommand('open-results');
     } else {
       window.requestAnimationFrame(() => document.getElementById(conclusionId)?.focus());
     }

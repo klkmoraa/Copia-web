@@ -1,0 +1,113 @@
+.dxf-import-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(880px, calc(100vh - 32px));
+}
+
+.dxf-experimental-note,
+.dxf-recovery-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warning, #a76c00) 10%, var(--surface, #fff));
+  color: var(--text, #282331);
+  font-size: 0.84rem;
+}
+
+.dxf-experimental-note span {
+  display: grid;
+  gap: 2px;
+}
+
+.dxf-file-field,
+.dxf-import-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dxf-file-field input {
+  padding: 12px;
+  border: 1px dashed var(--border, #d7cfdf);
+  border-radius: 12px;
+}
+
+.dxf-import-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.dxf-preview-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.dxf-preview-summary span,
+.dxf-preview-summary small {
+  color: var(--text-muted, #6c6377);
+}
+
+.dxf-preview {
+  width: 100%;
+  min-height: 190px;
+  background: var(--canvas-bg, #f8f5fb);
+  border-radius: 12px;
+}
+
+.dxf-preview rect {
+  fill: transparent;
+  stroke: var(--border, #d7cfdf);
+}
+
+.dxf-preview line {
+  stroke: var(--text, #282331);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.dxf-diagnostics {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dxf-diagnostics li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.8rem;
+}
+
+.dxf-diagnostics li.error,
+.dxf-blocking-message {
+  color: var(--danger, #a92f45);
+}
+
+.dxf-empty-state {
+  display: grid;
+  justify-items: center;
+  padding: 28px;
+  color: var(--text-muted, #6c6377);
+  text-align: center;
+}
+
+.dxf-blocking-message {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .dxf-import-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .dxf-preview {
+    min-height: 140px;
+  }
+}

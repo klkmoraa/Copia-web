@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultSettings } from '../data/defaultProject';
 import type { AnalysisResult, ProjectModel } from '../types';
-import { classifyAnalysisReliability, isTrustedForCombination, resolveReliability, worstLevel } from './reliability';
+import { classifyAnalysisReliability, isTrustedForCombination, resolveNumericQualityState, resolveReliability, worstLevel } from './reliability';
 import { analyzeProject } from './solver';
 
 const beam = (): ProjectModel => ({
@@ -57,6 +57,14 @@ const syntheticResult = (overrides: Partial<AnalysisResult> = {}): AnalysisResul
 });
 
 describe('clasificación de confiabilidad numérica', () => {
+  it('distingue los cinco estados comunicables sin inferir seguridad estructural', () => {
+    expect(resolveNumericQualityState(undefined)).toBe('unavailable');
+    expect(resolveNumericQualityState(syntheticResult())).toBe('stable');
+    expect(resolveNumericQualityState(syntheticResult({ conditionEstimate: 5e10 }))).toBe('limited');
+    expect(resolveNumericQualityState(syntheticResult({ conditionEstimate: 1e14 }))).toBe('unreliable');
+    expect(resolveNumericQualityState(analyzeProject(unsupportedBeam()))).toBe('failed');
+  });
+
   it('distingue cálculo terminado, resultado utilizable y resultado confiable', () => {
     const solved = analyzeProject(beam());
     expect(solved.success).toBe(true);

@@ -8,6 +8,7 @@
  */
 import type { AnalysisResult, DiagramQuantity, NodeModel } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
+import { readCanvasViewSettings } from '../../features/view/canvasViewSettings';
 import {
   distributedIntensityAt,
   grossRatioFromFlexible,
@@ -270,7 +271,7 @@ export const drawGlobalQuantityDiagram = (
   const modelPoint = (xValue: number, yValue: number) => projection.at(xValue, yValue);
   const maximum = Math.max(1e-12, ...analysis.memberResults.flatMap((result) => result.diagram.map((entry) => Math.abs(entry[quantity]))));
   const amplitude = Math.min(62, Math.max(34, Math.min(width, height) * 0.18));
-  const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+  const side = readCanvasViewSettings(project).diagramSide === 'negative' ? -1 : 1;
   const labelCandidates: Array<{ value: number; x: number; y: number; memberId: string; station: number }> = [];
   for (const member of project.members) {
     const ni = index.node(member.i);

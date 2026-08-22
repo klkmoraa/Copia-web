@@ -1,6 +1,8 @@
 import { createBlankProject } from '../data/defaultProject';
 import type { ProjectModel } from '../types';
 
+const CUSTOM_MEMBER_IDENTITY = { materialOrigin: 'custom', sectionOrigin: 'custom' } as const;
+
 export type ClassroomExerciseTemplateId = 'blank' | 'simple-beam' | 'cantilever' | 'portal-frame' | 'triangular-truss';
 export type ClassroomDifficulty = 'basic' | 'intermediate' | 'advanced';
 export type ClassroomTopic = 'inicio' | 'vigas' | 'diagramas' | 'pórticos' | 'armaduras' | 'hiperestática';
@@ -63,7 +65,7 @@ export const createSimpleBeamExercise = (parameters: Partial<ClassroomExercisePa
       { id: 'N2', x: length, y: 0, support: { type: 'roller', angleDeg: 90 } },
     ],
     members: [
-      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', E: 200e6, A: 0.01, I: 8e-5, density: 0, releases: { iMoment: true, jMoment: true } },
+      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.01, I: 8e-5, density: 0, releases: { iMoment: true, jMoment: true } },
     ],
     memberLoads: [
       {
@@ -84,7 +86,7 @@ export const createCantileverExercise = (parameters: Partial<ClassroomExercisePa
       { id: 'N2', x: length, y: 0, support: { type: 'none' } },
     ],
     members: [
-      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', E: 200e6, A: 0.01, I: 8e-5, density: 0 },
+      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.01, I: 8e-5, density: 0 },
     ],
     nodalLoads: [
       { id: 'NL1', nodeId: 'N2', caseId: 'LC1', fx: 0, fy: -loadMagnitude, mz: 0 },
@@ -105,9 +107,9 @@ export const createPortalFrameExercise = (parameters: Partial<ClassroomExerciseP
       { id: 'N4', x: length, y: height, support: { type: 'none' } },
     ],
     members: [
-      { id: 'M1', i: 'N1', j: 'N3', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
-      { id: 'M2', i: 'N3', j: 'N4', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
-      { id: 'M3', i: 'N2', j: 'N4', type: 'frame', E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
+      { id: 'M1', i: 'N1', j: 'N3', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
+      { id: 'M2', i: 'N3', j: 'N4', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
+      { id: 'M3', i: 'N2', j: 'N4', type: 'frame', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.005, I: 8.333e-5, density: 0 },
     ],
     memberLoads: [
       {
@@ -130,9 +132,9 @@ export const createTriangularTrussExercise = (parameters: Partial<ClassroomExerc
       { id: 'N3', x: length / 2, y: height, support: { type: 'none' } },
     ],
     members: [
-      { id: 'M1', i: 'N1', j: 'N2', type: 'truss', E: 200e6, A: 0.003, I: 0, density: 0 },
-      { id: 'M2', i: 'N1', j: 'N3', type: 'truss', E: 200e6, A: 0.003, I: 0, density: 0 },
-      { id: 'M3', i: 'N2', j: 'N3', type: 'truss', E: 200e6, A: 0.003, I: 0, density: 0 },
+      { id: 'M1', i: 'N1', j: 'N2', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0, density: 0 },
+      { id: 'M2', i: 'N1', j: 'N3', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0, density: 0 },
+      { id: 'M3', i: 'N2', j: 'N3', type: 'truss', ...CUSTOM_MEMBER_IDENTITY, E: 200e6, A: 0.003, I: 0, density: 0 },
     ],
     nodalLoads: [
       { id: 'NL1', nodeId: 'N3', caseId: 'LC1', fx: 0, fy: -loadMagnitude, mz: 0 },

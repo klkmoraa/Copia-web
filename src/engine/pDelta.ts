@@ -240,7 +240,7 @@ const solveLoadStep = (
   // load level is not simply a shrunk copy of the full-combination one.
   // Purely a reference vector for `relativeVectorChange`/amplification below —
   // never published — so it never needs the education trace.
-  const stepFirstOrder = analyzeProject(project, scaled, { includeEducationTrace: false });
+  const stepFirstOrder = analyzeProject(project, scaled, { includeEducationTrace: false, linearBackend: 'dense' });
   const firstOrderDisplacements = stepFirstOrder.success ? stepFirstOrder.displacements : [];
   // Physical scale this step's convergence is measured against; see
   // `relativeVectorChange`.
@@ -256,7 +256,11 @@ const solveLoadStep = (
     // `includeEducationTrace` intent is honored on all of them alike — building
     // it only on a guessed-final iteration would risk publishing a stale trace
     // if that guess were wrong.
-    const result = analyzeProject(project, scaled, { pDeltaAxialForces: axialForces, includeEducationTrace });
+    const result = analyzeProject(project, scaled, {
+      pDeltaAxialForces: axialForces,
+      includeEducationTrace,
+      linearBackend: 'dense',
+    });
     lastResult = result;
     if (!result.success) {
       return {
@@ -401,7 +405,7 @@ export const analyzeProjectPDelta = (
       suggestedFix: 'Corrige los valores en la configuración avanzada P-Delta, o bórralos para volver a los valores por defecto.',
     }], {
       pDelta: {
-        enabled: true, converged: false, loadStepsUsed: 0, totalIterations: 0,
+        enabled: true, experimental: true, converged: false, loadStepsUsed: 0, totalIterations: 0,
         initialResidual: Number.NaN, finalResidual: Number.NaN, finalDisplacementIncrement: Number.NaN,
         finalAxialChange: Number.NaN, finalEquilibriumResidual: Number.NaN,
         convergenceReason: '', failureReason: configProblems.join(' '),
@@ -411,12 +415,12 @@ export const analyzeProjectPDelta = (
   }
   const frameMemberIds = project.members.filter((member) => member.type === 'frame').map((member) => member.id);
 
-  const firstOrder = analyzeProject(project, combination, { includeEducationTrace });
+  const firstOrder = analyzeProject(project, combination, { includeEducationTrace, linearBackend: 'dense' });
   if (!firstOrder.success) {
     return {
       ...firstOrder,
       pDelta: {
-        enabled: true, converged: false, loadStepsUsed: 0, totalIterations: 0,
+        enabled: true, experimental: true, converged: false, loadStepsUsed: 0, totalIterations: 0,
         initialResidual: Number.NaN, finalResidual: Number.NaN, finalDisplacementIncrement: Number.NaN,
         finalAxialChange: Number.NaN, finalEquilibriumResidual: Number.NaN,
         convergenceReason: '',
@@ -484,6 +488,7 @@ export const analyzeProjectPDelta = (
 
   const pDelta: PDeltaDiagnostics = {
     enabled: true,
+    experimental: true,
     converged: true,
     loadStepsUsed,
     totalIterations,
@@ -525,6 +530,7 @@ const buildFailureResult = (
   const lastIteration = history.at(-1);
   const pDelta: PDeltaDiagnostics = {
     enabled: true,
+    experimental: true,
     converged: false,
     loadStepsUsed,
     totalIterations,

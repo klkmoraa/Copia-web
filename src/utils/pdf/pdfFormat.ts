@@ -5,7 +5,7 @@
  * its own thresholds (1e-5/1e7 here, 1e-4/1e8 in `clearNumber`, 1e-4/1e7 on screen), so a
  * value could appear in three shapes across the app, the PDF and the annex.
  */
-import type { DiagramQuantity, MatrixTrace, MemberLoad, ProjectModel } from '../../types';
+import type { DiagramQuantity, MemberLoad, ProjectModel } from '../../types';
 import { toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { formatNearZero, formatNumber } from '../numberFormat';
@@ -52,7 +52,6 @@ export const formatPolynomial = (
   });
   return terms.join(' ') || '0';
 };
-
 export const display = (project: ProjectModel, value: number, quantity: UnitQuantity): string =>
   `${number(toDisplay(value, project.settings.units, quantity))} ${unitLabel(project.settings.units, quantity)}`;
 
@@ -109,12 +108,4 @@ export const memberLoadDescription = (project: ProjectModel, index: ModelIndex, 
   return load.type === 'point'
     ? `${station}; Px=${display(project, load.px ?? 0, 'force')}, Py=${display(project, load.py ?? 0, 'force')}`
     : `${station}; M=${display(project, load.moment ?? 0, 'moment')}`;
-};
-
-export const matrixSummary = (label: string, matrix: MatrixTrace): string => {
-  const entries = matrix.entries
-    .filter((entry) => Math.abs(entry.value) > 1e-12)
-    .slice(0, 12)
-    .map((entry) => `[${entry.row + 1},${entry.column + 1}]=${number(entry.value, 5)}`);
-  return `${label}: ${matrix.rows} x ${matrix.columns}, ${matrix.entries.length} entradas; ${entries.join(', ') || 'matriz nula'}`;
 };

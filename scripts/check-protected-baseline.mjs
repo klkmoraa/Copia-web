@@ -2,8 +2,8 @@
 /**
  * Verifies that the protected mathematical boundary has not changed.
  *
- * The baseline is `docs/releases/0.8.1/PROTECTED_BASELINE.sha256`, produced at the
- * start of the 0.8.1 program. Any visual, export or documentation slice must leave
+ * The baseline is `scripts/protected-baseline.sha256`. Any visual, export or
+ * documentation slice must leave
  * these files byte-identical. A genuine engine change requires explicit user
  * authorization and a deliberate baseline refresh (`--update`).
  */
@@ -13,7 +13,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const BASELINE = path.join(ROOT, 'docs', 'releases', '0.8.1', 'PROTECTED_BASELINE.sha256');
+const BASELINE = path.join(ROOT, 'scripts', 'protected-baseline.sha256');
 const PROTECTED = [
   'src/engine',
   'src/workers',

@@ -44,16 +44,35 @@ export interface PortalDimensions {
   span: number;
 }
 
-/** Proporciones del pórtico de la referencia: ancho, achaparrado y estable. */
+/**
+ * Proporciones del pórtico (CRI-112).
+ *
+ * El dibujo anterior era ancho y achaparrado porque vivía a 208 px de ancho:
+ * a ese tamaño una figura esbelta se lee como un palito. Al pasar la pieza a
+ * ~460 px la relación se invierte —lo achaparrado se lee como pesado— así que
+ * la figura se redibuja para el tamaño en el que ahora vive: columnas más
+ * finas y bastante más altas, dintel más bajo y con más módulos, y un vano
+ * mayor. El resultado tiene proporción de pórtico real y deja ver el suelo
+ * entre las patas, que es lo que lo apoya en la mesa en vez de flotar.
+ *
+ * Ninguna de estas cifras está codificada en otro sitio: `buildPortal` es
+ * paramétrico y el encuadre del SVG se deriva del bounding box real, así que
+ * cambiar proporciones aquí no obliga a tocar el componente.
+ */
 export const DEFAULT_PORTAL: PortalDimensions = {
-  columnWidth: 22,
-  columnHeight: 116,
-  columnDepth: 22,
-  beamHeight: 26,
-  beamModules: 4,
-  baseWidth: 40,
-  baseHeight: 14,
-  span: 150,
+  columnWidth: 18,
+  columnHeight: 150,
+  columnDepth: 18,
+  /* `beamHeight` 21 → 15 (ajuste final CRI-112): el lima cubre dintel y
+     zapatas, y a la escala nueva (~430 px de ancho) un dintel del mismo
+     grosor de antes lee como más masa verde de la que la figura necesita. No
+     es un cambio de color — es la misma primitiva `beamHeight` que ya existía,
+     sólo con otro valor —, así que ni un HEX ni un token se tocan. */
+  beamHeight: 15,
+  beamModules: 6,
+  baseWidth: 34,
+  baseHeight: 11,
+  span: 178,
 };
 
 /**

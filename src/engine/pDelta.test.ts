@@ -85,6 +85,34 @@ describe('geometricStiffness', () => {
   });
 });
 
+describe('P-Delta: aislamiento del backend experimental', () => {
+  it('marca la corrida como experimental y fuerza LU denso aunque primer orden califique para sparse', () => {
+    const project = baseProject();
+    project.nodes = [];
+    project.members = [];
+    project.nodalLoads = [];
+    for (let index = 0; index < 25; index += 1) {
+      const baseId = `B${index}`;
+      const tipId = `T${index}`;
+      project.nodes.push(
+        { id: baseId, x: index * 2, y: 0, support: { type: 'fixed' } },
+        { id: tipId, x: index * 2, y: 3, support: { type: 'none' } },
+      );
+      project.members.push({ id: `M${index}`, i: baseId, j: tipId, type: 'frame', E, A: 0.02, I });
+      project.nodalLoads.push({ id: `H${index}`, nodeId: tipId, caseId: 'LC1', fx: H, fy: 0, mz: 0 });
+    }
+
+    const firstOrder = analyzeProject(project);
+    const secondOrder = analyzeProjectPDelta(project);
+
+    expect(firstOrder.success).toBe(true);
+    expect(firstOrder.linearSolver?.backend).toBe('sparse-ldlt');
+    expect(secondOrder.success).toBe(true);
+    expect(secondOrder.linearSolver).toMatchObject({ policy: 'dense', backend: 'dense-lu' });
+    expect(secondOrder.pDelta).toMatchObject({ experimental: true, converged: true });
+  });
+});
+
 describe('P-Delta: coincidencia con primer orden sin fuerza axial (requisito 1)', () => {
   it('reproduce el desplazamiento de primer orden cuando no hay fuerza axial', () => {
     const project = withTipLoads(cantilever(L, E, I), 0, H);

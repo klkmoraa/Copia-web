@@ -15,10 +15,26 @@ describe('Surface', () => {
     expect(el.getAttribute('data-pressed')).toBeNull();
   });
 
-  it('exposes each level as a data attribute', () => {
-    render(<><Surface level="flat" data-testid="a" /><Surface level="floating" data-testid="b" /></>);
-    expect(screen.getByTestId('a').getAttribute('data-level')).toBe('flat');
-    expect(screen.getByTestId('b').getAttribute('data-level')).toBe('floating');
+  it('exposes the complete six-level material grammar as data attributes', () => {
+    render(<>
+      <Surface level="flat" data-testid="base" />
+      <Surface level="inset" data-testid="inset" />
+      <Surface level="raised" data-testid="raised" />
+      <Surface level="floating" data-testid="floating" />
+      <Surface level="sheet" data-testid="sheet" />
+      <Surface level="modal" data-testid="modal" />
+    </>);
+
+    for (const [testId, level] of [
+      ['base', 'flat'],
+      ['inset', 'inset'],
+      ['raised', 'raised'],
+      ['floating', 'floating'],
+      ['sheet', 'sheet'],
+      ['modal', 'modal'],
+    ]) {
+      expect(screen.getByTestId(testId).getAttribute('data-level')).toBe(level);
+    }
   });
 
   it('marks the pressed state only when asked', () => {

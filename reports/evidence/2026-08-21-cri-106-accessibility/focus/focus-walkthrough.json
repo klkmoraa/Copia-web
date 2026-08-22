@@ -1,0 +1,198 @@
+[
+  {
+    "step": "Welcome Tab#1",
+    "tag": "SELECT",
+    "role": null,
+    "label": "EspañolEnglish",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#2",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Tema oscuro",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#3",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Lienzo en blanco",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#4",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Nuevo ejercicio",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#5",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Importar archivo",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#6",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Importar DXF",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#7",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Space 3DExperimental",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#8",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "1Bienvenida",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#9",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "2Cómo trabajas",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#10",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "3Por dónde",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#11",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "4Mesa",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Welcome Tab#12",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Continuar proyectoProyecto sin títuloMod",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#1",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Cargas",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#2",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Vista",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#3",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Resultados",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#4",
+    "tag": "BODY (foco perdido)"
+  },
+  {
+    "step": "Workspace Tab#5",
+    "tag": "A",
+    "role": null,
+    "label": "Saltar a la mesa de trabajo",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#6",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Ir al inicio",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#7",
+    "tag": "INPUT",
+    "role": null,
+    "label": "Nombre del proyecto",
+    "hasOutline": false,
+    "inert": false
+  },
+  {
+    "step": "Workspace Tab#8",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Abrir proyectos y ejemplos",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Model Doctor launcher (focus)",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Model Doctor",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Tras abrir Model Doctor",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Cerrar Model Doctor",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Tras Escape (¿vuelve el foco al lanzador?)",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Model Doctor",
+    "hasOutline": true,
+    "inert": false
+  },
+  {
+    "step": "Tras Ctrl+K (Command Palette)",
+    "tag": "INPUT",
+    "role": "combobox",
+    "label": "Busca una herramienta, una vista, un nudo o una barra…",
+    "hasOutline": false,
+    "inert": false
+  },
+  {
+    "step": "Tras Escape en Command Palette",
+    "tag": "BUTTON",
+    "role": null,
+    "label": "Model Doctor",
+    "hasOutline": true,
+    "inert": false
+  }
+]

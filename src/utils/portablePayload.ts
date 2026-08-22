@@ -1,5 +1,6 @@
 import type { AnalysisResult, ProjectModel } from '../types';
 import { APP_VERSION } from '../appVersion';
+import { resolveNumericQualityState } from '../engine/reliability';
 import {
   PORTABLE_FORMAT_VERSION,
   type PortableProvenance,
@@ -72,6 +73,9 @@ export const createPortablePayload = async (
     memberCount: project.members.length,
     loadCount: countLoads(project),
     analysisSuccess: analysis.success,
+    numericQuality: resolveNumericQualityState(analysis),
+    analysisMode: project.settings.analysisMode ?? 'first-order',
+    pDeltaExperimental: analysis.pDelta?.experimental === true,
   };
   const provenance: PortableProvenance = {
     generatedBy: 'structureCo',

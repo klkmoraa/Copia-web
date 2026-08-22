@@ -1,0 +1,376 @@
+{
+  "k0-portrait": {
+    "1-open": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 255,
+        "scrollTop": 0,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "2-row-selected": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 255,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "TD",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "3-draft": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 255,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "INPUT",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "4-locate-peek": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekClass": true,
+        "gridClientHeight": 0,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "svg",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "circle",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "5-restored": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 255,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    }
+  },
+  "k0-landscape": {
+    "1-open": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 57,
+        "scrollTop": 0,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "2-row-selected": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 57,
+        "scrollTop": 15,
+        "selectedRows": 1,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "TD",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "3-draft": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 57,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "INPUT",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "4-locate-peek": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekClass": true,
+        "gridClientHeight": 0,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "svg",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "circle",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "5-restored": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 57,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pendingDraft": 1,
+        "pendingText": "7.5"
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    }
+  }
+}

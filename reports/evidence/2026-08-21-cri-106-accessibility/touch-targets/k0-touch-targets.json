@@ -1,0 +1,182 @@
+[
+  {
+    "label": "stepper[0]",
+    "w": 119,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "stepper[1]",
+    "w": 40,
+    "h": 44,
+    "min": 40
+  },
+  {
+    "label": "stepper[2]",
+    "w": 40,
+    "h": 44,
+    "min": 40
+  },
+  {
+    "label": "stepper[3]",
+    "w": 100,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "welcome-launcher[0]",
+    "w": 358,
+    "h": 91,
+    "min": 91
+  },
+  {
+    "label": "tool-rail[0]",
+    "w": 47,
+    "h": 47,
+    "min": 47
+  },
+  {
+    "label": "tool-rail[1]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[2]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[3]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[4]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[5]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[6]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[7]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[8]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[9]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[10]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[11]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[12]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[13]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[14]",
+    "w": 47,
+    "h": 47,
+    "min": 47
+  },
+  {
+    "label": "tool-rail[15]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[16]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[17]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[18]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "tool-rail[19]",
+    "w": 48,
+    "h": 48,
+    "min": 48
+  },
+  {
+    "label": "topbar[0]",
+    "w": 44,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "topbar[1]",
+    "w": 44,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "topbar[2]",
+    "w": 44,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "topbar[3]",
+    "w": 44,
+    "h": 44,
+    "min": 44
+  },
+  {
+    "label": "topbar[4]",
+    "w": 36,
+    "h": 36,
+    "min": 36
+  }
+]

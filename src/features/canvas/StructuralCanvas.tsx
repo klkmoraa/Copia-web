@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -8,7 +8,7 @@ import { resolveMemberLocalLoads } from '../../engine/solver';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
-import { copyModelSelection, duplicateModelSelection, ensureNodeAtPoint, pasteModelClipboard, splitMemberAt, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
+import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
 import {
   buildIntersectionSnapCandidates,
   buildPerpendicularSnapCandidates,
@@ -19,12 +19,14 @@ import {
 } from '../../utils/snapping';
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
-import { useClassroomSession } from '../../store/ClassroomSessionContext';
+import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import {
   cameraForViewportResize,
   cameraForPinch,
   canvasPointerProfile,
+  LONG_PRESS_MS,
+  LONG_PRESS_JITTER_PX,
   midpoint,
   movedPastThreshold,
   panCameraFrom,
@@ -32,6 +34,7 @@ import {
   pointDistance,
   screenToModelPoint,
   shouldArmLongPress,
+  shouldTriggerLongPress,
   zoomCameraAt,
   type CanvasCamera,
   type ModelPoint,
@@ -43,7 +46,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
-import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
@@ -56,11 +59,88 @@ import {
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
+import { CanvasMiniMap } from './CanvasMiniMap';
+import { CanvasTouchLoupe } from './CanvasTouchLoupe';
+import { CandidatePicker } from './CanvasCandidatePicker';
+import {
+  activeCandidate,
+  candidateToSelection,
+  createCandidatePickerState,
+  cycleCandidatePicker,
+  type CandidatePickerState,
+  type CandidateTarget,
+} from './candidatePicker';
+import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
+import { ELASTIC_SATURATION_RATIO, elasticDemandGate, elasticDemandView, elasticIndexPaint, sectionElasticIndex } from '../results/elasticDemand';
+import { parseQuickEntryPair } from './quickEntry';
+import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
+import { RepeatActionOverlay } from './RepeatActionOverlay';
+import { prepareDuplicatePreview } from './duplicatePreview';
+import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
+import {
+  decodeStructuralClipboard,
+  encodeStructuralClipboard,
+  readClipboardText,
+  supportsClipboardReadText,
+} from './structuralClipboard';
+import {
+  createStructuralEditGeometryPreview,
+  prepareStructuralEdit,
+  resolveStructuralSelection,
+  structuralEditSnapshot,
+  type PreparedStructuralEdit,
+  type StructuralEditGeometryPreview,
+} from '../../data/structuralEditing';
+import {
+  buildStructuralEditRequest,
+  changeStructuralEditKind,
+  createStructuralEditDraft,
+  structuralEditCapabilities,
+  structuralEditSelectionAnchor,
+  updateDraftFromPointer,
+  type StructuralEditDraft,
+  type StructuralEditKind,
+} from './structuralEditUi';
+import { StructuralEditOverlay } from './StructuralEditOverlay';
+import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
+import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
+import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
+
+/**
+ * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
+ * código —ni el de los catálogos que ofrece— por arrancar el editor.
+ */
+const LazyStructureGeneratorSurface = lazy(() =>
+  import('../structure-generator/StructureGeneratorSurface')
+    .then((module) => ({ default: module.StructureGeneratorSurface })));
+import './phase2.css';
 
 type Camera = CanvasCamera;
 
 /** Shared empty list so the memoised snap candidates keep a stable identity. */
 const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
+
+/** Same empty set for an inactive edit, so pointer preview does not churn props. */
+const EMPTY_STRUCTURAL_EDIT_NODE_IDS: ReadonlySet<string> = new Set();
+
+/**
+ * Canvas geometry is memoised and must keep its event props stable while the
+ * transient edit ghost advances every animation frame. The ref is synchronised
+ * before paint, so events always dispatch to the latest canvas state without
+ * making both heavyweight geometry layers render for a preview-only update.
+ */
+const useStableCanvasEvent = <Args extends unknown[], Result>(callback: (...args: Args) => Result) => {
+  const callbackRef = useRef(callback);
+  useLayoutEffect(() => { callbackRef.current = callback; }, [callback]);
+  return useCallback((...args: Args) => callbackRef.current(...args), []);
+};
+
+/** `id` del grupo que la lupa táctil clona con `<use>` para ampliar la escena. */
+const CANVAS_SCENE_ID = 'canvas-scene-root';
+
+/** Misma razón: sin mapa de calor, la capa de geometría recibe siempre la misma referencia. */
+const EMPTY_DEMAND_RATIOS: ReadonlyMap<string, number> = new Map();
 
 interface Size {
   width: number;
@@ -91,6 +171,8 @@ type CanvasInteraction =
     pointerType: string;
     start: ScreenPoint;
     target: StructuralTarget;
+    candidates: CandidateTarget[];
+    anchor: ScreenPoint;
     tool: Tool;
     shiftKey: boolean;
   }
@@ -111,6 +193,14 @@ type CanvasInteraction =
     startDistance: number;
   }
   | { kind: 'node-drag'; pointerId: number; pointerType: string; nodeId: string; grabOffset: ModelPoint }
+  | {
+    kind: 'structural-edit';
+    pointerId: number;
+    pointerType: string;
+    start: ModelPoint;
+    grabOffset: ModelPoint;
+    beforeDraft: StructuralEditDraft;
+  }
   | ({ kind: 'selection-box' } & SelectionBox)
   | { kind: 'long-press'; pointerId: number; target: StructuralTarget };
 
@@ -129,6 +219,16 @@ const toolLabelKeys: Record<Tool, TranslationKey> = {
   cut: 'toolbar.cut',
   split: 'toolbar.split',
   delete: 'toolbar.delete',
+};
+
+const contextualActionLabelKeys: Record<ContextualActionId, TranslationKey> = {
+  copy: 'contextualActions.copy',
+  paste: 'contextualActions.paste',
+  duplicate: 'contextualActions.duplicate',
+  repeat: 'contextualActions.repeat',
+  delete: 'contextualActions.delete',
+  datasheet: 'contextualActions.datasheet',
+  structuralEdit: 'contextualActions.structuralEdit',
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -156,9 +256,12 @@ export const StructuralCanvas = ({
     activeTool,
     selection,
     resultTab,
+    setResultTab,
     selectedCombinationId,
     setSelection,
     setActiveTool,
+    executeProjectCommand,
+    executePreparedStructuralEdit,
     updateProject,
     replaceProject,
     beginProjectTransaction,
@@ -169,8 +272,15 @@ export const StructuralCanvas = ({
     resultCursor,
     influenceCanvasState,
   } = useProject();
-  const { resultsVisible } = useClassroomSession();
-  const { t } = useI18n();
+  const view = readCanvasViewSettings(project);
+  const { language, t } = useI18n();
+  const { t: phase2T } = usePhase2I18n(language);
+  /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
+  const surfaceBroker = useContext(SurfacePresentationContext);
+  const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
+  const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
+  const openContextualActionsSurface = surfaceBroker?.openSurface;
+  const closeContextualActionsSurface = surfaceBroker?.closeSurface;
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -185,7 +295,26 @@ export const StructuralCanvas = ({
   const [quickEntry, setQuickEntry] = useState({ first: '', second: '' });
   const [quickEntryMode, setQuickEntryMode] = useState<'delta' | 'polar'>('delta');
   const [quickEntryError, setQuickEntryError] = useState('');
-  const [cycleIndicator, setCycleIndicator] = useState<{ x: number; y: number; index: number; total: number } | null>(null);
+  const [candidatePicker, setCandidatePicker] = useState<CandidatePickerState | null>(null);
+  const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
+  const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
+  const [structuralEditDraft, setStructuralEditDraft] = useState<StructuralEditDraft | null>(null);
+  const [structuralEditLiveDraft, setStructuralEditLiveDraft] = useState<StructuralEditDraft | null>(null);
+  const [structuralEditPointerArmed, setStructuralEditPointerArmed] = useState(false);
+  const [structuralEditCommitError, setStructuralEditCommitError] = useState('');
+  /**
+   * Generador de estructuras. El lienzo guarda sólo lo que tiene que dibujar
+   * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
+   * en la superficie, que es la única que sabe traducirlos.
+   */
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [generatorGhost, setGeneratorGhost] = useState<StructureGenerationGhost | null>(null);
+  const [generatorOrigin, setGeneratorOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [generatorOriginPicking, setGeneratorOriginPicking] = useState(false);
+  const [generatorPickedOrigin, setGeneratorPickedOrigin] = useState<{ x: number; y: number; token: number } | null>(null);
+  const generatorOriginPickingRef = useRef(false);
+  const generatorPickTokenRef = useRef(0);
+  const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
   const cameraRef = useRef(camera);
@@ -197,13 +326,120 @@ export const StructuralCanvas = ({
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
-  const selectionCycleRef = useRef<{ x: number; y: number; at: number; key: string; index: number } | null>(null);
-  const cycleTimerRef = useRef<number | null>(null);
+  const structuralEditFrameRef = useRef<number | null>(null);
+  const pendingStructuralEditDraftRef = useRef<StructuralEditDraft | null>(null);
+  const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
+  const structuralEditApplyingRef = useRef(false);
+  const longPressMotionRef = useRef<{ pointerId: number; start: ScreenPoint; current: ScreenPoint } | null>(null);
   const previousSizeRef = useRef<Size | null>(null);
   const fittedProjectRef = useRef<string | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
   const [canvasFeedback, setCanvasFeedback] = useState('');
+  // This carries no clipboard availability or selection data. It only asks
+  // React to re-read the existing in-app clipboard ref after Copy succeeds.
+  const [, refreshClipboardAvailability] = useState(0);
+
+  // This intent is wholly derived from the canonical workspace selection. The
+  // broker stores only its presentation lifecycle, never a copied selection —
+  // and, being derived, it never outranks a surface the user opened. The
+  // Candidate Picker's precedence over it is the broker's, by surface role and
+  // in any opening order (CRI-108); it used to need a re-activation from here
+  // to win the "latest activation" race.
+  useEffect(() => {
+    if (!openContextualActionsSurface || !closeContextualActionsSurface) return;
+    if (selection) openContextualActionsSurface('contextualActions');
+    else closeContextualActionsSurface('contextualActions');
+  }, [closeContextualActionsSurface, openContextualActionsSurface, selection]);
+
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
+  const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;
+  const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
+  const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
+  const hasInAppClipboard = Boolean(clipboardRef.current);
+  const contextualActionAvailability = useMemo<ContextualActionAvailability>(() => {
+    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    return {
+      copy: Boolean(copyModelSelection(project, selection)),
+      paste: hasInAppClipboard || supportsClipboardReadText(browserClipboard),
+      duplicate: Boolean(selection && ['node', 'member', 'multi'].includes(selection.kind)),
+      repeat: Boolean(repeatCandidate),
+      datasheet: Boolean(selection),
+      structuralEdit: editCapabilities.structural,
+    };
+  }, [editCapabilities.structural, hasInAppClipboard, project, repeatCandidate, selection]);
+  const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
+    if (!structuralEditDraft) return { prepared: null, error: '' };
+    if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
+      return { prepared: null, error: t('modelDoctor.previewStaleBody') };
+    }
+    try {
+      return {
+        prepared: prepareStructuralEdit(project, buildStructuralEditRequest(project, structuralEditDraft)),
+        error: '',
+      };
+    } catch (error) {
+      return { prepared: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
+    }
+  }, [project, structuralEditDraft, t]);
+  const structuralEditLivePreview = useMemo((): { preview: StructuralEditGeometryPreview | null; error: string } => {
+    if (!structuralEditLiveDraft || structuralEditPreview.error) return { preview: null, error: structuralEditPreview.error };
+    try {
+      return {
+        preview: createStructuralEditGeometryPreview(project, buildStructuralEditRequest(project, structuralEditLiveDraft)),
+        error: '',
+      };
+    } catch (error) {
+      return { preview: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
+    }
+  }, [project, structuralEditLiveDraft, structuralEditPreview.error, t]);
+  const structuralEditExcludedNodeIds = useMemo(() => {
+    // A gesture only changes parameters. Its structural closure is fixed from
+    // the source draft, so do not rebuild this O(N + M) set on every rAF frame.
+    const draft = structuralEditDraft;
+    if (!draft) return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
+    try {
+      return new Set(resolveStructuralSelection(project, draft.selection).nodeIds);
+    } catch {
+      return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
+    }
+  }, [project, structuralEditDraft]);
+  const structuralEditFocusSession = structuralEditDraft?.sourceSnapshot ?? null;
+  useEffect(() => {
+    if (!structuralEditFocusSession) return undefined;
+    // Run after the surface is committed. This is deliberately session-scoped
+    // (not draft-scoped), so numeric typing never steals focus back but a mobile
+    // sheet handoff reliably lands on the first parameter field.
+    const frame = window.requestAnimationFrame(() => {
+      hostRef.current?.querySelector<HTMLInputElement>('.structural-edit-surface input')?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [structuralEditFocusSession]);
+  const duplicatePreview = useMemo(() => {
+    if (!duplicateDraft) return null;
+    try {
+      if (!duplicateDraft.x.trim() || !duplicateDraft.y.trim()) throw new Error(phase2T('canvas.invalidOffset'));
+      return {
+        prepared: prepareDuplicatePreview(project, duplicateDraft.selection, {
+          x: Number(duplicateDraft.x),
+          y: Number(duplicateDraft.y),
+        }),
+        error: '',
+      };
+    } catch (error) {
+      return { prepared: null, error: error instanceof Error ? error.message : phase2T('canvas.invalidOffset') };
+    }
+  }, [duplicateDraft, phase2T, project]);
+
+  const confirmDuplicate = useCallback(async () => {
+    if (!duplicatePreview?.prepared) return;
+    await executeProjectCommand(duplicatePreview.prepared.command);
+    const nodeIds = duplicatePreview.prepared.addedNodes.map((node) => node.id);
+    const memberIds = duplicatePreview.prepared.addedMembers.map((member) => member.id);
+    if (memberIds.length === 1 && nodeIds.length === 0) setSelection({ kind: 'member', id: memberIds[0] });
+    else if (nodeIds.length === 1 && memberIds.length === 0) setSelection({ kind: 'node', id: nodeIds[0] });
+    else setSelection({ kind: 'multi', nodeIds, memberIds });
+    setDuplicateDraft(null);
+  }, [duplicatePreview, executeProjectCommand, setSelection]);
 
   const nodeMap = useMemo(() => new Map(project.nodes.map((node) => [node.id, node])), [project.nodes]);
   const memberMap = useMemo(() => new Map(project.members.map((member) => [member.id, member])), [project.members]);
@@ -214,10 +450,10 @@ export const StructuralCanvas = ({
   }), [nodeMap, project.members]);
   const baseSnapCandidates = useMemo<SnapCandidate[]>(() => {
     const candidates: SnapCandidate[] = [];
-    if (project.settings.snapTargets?.nodes ?? true) {
+    if (view.snapTargets.nodes) {
       for (const node of project.nodes) candidates.push({ x: node.x, y: node.y, kind: 'node', sourceIds: [node.id] });
     }
-    if (project.settings.snapTargets?.midpoints ?? true) {
+    if (view.snapTargets.midpoints) {
       for (const segment of snapSegments) candidates.push({
         x: (segment.start.x + segment.end.x) / 2,
         y: (segment.start.y + segment.end.y) / 2,
@@ -225,74 +461,31 @@ export const StructuralCanvas = ({
         sourceIds: [segment.id],
       });
     }
-    if ((project.settings.snapTargets?.intersections ?? true) && snapSegments.length <= 500) {
+    if (view.snapTargets.intersections && snapSegments.length <= 500) {
       candidates.push(...buildIntersectionSnapCandidates(snapSegments));
     }
     return candidates;
-  }, [project.nodes, project.settings.snapTargets, snapSegments]);
+  }, [project.nodes, snapSegments, view.snapTargets]);
   const drawingOrigin = useMemo(() => (memberStart ? nodeMap.get(memberStart) ?? null : null), [memberStart, nodeMap]);
   // Perpendicular feet only depend on the drawing origin and the geometry, never
   // on the pointer, so they are built per model revision instead of per frame.
   const perpendicularSnapCandidates = useMemo<SnapCandidate[]>(() => (
-    drawingOrigin && (project.settings.snapTargets?.perpendicular ?? true)
+    drawingOrigin && view.snapTargets.perpendicular
       ? buildPerpendicularSnapCandidates(drawingOrigin, snapSegments)
       : EMPTY_SNAP_CANDIDATES
-  ), [drawingOrigin, project.settings.snapTargets, snapSegments]);
+  ), [drawingOrigin, snapSegments, view.snapTargets.perpendicular]);
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
-  /** P6 — Heatmap: demand ratio η per member. Pure presentation — reads frozen analysis data, never writes. */
-  const heatmapRatios = useMemo<Map<string, number>>(() => {
-    if (!analysis?.success || !layers.heatmap) return new Map();
-    const fy = 250_000; // kPa = kN/m², ref. S275
-    const ratioMap = new Map<string, number>();
-    for (const result of analysis.memberResults) {
-      const member = memberMap.get(result.memberId);
-      if (!member || member.type === 'rigid') continue;
-      const area = member.A > 0 ? member.A : 0.005;
-      const inertia = member.I > 0 ? member.I : 0.00008;
-      const depth = Math.sqrt((12 * inertia) / area) || 0.3;
-      const Wel = inertia / (depth / 2) || 0.0005;
-      const maxAxial = Math.max(Math.abs(result.maxAxial ?? 0), Math.abs(result.minAxial ?? 0));
-      const maxMoment = Math.max(Math.abs(result.maxMoment ?? 0), Math.abs(result.minMoment ?? 0));
-      const sigmaAxial = maxAxial / area;   // kPa
-      const sigmaBending = maxMoment / Wel;  // kPa
-      const ratio = (sigmaAxial + sigmaBending) / fy;
-      ratioMap.set(result.memberId, ratio);
-    }
-    return ratioMap;
-  }, [analysis, layers.heatmap, memberMap]);
   const units = project.settings.units;
-  const selectionFilter = useMemo(() => project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }, [project.settings.selectionFilter]);
-  const resultsAllowed = project.settings.calculationMode !== 'classroom' || resultsVisible;
+  const selectionFilter = view.selectionFilter;
+  const resultsAllowed = true;
   const lengthLabel = unitLabel(units, 'length');
   const forceLabel = unitLabel(units, 'force');
   const momentLabel = unitLabel(units, 'moment');
   const distributedLabel = unitLabel(units, 'distributedForce');
   const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId) ?? null;
   const selectionVisualState = useMemo(() => buildCanvasSelectionVisualState(selection), [selection]);
-
-  /** P12 — Dynamic Mode Shapes: Harmonic oscillation loop for deformed shape */
-  const [oscillating, setOscillating] = useState(false);
-  const [oscillationFactor, setOscillationFactor] = useState(1);
-
-  useEffect(() => {
-    if (!oscillating || resultTab !== 'deformed' || !analysis?.success) {
-      setOscillationFactor(1);
-      return undefined;
-    }
-    let frame: number;
-    const startTime = performance.now();
-    const loop = (now: number) => {
-      const elapsed = (now - startTime) / 1000;
-      // Harmonic wave: sin(2*pi*f*t) with f = 0.85 Hz
-      const factor = Math.sin(elapsed * Math.PI * 2 * 0.85);
-      setOscillationFactor(factor);
-      frame = requestAnimationFrame(loop);
-    };
-    frame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(frame);
-  }, [oscillating, resultTab, analysis?.success]);
   const loadPlacementInstruction = activeTool === 'pointLoad'
     ? t('canvas.placePointLoad')
     : activeTool === 'distributedLoad'
@@ -301,6 +494,66 @@ export const StructuralCanvas = ({
         ? t('canvas.placeMoment')
         : null;
   const loadsLayerVisible = layers.loads || loadPlacementInstruction !== null;
+  /**
+   * El mapa de demanda es una lectura derivada, no un estado: se recalcula sólo
+   * cuando la capa está encendida, así el coste no lo paga quien no lo pidió.
+   *
+   * Sale del mismo view-model que el Resumen y el Inspector, de modo que una
+   * barra sin Fy o sin W verificables —o un análisis no confiable— simplemente
+   * no aparece en el mapa: conserva su color de dibujo técnico en lugar de
+   * recibir un η fabricado.
+   */
+  const demandMapActive = layers.heatmap && resultsAllowed;
+  const demandView = useMemo(
+    () => demandMapActive ? elasticDemandView(project, analysis) : null,
+    [analysis, demandMapActive, project],
+  );
+  const heatmapRatios = demandView?.ratios ?? EMPTY_DEMAND_RATIOS;
+  /**
+   * Leyenda del mapa: sin ella el color es un adorno. Declara qué significa la
+   * rampa, cuántos miembros entraron realmente en la lectura y si algún η superó
+   * el techo de la rampa —punto en el que el color deja de distinguir magnitud y
+   * hay que leer el número—.
+   */
+  const demandLegend = useMemo(() => {
+    if (!demandView) return null;
+    const ratios = [...demandView.ratios.values()];
+    return {
+      evaluated: demandView.status === 'available' ? demandView.evaluated : 0,
+      total: demandView.total,
+      unevaluated: demandView.unevaluated.size,
+      saturated: ratios.some((ratio) => elasticIndexPaint(ratio).saturated),
+      maxRatio: ratios.length ? Math.max(...ratios) : null,
+    };
+  }, [demandView]);
+  /** Rectángulo de modelo que cabe hoy en pantalla; es lo que el radar enmarca. */
+  const minimapViewport = useMemo(() => {
+    if (!canvasMeasured || !size.width || !size.height) return null;
+    const topLeft = screenToModelPoint({ x: 0, y: 0 }, camera);
+    const bottomRight = screenToModelPoint({ x: size.width, y: size.height }, camera);
+    return {
+      minX: Math.min(topLeft.x, bottomRight.x),
+      maxX: Math.max(topLeft.x, bottomRight.x),
+      minY: Math.min(topLeft.y, bottomRight.y),
+      maxY: Math.max(topLeft.y, bottomRight.y),
+    };
+  }, [camera, canvasMeasured, size.height, size.width]);
+  /**
+   * Tarjeta contextual: el índice elástico *en esa sección concreta*, no el de
+   * la barra entera. Comparte `sectionElasticIndex` y la puerta de confiabilidad
+   * con los paneles, así que aquí tampoco se publica un η sin Fy o sin W
+   * verificables: en ese caso el corte dice «no disponible» y explica por qué.
+   */
+  const cutDemand = useMemo(() => {
+    if (!cut?.point || !resultsAllowed) return null;
+    const member = memberMap.get(cut.memberId);
+    if (!member) return null;
+    if (elasticDemandGate(analysis).blocker) return { status: 'unavailable' as const };
+    const index = sectionElasticIndex(member, cut.point.axial, cut.point.moment);
+    return index.status === 'available'
+      ? { status: 'available' as const, ratio: index.ratio, ...elasticIndexPaint(index.ratio) }
+      : { status: 'unavailable' as const };
+  }, [analysis, cut, memberMap, resultsAllowed]);
   const cutEquilibrium = useMemo(() => {
     if (!cut?.point || !analysis?.success) return null;
     const memberResult = resultMap.get(cut.memberId);
@@ -358,10 +611,41 @@ export const StructuralCanvas = ({
     });
   }, [moveNodeTransient]);
 
+  const flushStructuralEditDraft = useCallback(() => {
+    if (structuralEditFrameRef.current !== null) {
+      window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+    }
+    const pending = pendingStructuralEditDraftRef.current ?? structuralEditLiveDraftRef.current;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
+    if (pending) setStructuralEditDraft(pending);
+    setStructuralEditLiveDraft(null);
+  }, []);
+
+  const scheduleStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
+    pendingStructuralEditDraftRef.current = draft;
+    if (structuralEditFrameRef.current !== null) return;
+    structuralEditFrameRef.current = window.requestAnimationFrame(() => {
+      structuralEditFrameRef.current = null;
+      const pending = pendingStructuralEditDraftRef.current;
+      pendingStructuralEditDraftRef.current = null;
+      if (pending) {
+        structuralEditLiveDraftRef.current = pending;
+        setStructuralEditLiveDraft(pending);
+      }
+    });
+  }, []);
+
   const cancelNodeDragTransaction = useCallback(() => {
     pendingNodeMoveRef.current = null;
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
+    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     nodeMoveFrameRef.current = null;
+    structuralEditFrameRef.current = null;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
     cancelProjectTransaction();
   }, [cancelProjectTransaction]);
 
@@ -378,12 +662,14 @@ export const StructuralCanvas = ({
     if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
-    if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
+    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
     cameraFrameRef.current = null;
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
-    cycleTimerRef.current = null;
+    structuralEditFrameRef.current = null;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
     feedbackTimerRef.current = null;
   }, []);
 
@@ -392,6 +678,7 @@ export const StructuralCanvas = ({
       window.clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    longPressMotionRef.current = null;
   }, []);
 
   const toScreen = useCallback((x: number, y: number) => ({ x: camera.x + x * camera.scale, y: camera.y - y * camera.scale }), [camera]);
@@ -469,6 +756,10 @@ export const StructuralCanvas = ({
       const scale = Math.max(85, cameraRef.current.scale);
       updateCamera({ scale, x: size.width / 2 - point.x * scale, y: size.height / 2 + point.y * scale });
       showCanvasFeedback(t('canvas.objectCentered', { id: detail.id }));
+      // "Localizar" from a peeked Datasheet/Doctor moves DOM focus here: the
+      // background stops being inert the moment the surface degrades, and
+      // leaving focus behind on a now-shrunk handle would strand it (CRI-102).
+      window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
     };
     return onWorkspaceCommand('focus-object', focusObject);
   }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
@@ -495,36 +786,37 @@ export const StructuralCanvas = ({
     return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [project.name, showCanvasFeedback, t]);
 
-  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeId?: string) => {
+  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeIds?: string | ReadonlySet<string>) => {
     // Reuse the memoised arrays untouched whenever nothing has to be merged or
     // excluded: a pointer move should not copy the whole candidate list.
     const merged = perpendicularSnapCandidates.length
       ? [...baseSnapCandidates, ...perpendicularSnapCandidates]
       : baseSnapCandidates;
-    const candidates = excludedNodeId
-      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.includes(excludedNodeId)))
+    const excluded = typeof excludedNodeIds === 'string' ? new Set([excludedNodeIds]) : excludedNodeIds;
+    const candidates = excluded?.size
+      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.some((id) => excluded.has(id))))
       : merged;
     const result = resolveSnap(point, {
-      enabled: project.settings.snap,
-      gridSize: project.settings.gridSize,
+      enabled: view.snap,
+      gridSize: view.gridSize,
       pixelsPerUnit: camera.scale,
       candidates,
       modes: {
-        grid: project.settings.snapTargets?.grid ?? true,
-        node: project.settings.snapTargets?.nodes ?? true,
-        midpoint: project.settings.snapTargets?.midpoints ?? true,
-        intersection: project.settings.snapTargets?.intersections ?? true,
-        perpendicular: Boolean(drawingOrigin) && (project.settings.snapTargets?.perpendicular ?? true),
+        grid: view.snapTargets.grid,
+        node: view.snapTargets.nodes,
+        midpoint: view.snapTargets.midpoints,
+        intersection: view.snapTargets.intersections,
+        perpendicular: Boolean(drawingOrigin) && view.snapTargets.perpendicular,
       },
     });
     const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
     setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
     return result.point;
-  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, project.settings.gridSize, project.settings.snap, project.settings.snapTargets]);
+  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, view]);
 
-  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeId?: string) => {
+  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
     const local = localScreenPoint(clientX, clientY);
-    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeId);
+    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
   }, [localScreenPoint, snapPoint]);
 
   const nodeDragPointFromClient = useCallback((
@@ -540,35 +832,13 @@ export const StructuralCanvas = ({
 
   const deleteSelection = useCallback((target: Selection = selection) => {
     if (!target) return;
-    updateProject((draft) => {
-      if (target.kind === 'multi') {
-        const nodeIds = new Set(target.nodeIds);
-        const memberIds = new Set(target.memberIds);
-        for (const member of draft.members) if (nodeIds.has(member.i) || nodeIds.has(member.j)) memberIds.add(member.id);
-        draft.nodes = draft.nodes.filter((node) => !nodeIds.has(node.id));
-        draft.members = draft.members.filter((member) => !memberIds.has(member.id));
-        draft.nodalLoads = draft.nodalLoads.filter((load) => !nodeIds.has(load.nodeId));
-        draft.memberLoads = draft.memberLoads.filter((load) => !memberIds.has(load.memberId));
-        draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((item) => !nodeIds.has(item.nodeId));
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => !memberIds.has(effect.memberId));
-      } else if (target.kind === 'node') {
-        draft.nodes = draft.nodes.filter((node) => node.id !== target.id);
-        const deletedMembers = draft.members.filter((member) => member.i === target.id || member.j === target.id).map((member) => member.id);
-        draft.members = draft.members.filter((member) => !deletedMembers.includes(member.id));
-        draft.nodalLoads = draft.nodalLoads.filter((load) => load.nodeId !== target.id);
-        draft.memberLoads = draft.memberLoads.filter((load) => !deletedMembers.includes(load.memberId));
-        draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((item) => item.nodeId !== target.id);
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => !deletedMembers.includes(effect.memberId));
-      } else if (target.kind === 'member') {
-        draft.members = draft.members.filter((member) => member.id !== target.id);
-        draft.memberLoads = draft.memberLoads.filter((load) => load.memberId !== target.id);
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => effect.memberId !== target.id);
-      } else if (target.kind === 'nodalLoad') draft.nodalLoads = draft.nodalLoads.filter((load) => load.id !== target.id);
-      else draft.memberLoads = draft.memberLoads.filter((load) => load.id !== target.id);
-      return draft;
-    });
+    if (target.kind === 'member') void executeProjectCommand({ kind: 'member.delete', description: `Eliminar miembro ${target.id}`, memberId: target.id });
+    else if (target.kind === 'node') void executeProjectCommand({ kind: 'node.delete', description: 'Editar proyecto', nodeId: target.id });
+    else if (target.kind === 'multi') void executeProjectCommand({ kind: 'selection.delete', description: 'Editar proyecto', selection: target });
+    else if (target.kind === 'nodalLoad') updateProject((draft) => ({ ...draft, nodalLoads: draft.nodalLoads.filter((load) => load.id !== target.id) }));
+    else updateProject((draft) => ({ ...draft, memberLoads: draft.memberLoads.filter((load) => load.id !== target.id) }));
     setSelection(null);
-  }, [selection, setSelection, updateProject]);
+  }, [executeProjectCommand, selection, setSelection, updateProject]);
 
   const addNode = (point: { x: number; y: number }) => {
     let id = '';
@@ -577,10 +847,11 @@ export const StructuralCanvas = ({
       return draft;
     });
     if (id) setSelection({ kind: 'node', id });
+    if (activeTool === 'node') setRepeatRecipe(null);
     return id;
   };
 
-  const createMemberEndpoint = (point: { x: number; y: number }) => {
+  const createMemberEndpoint = async (point: { x: number; y: number }) => {
     if (!memberStart) {
       const id = addNode(point);
       setMemberStart(id);
@@ -591,39 +862,32 @@ export const StructuralCanvas = ({
       setQuickEntryError(t('canvas.endpointSeparated'));
       return;
     }
-    let nodeId = '';
     let memberId = '';
-    updateProject((draft) => {
-      nodeId = ensureNodeAtPoint(draft, point).nodeId;
-      if (nodeId === memberStart) return draft;
-      const existing = draft.members.find((member) =>
-        (member.i === memberStart && member.j === nodeId) || (member.i === nodeId && member.j === memberStart));
-      if (existing) {
-        memberId = existing.id;
-        return draft;
-      }
-      memberId = nextId('M', draft.members.map((member) => member.id));
-      draft.members.push({ id: memberId, i: memberStart, j: nodeId, type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 });
-      return draft;
+    const template = repeatRecipe?.kind === 'member'
+      ? repeatRecipe.template
+      : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+    const result = await executeProjectCommand({
+      kind: 'member.createAtPoint',
+      description: 'Crear miembro',
+      startNodeId: memberStart,
+      point,
+      template,
     });
+    if (result?.kind === 'member.createAtPoint') memberId = result.memberId;
     setMemberStart(null);
     if (memberId) setSelection({ kind: 'member', id: memberId });
     setQuickEntry({ first: '', second: '' });
     setQuickEntryError('');
+    setRepeatRecipe(null);
   };
 
   const submitQuickEntry = () => {
-    const first = Number(quickEntry.first);
-    const second = Number(quickEntry.second);
-    if (
-      quickEntry.first.trim() === ''
-      || quickEntry.second.trim() === ''
-      || !Number.isFinite(first)
-      || !Number.isFinite(second)
-    ) {
+    const parsed = parseQuickEntryPair(quickEntry.first, quickEntry.second);
+    if (!parsed.ok) {
       setQuickEntryError(t('canvas.twoValidNumbers'));
       return;
     }
+    const { first, second } = parsed.value;
     if (activeTool === 'node') {
       addNode({ x: fromDisplay(first, units, 'length'), y: fromDisplay(second, units, 'length') });
       setQuickEntry({ first: '', second: '' });
@@ -633,13 +897,72 @@ export const StructuralCanvas = ({
     const startNode = memberStart ? nodeMap.get(memberStart) : null;
     if (!startNode) return;
     if (quickEntryMode === 'delta') {
-      createMemberEndpoint({ x: startNode.x + fromDisplay(first, units, 'length'), y: startNode.y + fromDisplay(second, units, 'length') });
+      void createMemberEndpoint({ x: startNode.x + fromDisplay(first, units, 'length'), y: startNode.y + fromDisplay(second, units, 'length') });
     } else {
       const length = fromDisplay(first, units, 'length');
       const radians = second * Math.PI / 180;
-      createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
+      void createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
     }
   };
+
+  const cancelQuickEntry = () => {
+    setQuickEntry({ first: '', second: '' });
+    setQuickEntryError('');
+    if (activeTool === 'member') setMemberStart(null);
+  };
+
+  const activateRepeat = useCallback(() => {
+    const recipe = resolveRepeatRecipe(project, selection);
+    if (!recipe) return;
+    setRepeatRecipe(recipe);
+    setMemberStart(null);
+    setActiveTool(recipe.tool);
+    showCanvasFeedback(t('canvas.repeatWaiting', { tool: t(toolLabelKeys[recipe.tool]) }));
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [project, selection, setActiveTool, showCanvasFeedback, t]);
+
+  const copyStructuralSelection = useCallback(async () => {
+    const copied = copyModelSelection(project, selection);
+    if (!copied) return;
+    clipboardRef.current = copied;
+    pasteCountRef.current = 1;
+    refreshClipboardAvailability((revision) => revision + 1);
+    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    if (typeof browserClipboard?.writeText === 'function') {
+      try {
+        await browserClipboard.writeText(encodeStructuralClipboard(copied));
+      } catch {
+        // The existing in-app clipboard remains a valid touch fallback.
+      }
+    }
+    showCanvasFeedback(t('contextualActions.copyReady'));
+  }, [project, selection, showCanvasFeedback, t]);
+
+  const pasteStructuralSelection = useCallback(async () => {
+    const read = await readClipboardText();
+    const systemClipboard = read.status === 'read' ? decodeStructuralClipboard(read.text) : null;
+    const clipboard = systemClipboard ?? clipboardRef.current;
+    if (!clipboard) {
+      showCanvasFeedback(t('contextualActions.pasteUnavailable'));
+      return;
+    }
+    clipboardRef.current = clipboard;
+    const step = Math.max(project.settings.gridSize || 1, 0.25) * pasteCountRef.current;
+    const next = structuredClone(project);
+    const pasted = pasteModelClipboard(next, clipboard, { x: step, y: step });
+    replaceProject(next);
+    pasteCountRef.current += 1;
+    setSelection(pasted);
+    showCanvasFeedback(systemClipboard
+      ? t('contextualActions.pasteReady')
+      : t('contextualActions.pasteFallback'));
+  }, [project, replaceProject, setSelection, showCanvasFeedback, t]);
+
+  const startDuplicate = useCallback(() => {
+    if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
+    const step = Math.max(project.settings.gridSize || 1, 0.25);
+    setDuplicateDraft({ selection: structuredClone(selection), x: String(step), y: String(step) });
+  }, [project.settings.gridSize, selection]);
 
   const capturePointer = useCallback((pointerId: number) => {
     try { svgRef.current?.setPointerCapture(pointerId); } catch { /* Pointer may already be cancelled. */ }
@@ -656,6 +979,81 @@ export const StructuralCanvas = ({
     else setSelection({ kind: target.kind, id: target.id });
   }, [setSelection]);
 
+  const candidateTargetsAtPoint = useCallback((
+    clientX: number,
+    clientY: number,
+    fallback: StructuralTarget,
+  ): CandidateTarget[] => {
+    const candidates: CandidateTarget[] = [];
+    const seen = new Set<string>();
+    const elements = document.elementsFromPoint?.(clientX, clientY) ?? [];
+    const append = (kind: string | undefined, id: string | undefined) => {
+      if (!id || !kind || !['node', 'member', 'nodalLoad', 'memberLoad'].includes(kind)) return;
+      if (kind === 'node' && !selectionFilter.nodes) return;
+      if (kind === 'member' && !selectionFilter.members) return;
+      if ((kind === 'nodalLoad' || kind === 'memberLoad') && !selectionFilter.loads) return;
+      const key = `${kind}:${id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      candidates.push({ kind: kind as CandidateTarget['kind'], id });
+    };
+    for (const element of elements) {
+      const object = element.closest<SVGElement>('[data-structure-kind][data-structure-id]');
+      append(object?.dataset.structureKind, object?.dataset.structureId);
+    }
+    if (fallback.kind !== 'background') append(fallback.kind, fallback.id);
+    // SVG hit-testing does not consistently report a member exactly at one of
+    // its endpoint nodes. The model already owns that exact incidence through
+    // IDs, so complete the node stack from topology rather than tolerances or
+    // coordinate comparisons. A shared node can therefore offer its node,
+    // attached members, and its nodal loads as one precise candidate set.
+    if (fallback.kind === 'node') {
+      for (const member of project.members) {
+        if (member.i === fallback.id || member.j === fallback.id) append('member', member.id);
+      }
+      for (const load of project.nodalLoads) {
+        if (load.nodeId === fallback.id) append('nodalLoad', load.id);
+      }
+    }
+    return candidates;
+  }, [project.members, project.nodalLoads, selectionFilter.loads, selectionFilter.members, selectionFilter.nodes]);
+
+  const closeCandidatePicker = useCallback(() => {
+    setCandidatePicker(null);
+    surfaceBroker?.closeSurface('candidatePicker');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [surfaceBroker]);
+
+  const openCandidatePicker = useCallback((candidates: CandidateTarget[], anchor: ScreenPoint, additive = false): boolean => {
+    const picker = createCandidatePickerState(candidates, selection, {
+      x: clamp(anchor.x + 12, 8, Math.max(8, size.width - 260)),
+      y: clamp(anchor.y + 12, 8, Math.max(8, size.height - 260)),
+    }, 0, additive);
+    if (!picker) return false;
+    setCandidatePicker(picker);
+    surfaceBroker?.openSurface('candidatePicker');
+    return true;
+  }, [selection, size.height, size.width, surfaceBroker]);
+
+  const confirmCandidatePicker = useCallback(() => {
+    if (!candidatePicker) return;
+    const candidate = activeCandidate(candidatePicker);
+    if (candidatePicker.additive && (candidate.kind === 'node' || candidate.kind === 'member')) {
+      setSelection(toggleStructuralSelection(candidatePicker.previousSelection, { kind: candidate.kind, id: candidate.id }));
+    } else {
+      setSelection(candidateToSelection(candidate));
+    }
+    closeCandidatePicker();
+  }, [candidatePicker, closeCandidatePicker, setSelection]);
+
+  const setCandidatePickerIndex = useCallback((index: number) => {
+    setCandidatePicker((current) => {
+      if (!current) return null;
+      const activeIndex = clamp(index, 0, current.candidates.length - 1);
+      return activeIndex === current.activeIndex ? current : { ...current, activeIndex };
+    });
+  }, []);
+
   const startPan = useCallback((
     pointerId: number,
     pointerType: string,
@@ -671,31 +1069,120 @@ export const StructuralCanvas = ({
     });
   }, [capturePointer, clearLongPressTimer, transitionInteraction]);
 
-  const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget) => {
+  const startStructuralEditPointer = useCallback((event: ReactPointerEvent) => {
+    const draft = structuralEditDraft;
+    if (!draft || !structuralEditPointerArmed || event.button !== 0) return false;
+    event.preventDefault();
+    clearLongPressTimer();
+    const raw = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
+    const start = draft.kind === 'move'
+      ? structuralEditSelectionAnchor(project, draft.selection)
+      : modelPointFromClient(event.clientX, event.clientY);
+    const grabOffset = draft.kind === 'move'
+      ? { x: start.x - raw.x, y: start.y - raw.y }
+      : { x: 0, y: 0 };
+    capturePointer(event.pointerId);
+    transitionInteraction({
+      kind: 'structural-edit',
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      start,
+      grabOffset,
+      beforeDraft: draft,
+    });
+    if (draft.kind === 'mirror' && draft.fields.mirrorAxis !== 'arbitrary') {
+      try {
+        scheduleStructuralEditDraft(updateDraftFromPointer(draft, project, { start, current: start }));
+      } catch (error) {
+        setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+      }
+    }
+    return true;
+  }, [capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
+
+  /**
+   * Un solo clic entrega el origen de inserción y desarma el puntero.
+   *
+   * Se resuelve antes que cualquier herramienta y antes de la guardia que
+   * ignora los objetos del modelo: elegir el origen sobre un nudo existente es
+   * justamente el caso que más se quiere —el punto se ajusta a él— y no un
+   * accidente que haya que evitar. No abre interacción ni captura el puntero
+   * porque no hay arrastre: es un punto, no un gesto.
+   */
+  const pickGeneratorOrigin = useCallback((event: ReactPointerEvent): boolean => {
+    if (!generatorOriginPickingRef.current || event.button !== 0) return false;
+    event.preventDefault();
+    clearLongPressTimer();
+    const point = modelPointFromClient(event.clientX, event.clientY);
+    generatorPickTokenRef.current += 1;
+    setGeneratorPickedOrigin({ x: point.x, y: point.y, token: generatorPickTokenRef.current });
+    generatorOriginPickingRef.current = false;
+    setGeneratorOriginPicking(false);
+    return true;
+  }, [clearLongPressTimer, modelPointFromClient]);
+
+  const toggleGeneratorOriginPick = useCallback(() => {
+    setGeneratorOriginPicking((armed) => {
+      const next = !armed;
+      generatorOriginPickingRef.current = next;
+      return next;
+    });
+  }, []);
+
+  /** El punto ya llegó al formulario; el lienzo puede olvidarlo. */
+  const resolveGeneratorOriginPick = useCallback(() => setGeneratorPickedOrigin(null), []);
+
+  const closeGenerator = useCallback(() => {
+    setGeneratorOpen(false);
+    setGeneratorGhost(null);
+    setGeneratorOrigin(null);
+    setGeneratorOriginPicking(false);
+    generatorOriginPickingRef.current = false;
+  }, []);
+
+  const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget, candidates: CandidateTarget[] = []) => {
+    const anchor = localScreenPoint(event.clientX, event.clientY);
     const pending: CanvasInteraction = {
       kind: 'pending',
       pointerId: event.pointerId,
       pointerType: event.pointerType,
       start: { x: event.clientX, y: event.clientY },
       target,
+      candidates,
+      anchor,
       tool: activeTool,
       shiftKey: event.shiftKey,
     };
     capturePointer(event.pointerId);
     transitionInteraction(pending);
     clearLongPressTimer();
+    longPressMotionRef.current = { pointerId: event.pointerId, start: pending.start, current: pending.start };
     if (shouldArmLongPress(event.pointerType, activeTool, target.kind)) {
       longPressTimerRef.current = window.setTimeout(() => {
         const current = interactionRef.current;
         if (current.kind !== 'pending' || current.pointerId !== event.pointerId) return;
-        selectStructuralTarget(target);
+        const motion = longPressMotionRef.current;
+        const movedPx = motion?.pointerId === event.pointerId ? pointDistance(motion.start, motion.current) : 0;
+        if (!shouldTriggerLongPress(event.pointerType, current.tool, current.target.kind, LONG_PRESS_MS, movedPx)) return;
+        longPressTimerRef.current = null;
+        longPressMotionRef.current = null;
+        if (current.target.kind === 'background') {
+          const start = screenToModelPoint(current.anchor, cameraRef.current);
+          transitionInteraction({ kind: 'selection-box', pointerId: event.pointerId, start, current: start, additive: current.shiftKey });
+          return;
+        }
+        if (openCandidatePicker(current.candidates, current.anchor)) {
+          transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target: current.target });
+          return;
+        }
+        selectStructuralTarget(current.target);
         setActiveTool('select');
         onRequestInspector?.();
-        transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target });
+        transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target: current.target });
         longPressTimerRef.current = null;
-      }, 480);
+      }, LONG_PRESS_MS);
     }
-  }, [activeTool, capturePointer, clearLongPressTimer, onRequestInspector, selectStructuralTarget, setActiveTool, transitionInteraction]);
+  }, [activeTool, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
 
   const completeLoadPlacement = (label: string) => {
     setActiveTool('select');
@@ -725,11 +1212,17 @@ export const StructuralCanvas = ({
       if (!memberStart) { setMemberStart(node.id); setSelection({ kind: 'node', id: node.id }); return; }
       if (memberStart === node.id) { setMemberStart(null); return; }
       const id = nextId('M', project.members.map((member) => member.id));
-      updateProject((draft) => {
-        draft.members.push({ id, i: memberStart, j: node.id, type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 });
-        return draft;
+      const template = repeatRecipe?.kind === 'member'
+        ? repeatRecipe.template
+        : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+      void executeProjectCommand({
+        kind: 'member.create',
+        description: `Crear miembro ${id}`,
+        nodes: [],
+        member: { id, i: memberStart, j: node.id, ...template },
       });
       setMemberStart(null);
+      setRepeatRecipe(null);
       setSelection({ kind: 'member', id });
       return;
     }
@@ -750,10 +1243,14 @@ export const StructuralCanvas = ({
       const id = nextId('NL', project.nodalLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.nodalLoads.push({ id, nodeId: node.id, caseId, fx: 0, fy: -fromDisplay(10, units, 'force'), mz: 0 });
+        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'pointLoad'
+          ? repeatRecipe.template
+          : { caseId, fx: 0, fy: -fromDisplay(10, units, 'force'), mz: 0 };
+        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
         return draft;
       });
       setSelection({ kind: 'nodalLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.pointLoad'));
       return;
     }
@@ -761,10 +1258,14 @@ export const StructuralCanvas = ({
       const id = nextId('NL', project.nodalLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.nodalLoads.push({ id, nodeId: node.id, caseId, fx: 0, fy: 0, mz: fromDisplay(10, units, 'moment') });
+        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'moment'
+          ? repeatRecipe.template
+          : { caseId, fx: 0, fy: 0, mz: fromDisplay(10, units, 'moment') };
+        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
         return draft;
       });
       setSelection({ kind: 'nodalLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.moment'));
       return;
     }
@@ -788,30 +1289,29 @@ export const StructuralCanvas = ({
       const dx = nj.x - ni.x;
       const dy = nj.y - ni.y;
       const ratio = clamp(((point.x - ni.x) * dx + (point.y - ni.y) * dy) / Math.max(dx * dx + dy * dy, 1e-18), 1e-6, 1 - 1e-6);
-      let nodeId = '';
-      updateProject((draft) => {
-        const result = splitMemberAt(draft, member.id, ratio);
-        nodeId = result.nodeId;
-        if (tool === 'support') {
-          const target = draft.nodes.find((node) => node.id === nodeId);
-          if (target) target.support = { type: 'pin' };
-        }
-        return draft;
+      void executeProjectCommand({
+        kind: 'member.split',
+        description: `Dividir miembro ${member.id}`,
+        memberId: member.id,
+        ratio,
+        nodeSupport: tool === 'support' ? { type: 'pin' } : undefined,
+      }).then((result) => {
+        if (result?.kind === 'member.split') setSelection({ kind: 'node', id: result.nodeId });
       });
-      if (nodeId) setSelection({ kind: 'node', id: nodeId });
       return;
     }
     if (tool === 'distributedLoad') {
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({
-          id, memberId: member.id, caseId, type: 'distributed', coordinateSystem: 'global', lengthBasis: 'real',
-          start: 0, end: 1, qxStart: 0, qxEnd: 0, qyStart: -fromDisplay(10, units, 'distributedForce'), qyEnd: -fromDisplay(10, units, 'distributedForce'),
-        });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'distributedLoad'
+          ? repeatRecipe.template
+          : { caseId, type: 'distributed' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, qxStart: 0, qxEnd: 0, qyStart: -fromDisplay(10, units, 'distributedForce'), qyEnd: -fromDisplay(10, units, 'distributedForce') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.distributedLoad'));
       return;
     }
@@ -824,10 +1324,14 @@ export const StructuralCanvas = ({
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({ id, memberId: member.id, caseId, type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 0, py: -fromDisplay(10, units, 'force'), position: ratio });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'pointLoad'
+          ? repeatRecipe.template
+          : { caseId, type: 'point' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, px: 0, py: -fromDisplay(10, units, 'force') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.pointLoad'));
       return;
     }
@@ -840,10 +1344,14 @@ export const StructuralCanvas = ({
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({ id, memberId: member.id, caseId, type: 'moment', coordinateSystem: 'local', lengthBasis: 'real', start: 0, end: 1, moment: fromDisplay(10, units, 'moment'), position: ratio });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'moment'
+          ? repeatRecipe.template
+          : { caseId, type: 'moment' as const, coordinateSystem: 'local' as const, lengthBasis: 'real' as const, start: 0, end: 1, moment: fromDisplay(10, units, 'moment') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.moment'));
       return;
     }
@@ -869,7 +1377,7 @@ export const StructuralCanvas = ({
   const performTargetAction = (target: StructuralTarget, tool: Tool, client: ScreenPoint, shiftKey = false) => {
     if (target.kind === 'background') {
       if (tool === 'node') addNode(modelPointFromClient(client.x, client.y));
-      else if (tool === 'member') createMemberEndpoint(modelPointFromClient(client.x, client.y));
+      else if (tool === 'member') void createMemberEndpoint(modelPointFromClient(client.x, client.y));
       else if (tool === 'pointLoad' || tool === 'distributedLoad' || tool === 'moment') {
         showCanvasFeedback(tool === 'distributedLoad'
           ? t('canvas.placeDistributedLoad')
@@ -902,14 +1410,16 @@ export const StructuralCanvas = ({
   const shouldStartPan = useCallback((event: ReactPointerEvent) =>
     event.button === 1 || (event.button === 0 && (activeTool === 'pan' || spacePressedRef.current)), [activeTool]);
 
-  const handleObjectPointerDown = (event: ReactPointerEvent, target: StructuralTarget) => {
+  const handleObjectPointerDown = useStableCanvasEvent((event: ReactPointerEvent, target: StructuralTarget) => {
     event.stopPropagation();
+    if (candidatePicker) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
       event.preventDefault();
       startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
       return;
     }
+    if (startStructuralEditPointer(event)) return;
     if (event.button !== 0) return;
     let resolvedTarget = target;
     // Loads are intentionally easy to hit, but they must not block tools whose
@@ -931,42 +1441,21 @@ export const StructuralCanvas = ({
             ? selectionFilter.loads
             : true;
       if (!selectable) return;
-      if (event.pointerType !== 'touch') {
-        const candidates: StructuralTarget[] = [];
-        const seen = new Set<string>();
-        const hitElements = document.elementsFromPoint?.(event.clientX, event.clientY) ?? [event.target as Element];
-        for (const element of hitElements) {
-          const object = element.closest<SVGElement>('[data-structure-kind][data-structure-id]');
-          const kind = object?.dataset.structureKind;
-          const id = object?.dataset.structureId;
-          if (!kind || !id || !['node', 'member', 'nodalLoad', 'memberLoad'].includes(kind)) continue;
-          if (kind === 'node' && !selectionFilter.nodes) continue;
-          if (kind === 'member' && !selectionFilter.members) continue;
-          if ((kind === 'nodalLoad' || kind === 'memberLoad') && !selectionFilter.loads) continue;
-          const candidateKey = `${kind}:${id}`;
-          if (seen.has(candidateKey)) continue;
-          seen.add(candidateKey);
-          candidates.push({ kind: kind as 'node' | 'member' | 'nodalLoad' | 'memberLoad', id });
-        }
-        if (candidates.length > 1) {
-          const key = candidates.map((candidate) => `${candidate.kind}:${'id' in candidate ? candidate.id : ''}`).join('|');
-          const previous = selectionCycleRef.current;
-          const sameSpot = previous && Math.hypot(previous.x - event.clientX, previous.y - event.clientY) <= 6 && performance.now() - previous.at <= 900 && previous.key === key;
-          const initialIndex = 'id' in target
-            ? candidates.findIndex((candidate) => 'id' in candidate && candidate.kind === target.kind && candidate.id === target.id)
-            : 0;
-          const index = sameSpot || event.altKey ? ((previous?.index ?? -1) + 1) % candidates.length : Math.max(0, initialIndex);
-          resolvedTarget = candidates[index];
-          selectionCycleRef.current = { x: event.clientX, y: event.clientY, at: performance.now(), key, index };
-          const rect = hostRef.current?.getBoundingClientRect();
-          setCycleIndicator({ x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0), index: index + 1, total: candidates.length });
-          if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
-          cycleTimerRef.current = window.setTimeout(() => { setCycleIndicator(null); cycleTimerRef.current = null; }, 1100);
-        } else selectionCycleRef.current = null;
+      const candidates = candidateTargetsAtPoint(event.clientX, event.clientY, resolvedTarget);
+      if (candidates.length > 1) {
+        if (event.pointerType === 'touch') startPending(event, resolvedTarget, candidates);
+        else openCandidatePicker(candidates, localScreenPoint(event.clientX, event.clientY), event.shiftKey);
+        return;
+      }
+      // A one-finger touch remains pending until time plus displacement resolves
+      // it as a true long press, marquee, or pan.
+      if (event.pointerType === 'touch') {
+        startPending(event, resolvedTarget, candidates);
+        return;
       }
     }
     if (event.pointerType === 'touch' || activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') {
-      startPending(event, resolvedTarget);
+        startPending(event, resolvedTarget);
       return;
     }
     if (resolvedTarget.kind === 'node' && activeTool === 'select' && !event.shiftKey) {
@@ -975,9 +1464,10 @@ export const StructuralCanvas = ({
       return;
     }
     performTargetAction(resolvedTarget, activeTool, { x: event.clientX, y: event.clientY }, event.shiftKey);
-  };
+  });
 
   const handleBackgroundPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (candidatePicker) return;
     if (event.target !== event.currentTarget && (event.target as Element).closest('[data-structure-object]')) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
@@ -985,11 +1475,12 @@ export const StructuralCanvas = ({
       startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
       return;
     }
+    if (startStructuralEditPointer(event)) return;
     if (event.button !== 0) return;
     if (event.pointerType === 'touch') {
-      if (activeTool === 'select' || activeTool === 'pan') {
-        startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, activeTool === 'select');
-      } else startPending(event, { kind: 'background' });
+      if (activeTool === 'select') startPending(event, { kind: 'background' });
+      else if (activeTool === 'pan') startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
+      else startPending(event, { kind: 'background' });
       return;
     }
     if (activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') {
@@ -997,7 +1488,7 @@ export const StructuralCanvas = ({
       return;
     }
     if (activeTool === 'node') addNode(modelPointFromClient(event.clientX, event.clientY));
-    else if (activeTool === 'member') createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY));
+    else if (activeTool === 'member') void createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY));
     else if (activeTool === 'select') {
       const start = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
       capturePointer(event.pointerId);
@@ -1010,6 +1501,17 @@ export const StructuralCanvas = ({
   };
 
   const handlePointerDownCapture = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (candidatePicker) {
+      event.stopPropagation();
+      return;
+    }
+    // En captura, para que elegir el origen sobre un nudo existente entregue el
+    // punto y no lo seleccione además: el manejador del objeto está por debajo
+    // y nunca llega a verlo.
+    if (pickGeneratorOrigin(event)) {
+      event.stopPropagation();
+      return;
+    }
     if (event.pointerType !== 'touch') return;
     // A fresh primary contact starts a new touch sequence. Some mobile engines
     // may omit one of the final pointer events after a pinch; discard any stale
@@ -1017,6 +1519,15 @@ export const StructuralCanvas = ({
     if (event.isPrimary && activePointersRef.current.size > 0) {
       clearLongPressTimer();
       if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
+      if (interactionRef.current.kind === 'structural-edit') {
+        pendingStructuralEditDraftRef.current = null;
+        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+        structuralEditFrameRef.current = null;
+        setStructuralEditDraft(interactionRef.current.beforeDraft);
+        structuralEditLiveDraftRef.current = null;
+        setStructuralEditLiveDraft(null);
+        setStructuralEditPointerArmed(false);
+      }
       for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
       activePointersRef.current.clear();
       transitionInteraction(IDLE_INTERACTION);
@@ -1026,6 +1537,15 @@ export const StructuralCanvas = ({
     event.preventDefault();
     clearLongPressTimer();
     if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
+    if (interactionRef.current.kind === 'structural-edit') {
+      pendingStructuralEditDraftRef.current = null;
+      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+      setStructuralEditDraft(interactionRef.current.beforeDraft);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
+    }
     const entries = [...activePointersRef.current.entries()];
     const first = entries[0];
     const second = entries[1];
@@ -1043,11 +1563,36 @@ export const StructuralCanvas = ({
     });
   };
 
+  /**
+   * La lupa sólo aparece bajo un dedo y sólo mientras hay una intención en curso
+   * (colocación, arrastre, marco de selección). Durante `pan` o `pinch` el punto
+   * de modelo bajo el dedo no cambia — dibujarla ahí sería una cota que miente
+   * sobre el gesto y un `setState` por cuadro que no compra nada.
+   */
+  const syncTouchLoupe = (pointerType: string, current: CanvasInteraction, clientX: number, clientY: number) => {
+    const placing = current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member');
+    const tracking = current.kind === 'pending' || current.kind === 'node-drag' || current.kind === 'structural-edit'
+      || current.kind === 'long-press' || current.kind === 'selection-box';
+    if (pointerType !== 'touch' || !(placing || tracking)) {
+      setTouchLoupe((existing) => existing === null ? existing : null);
+      return;
+    }
+    const local = localScreenPoint(clientX, clientY);
+    const model = screenToModelPoint(local, cameraRef.current);
+    setTouchLoupe({
+      screenX: local.x,
+      screenY: local.y,
+      modelX: toDisplay(model.x, units, 'length'),
+      modelY: toDisplay(model.y, units, 'length'),
+    });
+  };
+
   const handlePointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     const client = { x: event.clientX, y: event.clientY };
     updateCoordinateReadout(event.clientX, event.clientY, event.pointerType);
     if (event.pointerType === 'touch') activePointersRef.current.set(event.pointerId, client);
     const current = interactionRef.current;
+    syncTouchLoupe(event.pointerType, current, event.clientX, event.clientY);
     if (current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member')) {
       modelPointFromClient(event.clientX, event.clientY);
     }
@@ -1066,6 +1611,11 @@ export const StructuralCanvas = ({
       return;
     }
     if (current.kind === 'pending' && current.pointerId === event.pointerId) {
+      const movedPx = pointDistance(current.start, client);
+      if (current.pointerType === 'touch') {
+        longPressMotionRef.current = { pointerId: current.pointerId, start: current.start, current: client };
+        if (movedPx > LONG_PRESS_JITTER_PX) clearLongPressTimer();
+      }
       if (!movedPastThreshold(current.start, client, current.pointerType)) return;
       clearLongPressTimer();
       if (current.target.kind === 'node' && pendingDragIntent(current.pointerType, current.tool, current.target.kind) === 'node-drag') {
@@ -1101,6 +1651,19 @@ export const StructuralCanvas = ({
       scheduleNodeMove(current.nodeId, nodeDragPointFromClient(event.clientX, event.clientY, current.nodeId, current.grabOffset));
       return;
     }
+    if (current.kind === 'structural-edit' && current.pointerId === event.pointerId) {
+      try {
+        const raw = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
+        const point = current.beforeDraft.kind === 'move'
+          ? snapPoint({ x: raw.x + current.grabOffset.x, y: raw.y + current.grabOffset.y }, structuralEditExcludedNodeIds)
+          : modelPointFromClient(event.clientX, event.clientY);
+        scheduleStructuralEditDraft(updateDraftFromPointer(current.beforeDraft, project, { start: current.start, current: point }));
+        setStructuralEditCommitError('');
+      } catch (error) {
+        setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+      }
+      return;
+    }
     if (current.kind === 'selection-box' && current.pointerId === event.pointerId) {
       scheduleInteractionFrame({
         ...current,
@@ -1112,6 +1675,7 @@ export const StructuralCanvas = ({
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>, cancelled: boolean) => {
     clearLongPressTimer();
     setSnapPreview(null);
+    setTouchLoupe(null);
     if (event.pointerType === 'touch') activePointersRef.current.delete(event.pointerId);
     const current = interactionRef.current;
     if (current.kind === 'pinch' && current.pointerIds.includes(event.pointerId)) {
@@ -1140,6 +1704,17 @@ export const StructuralCanvas = ({
         commitProjectTransaction();
       }
       transitionInteraction(IDLE_INTERACTION);
+    } else if (current.kind === 'structural-edit' && current.pointerId === event.pointerId) {
+      if (cancelled) {
+        pendingStructuralEditDraftRef.current = null;
+        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+        structuralEditFrameRef.current = null;
+        setStructuralEditDraft(current.beforeDraft);
+        structuralEditLiveDraftRef.current = null;
+        setStructuralEditLiveDraft(null);
+      } else flushStructuralEditDraft();
+      setStructuralEditPointerArmed(false);
+      transitionInteraction(IDLE_INTERACTION);
     } else if (current.kind === 'selection-box' && current.pointerId === event.pointerId) {
       if (!cancelled) finishSelectionBox(current);
       transitionInteraction(IDLE_INTERACTION);
@@ -1152,20 +1727,136 @@ export const StructuralCanvas = ({
   const cancelActiveInteraction = useCallback(() => {
     clearLongPressTimer();
     setSnapPreview(null);
+    setTouchLoupe(null);
     const current = interactionRef.current;
     if (current.kind === 'node-drag') {
       cancelNodeDragTransaction();
+    } else if (current.kind === 'structural-edit') {
+      pendingStructuralEditDraftRef.current = null;
+      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+      setStructuralEditDraft(current.beforeDraft);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
     }
     for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
     activePointersRef.current.clear();
     transitionInteraction(IDLE_INTERACTION);
   }, [cancelNodeDragTransaction, clearLongPressTimer, releasePointer, transitionInteraction]);
 
+  const cancelStructuralEdit = useCallback(() => {
+    cancelActiveInteraction();
+    setStructuralEditDraft(null);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditPointerArmed(false);
+    setStructuralEditCommitError('');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [cancelActiveInteraction]);
+
+  const startStructuralEdit = useCallback((kind: StructuralEditKind) => {
+    if (!selection || !editCapabilities.structural) return;
+    cancelActiveInteraction();
+    setDuplicateDraft(null);
+    setRepeatRecipe(null);
+    setMemberStart(null);
+    setCut(null);
+    closeCandidatePicker();
+    setActiveTool('select');
+    setStructuralEditPointerArmed(false);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditCommitError('');
+    try {
+      setStructuralEditDraft(createStructuralEditDraft(project, selection, kind));
+    } catch (error) {
+      showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+    }
+  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+
+  const invokeContextualAction = useCallback((action: ContextualActionId) => {
+    switch (action) {
+      case 'copy':
+        void copyStructuralSelection();
+        return;
+      case 'paste':
+        void pasteStructuralSelection();
+        return;
+      case 'duplicate':
+        startDuplicate();
+        return;
+      case 'repeat':
+        activateRepeat();
+        return;
+      case 'delete':
+        deleteSelection();
+        return;
+      case 'datasheet':
+        emitWorkspaceCommand('open-datasheet');
+        return;
+      case 'structuralEdit':
+        emitWorkspaceCommand('open-structural-edit');
+        return;
+    }
+  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate]);
+
+  useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
+  useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
+
+  const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
+    setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditPointerArmed(false);
+    setStructuralEditCommitError('');
+  }, [project]);
+
+  const updateStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
+    setStructuralEditDraft(draft);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditCommitError('');
+  }, []);
+
+  const confirmStructuralEdit = useCallback(async () => {
+    const prepared = structuralEditPreview.prepared;
+    if (!prepared?.hasChanges || structuralEditApplyingRef.current) return;
+    structuralEditApplyingRef.current = true;
+    try {
+      await executePreparedStructuralEdit(prepared);
+      if (prepared.createdNodeIds.length || prepared.createdMemberIds.length) {
+        setSelection(structuralSelectionFromIds(prepared.createdNodeIds, prepared.createdMemberIds));
+      }
+      setStructuralEditDraft(null);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
+      setStructuralEditCommitError('');
+      window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+    } catch (error) {
+      setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+    } finally {
+      structuralEditApplyingRef.current = false;
+    }
+  }, [executePreparedStructuralEdit, setSelection, structuralEditPreview.prepared, t]);
+
+  useEffect(() => {
+    if (!structuralEditDraft || JSON.stringify(structuralEditDraft.selection) === JSON.stringify(selection)) return;
+    cancelStructuralEdit();
+  }, [cancelStructuralEdit, selection, structuralEditDraft]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : null;
       const modalOpen = document.querySelector<HTMLElement>('[aria-modal="true"]');
       const interactive = target?.closest('input, select, textarea, button, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="tablist"]');
+      if (event.key === 'Escape' && candidatePicker) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeCandidatePicker();
+        return;
+      }
       if ((modalOpen && !target?.closest('[aria-modal="true"]')) || interactive) return;
       if (event.code === 'Space') {
         event.preventDefault();
@@ -1177,41 +1868,53 @@ export const StructuralCanvas = ({
       }
       const command = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      if (event.key === 'Escape' && structuralEditDraft) {
+        event.preventDefault();
+        cancelStructuralEdit();
+        return;
+      }
+      if (structuralEditDraft) return;
+      // Letter-only shortcuts (no modifier) are scoped to the canvas element
+      // itself (CRI-103): anywhere else — including plain document/body focus,
+      // which is where a screen reader's quick-nav browse mode intercepts
+      // single letters — they must not fire, or they hijack that navigation.
+      const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
+      if (key === 'r' && !command && !event.altKey && canvasHasFocus) {
+        if (!repeatCandidate) return;
+        event.preventDefault();
+        activateRepeat();
+        return;
+      }
       if (command && key === 'c') {
         event.preventDefault();
-        clipboardRef.current = copyModelSelection(project, selection);
-        pasteCountRef.current = 1;
+        void copyStructuralSelection();
         return;
       }
       if (command && key === 'v') {
-        if (!clipboardRef.current) return;
         event.preventDefault();
-        const step = Math.max(project.settings.gridSize || 1, 0.25) * pasteCountRef.current;
-        const next = structuredClone(project);
-        const pasted = pasteModelClipboard(next, clipboardRef.current, { x: step, y: step });
-        replaceProject(next);
-        pasteCountRef.current += 1;
-        setSelection(pasted);
+        void pasteStructuralSelection();
         return;
       }
       if (command && key === 'd') {
-        if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
         event.preventDefault();
-        const step = Math.max(project.settings.gridSize || 1, 0.25);
-        const next = structuredClone(project);
-        const duplicated = duplicateModelSelection(next, selection, { x: step, y: step });
-        replaceProject(next);
-        setSelection(duplicated);
+        startDuplicate();
         return;
       }
       const shortcutTool = toolFromShortcut(key);
-      if (shortcutTool && !command && !event.altKey) {
+      if (shortcutTool && !command && !event.altKey && canvasHasFocus) {
         event.preventDefault();
         setActiveTool(shortcutTool);
       }
       if (event.key === 'Escape') {
+        if (duplicateDraft) {
+          setDuplicateDraft(null);
+          return;
+        }
         cancelActiveInteraction();
         setMemberStart(null);
+        setQuickEntry({ first: '', second: '' });
+        setQuickEntryError('');
+        setRepeatRecipe(null);
         setSelection(null);
         setCut(null);
         setActiveTool('select');
@@ -1237,7 +1940,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [cancelActiveInteraction, deleteSelection, project, replaceProject, selection, setActiveTool, setSelection]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1261,7 +1964,7 @@ export const StructuralCanvas = ({
     return evaluateDiagramAt(result.diagramSegments, result.diagramJumps, localX, 'right');
   };
 
-  const showCut = (event: ReactPointerEvent, member: MemberModel) => {
+  const showCut = useStableCanvasEvent((event: ReactPointerEvent, member: MemberModel) => {
     if (!resultsAllowed || !analysis?.success || cut?.pinned) return;
     const rect = svgRef.current!.getBoundingClientRect();
     const model = toModel(event.clientX - rect.left, event.clientY - rect.top);
@@ -1269,7 +1972,7 @@ export const StructuralCanvas = ({
     const nj = nodeMap.get(member.j)!;
     const ratio = grossRatioAtPoint(memberAxis(member, ni, nj), model);
     setCut({ memberId: member.id, ratio, point: memberValueAt(member.id, ratio), clientX: event.clientX, clientY: event.clientY, pinned: false });
-  };
+  });
 
   const globalDiagramMax = useMemo(() => {
     if (!analysis?.success) return 1e-9;
@@ -1289,8 +1992,8 @@ export const StructuralCanvas = ({
     return maximum > 1e-14 ? 72 / maximum : 0;
   }, [mechanismMap]);
   const grid = useMemo(() => {
-    if (!project.settings.showGrid) return null;
-    const step = project.settings.gridSize * camera.scale;
+    if (!view.showGrid) return null;
+    const step = view.gridSize * camera.scale;
     if (step < 8) return null;
     const lines = [];
     const startX = ((camera.x % step) + step) % step;
@@ -1298,24 +2001,29 @@ export const StructuralCanvas = ({
     for (let x = startX; x < size.width; x += step) lines.push(<line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={size.height} />);
     for (let y = startY; y < size.height; y += step) lines.push(<line key={`gy-${y}`} x1={0} y1={y} x2={size.width} y2={y} />);
     return <g className="grid-lines">{lines}</g>;
-  }, [camera, project.settings.gridSize, project.settings.showGrid, size]);
+  }, [camera, size, view.gridSize, view.showGrid]);
 
-  const handleLoadKeyDown = (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
+  const handleObjectKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    setSelection(target);
-    onRequestInspector?.();
-  };
+    const rect = event.currentTarget.getBoundingClientRect();
+    const client = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    const candidates = candidateTargetsAtPoint(client.x, client.y, target);
+    if (openCandidatePicker(candidates, localScreenPoint(client.x, client.y), event.shiftKey)) return;
+    performTargetAction(target, 'select', client);
+    if (target.kind === 'nodalLoad' || target.kind === 'memberLoad') onRequestInspector?.();
+  });
 
   const onCutLeave = useCallback(() => setCut((current) => current?.pinned ? current : null), []);
 
-  const smartLabelCandidates: SmartLabelCandidate[] = [];
-  const selectedNodeIds = selectionVisualState.nodeIds;
-  const selectedMemberIds = selectionVisualState.memberIds;
+  const placedSmartLabels = useMemo(() => {
+    const smartLabelCandidates: SmartLabelCandidate[] = [];
+    const selectedNodeIds = selectionVisualState.nodeIds;
+    const selectedMemberIds = selectionVisualState.memberIds;
 
   for (const node of project.nodes) {
     const selected = selectedNodeIds.includes(node.id);
-    if (!selected && !(layers.labels && layers.ids && project.settings.showNodeLabels)) continue;
+    if (!selected && !(layers.labels && layers.ids && view.showNodeLabels)) continue;
     const anchor = toScreen(node.x, node.y);
     smartLabelCandidates.push({
       id: `node:${node.id}`,
@@ -1336,7 +2044,7 @@ export const StructuralCanvas = ({
     const b = toScreen(nj.x, nj.y);
     const anchor = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const selected = selectedMemberIds.includes(member.id);
-    if (selected || (layers.labels && layers.ids && project.settings.showMemberLabels)) {
+    if (selected || (layers.labels && layers.ids && view.showMemberLabels)) {
       smartLabelCandidates.push({
         id: `member:${member.id}`,
         text: member.id,
@@ -1348,7 +2056,7 @@ export const StructuralCanvas = ({
       });
     }
     const dimensionToolActive = activeTool === 'dimension';
-    if (dimensionToolActive || (layers.labels && layers.dimensions && (project.settings.showLocalAxes || project.settings.showDimensions))) {
+    if (dimensionToolActive || (layers.labels && layers.dimensions && (view.showLocalAxes || view.showDimensions))) {
       smartLabelCandidates.push({
         id: `dimension:${member.id}`,
         text: `${formatFixed(toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length'), 3)} ${lengthLabel}`,
@@ -1361,7 +2069,7 @@ export const StructuralCanvas = ({
     }
   }
 
-  if (loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence') {
+  if (loadsLayerVisible && view.showLoads && resultTab !== 'influence') {
     for (const load of project.nodalLoads) {
       const node = nodeMap.get(load.nodeId);
       if (!node) continue;
@@ -1464,7 +2172,7 @@ export const StructuralCanvas = ({
     }
   }
 
-  if (layers.results && layers.labels && resultsAllowed && project.settings.showResultValues && analysis?.success) {
+  if (layers.results && layers.labels && resultsAllowed && view.showResultValues && analysis?.success) {
     for (const node of project.nodes) {
       const result = nodeResultMap.get(node.id);
       if (!result) continue;
@@ -1482,9 +2190,9 @@ export const StructuralCanvas = ({
       }
     }
 
-    if (['axial', 'shear', 'moment'].includes(resultTab) && project.settings.showResultOverlay) {
+    if (['axial', 'shear', 'moment'].includes(resultTab) && view.showResultOverlay) {
       const quantity = resultTab as DiagramQuantity;
-      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+      const side = view.diagramSide === 'negative' ? -1 : 1;
       for (const member of project.members) {
         const result = resultMap.get(member.id);
         const ni = nodeMap.get(member.i);
@@ -1528,7 +2236,42 @@ export const StructuralCanvas = ({
     }
   }
 
-  const placedSmartLabels = layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+    return layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+  }, [
+    activeTool,
+    analysis,
+    camera.scale,
+    distributedLabel,
+    forceLabel,
+    globalDiagramMax,
+    layers,
+    lengthLabel,
+    loadsLayerVisible,
+    memberMap,
+    momentLabel,
+    nodeMap,
+    nodeResultMap,
+    project,
+    resultMap,
+    resultTab,
+    resultsAllowed,
+    selectionVisualState,
+    size,
+    toScreen,
+    units,
+    view,
+  ]);
+  const smartLabelLayer = useMemo(() => <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
+    {placedSmartLabels.map((label) => {
+      const centerX = label.rect.x + label.rect.width / 2;
+      const centerY = label.rect.y + label.rect.height / 2;
+      return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
+        {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
+        <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
+        <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
+      </g>;
+    })}
+  </g>, [camera.scale, placedSmartLabels]);
   const multiSelectionPoints = selectionVisualState.kind === 'multi' ? [
     ...selectionVisualState.nodeIds.flatMap((nodeId) => {
       const node = nodeMap.get(nodeId);
@@ -1542,6 +2285,10 @@ export const StructuralCanvas = ({
     }),
   ] : [];
   const multiSelectionEnvelope = selectionEnvelopeForPoints(multiSelectionPoints, { x: 0, y: 0, width: size.width, height: size.height }, 22);
+  const duplicatePreviewNodeMap = new Map([
+    ...project.nodes.map((node) => [node.id, node] as const),
+    ...(duplicatePreview?.prepared?.addedNodes ?? []).map((node) => [node.id, node] as const),
+  ]);
 
   return (
     <div className="canvas-host" ref={hostRef}>
@@ -1553,7 +2300,7 @@ export const StructuralCanvas = ({
         role="application"
         aria-label={t('canvas.workspace')}
         aria-describedby="canvas-interaction-description"
-        aria-keyshortcuts="V H N M S P D O C X B Delete Backspace Escape"
+        aria-keyshortcuts="V H N M S P D O C X B R ArrowUp ArrowDown Home End Enter Delete Backspace Escape"
         data-pointer-support="mouse touch pen"
         tabIndex={0}
         onPointerDownCapture={handlePointerDownCapture}
@@ -1580,6 +2327,11 @@ export const StructuralCanvas = ({
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--axial)" /></marker>
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
         </defs>
+        {/* Todo lo dibujable va dentro de un grupo con `id`: la lupa táctil lo
+            clona con `<use>` para ampliarlo, en vez de mantener un segundo
+            render de la estructura que podría desincronizarse de éste. El
+            grupo no lleva transform — sus coordenadas son las del lienzo. */}
+        <g id={CANVAS_SCENE_ID}>
         {grid}
         <CanvasInteractionLayer
           slot="preview"
@@ -1595,6 +2347,37 @@ export const StructuralCanvas = ({
           size={size}
           t={t}
         />
+
+        {duplicatePreview?.prepared ? <g className="duplicate-preview-layer" aria-label={phase2T('canvas.duplicatePreviewAria')}>
+          {duplicatePreview.prepared.addedMembers.map((member) => {
+            const start = duplicatePreviewNodeMap.get(member.i);
+            const end = duplicatePreviewNodeMap.get(member.j);
+            if (!start || !end) return null;
+            const a = toScreen(start.x, start.y);
+            const b = toScreen(end.x, end.y);
+            return <line key={member.id} className="duplicate-preview-member" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+          })}
+          {duplicatePreview.prepared.addedNodes.map((node) => {
+            const point = toScreen(node.x, node.y);
+            return <circle key={node.id} className="duplicate-preview-node" cx={point.x} cy={point.y} r="6" />;
+          })}
+        </g> : null}
+
+        {generatorGhost ? <CanvasStructureGeneratorLayer
+          ghost={generatorGhost}
+          origin={generatorOrigin}
+          toScreen={toScreen}
+          label={t('generator.title')}
+        /> : null}
+
+        {structuralEditLivePreview.preview || structuralEditPreview.prepared ? <CanvasStructuralEditPreviewLayer
+          project={project}
+          prepared={structuralEditLivePreview.preview ? null : structuralEditPreview.prepared}
+          geometry={structuralEditLivePreview.preview}
+          size={size}
+          toScreen={toScreen}
+          label={t('canvas.structuralEditTitle')}
+        /> : null}
 
         <CanvasResultLayer
           slot="diagrams"
@@ -1617,11 +2400,10 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results}
-          showDiagnostics={layers.diagnostics}
+          showResults={layers.results && !structuralEditDraft}
+          showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
-          oscillationFactor={oscillationFactor}
         />
 
         <CanvasGeometryLayer
@@ -1632,20 +2414,21 @@ export const StructuralCanvas = ({
           toScreen={toScreen}
           camera={camera}
           selectionVisualState={selectionVisualState}
+          candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
           layers={layers}
           loadsLayerVisible={loadsLayerVisible}
+          heatmapRatios={heatmapRatios}
+          demandMapActive={demandMapActive}
           resultTab={resultTab}
           units={units}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
           distributedLabel={distributedLabel}
           t={t}
-          heatmapRatios={heatmapRatios}
           onObjectPointerDown={handleObjectPointerDown}
-          onSelect={setSelection}
-          onLoadKeyDown={handleLoadKeyDown}
+          onObjectKeyDown={handleObjectKeyDown}
           onShowCut={showCut}
           onCutLeave={onCutLeave}
         />
@@ -1671,11 +2454,10 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results}
-          showDiagnostics={layers.diagnostics}
+          showResults={layers.results && !structuralEditDraft}
+          showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
-          oscillationFactor={oscillationFactor}
         />
 
         <CanvasGeometryLayer
@@ -1686,10 +2468,13 @@ export const StructuralCanvas = ({
           toScreen={toScreen}
           camera={camera}
           selectionVisualState={selectionVisualState}
+          candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
           layers={layers}
           loadsLayerVisible={loadsLayerVisible}
+          heatmapRatios={heatmapRatios}
+          demandMapActive={demandMapActive}
           resultTab={resultTab}
           units={units}
           forceLabel={forceLabel}
@@ -1697,8 +2482,7 @@ export const StructuralCanvas = ({
           distributedLabel={distributedLabel}
           t={t}
           onObjectPointerDown={handleObjectPointerDown}
-          onSelect={setSelection}
-          onLoadKeyDown={handleLoadKeyDown}
+          onObjectKeyDown={handleObjectKeyDown}
           onShowCut={showCut}
           onCutLeave={onCutLeave}
         />
@@ -1718,17 +2502,7 @@ export const StructuralCanvas = ({
           t={t}
         />
 
-        <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
-          {placedSmartLabels.map((label) => {
-            const centerX = label.rect.x + label.rect.width / 2;
-            const centerY = label.rect.y + label.rect.height / 2;
-            return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
-              {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
-              <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
-              <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
-            </g>;
-          })}
-        </g>
+        {smartLabelLayer}
 
         <g className="global-axes" transform={`translate(42 ${size.height - 45})`}>
           <line x1="0" y1="0" x2="58" y2="0" markerEnd="url(#axis-x)" />
@@ -1739,7 +2513,68 @@ export const StructuralCanvas = ({
           </defs>
           <text x="65" y="5" className="axis-x-label">X</text><text x="-5" y="-66" className="axis-y-label">Y</text>
         </g>
+        </g>
       </svg>
+
+      {duplicateDraft ? <form
+        className="duplicate-preview-panel"
+        aria-label={phase2T('canvas.duplicateTitle')}
+        onSubmit={(event) => { event.preventDefault(); confirmDuplicate(); }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setDuplicateDraft(null);
+            svgRef.current?.focus();
+          }
+        }}
+      >
+        <strong>{phase2T('canvas.duplicateTitle')}</strong>
+        <p>{phase2T('canvas.duplicateDescription')}</p>
+        <div className="duplicate-preview-fields">
+          <label>{phase2T('canvas.offsetX')}<input type="number" step="any" value={duplicateDraft.x} onChange={(event) => setDuplicateDraft((current) => current ? { ...current, x: event.target.value } : null)} /></label>
+          <label>{phase2T('canvas.offsetY')}<input type="number" step="any" value={duplicateDraft.y} onChange={(event) => setDuplicateDraft((current) => current ? { ...current, y: event.target.value } : null)} /></label>
+        </div>
+        {duplicatePreview?.error ? <span className="duplicate-preview-error" role="alert">{duplicatePreview.error}</span> : null}
+        <div className="duplicate-preview-actions">
+          <button type="submit" disabled={!duplicatePreview?.prepared}>{phase2T('canvas.confirmDuplicate')}</button>
+          <button type="button" onClick={() => { setDuplicateDraft(null); svgRef.current?.focus(); }}>{phase2T('canvas.cancelDuplicate')}</button>
+        </div>
+      </form> : null}
+
+      {generatorOpen ? <Suspense fallback={null}><LazyStructureGeneratorSurface
+        pickedOrigin={generatorPickedOrigin}
+        originPicking={generatorOriginPicking}
+        onToggleOriginPick={toggleGeneratorOriginPick}
+        onOriginPickResolved={resolveGeneratorOriginPick}
+        onGhostChange={setGeneratorGhost}
+        onOriginChange={setGeneratorOrigin}
+        onClose={closeGenerator}
+      /></Suspense> : null}
+
+      <StructuralEditOverlay
+        // Contextual-actions owns the selection entry point. Once a structural
+        // draft starts, this overlay continues to own that in-progress intent.
+        // Never leave the legacy launcher visible or focusable beside the
+        // Compact floor (primary verb + Delete + overflow).
+        available={Boolean(structuralEditDraft) || (editCapabilities.structural
+          && !selection && !duplicateDraft && !repeatRecipe && !generatorOpen)}
+        repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
+        draft={structuralEditDraft}
+        capabilities={editCapabilities}
+        prepared={structuralEditPreview.prepared}
+        error={structuralEditCommitError || structuralEditLivePreview.error || structuralEditPreview.error}
+        pointerArmed={structuralEditPointerArmed}
+        lengthUnit={lengthLabel}
+        onStart={startStructuralEdit}
+        onKindChange={changeStructuralEditOperation}
+        onDraftChange={updateStructuralEditDraft}
+        onTogglePointer={() => {
+          setStructuralEditPointerArmed((current) => !current);
+          window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+        }}
+        onApply={() => { void confirmStructuralEdit(); }}
+        onCancel={cancelStructuralEdit}
+      />
 
       <CanvasChrome
         modeLabel={t(toolLabelKeys[activeTool])}
@@ -1747,51 +2582,122 @@ export const StructuralCanvas = ({
         showHelp={layers.help}
         layers={layers}
         dispatchLayers={dispatchLayers}
-        snapEnabled={project.settings.snap}
-        gridEnabled={project.settings.showGrid}
+        resultTab={resultTab}
+        setResultTab={setResultTab}
+        snapEnabled={view.snap}
+        gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}
         lengthLabel={lengthLabel}
         scale={camera.scale}
-        hasAnalysis={Boolean(analysis?.success)}
-        isDeformedTab={resultTab === 'deformed'}
-        oscillating={oscillating}
-        onToggleOscillation={() => setOscillating((prev) => !prev)}
         onCancelPlacement={() => setActiveTool('select')}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onFit={fitModel}
       />
+      <CanvasMiniMap
+        nodes={project.nodes}
+        members={project.members}
+        viewport={minimapViewport}
+        label={t('canvas.minimap')}
+        onFit={fitModel}
+      />
+      {touchLoupe ? <CanvasTouchLoupe
+        {...touchLoupe}
+        lengthLabel={lengthLabel}
+        sceneId={CANVAS_SCENE_ID}
+        canvasHeight={size.height}
+      /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(project.settings.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: project.settings.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
+      {selection && (!surfaceBroker || contextualActionsSurface?.status === 'active') ? <div
+        data-workspace-surface={surfaceBroker ? 'contextualActions' : undefined}
+        ref={surfaceBroker?.surfaceRootRef('contextualActions') as Ref<HTMLDivElement> | undefined}
+      >
+        <ContextualActions
+          selection={selection}
+          availability={contextualActionAvailability}
+          active
+          presentation={contextualActionsSurface?.presentation ?? 'inset'}
+          shellClass={surfaceBroker?.shellClass ?? 'K0'}
+          ariaLabel={t('contextualActions.title')}
+          labelForAction={(action) => t(contextualActionLabelKeys[action])}
+          accessibleLabelForAction={(action) => action === 'structuralEdit'
+            ? t('contextualActions.structuralEditAccessible')
+            : t(contextualActionLabelKeys[action])}
+          overflowLabel={t('contextualActions.more')}
+          onInvoke={invokeContextualAction}
+        />
+      </div> : null}
+      <RepeatActionOverlay
+        available={Boolean(repeatCandidate) && !structuralEditDraft}
+        active={Boolean(repeatRecipe)}
+        actionLabel={t('canvas.repeatAction')}
+        previewLabel={t('canvas.repeatPreview')}
+        instruction={repeatRecipe ? t('canvas.repeatWaiting', { tool: t(toolLabelKeys[repeatRecipe.tool]) }) : ''}
+        cancelLabel={t('canvas.cancelPlacement')}
+        onActivate={activateRepeat}
+        onCancel={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}
+      />
+      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(view.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
+      {demandLegend ? <div className="canvas-demand-legend" aria-label={t('canvas.demandLegendTitle')} data-canvas-chrome="demand-legend" data-testid="canvas-demand-legend">
+        <strong>{t('canvas.demandLegendTitle')}</strong>
+        {/* La rampa se declara con sus dos extremos y la referencia: sin esto el
+            color es decoración y el usuario no sabe qué está mirando. */}
+        <span className="canvas-demand-ramp" aria-hidden="true" />
+        <span className="canvas-demand-scale"><i>η 0</i><i>η 1</i><i>{`η ${ELASTIC_SATURATION_RATIO}+`}</i></span>
+        <small>{t('canvas.demandLegendMeaning')}</small>
+        <small data-testid="canvas-demand-coverage">{t(
+          demandLegend.unevaluated > 0 ? 'canvas.demandLegendCoveragePartial' : 'canvas.demandLegendCoverageComplete',
+          { evaluated: demandLegend.evaluated, total: demandLegend.total, unevaluated: demandLegend.unevaluated },
+        )}</small>
+        {demandLegend.unevaluated > 0 ? <small className="canvas-demand-unevaluated">{t('canvas.demandLegendUnevaluated')}</small> : null}
+        {demandLegend.saturated ? <small className="canvas-demand-saturated" data-testid="canvas-demand-saturated">{t('canvas.demandLegendSaturated', {
+          saturation: formatFixed(ELASTIC_SATURATION_RATIO, 2),
+          max: formatFixed(demandLegend.maxRatio ?? 0, 2),
+        })}</small> : null}
+      </div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
-      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{t(activeTool === 'node' ? 'canvas.createNode' : 'canvas.createMember')}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
-      {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{t('canvas.selectionCycle', { index: cycleIndicator.index, total: cycleIndicator.total })}</div> : null}
+      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}>
+        <div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div>
+        <label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="text" inputMode="decimal" autoComplete="off" value={quickEntry.first} onChange={(event) => { setQuickEntry((current) => ({ ...current, first: event.target.value })); setQuickEntryError(''); }} /><small>{lengthLabel}</small></label>
+        <label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="text" inputMode="decimal" autoComplete="off" value={quickEntry.second} onChange={(event) => { setQuickEntry((current) => ({ ...current, second: event.target.value })); setQuickEntryError(''); }} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label>
+        <button type="submit">{t(activeTool === 'node' ? 'canvas.createNode' : 'canvas.createMember')}</button>
+        <button type="button" className="quick-entry-cancel" onClick={cancelQuickEntry}>{t('canvas.cancelPlacement')}</button>
+        {quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}
+      </form> : null}
+      {candidatePicker && (!surfaceBroker || candidatePickerSurface?.status === 'active') ? <div
+        data-workspace-surface={surfaceBroker ? 'candidatePicker' : undefined}
+        ref={surfaceBroker?.surfaceRootRef('candidatePicker') as Ref<HTMLDivElement> | undefined}
+      >
+        <CandidatePicker
+          state={candidatePicker}
+          presentation={candidatePickerSurface?.presentation === 'sheet' ? 'sheet' : 'floating'}
+          onCycle={(direction) => setCandidatePicker((current) => current ? cycleCandidatePicker(current, direction) : null)}
+          onSetActive={setCandidatePickerIndex}
+          onConfirm={confirmCandidatePicker}
+          onCancel={closeCandidatePicker}
+          labels={{
+            title: t('canvas.overlapPicker'),
+            cancel: t('canvas.cancelPlacement'),
+            confirm: t('canvas.confirmSelection'),
+          }}
+          labelForCandidate={(candidate) => `${candidate.kind === 'node' ? t('inspector.node') : candidate.kind === 'member' ? t('inspector.member') : candidate.kind === 'nodalLoad' ? t('canvas.overlapNodalLoad') : t('inspector.memberLoad')} ${candidate.id}`}
+        />
+      </div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
           <div className="cut-title-row">
             <strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong>
-            {(() => {
-              const member = memberMap.get(cut.memberId);
-              if (!member || member.type === 'rigid') return null;
-              const area = member.A > 0 ? member.A : 0.005;
-              const inertia = member.I > 0 ? member.I : 0.00008;
-              const depth = Math.sqrt((12 * inertia) / area) || 0.3;
-              const Wel = inertia / (depth / 2) || 0.0005;
-              const sigmaAxial = (Math.abs(cut.point.axial) / area) / 1000;
-              const sigmaBending = Wel > 0 ? (Math.abs(cut.point.moment) / Wel) / 1000 : 0;
-              const sigmaTotal = sigmaAxial + sigmaBending;
-              const ratio = sigmaTotal / 250;
-              const pct = Math.round(ratio * 100);
-              const tone = ratio > 1.0 ? 'overstressed' : ratio > 0.85 ? 'warning' : 'ok';
-              return (
-                <span className="member-narrative-badge" data-tone={tone}>
-                  η = {pct}%
-                </span>
-              );
-            })()}
+            {cutDemand ? <span
+              className="cut-demand-badge"
+              data-status={cutDemand.status}
+              data-at-reference={cutDemand.status === 'available' && cutDemand.atReference ? 'true' : undefined}
+              title={t(cutDemand.status === 'available' ? 'canvas.cutDemandHint' : 'canvas.cutDemandUnavailableHint')}
+            >{cutDemand.status === 'available'
+              ? `η ${formatFixed(cutDemand.ratio, 2)}`
+              : t('canvas.cutDemandUnavailable')}</span> : null}
             <span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span>
           </div>
-          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small>({formatFixed(cut.ratio * 100, 1)}%)</small></span>
+          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small className="cut-station">({formatFixed(cut.ratio * 100, 1)}% s/L)</small></span>
           <div className="cut-values">
             <span className="axial-text">N = {formatFixed(toDisplay(cut.point.axial, units, 'force'), 3)} {forceLabel}</span>
             <span className="shear-text">V = {formatFixed(toDisplay(cut.point.shear, units, 'force'), 3)} {forceLabel}</span>

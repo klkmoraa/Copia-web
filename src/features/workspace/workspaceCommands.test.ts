@@ -15,6 +15,16 @@ describe('bus de comandos del workspace', () => {
     unsubscribe();
   });
 
+  it('abre Model Doctor mediante el mismo bus desde cualquier launcher', () => {
+    const handler = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-model-doctor', handler);
+
+    emitWorkspaceCommand('open-model-doctor');
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('entrega el detalle del comando sin castings en el consumidor', () => {
     const handler = vi.fn();
     const unsubscribe = onWorkspaceCommand('focus-object', handler);
@@ -25,21 +35,21 @@ describe('bus de comandos del workspace', () => {
 
   it('deja de entregar tras darse de baja, sin dejar el listener colgado', () => {
     const handler = vi.fn();
-    onWorkspaceCommand('expand-mobile-results', handler)();
-    emitWorkspaceCommand('expand-mobile-results');
+    onWorkspaceCommand('open-results', handler)();
+    emitWorkspaceCommand('open-results');
     expect(handler).not.toHaveBeenCalled();
   });
 
   it('no mezcla comandos distintos', () => {
-    const expand = vi.fn();
-    const collapse = vi.fn();
+    const results = vi.fn();
+    const datasheet = vi.fn();
     const off = [
-      onWorkspaceCommand('expand-mobile-results', expand),
-      onWorkspaceCommand('collapse-mobile-results', collapse),
+      onWorkspaceCommand('open-results', results),
+      onWorkspaceCommand('open-datasheet', datasheet),
     ];
-    emitWorkspaceCommand('collapse-mobile-results');
-    expect(collapse).toHaveBeenCalledTimes(1);
-    expect(expand).not.toHaveBeenCalled();
+    emitWorkspaceCommand('open-datasheet');
+    expect(datasheet).toHaveBeenCalledTimes(1);
+    expect(results).not.toHaveBeenCalled();
     for (const unsubscribe of off) unsubscribe();
   });
 

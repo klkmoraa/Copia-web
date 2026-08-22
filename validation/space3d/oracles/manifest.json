@@ -1,0 +1,695 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "validation/space3d/build-manifest.py",
+  "engine": "structureCo 0.8.2 · src/space3d",
+  "notes": [
+    "Los casos `manual` comparan el solver contra formas cerradas derivadas en manual-cases.md.",
+    "Los valores esperados los produce validation/space3d/derive-expected.py, que no usa el solver.",
+    "Una corrida externa sólo pasa a PASS cuando tiene output, versión y hash reales.",
+    "Las corridas externas las produce validation/space3d/run-oracles.py, que no importa nada de structureCo."
+  ],
+  "cases": [
+    {
+      "id": "S3D-AXIAL-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-AXIAL-001.project.json",
+      "result": "expected/S3D-AXIAL-001.result.json",
+      "modelSha256": "a9de3de66209e63aebbfa7bd2dd66ed0455bded5aee850940c15baf17416df15",
+      "resultSha256": "b0ceb638f7cf2699ac310974e37308e44f1ecaa8c838c91ef1ba5f5775476b66",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-BENDING-Y-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-BENDING-Y-001.project.json",
+      "result": "expected/S3D-BENDING-Y-001.result.json",
+      "modelSha256": "de7c48db518f9a5008cbb27f115d6f7885b7e4c20a7fbbee0edf469b60f87d71",
+      "resultSha256": "296206c2ccfa17b3bf34b09b2102e79500ad7269a24ba79d3449b9a287bf7a17",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-BENDING-Z-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-BENDING-Z-001.project.json",
+      "result": "expected/S3D-BENDING-Z-001.result.json",
+      "modelSha256": "1ea3d947668a95e6f98278515abc90b6a967a7dac7452156edfd149a2f59c9b8",
+      "resultSha256": "06425880eb65d4ca7f4a2b526a8880ea3a082e11740a2fc70f804dc1ccee09c8",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-FRAME-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-FRAME-001.project.json",
+      "result": "expected/S3D-FRAME-001.result.json",
+      "modelSha256": "5a1382f312ff05d11be9e2c95ed7f05f3938aa73b0d8184b662c12d958ca8768",
+      "resultSha256": "ab7e0044d0bcddfd3acdd0d0b14ec8e59a3455b11741e59cef187ef7ae0715fb",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-TORSION-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-TORSION-001.project.json",
+      "result": "expected/S3D-TORSION-001.result.json",
+      "modelSha256": "5633d4382650b1d4df9434c095cf44967ad02d3f46b6353351f573f6faa433cd",
+      "resultSha256": "59c445fcab05092282c432857b226e0aaa631c478d1da06d1a3d34e53c68c804",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    }
+  ],
+  "externalRuns": [
+    {
+      "caseId": "S3D-AXIAL-001",
+      "oracle": "opensees",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-AXIAL-001.project.json",
+      "inputSha256": "a9de3de66209e63aebbfa7bd2dd66ed0455bded5aee850940c15baf17416df15",
+      "output": "opensees/output/S3D-AXIAL-001.json",
+      "outputSha256": "5037b5940390596f7a1394bb24907910f367301db474e974cc83f8c219acc3d3",
+      "version": "OpenSees 3.8.0 (openseespy)",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [opensees]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-AXIAL-001",
+      "oracle": "pynite",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-AXIAL-001.project.json",
+      "inputSha256": "a9de3de66209e63aebbfa7bd2dd66ed0455bded5aee850940c15baf17416df15",
+      "output": "pynite/output/S3D-AXIAL-001.json",
+      "outputSha256": "c7cc28ef7a04d1090efb80cf71d8bea3afafd25de9dab573833434cf0e5d46a4",
+      "version": "PyNite 3.0.0",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [pynite]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-AXIAL-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "frame3dd executable unavailable: SourceForge mirrors return 403, the PyPI package of the same name is an input-file generator rather than the solver, and no C toolchain is present to build the official source",
+      "input": "frame3dd/S3D-AXIAL-001.3dd",
+      "inputSha256": "40fee5eb55b847f5f966071413b9338922e9ae65036764dddbaf29ac627441d4",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Y-001",
+      "oracle": "opensees",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-BENDING-Y-001.project.json",
+      "inputSha256": "de7c48db518f9a5008cbb27f115d6f7885b7e4c20a7fbbee0edf469b60f87d71",
+      "output": "opensees/output/S3D-BENDING-Y-001.json",
+      "outputSha256": "f6cf9fa643efa2ef1435844c875f6f5eb51c1d019064f440bc13efaec31d3a4f",
+      "version": "OpenSees 3.8.0 (openseespy)",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [opensees]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-BENDING-Y-001",
+      "oracle": "pynite",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-BENDING-Y-001.project.json",
+      "inputSha256": "de7c48db518f9a5008cbb27f115d6f7885b7e4c20a7fbbee0edf469b60f87d71",
+      "output": "pynite/output/S3D-BENDING-Y-001.json",
+      "outputSha256": "69e0bf796df5f2d12bfdc593f8d15326194427dc5c53955a6fa455b8dcea4d4e",
+      "version": "PyNite 3.0.0",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [pynite]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-BENDING-Y-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "frame3dd executable unavailable: SourceForge mirrors return 403, the PyPI package of the same name is an input-file generator rather than the solver, and no C toolchain is present to build the official source",
+      "input": "frame3dd/S3D-BENDING-Y-001.3dd",
+      "inputSha256": "c971bf2e6a34a75a752f3c6c588d752ee3d76541e1084ba5362ad55591a95f40",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Z-001",
+      "oracle": "opensees",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-BENDING-Z-001.project.json",
+      "inputSha256": "1ea3d947668a95e6f98278515abc90b6a967a7dac7452156edfd149a2f59c9b8",
+      "output": "opensees/output/S3D-BENDING-Z-001.json",
+      "outputSha256": "85f83de3228d2aad86ccc844631fd6965e2499cc20e89430e1a543f7a3baf613",
+      "version": "OpenSees 3.8.0 (openseespy)",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [opensees]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-BENDING-Z-001",
+      "oracle": "pynite",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-BENDING-Z-001.project.json",
+      "inputSha256": "1ea3d947668a95e6f98278515abc90b6a967a7dac7452156edfd149a2f59c9b8",
+      "output": "pynite/output/S3D-BENDING-Z-001.json",
+      "outputSha256": "adbdddae10ecd4aa23d790c6ad49a87b7993c24aec5acabb6da1b5d4aaeafda4",
+      "version": "PyNite 3.0.0",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [pynite]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-BENDING-Z-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "frame3dd executable unavailable: SourceForge mirrors return 403, the PyPI package of the same name is an input-file generator rather than the solver, and no C toolchain is present to build the official source",
+      "input": "frame3dd/S3D-BENDING-Z-001.3dd",
+      "inputSha256": "0054bf5b847ad5e274d7eaa7536f3af369cf9c89608e202067e71f7f51df5e8e",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-FRAME-001",
+      "oracle": "opensees",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-FRAME-001.project.json",
+      "inputSha256": "5a1382f312ff05d11be9e2c95ed7f05f3938aa73b0d8184b662c12d958ca8768",
+      "output": "opensees/output/S3D-FRAME-001.json",
+      "outputSha256": "3edd04647f6025e37718c3010e3071c269c673f8bb93aed83dee7099f2a4bd00",
+      "version": "OpenSees 3.8.0 (openseespy)",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [opensees]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-FRAME-001",
+      "oracle": "pynite",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-FRAME-001.project.json",
+      "inputSha256": "5a1382f312ff05d11be9e2c95ed7f05f3938aa73b0d8184b662c12d958ca8768",
+      "output": "pynite/output/S3D-FRAME-001.json",
+      "outputSha256": "8fc50abaeeccf22b3ca7635408b25c3aaaa448076e72ddfff5a7b2bc63638b35",
+      "version": "PyNite 3.0.0",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [pynite]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-FRAME-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "frame3dd executable unavailable: SourceForge mirrors return 403, the PyPI package of the same name is an input-file generator rather than the solver, and no C toolchain is present to build the official source",
+      "input": "frame3dd/S3D-FRAME-001.3dd",
+      "inputSha256": "e7c2f3f0902856adc10d6926a37704c174cc290e97053d2d268e28787988635d",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-TORSION-001",
+      "oracle": "opensees",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-TORSION-001.project.json",
+      "inputSha256": "5633d4382650b1d4df9434c095cf44967ad02d3f46b6353351f573f6faa433cd",
+      "output": "opensees/output/S3D-TORSION-001.json",
+      "outputSha256": "014ff9c7507dbecbbf7d5bb8737c374fc0d8a960af3454dc0fdba67cb000172d",
+      "version": "OpenSees 3.8.0 (openseespy)",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [opensees]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-TORSION-001",
+      "oracle": "pynite",
+      "status": "RUN",
+      "reason": null,
+      "input": "expected/S3D-TORSION-001.project.json",
+      "inputSha256": "5633d4382650b1d4df9434c095cf44967ad02d3f46b6353351f573f6faa433cd",
+      "output": "pynite/output/S3D-TORSION-001.json",
+      "outputSha256": "d8b35e8e7079a8ef205288e429049e37a06a0f0beec90335f624bffb27bce641",
+      "version": "PyNite 3.0.0",
+      "os": "Windows 11 (AMD64)",
+      "command": "python validation/space3d/run-oracles.py [pynite]",
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": "identidad",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        }
+      ]
+    },
+    {
+      "caseId": "S3D-TORSION-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "frame3dd executable unavailable: SourceForge mirrors return 403, the PyPI package of the same name is an input-file generator rather than the solver, and no C toolchain is present to build the official source",
+      "input": "frame3dd/S3D-TORSION-001.3dd",
+      "inputSha256": "1ceafed41c5a265527ad5d99077a908f76ce37f59825e142433d2f34738ab4a7",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    }
+  ]
+}

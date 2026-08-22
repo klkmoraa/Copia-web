@@ -1,4 +1,4 @@
-import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactElement } from 'react';
+import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactElement, type Ref } from 'react';
 
 /**
  * Niveles de elevación clay.
@@ -6,10 +6,11 @@ import { createElement, type ComponentPropsWithoutRef, type ElementType, type Re
  * `flat` no aplica volumen y es el nivel de las zonas técnicas densas —tablas
  * de resultados, filas del inspector, el lienzo—: darles relieve a cada una
  * convierte una rejilla de datos en un montón de fichas y se lee peor.
- * `raised` es la tarjeta normal. `floating` es la elevación de lo que se
- * despega del plano: popovers, hojas, menús.
+ * `inset` recibe controles y bandejas. `raised` es la tarjeta normal.
+ * `floating` es la elevación de lo que se despega del plano: popovers y
+ * menús. `sheet` nace de un borde y `modal` interrumpe el plano con velo.
  */
-export type SurfaceLevel = 'flat' | 'raised' | 'floating';
+export type SurfaceLevel = 'flat' | 'inset' | 'raised' | 'floating' | 'sheet' | 'modal';
 
 export type SurfaceTag = 'div' | 'section' | 'article' | 'aside' | 'button' | 'header' | 'nav';
 
@@ -18,6 +19,12 @@ type SurfaceOwnProps<Tag extends SurfaceTag> = {
   /** Invierte la iluminación. El estilo vive en CSS; aquí sólo se expone el estado. */
   pressed?: boolean;
   as?: Tag;
+  /**
+   * Acceso al elemento, como en el resto de la librería (`Button`, `Field`,
+   * `Select`). Una superficie flotante que se abre tiene que poder recibir el
+   * foco al montarse, y eso lo decide quien la abre, no el envoltorio de CSS.
+   */
+  ref?: Ref<HTMLElement>;
 };
 
 export type SurfaceProps<Tag extends SurfaceTag = 'div'> = SurfaceOwnProps<Tag>
@@ -34,6 +41,7 @@ export const Surface = <Tag extends SurfaceTag = 'div'>({
   as,
   className = '',
   children,
+  ref,
   ...rest
 }: SurfaceProps<Tag>): ReactElement => {
   const SurfaceElement: ElementType = as ?? 'div';
@@ -41,6 +49,7 @@ export const Surface = <Tag extends SurfaceTag = 'div'>({
   return createElement(
     SurfaceElement,
     {
+      ref,
       className: `sc-surface${className ? ` ${className}` : ''}`,
       'data-level': level,
       'data-pressed': pressed ? 'true' : undefined,

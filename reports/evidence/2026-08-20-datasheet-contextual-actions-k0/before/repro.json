@@ -1,0 +1,382 @@
+{
+  "k0-portrait": {
+    "1-open": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 255,
+        "scrollTop": 0,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "2-row-selected": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "svg",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "draftError": "no hay carril contextual alcanzable",
+    "3-draft": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "svg",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "locateError": "no hay botón Localizar alcanzable",
+    "4-locate-peek": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "svg",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "restoreError": "no hay asa de peek",
+    "5-restored": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "svg",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    }
+  },
+  "k0-landscape": {
+    "1-open": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekClass": false,
+        "gridClientHeight": 57,
+        "scrollTop": 0,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": false,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": true,
+        "ariaHidden": "true"
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "surface": "datasheet",
+        "insideDatasheet": true,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "TH",
+        "insideInert": false,
+        "insideDatasheet": true
+      }
+    },
+    "2-row-selected": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "line",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "draftError": "no hay carril contextual alcanzable",
+    "3-draft": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "line",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "locateError": "no hay botón Localizar alcanzable",
+    "4-locate-peek": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "line",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    },
+    "restoreError": "no hay asa de peek",
+    "5-restored": {
+      "shellClass": "K0",
+      "datasheet": {
+        "mounted": false,
+        "visible": false,
+        "extent": null,
+        "peekClass": false,
+        "gridClientHeight": null,
+        "scrollTop": null,
+        "selectedRows": 0,
+        "pendingDraft": 0,
+        "pendingText": ""
+      },
+      "contextualActions": {
+        "mounted": true,
+        "visible": false
+      },
+      "candidatePicker": {
+        "mounted": false
+      },
+      "background": {
+        "inert": false,
+        "ariaHidden": null
+      },
+      "focus": {
+        "tag": "BODY",
+        "surface": null,
+        "insideDatasheet": false,
+        "insideInert": false,
+        "hidden": false
+      },
+      "canvasHit": {
+        "tag": "line",
+        "insideInert": false,
+        "insideDatasheet": false
+      }
+    }
+  }
+}

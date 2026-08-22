@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createEditorLayerState, editorLayerReducer, parseEditorLayerState } from './editorLayers';
+import {
+  activeEditorLayerPreset,
+  createEditorLayerState,
+  editorLayerReducer,
+  parseEditorLayerState,
+} from './editorLayers';
 
 describe('editor layer state', () => {
-  it('starts with every presentation layer visible', () => {
+  it('starts with every presentation layer visible except the heatmap', () => {
     expect(createEditorLayerState()).toEqual({
       model: true,
       loads: true,
@@ -12,6 +17,7 @@ describe('editor layer state', () => {
       labels: true,
       help: true,
       diagnostics: true,
+      // El mapa de calor reinterpreta el color del dibujo técnico: se pide, no se hereda.
       heatmap: false,
     });
   });
@@ -31,6 +37,21 @@ describe('editor layer state', () => {
       { type: 'toggle', layer: 'results' },
     );
     expect(editorLayerReducer(changed, { type: 'reset' })).toEqual(createEditorLayerState());
+  });
+
+  it('applies a preset as a whole view instead of toggling one entry', () => {
+    const results = editorLayerReducer(createEditorLayerState(), { type: 'preset', preset: 'results' });
+    expect(results).toMatchObject({ model: true, results: true, heatmap: true, loads: false, help: false });
+
+    const clean = editorLayerReducer(results, { type: 'preset', preset: 'clean' });
+    expect(clean).toMatchObject({ model: true, ids: false, labels: false, diagnostics: false, heatmap: false });
+  });
+
+  it('reports the preset that matches the current view, and none once the user diverges', () => {
+    const state = createEditorLayerState();
+    expect(activeEditorLayerPreset(state)).toBe('all');
+    expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'preset', preset: 'loads' }))).toBe('loads');
+    expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'toggle', layer: 'ids' }))).toBeNull();
   });
 
   it('restores only validated presentation values and always protects the model', () => {

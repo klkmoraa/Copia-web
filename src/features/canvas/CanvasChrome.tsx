@@ -1,10 +1,9 @@
-import { Crosshair, Flame, LocateFixed, Minus, Plus, Waves, X } from 'lucide-react';
+import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
 import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
+import type { ResultTab } from '../../store/ProjectContext';
 import { CanvasLayers } from './CanvasLayers';
-import { CanvasMiniMap } from './CanvasMiniMap';
-import { useProjectModel } from '../../store/ProjectContext';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -15,15 +14,13 @@ export interface CanvasChromeProps {
   showHelp: boolean;
   layers: EditorLayerState;
   dispatchLayers: Dispatch<EditorLayerAction>;
+  resultTab: ResultTab;
+  setResultTab: (tab: ResultTab) => void;
   snapEnabled: boolean;
   gridEnabled: boolean;
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
   lengthLabel: string;
   scale: number;
-  hasAnalysis: boolean;
-  isDeformedTab?: boolean;
-  oscillating?: boolean;
-  onToggleOscillation?: () => void;
   onCancelPlacement: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -37,29 +34,25 @@ export const CanvasChrome = ({
   showHelp,
   layers,
   dispatchLayers,
+  resultTab,
+  setResultTab,
   snapEnabled,
   gridEnabled,
   coordinateReadoutRef,
   lengthLabel,
   scale,
-  hasAnalysis,
-  isDeformedTab = false,
-  oscillating = false,
-  onToggleOscillation,
   onCancelPlacement,
   onZoomIn,
   onZoomOut,
   onFit,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
-  const { project } = useProjectModel();
 
   useEffect(() => {
     return onWorkspaceCommand('fit-canvas', () => onFit());
   }, [onFit]);
 
   return <>
-    <CanvasMiniMap project={project} onFit={onFit} />
     <div className={`canvas-mode-badge${placementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
       <strong>{modeLabel}</strong>
       {placementInstruction ? <span className="canvas-action-instruction">{placementInstruction}</span> : showHelp ? <>
@@ -68,34 +61,10 @@ export const CanvasChrome = ({
       </> : null}
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
-    <CanvasLayers layers={layers} dispatch={dispatchLayers} />
+    <CanvasLayers layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} />
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
       <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
       <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
-      {hasAnalysis ? (
-        <button
-          type="button"
-          className={`canvas-heatmap-toggle${layers.heatmap ? ' active' : ''}`}
-          aria-pressed={layers.heatmap}
-          title={layers.heatmap ? 'Desactivar Heatmap de Demanda' : 'Activar Heatmap de Demanda (η)'}
-          onClick={() => dispatchLayers({ type: 'toggle', layer: 'heatmap' })}
-        >
-          <Flame size={12} aria-hidden="true" />
-          Heatmap
-        </button>
-      ) : null}
-      {hasAnalysis && isDeformedTab && onToggleOscillation ? (
-        <button
-          type="button"
-          className={`canvas-oscillation-toggle${oscillating ? ' active' : ''}`}
-          aria-pressed={oscillating}
-          title={oscillating ? 'Pausar oscilación dinámica' : 'Simular oscilación dinámica armónica'}
-          onClick={onToggleOscillation}
-        >
-          <Waves size={12} aria-hidden="true" />
-          {oscillating ? 'Oscilando' : 'Oscilar'}
-        </button>
-      ) : null}
     </div>
     <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
       <IconButton label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={onZoomIn}><Plus size={18} /></IconButton>

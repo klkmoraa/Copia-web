@@ -12,6 +12,7 @@
  * listening keeps working — but the name and the payload now have one definition each.
  */
 import type { Selection } from '../../types';
+import type { DenseResultView } from '../results/denseResults';
 
 /** A selection that names exactly one object; `multi` and `null` cannot be focused. */
 export type FocusableSelection = Extract<NonNullable<Selection>, { id: string }>;
@@ -26,14 +27,34 @@ export interface WorkspaceCommands {
   'focus-object': FocusableSelection;
   /** Fit the whole model into the visible canvas. */
   'fit-canvas': void;
-  /** Raise the results sheet on small viewports. */
-  'expand-mobile-results': void;
-  /** Lower the results sheet on small viewports. */
-  'collapse-mobile-results': void;
+  /** Request the Results surface; the presentation broker chooses its placement. */
+  'open-results': void;
+  /**
+   * Invoke the dense results surface (reactions, influence, "Entender") on a
+   * given view. It is never resident, so the launcher travels with the element
+   * that asked for it: the broker returns focus there when the surface closes.
+   */
+  'open-dense-results': { view: DenseResultView; trigger?: HTMLElement | null };
   /** Export the structural canvas as a standalone SVG file. */
   'export-svg': void;
   /** Export the structural canvas as a raster image. */
   'export-png': void;
+  /** Raise the command palette; emitted from the ToolRail trigger or keyboard shortcut. */
+  'open-command-palette': void;
+  /** Open the preventive Model Doctor surface before or after analysis. */
+  'open-model-doctor': void;
+  /**
+   * Open the structural datasheet. It projects the current model as a table and
+   * shares the workspace selection, so it needs no payload of its own.
+   */
+  'open-datasheet': void;
+  /** Open the contextual structural-editing surface for the current selection. */
+  'open-structural-edit': void;
+  /**
+   * Open the structure generator over the canvas. It needs no selection: it
+   * creates geometry rather than transforming what is already there.
+   */
+  'open-structure-generator': void;
   /** Show a toast notification on screen. */
   'show-toast': {
     message: string;
@@ -41,8 +62,6 @@ export interface WorkspaceCommands {
     tone?: 'success' | 'info' | 'warning' | 'error';
     durationMs?: number;
   };
-  /** Open the global Command Palette modal. */
-  'open-command-palette': void;
 }
 
 export type WorkspaceCommand = keyof WorkspaceCommands;

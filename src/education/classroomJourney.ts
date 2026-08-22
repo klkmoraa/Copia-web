@@ -1,11 +1,10 @@
 import type { AnalysisResult, ProjectModel, Tool } from '../types';
 import { deriveClassroomProgress } from './classroomProgress';
 
-export type ClassroomJourneyStepId = 'build' | 'define' | 'predict' | 'analyze' | 'compare' | 'conclude';
+export type ClassroomJourneyStepId = 'build' | 'define' | 'analyze' | 'compare' | 'conclude';
 export type ClassroomJourneyStepState = 'complete' | 'current' | 'pending' | 'attention';
 export type ClassroomJourneyAction =
   | { kind: 'tool'; tool: Tool }
-  | { kind: 'predict' }
   | { kind: 'analyze' }
   | { kind: 'compare' }
   | { kind: 'conclude' };
@@ -18,9 +17,10 @@ export interface ClassroomJourneyStep {
 }
 
 export interface ClassroomJourneyInput {
-  hasPredictions: boolean;
+  /** Legacy session fields are accepted only so old callers can open safely. */
+  hasPredictions?: boolean;
   analysisRequested: boolean;
-  resultsVisible: boolean;
+  resultsVisible?: boolean;
   conclusion: string;
 }
 
@@ -40,9 +40,8 @@ export const deriveClassroomJourney = (
   const modelProgress = deriveClassroomProgress(project, analysis);
   const buildComplete = modelProgress.geometry.valid;
   const definitionComplete = buildComplete && modelProgress.supports.valid && modelProgress.loads.valid;
-  const predictionComplete = definitionComplete && session.hasPredictions;
-  const analysisComplete = predictionComplete && session.analysisRequested && analysis?.success === true;
-  const comparisonComplete = analysisComplete && session.resultsVisible;
+  const analysisComplete = definitionComplete && analysis?.success === true;
+  const comparisonComplete = analysisComplete;
   const definitions: Array<Omit<ClassroomJourneyStep, 'state'>> = [
     {
       id: 'build',
@@ -58,7 +57,6 @@ export const deriveClassroomJourney = (
         ? { kind: 'tool', tool: 'pointLoad' }
         : { kind: 'tool', tool: 'support' },
     },
-    { id: 'predict', complete: predictionComplete, action: { kind: 'predict' } },
     { id: 'analyze', complete: analysisComplete, action: { kind: 'analyze' } },
     { id: 'compare', complete: comparisonComplete, action: { kind: 'compare' } },
     { id: 'conclude', complete: comparisonComplete && Boolean(session.conclusion.trim()), action: { kind: 'conclude' } },
@@ -68,7 +66,7 @@ export const deriveClassroomJourney = (
     ...step,
     state: step.complete
       ? 'complete'
-      : step.id === 'analyze' && predictionComplete && session.analysisRequested && analysis?.success === false
+      : step.id === 'analyze' && session.analysisRequested && analysis?.success === false
         ? 'attention'
         : index === firstIncompleteIndex
           ? 'current'

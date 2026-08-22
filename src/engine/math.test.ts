@@ -115,8 +115,26 @@ describe('solucionador lineal robusto', () => {
     expect(__testables.buildHybridSolver(matrix)).not.toBeNull();
     const expected = Array.from({ length: matrix.length }, (_, index) => Math.sin(index) * 3 + 1);
     const result = solveForKnown(matrix, expected);
+    expect(result.diagnostics).toMatchObject({
+      policy: 'auto',
+      backend: 'sparse-ldlt',
+      fallbackReason: undefined,
+    });
     result.x.forEach((value, index) => close(value, expected[index]));
     expect(result.relativeResidual).toBeLessThan(1e-13);
+  });
+
+  it('permite forzar LU denso y explica por qué no eligió sparse', () => {
+    const dofs = 90;
+    const matrix = augmentedSystem(dofs, [{ terms: [[0, 1]] }, { terms: [[dofs - 1, 1]] }]);
+    const expected = Array.from({ length: matrix.length }, (_, index) => Math.sin(index) + 1);
+    const result = solveLinearSystem(matrix, multiplyMatrixVector(matrix, expected), { backend: 'dense' });
+    expect(result.diagnostics).toMatchObject({
+      policy: 'dense',
+      backend: 'dense-lu',
+      fallbackReason: 'forced-dense',
+    });
+    result.x.forEach((value, index) => close(value, expected[index]));
   });
 
   it('trata como restricción de un grado el apoyo deslizante alineado a los ejes', () => {
@@ -149,6 +167,10 @@ describe('solucionador lineal robusto', () => {
 
     const expected = Array.from({ length: matrix.length }, (_, index) => (index % 7) - 3);
     const result = solveForKnown(matrix, expected);
+    expect(result.diagnostics).toMatchObject({
+      backend: 'dense-lu',
+      fallbackReason: 'non-positive-pivot',
+    });
     result.x.forEach((value, index) => close(value, expected[index]));
   });
 
@@ -164,6 +186,10 @@ describe('solucionador lineal robusto', () => {
 
     const expected = Array.from({ length: matrix.length }, (_, index) => Math.sin(index * 0.5));
     const result = solveForKnown(matrix, expected);
+    expect(result.diagnostics).toMatchObject({
+      backend: 'dense-lu',
+      fallbackReason: 'constraints-not-reducible',
+    });
     result.x.forEach((value, index) => close(value, expected[index]));
   });
 

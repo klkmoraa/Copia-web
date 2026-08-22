@@ -1,1 +1,0 @@
-var e=new WeakMap,t=t=>{let n=e.get(t);if(n!==void 0)return n;let r=JSON.stringify([t.nodes,t.members,t.loadCases,t.combinations,t.nodalLoads,t.prescribedDisplacements??null,t.memberLoads,t.memberInitialEffects??null,t.settings.calculationMode??null,t.settings.analysisMode??null,t.settings.pDeltaConfig??null]);return e.set(t,r),r};export{t};

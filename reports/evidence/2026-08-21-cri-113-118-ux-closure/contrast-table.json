@@ -1,0 +1,57 @@
+[
+  {
+    "role": "caption técnico (CRI-114)",
+    "elemento": "#6c7375 D / #a6b6b0 N",
+    "dia_lienzo": 4.76,
+    "noche_lienzo": 8.66,
+    "dia_superficie": 4.72,
+    "noche_superficie": 7.6,
+    "peor": 4.72,
+    "umbral": 4.5,
+    "pass": true
+  },
+  {
+    "role": "disabled con contenido obligatorio (CRI-117)",
+    "elemento": "#6b7274 D / #849590 N",
+    "dia_lienzo": 4.82,
+    "noche_lienzo": 5.82,
+    "dia_superficie": 4.79,
+    "noche_superficie": 5.11,
+    "peor": 4.79,
+    "umbral": 4.5,
+    "pass": true
+  },
+  {
+    "role": "disabled inactivo, exento 1.4.3 (CRI-117)",
+    "elemento": "#9aa0a1 D / #64746f N",
+    "dia_lienzo": 2.61,
+    "noche_lienzo": 3.72,
+    "dia_superficie": 2.59,
+    "noche_superficie": 3.27,
+    "peor": 2.59,
+    "umbral": null,
+    "pass": null
+  },
+  {
+    "role": "brand ink sobre accent-soft (CRI-113)",
+    "elemento": "#087e5c D / #1aa57a N vs accent-soft (fondo hover/active)",
+    "dia_lienzo": "—",
+    "dia_superficie": 4.45,
+    "noche_lienzo": "—",
+    "noche_superficie": 4.46,
+    "peor": 4.45,
+    "umbral": 3,
+    "pass": true
+  },
+  {
+    "role": "brand edge (invariante, control)",
+    "elemento": "#087e5c (idéntico D/N)",
+    "dia_lienzo": 4.98,
+    "noche_lienzo": 3.62,
+    "dia_superficie": 4.95,
+    "noche_superficie": 3.17,
+    "peor": 3.17,
+    "umbral": 3,
+    "pass": true
+  }
+]

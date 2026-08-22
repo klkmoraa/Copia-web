@@ -1,4 +1,4 @@
-import type { AnalysisResult, ProjectModel, UnitSystemId } from '../types';
+import type { AnalysisResult, NumericQualityState, ProjectModel, UnitSystemId } from '../types';
 
 export const STRUCTURECO_PAYLOAD_FILENAME = 'structureco-payload.json';
 export const STRUCTURECO_PAYLOAD_MIME = 'application/vnd.structureco.project+json';
@@ -13,6 +13,9 @@ export interface PortableReportMetadata {
   memberCount: number;
   loadCount: number;
   analysisSuccess: boolean;
+  numericQuality: NumericQualityState;
+  analysisMode: 'first-order' | 'p-delta';
+  pDeltaExperimental: boolean;
 }
 
 export interface PortableProvenance {

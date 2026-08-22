@@ -1,50 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  analyzeAxleTrain,
-  buildInfluenceLine,
   type AxleTrainEnvelope,
-  type ConcentratedAxleTrain,
   type InfluenceLine,
-  type InfluenceTarget,
 } from './influence';
 import { analysisSignature } from './projectSignature';
 import type { ProjectModel } from '../types';
+import { handleInfluenceEnvelope } from '../runtime/workerHandlers';
+import {
+  WORKER_PROTOCOL_VERSION,
+  type InfluenceAnalysisInput as ProtocolInfluenceAnalysisInput,
+  type InfluenceWorkerPayload,
+  type InfluenceWorkerResult,
+  type WorkerRequestEnvelope,
+  type WorkerResponseEnvelope,
+} from '../runtime/workerProtocol';
 
-export interface InfluenceAnalysisInput {
-  pathMemberIds: readonly string[];
-  target: InfluenceTarget;
-  startNodeId?: string;
-  train?: ConcentratedAxleTrain | null;
-}
+export type InfluenceAnalysisInput = ProtocolInfluenceAnalysisInput;
 
 export interface InfluenceAnalysisOutput {
   line: InfluenceLine;
   axleTrain: AxleTrainEnvelope | null;
 }
-
-interface InfluenceWorkerRequest {
-  type: 'analyze-influence';
-  requestId: number;
-  project: ProjectModel;
-  input: InfluenceAnalysisInput;
-}
-
-interface InfluenceWorkerSuccess {
-  type: 'influence-result';
-  requestId: number;
-  result: InfluenceAnalysisOutput;
-}
-
-interface InfluenceWorkerFailure {
-  type: 'influence-error';
-  requestId: number;
-  message: string;
-}
-
-type InfluenceWorkerResponse = InfluenceWorkerSuccess | InfluenceWorkerFailure;
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : 'No se pudo calcular la línea de influencia.';
 
 export const useInfluenceAnalysis = (project: ProjectModel) => {
   const [result, setResult] = useState<InfluenceAnalysisOutput | null>(null);
@@ -105,23 +81,13 @@ export const useInfluenceAnalysis = (project: ProjectModel) => {
       fallbackTimerRef.current = window.setTimeout(() => {
         fallbackTimerRef.current = null;
         if (requestRef.current !== requestId) return;
-        try {
-          const line = buildInfluenceLine(
-            project,
-            immutableInput.pathMemberIds,
-            immutableInput.target,
-            immutableInput.startNodeId,
-          );
-          const axleTrain = immutableInput.train
-            ? analyzeAxleTrain(line, immutableInput.train)
-            : null;
-          if (requestRef.current !== requestId) return;
-          setResult({ line, axleTrain });
-        } catch (caught) {
-          if (requestRef.current === requestId) setError(errorMessage(caught));
-        } finally {
-          if (requestRef.current === requestId) setBusy(false);
-        }
+        const response = handleInfluenceEnvelope({
+          protocolVersion: 1, type: 'run', domain: 'influence', requestId, payload: { project, input: immutableInput },
+        });
+        if (requestRef.current !== requestId) return;
+        if (response.type === 'success') setResult(response.result);
+        else setError(response.error.message);
+        setBusy(false);
       }, 0);
     };
 
@@ -140,21 +106,19 @@ export const useInfluenceAnalysis = (project: ProjectModel) => {
         if (workerRef.current === worker) workerRef.current = null;
         fallback();
       };
-      worker.onmessage = (event: MessageEvent<InfluenceWorkerResponse>) => {
+      worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'influence', InfluenceWorkerResult>>) => {
         if (settled || event.data.requestId !== requestId || requestRef.current !== requestId) return;
         settled = true;
         worker.terminate();
         if (workerRef.current === worker) workerRef.current = null;
-        if (event.data.type === 'influence-result') setResult(event.data.result);
-        else setError(event.data.message);
+        if (event.data.type === 'success') setResult(event.data.result);
+        else setError(event.data.error.message);
         setBusy(false);
       };
       worker.onerror = fallbackOnce;
-      const request: InfluenceWorkerRequest = {
-        type: 'analyze-influence',
-        requestId,
-        project,
-        input: immutableInput,
+      const request: WorkerRequestEnvelope<'influence', InfluenceWorkerPayload> = {
+        protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'influence', requestId,
+        payload: { project, input: immutableInput },
       };
       worker.postMessage(request);
     } catch {

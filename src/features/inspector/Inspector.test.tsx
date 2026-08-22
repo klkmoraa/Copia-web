@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { findStandardSection } from '../../data/standardSections';
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
-import { ProjectProvider, useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { ProjectProvider } from '../../store/ProjectContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel, Selection, UnitSystemId } from '../../types';
 import { Inspector } from './Inspector';
 
@@ -72,19 +76,10 @@ const selections: Array<{ label: string; value: Selection }> = [
   },
 ];
 
-const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number }) => {
-  const {
-    project,
-    analysis,
-    selection,
-    setSelection,
-    analyze,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    updateProjectView,
-  } = useProject();
+const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth, mobileDetent, onMobileDetentChange }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void }) => {
+  const { project, canUndo, canRedo, undo, redo, updateProjectView } = useProjectModel();
+  const { analysis, analyze } = useProjectAnalysis();
+  const { selection, setSelection } = useWorkspaceUI();
   const nodeN3 = project.nodes.find((node) => node.id === 'N3');
   const nodeN4 = project.nodes.find((node) => node.id === 'N4');
   const memberM1 = project.members.find((member) => member.id === 'M1');
@@ -107,22 +102,61 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="N3 X almacenada">{String(nodeN3?.x)}</output>
       <output aria-label="N3 Y almacenada">{String(nodeN3?.y)}</output>
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
+      <output aria-label="Nodos actuales">{project.nodes.map((node) => node.id).join(',')}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
+      <output aria-label="M1 A almacenada">{String(memberM1?.A)}</output>
+      <output aria-label="M1 material ID">{String((memberM1 as unknown as Record<string, unknown>)?.materialId ?? '')}</output>
+      <output aria-label="M1 origen material">{String((memberM1 as unknown as Record<string, unknown>)?.materialOrigin ?? '')}</output>
+      <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
+      <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
-      <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} />
+      <Inspector desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
   </ClassroomSessionProvider>;
 };
 
 const renderInspector = (
   project: ProjectModel = createInspectorProject(),
-  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number } = {},
+  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void } = {},
 ) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   return render(<ProjectProvider><InspectorHarness {...props} /></ProjectProvider>);
 };
 
 const storedNumber = (label: string) => Number(screen.getByLabelText(label).textContent);
+
+const SplitSurfaceHarness = ({ surface }: { surface: 'detail' | 'analysisSetup' | 'view' }) => {
+  const [presentation, setPresentation] = useState<'dock' | 'inset' | 'sheet'>('dock');
+  const { selection, setSelection, activeTool, setActiveTool } = useWorkspaceUI();
+  const { project } = useProjectModel();
+  const member = project.members.find((item) => item.id === 'M1');
+  const migrate = (next: 'dock' | 'inset' | 'sheet') => (event: ReactMouseEvent<HTMLButtonElement>) => {
+    // A shell recomposition does not move focus to a launcher. Preserve that
+    // browser behavior in this focused draft regression.
+    event.preventDefault();
+    setPresentation(next);
+  };
+  return <ClassroomSessionProvider projectId={project.id}>
+    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setSelection({ kind: 'member', id: 'M1' })}>seleccionar miembro dividido</button>
+    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setSelection({ kind: 'node', id: 'N3' })}>seleccionar nodo dividido</button>
+    <button type="button" onMouseDown={migrate('inset')} onClick={migrate('inset')}>migrar M1</button>
+    <button type="button" onMouseDown={migrate('sheet')} onClick={migrate('sheet')}>migrar K0</button>
+    <button type="button" onMouseDown={migrate('dock')} onClick={migrate('dock')}>migrar X2</button>
+    <output aria-label="selección dividida">{selection?.kind ?? 'none'}</output>
+    <output aria-label="E dividida almacenada">{String(member?.E)}</output>
+    <Inspector
+      surface={surface}
+      presentation={presentation}
+      activeTool={activeTool}
+      onActiveToolChange={setActiveTool}
+    />
+  </ClassroomSessionProvider>;
+};
+
+const renderSplitSurface = (surface: 'detail' | 'analysisSetup' | 'view', project = createInspectorProject()) => {
+  localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+  return render(<ProjectProvider><SplitSurfaceHarness surface={surface} /></ProjectProvider>);
+};
 
 const expectDescribedUnit = (input: HTMLElement, expectedUnit: string) => {
   const describedBy = input.getAttribute('aria-describedby')?.split(/\s+/).filter(Boolean) ?? [];
@@ -186,9 +220,12 @@ describe('Inspector selection variants', () => {
     const loadCaseName = screen.getByRole('textbox', { name: `Load case name ${firstLoadCase.id}` }) as HTMLInputElement;
     expect(loadCaseName.value).toBe(firstLoadCase.name);
 
-    await user.click(screen.getByRole('tab', { name: 'View' }));
+    await user.click(screen.getByRole('tab', { name: 'Loads' }));
     expect(screen.getByRole('heading', { name: 'Calculation experience' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Complete' })).toBeTruthy();
+
+    await user.click(screen.getByRole('tab', { name: 'View' }));
+    expect(screen.queryByRole('heading', { name: 'Calculation experience' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'CAD precision' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Selection filters' })).toBeTruthy();
     const spacing = screen.getByRole('textbox', { name: 'Spacing' });
@@ -364,7 +401,7 @@ describe('Inspector selection variants', () => {
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Momento Mz' }), 'kN·m');
   });
 
-  it('makes multiple selection read-only and explains why bulk editing is locked', async () => {
+  it('offers bulk editing for a multiple selection instead of locking it', async () => {
     const user = userEvent.setup();
     renderInspector();
 
@@ -373,12 +410,61 @@ describe('Inspector selection variants', () => {
     expect(within(summary).getByText('Selección múltiple')).toBeTruthy();
     expect(within(summary).getByText('3 objetos')).toBeTruthy();
     expect(screen.getByText('2 nodos · 1 miembros')).toBeTruthy();
-    expect(screen.getByText('Edición masiva bloqueada')).toBeTruthy();
-    expect(screen.getByText(/evitar cambios físicos ambiguos/)).toBeTruthy();
     expect(screen.getAllByText('Calculado').length).toBeGreaterThan(0);
-    const panel = screen.getByRole('tabpanel', { name: 'Inspector' });
-    expect(within(panel).queryByRole('textbox')).toBeNull();
-    expect(within(panel).queryByRole('combobox')).toBeNull();
+
+    // La multiselección dejó de ser de sólo lectura: aparece el panel de
+    // edición múltiple y arranca sin ningún cambio preparado.
+    const panel = screen.getByRole('region', { name: 'Edición múltiple' });
+    expect(within(panel).getByText('3 objetos seleccionados')).toBeTruthy();
+    expect(screen.getByTestId('bulk-changes-count').textContent).toBe('Ningún cambio preparado');
+    // Sin nada preparado no se puede ni abrir la revisión, así que tampoco
+    // llegar a la confirmación.
+    expect((screen.getByRole('button', { name: 'Revisar cambios' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('split Inspector surfaces', () => {
+  it('keeps a focused numeric detail draft through X2, M1, K0, and back without publishing it', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface('detail');
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    const field = screen.getByRole('textbox', { name: 'E' }) as HTMLInputElement;
+    const original = screen.getByLabelText('E dividida almacenada').textContent;
+    field.focus();
+    await user.clear(field);
+    await user.type(field, '123456');
+
+    await user.click(screen.getByRole('button', { name: 'migrar M1' }));
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+    expect(document.activeElement).toBe(field);
+
+    await user.click(screen.getByRole('button', { name: 'migrar K0' }));
+    expect(screen.getByRole('dialog', { name: 'Inspector' })).toBeTruthy();
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+
+    await user.click(screen.getByRole('button', { name: 'migrar X2' }));
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+  });
+
+  it('keeps detail open while its selection authority changes, while analysis setup remains selection-independent', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface('detail');
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    await user.click(screen.getByRole('button', { name: 'migrar K0' }));
+    await user.click(screen.getByRole('button', { name: 'seleccionar nodo dividido' }));
+    expect(screen.getByLabelText('selección dividida').textContent).toBe('node');
+    expect(screen.getByRole('dialog', { name: 'Inspector' }).getAttribute('data-workspace-surface')).toBe('detail');
+
+    cleanup();
+    renderSplitSurface('analysisSetup');
+    const loadCase = screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement;
+    const before = loadCase.value;
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    expect(screen.getByRole('complementary', { name: 'Cargas' }).getAttribute('data-workspace-surface')).toBe('analysisSetup');
+    expect((screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement).value).toBe(before);
   });
 });
 
@@ -393,11 +479,41 @@ describe('Inspector preset selectors and load-case guidance', () => {
 
     expect(materialSelect().value).toBe('');
     await user.selectOptions(materialSelect(), 'steel-a992');
-    expect(materialSelect().value).toBe('steel-a992');
-    expect(storedNumber('M1 E almacenado')).toBe(200e6);
+    await waitFor(() => {
+      expect(materialSelect().value).toBe('steel-a992');
+      expect(storedNumber('M1 E almacenado')).toBe(200e6);
+      expect(screen.getByLabelText('M1 material ID').textContent).toBe('steel-a992');
+      expect(screen.getByLabelText('M1 origen material').textContent).toBe('catalog');
+    });
 
     await user.selectOptions(sectionSelect(), 'w12x26');
-    expect(sectionSelect().value).toBe('w12x26');
+    const section = findStandardSection('w12x26');
+    expect(section).toBeDefined();
+    await waitFor(() => {
+      expect(sectionSelect().value).toBe('w12x26');
+      expect(storedNumber('M1 A almacenada')).toBe(section?.area);
+      expect(screen.getByLabelText('M1 sección ID').textContent).toBe('w12x26');
+      expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
+    });
+  });
+
+  it('resolves both selectors from explicit IDs, including numerically indistinguishable steel presets', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const member = project.members.find((item) => item.id === 'M1')!;
+    const section = findStandardSection('ipe-300')!;
+    Object.assign(member as object, {
+      E: 200e6, G: 76_923_076.9231, density: 7850,
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      A: section.area, I: section.inertiaX,
+      sectionId: section.id, sectionOrigin: 'catalog',
+    });
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+
+    expect(materialSelect().value).toBe('steel-a992');
+    expect(sectionSelect().value).toBe('ipe-300');
   });
 
   it('does not carry the chosen preset over to another member with identical properties', async () => {
@@ -431,6 +547,39 @@ describe('Inspector preset selectors and load-case guidance', () => {
     await user.keyboard('{Enter}');
 
     expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+
+    await user.click(screen.getByRole('button', { name: 'Deshacer fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(sectionSelect().value).toBe('w12x26');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
+
+    await user.click(screen.getByRole('button', { name: 'Rehacer fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+  });
+
+  it('does not recover section identity when exact preset floats are typed back manually', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(sectionSelect(), 'w12x26');
+    const section = findStandardSection('w12x26')!;
+    const area = screen.getByRole('textbox', { name: 'A' });
+
+    await user.clear(area);
+    await user.type(area, '0.02');
+    await user.keyboard('{Enter}');
+    await user.clear(area);
+    await user.type(area, String(section.area));
+    await user.keyboard('{Enter}');
+
+    expect(storedNumber('M1 A almacenada')).toBe(section.area);
+    expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
   });
 
   it('lists compact preset labels translated to the project language', async () => {
@@ -556,6 +705,25 @@ describe('Inspector editing safety and history', () => {
     await user.click(screen.getByRole('button', { name: 'Rehacer fixture' }));
     expect(storedNumber('N3 Y almacenada')).toBe(exact);
   });
+
+  it('remaps the selected node after its coordinate edit repairs coincident topology', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const nodeN1 = project.nodes.find((node) => node.id === 'N1');
+    project.members = project.members.filter((member) => member.id !== 'MR');
+    if (nodeN1) nodeN1.y = 4;
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar apoyo N1' }));
+    const x = screen.getByRole('textbox', { name: 'X' });
+    await user.clear(x);
+    await user.type(x, '6');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(within(selectionSummary()).getByText('N4')).toBeTruthy());
+    expect(screen.getByLabelText('Nodos actuales').textContent).toBe('N2,N3,N4');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('true');
+  });
 });
 
 describe('Inspector advanced, locked, and validation states', () => {
@@ -653,67 +821,46 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });
 
-  it('uses dialog semantics, traps keyboard focus, and closes safely with Escape in modal mode', async () => {
+  it('uses non-modal sheet semantics, lets focus leave, and closes safely with Escape', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderInspector(createInspectorProject(), { modal: true, onClose });
 
-    expect(screen.getByRole('dialog', { name: 'Inspector' }).getAttribute('aria-modal')).toBe('true');
-    const first = screen.getByRole('tab', { name: 'Inspector' });
+    expect(screen.getByRole('dialog', { name: 'Inspector' }).hasAttribute('aria-modal')).toBe(false);
     const last = screen.getByRole('button', { name: 'Cerrar inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(first));
-
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(last);
+    last.focus();
     await user.tab();
-    expect(document.activeElement).toBe(first);
+    expect(document.activeElement).toBe(document.body);
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('traps focus against the active tab and ignores controls inside closed details', async () => {
+  it('exposes three mutually exclusive phone heights without mutating the model', async () => {
     const user = userEvent.setup();
-    renderInspector(createInspectorProject(), { modal: true, onClose: vi.fn() });
+    const onMobileDetentChange = vi.fn();
+    renderInspector(createInspectorProject(), { modal: true, mobileDetent: 'medium', onMobileDetentChange });
 
-    const inspectorTab = screen.getByRole('tab', { name: 'Inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(inspectorTab));
-    await user.keyboard('{ArrowRight}');
+    const group = screen.getByRole('group', { name: 'Altura del Inspector' });
+    expect(within(group).getByRole('button', { name: 'Compacta' }).getAttribute('aria-pressed')).toBe('false');
+    expect(within(group).getByRole('button', { name: 'Media' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(group).getByRole('button', { name: 'Casi completa' }).getAttribute('aria-pressed')).toBe('false');
 
-    const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
-    await waitFor(() => expect(document.activeElement).toBe(loadsTab));
-    expect(loadsTab.getAttribute('aria-selected')).toBe('true');
-    const closedDetails = [...document.querySelectorAll<HTMLDetailsElement>('details:not([open])')];
-    expect(closedDetails.length).toBeGreaterThan(0);
-    const lastSummary = closedDetails.at(-1)?.querySelector('summary');
-    expect(lastSummary).toBeTruthy();
-
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(lastSummary);
-    await user.tab();
-    expect(document.activeElement).toBe(loadsTab);
+    await user.click(within(group).getByRole('button', { name: 'Casi completa' }));
+    expect(onMobileDetentChange).toHaveBeenCalledWith('large');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });
 
-  it('includes controls inside an open details element in the modal focus loop', async () => {
+  it('keeps native tab order through closed details because a sheet is not a focus trap', async () => {
     const user = userEvent.setup();
     renderInspector(createInspectorProject(), { modal: true, onClose: vi.fn() });
 
     const inspectorTab = screen.getByRole('tab', { name: 'Inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(inspectorTab));
+    inspectorTab.focus();
     await user.keyboard('{ArrowRight}');
-    const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
-    const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].at(-1);
-    const summary = details?.querySelector<HTMLElement>('summary');
-    expect(details).toBeTruthy();
-    expect(summary).toBeTruthy();
-    await user.click(summary as HTMLElement);
-    expect(details?.open).toBe(true);
-    const lastInput = [...(details?.querySelectorAll<HTMLElement>('input:not([disabled])') ?? [])].at(-1);
-    expect(lastInput).toBeTruthy();
 
-    loadsTab.focus();
+    const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
+    expect(loadsTab.getAttribute('aria-selected')).toBe('true');
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(lastInput);
-    await user.tab();
-    expect(document.activeElement).toBe(loadsTab);
+    expect(document.activeElement).not.toBe(loadsTab);
   });
 });

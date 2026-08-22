@@ -19,6 +19,23 @@ const memoryStorage = (seed: Record<string, string> = {}): StorageLike & { data:
 };
 
 describe('project storage recovery', () => {
+  it('round-trips material and section identity through save and load', () => {
+    const project = createDefaultProject();
+    Object.assign(project.members[0] as object, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
+    const storage = memoryStorage();
+
+    saveProjectToStorage(storage, project);
+    const loaded = loadProjectFromStorage(storage).project;
+
+    expect(loaded.members[0]).toMatchObject({
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
+  });
+
   it('rotates the previous valid project into a backup', () => {
     const first = createDefaultProject();
     first.name = 'First';

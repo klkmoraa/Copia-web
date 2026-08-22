@@ -1,7 +1,7 @@
 node_modules/
 dist/
 qa-artifacts/
-output/
+/output/
 tmp/
 __pycache__/
 *.pyc
@@ -28,6 +28,7 @@ structureco-skills/
 structureco-ux-responsive/
 
 # Backups y temporales de trabajo
+/.worktrees/
 structureCo-backup-*/
 structureCo-contexto-*/
 structureCo-create-zip-parts.py

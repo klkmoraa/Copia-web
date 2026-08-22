@@ -6,11 +6,11 @@ import {
   useRef,
   type ReactElement,
   type ReactNode,
-  type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Maximize2, X } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
+import { useModalFocus } from './modalFocus';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -112,92 +112,7 @@ export const Popover = ({
   </div>;
 };
 
-const focusableSelector = [
-  'button:not([disabled]):not([tabindex="-1"])',
-  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
-  'select:not([disabled]):not([tabindex="-1"])',
-  'textarea:not([disabled]):not([tabindex="-1"])',
-  'a[href]:not([tabindex="-1"])',
-  'summary',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-const getModalFocusable = (surface: HTMLElement | null) => [
-  ...(surface?.querySelectorAll<HTMLElement>(focusableSelector) ?? []),
-].filter((element) => {
-  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
-  const closedDetails = element.closest('details:not([open])');
-  if (closedDetails && element.tagName !== 'SUMMARY') return false;
-  const style = window.getComputedStyle(element);
-  return style.display !== 'none' && style.visibility !== 'hidden' && style.visibility !== 'collapse';
-});
-
-const useModalFocus = (
-  open: boolean,
-  onOpenChange: (open: boolean) => void,
-  surfaceRef: RefObject<HTMLElement | null>,
-) => {
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (open) return undefined;
-    const remember = (target: EventTarget | null) => {
-      if (!(target instanceof HTMLElement) || target === document.body || target === document.documentElement) return;
-      previousFocusRef.current = target;
-    };
-    remember(document.activeElement);
-    const onFocusIn = (event: FocusEvent) => remember(event.target);
-    document.addEventListener('focusin', onFocusIn);
-    return () => document.removeEventListener('focusin', onFocusIn);
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) return undefined;
-    const activeElement = document.activeElement;
-    if (activeElement instanceof HTMLElement && activeElement !== document.body && !surfaceRef.current?.contains(activeElement)) {
-      previousFocusRef.current = activeElement;
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => {
-      const surface = surfaceRef.current;
-      const first = getModalFocusable(surface)[0];
-      (first ?? surface)?.focus();
-    });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onOpenChange(false);
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = getModalFocusable(surfaceRef.current);
-      if (!focusable.length) {
-        event.preventDefault();
-        surfaceRef.current?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      const returnTarget = previousFocusRef.current;
-      returnTarget?.focus({ preventScroll: true });
-      window.requestAnimationFrame(() => returnTarget?.focus({ preventScroll: true }));
-    };
-  }, [open, onOpenChange, surfaceRef]);
-};
+export type ModalSurfaceExtent = 'default' | 'peek';
 
 interface ModalSurfaceProps {
   open: boolean;
@@ -207,9 +122,25 @@ interface ModalSurfaceProps {
   children: ReactNode;
   footer?: ReactNode;
   closeLabel?: string;
-  kind: 'dialog' | 'drawer';
+  kind: 'dialog' | 'drawer' | 'fullscreen';
   side?: 'left' | 'right' | 'bottom';
   className?: string;
+  /** Explicit launcher used when another surface transfers focus during lazy loading. */
+  returnFocusTo?: HTMLElement | null;
+  /** The broker owns focus return for retained workspace surfaces. */
+  restoreFocus?: boolean;
+  surfaceId?: string;
+  onSurfaceReady?: (ready: boolean) => void;
+  /**
+   * `peek` shrinks a `drawer`/`fullscreen` surface to a handle without
+   * unmounting it: scroll, drafts and list position stay exactly where they
+   * were. Only `drawer`/`fullscreen` accept it — the broker enforces that.
+   */
+  extent?: ModalSurfaceExtent;
+  /** Restores a `peek`ed surface to `default`. Required when `extent` is passed. */
+  onRestore?: () => void;
+  /** Accessible label for the peek handle, e.g. "Restore Datasheet". */
+  restoreLabel?: string;
 }
 
 const ModalSurface = ({
@@ -223,11 +154,31 @@ const ModalSurface = ({
   kind,
   side = 'right',
   className = '',
+  returnFocusTo,
+  restoreFocus = true,
+  surfaceId,
+  onSurfaceReady,
+  extent = 'default',
+  onRestore,
+  restoreLabel,
 }: ModalSurfaceProps) => {
   const titleId = useId();
   const descriptionId = useId();
   const surfaceRef = useRef<HTMLElement>(null);
-  useModalFocus(open, onOpenChange, surfaceRef);
+  const peeked = extent === 'peek';
+  useModalFocus({
+    open,
+    containerRef: surfaceRef,
+    onEscape: () => onOpenChange(false),
+    restoreFocus,
+    returnFocusTo,
+    trapFocus: !peeked,
+  });
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    onSurfaceReady?.(true);
+    return () => onSurfaceReady?.(false);
+  }, [onSurfaceReady, open]);
   const reducedMotion = useReducedMotion();
 
   if (typeof document === 'undefined') return null;
@@ -262,30 +213,48 @@ const ModalSurface = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={reducedMotion ? { duration: 0.01 } : { duration: 0.2 }}
-          className={`sc-overlay sc-overlay--${kind}`}
+          className={`sc-overlay sc-overlay--${kind}${peeked ? ' sc-overlay--peek' : ''}`}
           data-ui-overlay={kind}
+          data-surface-presentation={kind === 'dialog' ? 'overlay' : kind}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) onOpenChange(false);
+            if (peeked || event.target !== event.currentTarget) return;
+            onOpenChange(false);
           }}
         >
           <m.section
             ref={surfaceRef}
             {...surfaceMotionProps}
-            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
+            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${peeked ? ' sc-modal-surface--peek' : ''}${className ? ` ${className}` : ''}`}
+            data-level={kind === 'drawer' ? 'sheet' : 'modal'}
+            data-workspace-surface={surfaceId}
+            data-surface-extent={extent}
             role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={description ? descriptionId : undefined}
+            aria-modal={peeked ? undefined : true}
+            aria-label={peeked ? title : undefined}
+            aria-labelledby={peeked ? undefined : titleId}
+            aria-describedby={peeked || !description ? undefined : descriptionId}
             tabIndex={-1}
           >
-            <header className="sc-modal-surface__header">
-              <div>
-                <h2 id={titleId}>{title}</h2>
-                {description ? <p id={descriptionId}>{description}</p> : null}
-              </div>
-              <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
-            </header>
-            <div className="sc-modal-surface__body">{children}</div>
+            {peeked ? (
+              <button
+                type="button"
+                className="sc-modal-surface__peek-handle"
+                aria-label={restoreLabel ? `${restoreLabel}: ${title}` : title}
+                onClick={() => onRestore?.()}
+              >
+                <Maximize2 size={16} aria-hidden="true" />
+                <span>{title}</span>
+              </button>
+            ) : (
+              <header className="sc-modal-surface__header">
+                <div>
+                  <h2 id={titleId}>{title}</h2>
+                  {description ? <p id={descriptionId}>{description}</p> : null}
+                </div>
+                <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
+              </header>
+            )}
+            <div className="sc-modal-surface__body" inert={peeked} aria-hidden={peeked || undefined}>{children}</div>
             {footer ? <footer className="sc-modal-surface__footer">{footer}</footer> : null}
           </m.section>
         </m.div>
@@ -301,6 +270,7 @@ export const Dialog = (props: DialogProps) => <ModalSurface {...props} kind="dia
 
 export interface DrawerProps extends Omit<ModalSurfaceProps, 'kind'> {
   side?: 'left' | 'right' | 'bottom';
+  presentation?: 'drawer' | 'fullscreen';
 }
 
-export const Drawer = (props: DrawerProps) => <ModalSurface {...props} kind="drawer" />;
+export const Drawer = ({ presentation = 'drawer', ...props }: DrawerProps) => <ModalSurface {...props} kind={presentation} />;

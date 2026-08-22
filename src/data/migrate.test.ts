@@ -3,6 +3,44 @@ import { createDefaultProject, CURRENT_SCHEMA_VERSION } from './defaultProject';
 import { normalizeProject } from './migrate';
 
 describe('project schema migration and validation', () => {
+  it('preserves explicit identity from the current schema without consulting numeric equality', () => {
+    const source = createDefaultProject();
+    const member = source.members[0] as typeof source.members[number] & Record<string, unknown>;
+    Object.assign(member, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
+
+    const normalized = normalizeProject(JSON.parse(JSON.stringify(source)));
+
+    expect(normalized.members[0]).toMatchObject({
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
+  });
+
+  it('marks legacy members explicitly and never identifies catalog presets from matching floats', () => {
+    const source = createDefaultProject();
+    const legacy = JSON.parse(JSON.stringify(source)) as Record<string, unknown>;
+    legacy.schemaVersion = 5;
+    const member = (legacy.members as Array<Record<string, unknown>>)[0];
+    member.E = 200_000_000;
+    member.G = 76_923_076.9231;
+    member.density = 7850;
+    member.A = 0.00538;
+    member.I = 0.0000836;
+    delete member.materialId;
+    delete member.materialOrigin;
+    delete member.sectionId;
+    delete member.sectionOrigin;
+
+    const normalized = normalizeProject(legacy);
+
+    expect(normalized.members[0]).toMatchObject({ materialOrigin: 'legacy', sectionOrigin: 'legacy' });
+    expect(normalized.members[0]).not.toHaveProperty('materialId');
+    expect(normalized.members[0]).not.toHaveProperty('sectionId');
+  });
+
   it('upgrades a v2 project and preserves v3 hinge and rigid offset data', () => {
     const source = createDefaultProject();
     const legacy = {

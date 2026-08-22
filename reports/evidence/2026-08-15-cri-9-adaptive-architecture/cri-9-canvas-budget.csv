@@ -1,0 +1,18 @@
+viewport,width,height,todayTier,todayCanvasPct,resolved,restPct,detailPct,canvasBox,sheetSide,denseDockPinnable,deltaVsToday
+320×568 · móvil mínimo,320,568,Compact,71.8,K0,81.3,32.6,320×185,bottom,false,9.5
+360×800 · móvil,360,800,Compact,80,K0,86.8,34.8,360×278,bottom,false,6.8
+375×667 · móvil,375,667,Compact,76,K0,84.1,33.6,375×224,bottom,false,8.1
+390×844 · móvil,390,844,Compact,81,K0,87.4,35,390×295,bottom,false,6.4
+844×390 · móvil apaisado,844,390,Compact,69.5,K0,83.6,51.9,524×326,side,false,14.1
+768×1024 · tablet retrato,768,1024,Compact,82.8,K0,88.1,35.3,768×361,bottom,false,5.3
+900×1000 · split-screen,900,1000,Compact,82.4,M1,83.3,53,524×910,—,false,0.9
+1024×1366 · tablet grande retrato,1024,1366,—,,M1,86.5,59.1,648×1276,—,false,
+1024×768 · portátil corriente,1024,768,Expanded,24.6,M1,81.7,55.9,648×678,—,false,57.1
+1112×834 · tablet apaisada,1112,834,—,,X2,76.1,50.4,628×744,—,false,
+1180×820 · tablet grande apaisada,1180,820,—,,X2,76.7,52.5,696×730,—,false,
+1280×800,1280,800,Expanded,30.3,X2,77.4,55.2,796×710,—,false,47.1
+1366×768,1366,768,—,,X2,77.7,57,882×678,—,false,
+1440×900,1440,900,Expanded,36.1,X2,79.8,59.8,956×810,—,false,43.6
+1536×960,1536,960,Expanded,39.2,X2,80.9,62.1,1052×870,—,false,41.7
+1920×1080,1920,1080,—,,X2,83.8,68.6,1436×990,—,true,
+2560×1440,2560,1440,—,,X2,87.7,76,2076×1350,—,true,

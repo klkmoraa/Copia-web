@@ -1,0 +1,45 @@
+{
+  "case": "S3D-BENDING-Z-001",
+  "target": "LC1",
+  "oracle": "opensees",
+  "version": "OpenSees 3.8.0 (openseespy)",
+  "units": "kN, m",
+  "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+  "signMap": "identidad: desplazamientos y reacciones en ejes globales, R = K*U - F",
+  "nodes": {
+    "I": {
+      "ux": 0.0,
+      "uy": 0.0,
+      "uz": 0.0,
+      "rx": 0.0,
+      "ry": 0.0,
+      "rz": 0.0
+    },
+    "J": {
+      "ux": 0.0,
+      "uy": 0.0016666666666666663,
+      "uz": 0.0,
+      "rx": 0.0,
+      "ry": 0.0,
+      "rz": 0.00125
+    }
+  },
+  "reactions": {
+    "I": {
+      "ux": 0.0,
+      "uy": -9.999999999999993,
+      "uz": 0.0,
+      "rx": 0.0,
+      "ry": 0.0,
+      "rz": -19.999999999999993
+    },
+    "J": {
+      "ux": 0.0,
+      "uy": -7.105427357601002e-15,
+      "uz": 0.0,
+      "rx": 0.0,
+      "ry": 0.0,
+      "rz": 8.881784197001252e-15
+    }
+  }
+}

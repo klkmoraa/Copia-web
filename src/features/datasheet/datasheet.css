@@ -1,0 +1,849 @@
+/*
+ * Datasheet estructural.
+ *
+ * Dos registros deliberadamente distintos conviven aquí:
+ *
+ * - La **tabla es plana**. `SurfaceLevel` reserva `flat` para las zonas técnicas
+ *   densas justamente por esto: dar relieve a cada fila convierte una rejilla de
+ *   auditoría en un montón de fichas y se lee peor.
+ * - Todo lo demás es **Clay**: barra de herramientas, chips de filtro, tarjetas
+ *   del panel contextual y acciones.
+ *
+ * El foco y la selección se dibujan distinto a propósito. El foco es un anillo
+ * (`--sc-ring-focus`); la selección es un fondo (`--sc-color-selection`). Si
+ * compartieran señal, recorrer la tabla con las flechas parecería ir cambiando
+ * el objeto seleccionado en el lienzo.
+ */
+
+.datasheet-surface.sc-modal-surface--bottom {
+  height: min(88vh, 100%);
+  max-height: 88vh;
+}
+
+.datasheet-surface .sc-modal-surface__body {
+  display: flex;
+  min-height: 0;
+  padding-top: 0;
+}
+
+.datasheet-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--sc-space-4);
+  width: 100%;
+  min-height: 0;
+}
+
+.datasheet-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Barra de herramientas                                               */
+/* ------------------------------------------------------------------ */
+
+.datasheet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sc-space-3);
+}
+
+.datasheet-entity {
+  display: flex;
+  gap: var(--sc-space-1);
+  padding: var(--sc-space-1);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.datasheet-entity button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  min-height: var(--sc-control-height-sm);
+  padding: 0 var(--sc-space-4);
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.datasheet-entity button.active {
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-primary);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+
+.datasheet-entity__count {
+  display: inline-grid;
+  min-width: 1.5rem;
+  padding: 0 var(--sc-space-1);
+  place-items: center;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  font-variant-numeric: var(--sc-numeric-variant);
+}
+
+.datasheet-search {
+  display: inline-flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: var(--sc-space-2);
+  min-height: var(--sc-control-height-sm);
+  max-width: 340px;
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-input);
+  color: var(--sc-color-text-muted);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.datasheet-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-control);
+}
+
+.datasheet-search input:focus-visible {
+  outline: none;
+}
+
+.datasheet-search:focus-within {
+  border-color: var(--sc-color-focus);
+  box-shadow: var(--sc-ring-focus);
+}
+
+.datasheet-count {
+  margin: 0;
+  margin-left: auto;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  font-variant-numeric: var(--sc-numeric-variant);
+}
+
+/* ------------------------------------------------------------------ */
+/* Filtros                                                             */
+/* ------------------------------------------------------------------ */
+
+.datasheet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-4);
+}
+
+.datasheet-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.datasheet-filter__label {
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.datasheet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  min-height: var(--sc-control-height-sm);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-medium);
+  box-shadow: var(--sc-shadow-clay-xs);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.datasheet-chip.active {
+  border-color: var(--sc-color-action-primary);
+  background: var(--sc-color-action-subtle);
+  color: var(--sc-color-text-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.datasheet-chip__count {
+  color: var(--sc-color-text-muted);
+  font-variant-numeric: var(--sc-numeric-variant);
+}
+
+/* ------------------------------------------------------------------ */
+/* Rejilla — plana                                                     */
+/* ------------------------------------------------------------------ */
+
+.datasheet-grid-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-1);
+  scrollbar-width: thin;
+}
+
+.datasheet-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  border-bottom: var(--sc-border-width) solid var(--sc-color-border);
+  background: var(--sc-color-surface-2);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.datasheet-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  width: 100%;
+  min-height: var(--sc-control-height-sm);
+  padding: 0 var(--sc-space-3);
+  border: none;
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+  letter-spacing: var(--sc-tracking-technical);
+  cursor: pointer;
+}
+
+.datasheet-grid th.is-numeric .datasheet-sort {
+  justify-content: flex-end;
+}
+
+.datasheet-grid tbody th,
+.datasheet-grid tbody td {
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-bottom: var(--sc-border-width) solid var(--sc-color-divider);
+  color: var(--sc-color-text-technical);
+  font-weight: var(--sc-font-weight-regular);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.datasheet-grid tbody th {
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-mono);
+  font-weight: var(--sc-font-weight-medium);
+}
+
+.datasheet-grid tbody .is-numeric {
+  font-family: var(--sc-font-mono);
+  font-variant-numeric: var(--sc-numeric-variant);
+  text-align: right;
+}
+
+/* La selección es un fondo. */
+.datasheet-grid tbody tr[data-selected='true'] th,
+.datasheet-grid tbody tr[data-selected='true'] td {
+  background: var(--sc-color-selection);
+  color: var(--sc-color-text-primary);
+}
+
+/* El foco es un anillo, y se ve también sobre una fila seleccionada. */
+.datasheet-grid tbody th:focus-visible,
+.datasheet-grid tbody td:focus-visible {
+  outline: var(--sc-focus-ring-width-compact) solid var(--sc-color-focus);
+  outline-offset: calc(var(--sc-focus-ring-offset) * -1);
+}
+
+/* Una celda de identidad se lee como lo que es: un dato que no se negocia. */
+.datasheet-grid tbody [data-editability='identity'] {
+  color: var(--sc-color-text-muted);
+}
+
+.datasheet-empty {
+  margin: 0;
+  padding: var(--sc-space-7) var(--sc-space-4);
+  border: var(--sc-border-width) dashed var(--sc-color-border);
+  border-radius: var(--sc-radius-sm);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-body);
+  text-align: center;
+}
+
+.datasheet-keyboard-hint {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  line-height: var(--sc-line-height-compact);
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel contextual — Clay                                             */
+/* ------------------------------------------------------------------ */
+
+.datasheet-context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-height: 0;
+}
+
+.datasheet-context__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+}
+
+.datasheet-context__object {
+  margin: 0;
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-subtitle);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.datasheet-focus-action {
+  min-height: var(--sc-control-height-sm);
+  padding: 0 var(--sc-space-3);
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+  box-shadow: var(--sc-shadow-clay-action);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.datasheet-focus-action:hover:not(:disabled) {
+  background: var(--sc-color-action-hover);
+  box-shadow: var(--sc-shadow-clay-action-hover);
+}
+
+.datasheet-focus-action:disabled {
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-text-disabled);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.datasheet-context__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.datasheet-card {
+  padding: var(--sc-space-3);
+  border-radius: var(--sc-radius-sm);
+}
+
+.datasheet-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  margin: 0 0 var(--sc-space-2);
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+  letter-spacing: var(--sc-tracking-technical);
+  text-transform: uppercase;
+}
+
+.datasheet-card__lead {
+  margin: 0 0 var(--sc-space-2);
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc-font-size-body);
+  font-weight: var(--sc-font-weight-medium);
+  line-height: var(--sc-line-height-compact);
+}
+
+.datasheet-card__empty,
+.datasheet-card__note {
+  margin: var(--sc-space-2) 0 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  line-height: var(--sc-line-height-compact);
+}
+
+.datasheet-facts {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--sc-space-1) var(--sc-space-3);
+  margin: 0;
+}
+
+.datasheet-facts > div {
+  display: contents;
+}
+
+.datasheet-facts dt {
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+}
+
+.datasheet-facts dd {
+  margin: 0;
+  color: var(--sc-color-text-technical);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+  font-variant-numeric: var(--sc-numeric-variant);
+  text-align: right;
+}
+
+.datasheet-load-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.datasheet-load-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--sc-color-text-technical);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-load-list__case {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.datasheet-context__note {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  line-height: var(--sc-line-height-compact);
+}
+
+/* ------------------------------------------------------------------ */
+/* Previews                                                            */
+/* ------------------------------------------------------------------ */
+
+.datasheet-node-preview,
+.datasheet-support-preview,
+.datasheet-section-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--sc-space-2);
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-bg-canvas);
+}
+
+.datasheet-node-preview__member {
+  stroke: var(--sc-color-structure-member);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.datasheet-node-preview__node {
+  fill: var(--sc-color-structure-node);
+  stroke: var(--sc-color-bg-canvas);
+  stroke-width: 1.5;
+}
+
+.datasheet-support-glyph {
+  fill: none;
+  stroke: var(--sc-color-structure-support);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.datasheet-support-glyph circle,
+.datasheet-support-glyph polygon {
+  fill: var(--sc-color-bg-canvas);
+}
+
+.datasheet-section-preview .section-shape {
+  fill: var(--sc-color-structure-member);
+  stroke: var(--sc-color-structure-member);
+  stroke-width: 1;
+}
+
+.datasheet-section-preview .section-shape-void {
+  fill: var(--sc-color-bg-canvas);
+  stroke: none;
+}
+
+.datasheet-node-preview__ghost {
+  /* La posición anterior del nudo: se lee como referencia, no como objeto. */
+  fill: none;
+  stroke: var(--sc-color-structure-node);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.65;
+}
+
+.datasheet-load-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--sc-space-2);
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-bg-canvas);
+}
+
+.datasheet-load-preview__base {
+  stroke: var(--sc-color-structure-member);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.datasheet-load-preview__arrow {
+  fill: var(--sc-color-load-point);
+  stroke: var(--sc-color-load-point);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* ------------------------------------------------------------------ */
+/* Edición                                                             */
+/* ------------------------------------------------------------------ */
+
+/*
+  Tres estados que pueden coincidir en la misma celda, con tres señales que no
+  se confunden: la selección es fondo, el foco es anillo y lo pendiente es una
+  marca en el borde de inicio. Compartir cualquiera de ellas haría ilegible una
+  celda seleccionada, enfocada y sin aplicar a la vez.
+*/
+.datasheet-grid tbody th[data-pending='true'],
+.datasheet-grid tbody td[data-pending='true'] {
+  box-shadow: inset 3px 0 0 0 var(--sc-color-state-info);
+  color: var(--sc-color-text-primary);
+  font-weight: var(--sc-font-weight-medium);
+}
+
+/* El editor ocupa la celda a ras, sin relieve: la rejilla sigue siendo plana. */
+.datasheet-cell-editor {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-surface-input);
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-cell-editor:focus-visible {
+  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset: 1px;
+}
+
+.datasheet-grid tbody td.is-numeric .datasheet-cell-editor {
+  text-align: right;
+}
+
+.datasheet-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-2);
+  margin: 0;
+  padding: var(--sc-space-2);
+  border: 1px solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-xs);
+}
+
+.datasheet-checks legend {
+  padding: 0 var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.datasheet-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-mode {
+  display: flex;
+  gap: var(--sc-space-1);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-mode button {
+  flex: 1;
+  padding: var(--sc-space-1) var(--sc-space-2);
+  border: 1px solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-xs);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-caption);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.datasheet-mode button.active {
+  border-color: var(--sc-color-border-strong);
+  background: var(--sc-color-surface-pressed);
+  color: var(--sc-color-text-primary);
+}
+
+.datasheet-mode button:focus-visible {
+  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset: 2px;
+}
+
+.datasheet-transition {
+  display: flex;
+  gap: var(--sc-space-3);
+  margin: 0 0 var(--sc-space-2);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-transition span {
+  display: flex;
+  flex-direction: column;
+}
+
+.datasheet-transition small {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.datasheet-section-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-section-pair small {
+  display: block;
+  margin-bottom: var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+/*
+  Barra del borrador. Se ancla al pie del carril para que el recuento y las dos
+  acciones estén siempre a la vista mientras se recorren las tarjetas.
+*/
+.datasheet-draft-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  padding-top: var(--sc-space-2);
+  border-top: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-1);
+}
+
+.datasheet-draft-bar p {
+  flex: 1;
+  margin: 0;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+/* ------------------------------------------------------------------ */
+/* Revisión                                                            */
+/* ------------------------------------------------------------------ */
+
+.datasheet-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-width: 0;
+  padding: var(--sc-space-3);
+  overflow-y: auto;
+}
+
+.datasheet-review__header h2 {
+  margin: 0;
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc-font-size-body);
+}
+
+.datasheet-review__header p {
+  margin: var(--sc-space-1) 0 0;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  margin: 0;
+}
+
+.datasheet-review__list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sc-space-2);
+  align-items: baseline;
+}
+
+.datasheet-review__list dt {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-review__list dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.datasheet-review__transition {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-technical);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-review__list small {
+  display: block;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-1);
+  margin: 0;
+  padding-left: var(--sc-space-4);
+  color: var(--sc-color-state-error-foreground);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sc-space-2);
+  margin-top: auto;
+  padding-top: var(--sc-space-2);
+  border-top: 1px solid var(--sc-color-border-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* Adaptación a pantallas estrechas                                    */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 1023px) {
+  /*
+    Apiladas, la rejilla y el panel contextual compiten por la MISMA altura, y
+    `auto` deja que el panel se sirva primero: pide su alto de contenido entero
+    —716 px de 732 disponibles en 390x844— y a `minmax(0, 1fr)` no le queda
+    espacio libre que repartir, así que la fila de la rejilla se resuelve a 0.
+    `.datasheet-main` y `.datasheet-grid-scroll` llevan `min-height: 0` para
+    poder encogerse dentro de su carril, de modo que colapsan sin protestar: la
+    tabla queda con altura 0, invisible y fuera del hit-test, tapada por el
+    panel.
+
+    `fit-content` es el contrato que faltaba: el panel sigue midiéndose por su
+    contenido —cuando es corto ocupa lo que ocupa y no reserva de más— pero no
+    puede pasar de un cuarto de la superficie. La rejilla conserva siempre los
+    tres cuartos restantes, y el panel no pierde nada porque
+    `.datasheet-context__body` ya se desplaza por dentro.
+  */
+  .datasheet-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) fit-content(25%);
+    overflow-y: auto;
+  }
+
+  .datasheet-context__body {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .datasheet-card {
+    flex: 0 0 240px;
+  }
+}
+
+@media (max-width: 700px) {
+  .datasheet-entity button,
+  .datasheet-chip,
+  .datasheet-focus-action,
+  .datasheet-sort,
+  .datasheet-mode button,
+  .datasheet-cell-editor {
+    min-height: var(--sc-control-height-touch);
+  }
+
+  .datasheet-context__body {
+    flex-direction: column;
+  }
+
+  .datasheet-card {
+    flex: 0 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .datasheet-entity button,
+  .datasheet-chip,
+  .datasheet-focus-action,
+  .datasheet-mode button {
+    transition: none;
+  }
+}

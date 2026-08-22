@@ -6,6 +6,7 @@
  * is allowed to break the page if it ever stops fitting.
  */
 import type { DiagramQuantity } from '../../types';
+import { resolveNumericQualityState } from '../../engine/reliability';
 import { pdfText, wrapText } from './pdfGlyphs';
 import { clearDisplay, clearNumber } from './pdfFormat';
 import { drawKpi, drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
@@ -34,6 +35,17 @@ const absoluteExtreme = (
 export const drawExecutivePage = (context: ReportContext): void => {
   const { layout, project, analysis, options } = context;
   const { rgb, fonts, palette, margin } = layout;
+  const numericQuality = resolveNumericQualityState(analysis);
+  const qualityLabel = {
+    stable: 'ESTABLE',
+    limited: 'LIMITADA',
+    unreliable: 'NO CONFIABLE',
+    failed: 'FALLIDA',
+    unavailable: 'NO DISPONIBLE',
+  }[numericQuality];
+  const qualityColor = numericQuality === 'stable'
+    ? rgb(0.08, 0.43, 0.27)
+    : numericQuality === 'limited' ? rgb(0.72, 0.43, 0.05) : rgb(0.75, 0.20, 0.16);
   layout.page.drawRectangle({ x: 0, y: 0, width: layout.width, height: layout.height, color: rgb(0.965, 0.975, 0.968) });
   drawVisualHeader(layout, project.name, options.scenarioName ?? 'Analisis activo');
   drawSectionBand(layout, '01', 'DCL global y equilibrio', 'Cargas, reacciones y resultados gobernantes en una sola lectura');
@@ -69,9 +81,10 @@ export const drawExecutivePage = (context: ReportContext): void => {
     layout.page.drawText(pdfText(entry.result), { x: margin + 160, y: rowY - 8, size: 6.4, font: fonts.bold, color: rgb(0.10, 0.35, 0.22) });
     rowY -= 44;
   });
-  layout.page.drawRectangle({ x: margin + 12, y: 80, width: 218, height: 52, color: rgb(0.91, 0.96, 0.93), borderColor: rgb(0.12, 0.50, 0.34), borderWidth: 0.8 });
-  layout.page.drawText(analysis.success ? 'EQUILIBRIO APROBADO' : 'REVISAR EL MODELO', { x: margin + 24, y: 109, size: 10.5, font: fonts.bold, color: analysis.success ? rgb(0.08, 0.43, 0.27) : rgb(0.75, 0.20, 0.16) });
-  layout.page.drawText(pdfText(analysis.success ? 'El solucionador cerro equilibrio y compatibilidad.' : 'Existen incidencias que impiden cerrar el analisis.'), { x: margin + 24, y: 94, size: 6.7, font: fonts.regular, color: rgb(0.28, 0.35, 0.30) });
+  layout.page.drawRectangle({ x: margin + 12, y: 80, width: 218, height: 52, color: rgb(0.91, 0.96, 0.93), borderColor: qualityColor, borderWidth: 0.8 });
+  layout.page.drawText(pdfText(`CALIDAD NUMERICA: ${qualityLabel}`), { x: margin + 24, y: 111, size: 8.7, font: fonts.bold, color: qualityColor });
+  layout.page.drawText(pdfText(`Condicion k1 ${clearNumber(analysis.conditionEstimate)} | residuo ${clearNumber(analysis.linearResidual ?? analysis.residualNorm)} | error ${clearNumber(analysis.forwardErrorBound ?? Number.NaN)}`), { x: margin + 24, y: 97, size: 5.8, font: fonts.regular, color: rgb(0.20, 0.28, 0.23) });
+  layout.page.drawText(pdfText('Diagnostico numerico; no evalua seguridad estructural.'), { x: margin + 24, y: 85, size: 5.8, font: fonts.bold, color: rgb(0.28, 0.35, 0.30) });
 
   drawPanel(layout, margin + 254, 60, 241, 278);
   layout.page.drawText('REACCIONES Y DATOS CLAVE', { x: margin + 266, y: 318, size: 8.5, font: fonts.bold, color: palette.forestDeep });
@@ -84,6 +97,7 @@ export const drawExecutivePage = (context: ReportContext): void => {
   }
   layout.page.drawText('HIPOTESIS', { x: margin + 266, y: 124, size: 7, font: fonts.bold, color: palette.forestDeep });
   const formulation = analysis.educationTrace?.formulation ?? 'analisis estatico lineal 2D';
-  const hypothesis = wrapText(`${formulation}; pequenas deformaciones; propiedades prismaticas por miembro.`, fonts.regular, 6.8, 213);
+  const experimentalScope = analysis.pDelta?.experimental ? 'P-Delta experimental; ' : '';
+  const hypothesis = wrapText(`${experimentalScope}${formulation}; pequenas deformaciones; propiedades prismaticas por miembro.`, fonts.regular, 6.8, 213);
   hypothesis.slice(0, 3).forEach((entry, index) => layout.page.drawText(entry, { x: margin + 266, y: 109 - index * 11, size: 6.8, font: fonts.regular, color: rgb(0.30, 0.36, 0.32) }));
 };

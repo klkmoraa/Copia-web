@@ -58,11 +58,20 @@ export interface MemberRelease {
   jMoment?: boolean;
 }
 
+/** Provenance of the material or section properties stored on a 2D member. */
+export type MemberPropertyOrigin = 'catalog' | 'custom' | 'imported' | 'legacy';
+
 export interface MemberModel {
   id: string;
   i: string;
   j: string;
   type: MemberType;
+  /** Stable catalog identity. Numeric properties remain the solver inputs. */
+  materialId?: string;
+  materialOrigin?: MemberPropertyOrigin;
+  /** Stable catalog identity. Numeric properties remain the solver inputs. */
+  sectionId?: string;
+  sectionOrigin?: MemberPropertyOrigin;
   E: number; // kN / m², internal base unit
   A: number; // m²
   I: number; // m⁴
@@ -458,6 +467,29 @@ export interface ResultReliability {
   reasons: string[];
 }
 
+/** Public presentation state for numerical quality; it is not a safety rating. */
+export type NumericQualityState = 'stable' | 'limited' | 'unreliable' | 'failed' | 'unavailable';
+
+/** Backend policy for one complete analysis run. `auto` retains the hybrid solver gates. */
+export type LinearSolverPolicy = 'auto' | 'dense';
+export type LinearSolverBackend = 'dense-lu' | 'sparse-ldlt';
+export type LinearSolverFallbackReason =
+  | 'forced-dense'
+  | 'below-size-threshold'
+  | 'constraints-not-reducible'
+  | 'reduced-system-below-threshold'
+  | 'excessive-fill'
+  | 'non-positive-pivot';
+
+/** Additive trace of the actual linear backend used; never changes structural values. */
+export interface LinearSolverDiagnostics {
+  policy: LinearSolverPolicy;
+  backend: LinearSolverBackend;
+  fallbackReason?: LinearSolverFallbackReason;
+  dimension: number;
+  reducedDimension?: number;
+}
+
 /** Advanced load-stepping/iteration limits for the P-Delta solver; every field has a project-independent default. */
 export interface PDeltaConfig {
   maxLoadSteps: number;
@@ -485,6 +517,8 @@ export interface PDeltaStepIteration {
 
 export interface PDeltaDiagnostics {
   enabled: true;
+  /** P-Delta remains an opt-in, bounded experimental capability. */
+  experimental: true;
   converged: boolean;
   loadStepsUsed: number;
   totalIterations: number;
@@ -529,6 +563,8 @@ export interface AnalysisResult {
   conditionEstimate: number;
   forwardErrorBound?: number;
   reliableDigits?: number;
+  /** Backend used for this run; absent only on failed or legacy/external results. */
+  linearSolver?: LinearSolverDiagnostics;
   mechanism?: {
     nullity: number;
     residual: number;

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Button } from './controls';
 import { Dialog, Drawer, Popover, Tooltip } from './overlays';
 
@@ -45,6 +45,24 @@ const ModalHarness = () => {
 };
 
 const FieldInModal = () => <button type="button">Acción interna</button>;
+
+const PeekHarness = ({ onOpenChange }: { onOpenChange: (open: boolean) => void }) => {
+  const [extent, setExtent] = useState<'default' | 'peek'>('default');
+  return <>
+    <button type="button" id="canvas-stand-in">Lienzo</button>
+    <button type="button" onClick={() => setExtent('peek')}>Entrar a peek</button>
+    <Drawer
+      open
+      onOpenChange={onOpenChange}
+      title="Hoja de datos"
+      extent={extent}
+      onRestore={() => setExtent('default')}
+      restoreLabel="Restaurar"
+    >
+      <button type="button">Acción interna</button>
+    </Drawer>
+  </>;
+};
 
 const VisibilityModalHarness = () => {
   const [open, setOpen] = useState(false);
@@ -111,6 +129,43 @@ describe('component-library overlays', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Propiedades' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('degrades to peek without unmounting: stops trapping, exposes a restore handle, and stays clickable through (CRI-102)', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(<PeekHarness onOpenChange={onOpenChange} />);
+    const dialog = screen.getByRole('dialog', { name: 'Hoja de datos' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Acción interna' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Entrar a peek' }));
+
+    // Sigue montado — no es un `close`: el mismo nodo `dialog` sigue en el DOM.
+    expect(screen.getByRole('dialog', { name: 'Hoja de datos' })).toBe(dialog);
+    expect(dialog.getAttribute('aria-modal')).toBeNull();
+    // El cuerpo quedó inerte —ya no participa del árbol de accesibilidad—
+    // pero sigue siendo el mismo nodo montado, no uno recreado desde cero.
+    expect(screen.queryByRole('button', { name: 'Acción interna' })).toBeNull();
+    const body = dialog.querySelector('.sc-modal-surface__body');
+    expect(body?.hasAttribute('inert')).toBe(true);
+    expect(body?.querySelector('button')?.textContent).toBe('Acción interna');
+    // El asa es alcanzable por teclado/touch como cualquier botón nativo.
+    const handle = screen.getByRole('button', { name: /Restaurar/ });
+    expect(handle).toBeTruthy();
+
+    // El fondo (el lienzo) sigue siendo clicable: no dispara el cierre modal.
+    await user.click(screen.getByRole('button', { name: 'Lienzo' }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    // Escape ya no está capturado por el trap mientras está en peek.
+    await user.keyboard('{Escape}');
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    await user.click(handle);
+    await waitFor(() => expect(dialog.getAttribute('aria-modal')).toBe('true'));
+    expect(screen.getByRole('button', { name: 'Acción interna' })).toBeTruthy();
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
   });
 
   it('traps focus using only visible controls and the summary of closed details', async () => {

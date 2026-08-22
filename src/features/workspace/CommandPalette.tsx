@@ -1,506 +1,223 @@
-import { useEffect, useId, useRef, useState, useMemo } from 'react';
-import {
-  Search,
-  Play,
-  FileDown,
-  Sun,
-  Moon,
-  Grid,
-  Magnet,
-  Maximize2,
-  Undo2,
-  Redo2,
-  FileCode2,
-  Eye,
-  Crosshair,
-  Compass,
-  GraduationCap,
-  Download,
-  Box,
-} from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Search } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
-import { exampleProjects } from '../../data/defaultProject';
-import { standardSections } from '../../data/standardSections';
-import { exportProjectJson } from '../../utils/export';
-import { formatFixed } from '../../utils/numberFormat';
-import { emitWorkspaceCommand } from './workspaceCommands';
+import type { TranslationKey } from '../../i18n/catalogs';
+import { useProject } from '../../store/ProjectContext';
+import { buildCommands, type CommandCategory, type CommandContext, type CommandListItem } from './commandRegistry';
+import type { EditorLayerAction } from '../canvas/editorLayers';
+import type { SurfacePresentation } from './surfacePresentation';
 
 export interface CommandPaletteProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
+  dispatchLayers: Dispatch<EditorLayerAction>;
+  presentation?: Extract<SurfacePresentation, 'overlay' | 'sheet'>;
 }
 
-interface CommandItem {
-  id: string;
-  category: string;
-  label: string;
-  description?: string;
-  icon: typeof Search;
-  shortcut?: string;
-  action: () => void;
-}
+const GROUP_LABEL_KEYS: Record<CommandCategory, TranslationKey> = {
+  tools: 'palette.groupTools',
+  view: 'palette.groupView',
+  results: 'palette.groupResults',
+  analysis: 'palette.groupAnalysis',
+  navigate: 'palette.groupNavigate',
+  export: 'palette.groupExport',
+};
 
-export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
-  const { t } = useI18n();
+const GROUP_ORDER: readonly CommandCategory[] = ['analysis', 'tools', 'navigate', 'results', 'view', 'export'];
+
+/** Coincidencia por subcadena sobre etiqueta y pista, sin acentos ni mayúsculas. */
+const normalize = (value: string) => value
+  .toLocaleLowerCase('es')
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu, '');
+
+/**
+ * Paleta de comandos (Ctrl/⌘ + K).
+ *
+ * No construye su propia lista de comandos: proyecta `commandRegistry`
+ * (CRI-103), la misma fuente que alimenta los botones visibles y los atajos
+ * de teclado. Su valor está en alcanzar esos comandos con el teclado sin
+ * recordar dónde vive cada control, y en poder saltar a un nudo o una barra
+ * por su identificador — la única parte que sigue siendo contenido propio de
+ * la paleta, porque es dato del proyecto, no un comando fijo.
+ */
+export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = 'overlay' }: CommandPaletteProps) => {
   const {
-    project,
-    replaceProject,
-    updateProject,
-    updateProjectView,
-    setSelection,
-    selection,
-    analyze,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
+    project, analysis, theme, canUndo, canRedo, isAnalyzing, selection,
+    setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, analyze, undo, redo,
   } = useProject();
-  const { theme, setTheme, setActiveTool } = useWorkspaceUI();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
   const titleId = useId();
 
-  // Reset query and focus on open
-  useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      window.requestAnimationFrame(() => {
-        inputRef.current?.focus();
-      });
-    }
-  }, [isOpen]);
+  const close = useCallback(() => onClose(), [onClose]);
 
-  const commands = useMemo<CommandItem[]>(() => {
-    const list: CommandItem[] = [
-      // Actions
-      {
-        id: 'action-analyze',
-        category: t('palette.categoryActions') || 'Acciones',
-        label: t('analysis.run') || 'Ejecutar Análisis Estructural',
-        description: 'P-Delta & Solver Matricial',
-        icon: Play,
-        shortcut: 'Ctrl+Enter',
-        action: () => {
-          analyze();
-          onClose();
-        },
-      },
-      {
-        id: 'action-fit-canvas',
-        category: t('palette.categoryActions') || 'Acciones',
-        label: t('palette.fitCanvas') || 'Auto-encuadrar Canvas',
-        icon: Maximize2,
-        shortcut: 'F',
-        action: () => {
-          emitWorkspaceCommand('fit-canvas');
-          onClose();
-        },
-      },
-      {
-        id: 'action-undo',
-        category: t('palette.categoryActions') || 'Acciones',
-        label: t('palette.undo') || 'Deshacer último cambio',
-        icon: Undo2,
-        shortcut: 'Ctrl+Z',
-        action: () => {
-          if (canUndo) undo();
-          onClose();
-        },
-      },
-      {
-        id: 'action-redo',
-        category: t('palette.categoryActions') || 'Acciones',
-        label: t('palette.redo') || 'Rehacer cambio',
-        icon: Redo2,
-        shortcut: 'Ctrl+Y',
-        action: () => {
-          if (canRedo) redo();
-          onClose();
-        },
-      },
-      {
-        id: 'action-toggle-theme',
-        category: t('palette.categoryView') || 'Vista y Temas',
-        label: theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro',
-        icon: theme === 'dark' ? Sun : Moon,
-        action: () => {
-          setTheme(theme === 'dark' ? 'light' : 'dark');
-          onClose();
-        },
-      },
-      {
-        id: 'action-toggle-classroom',
-        category: t('palette.categoryView') || 'Vista y Temas',
-        label: project.settings.calculationMode === 'classroom'
-          ? 'Cambiar a Modo Completo (Profesional)'
-          : 'Cambiar a Modo Aula (Pedagógico)',
-        description: 'Alternar experiencia pedagógica o ingeniería completa',
-        icon: GraduationCap,
-        action: () => {
-          updateProjectView((draft) => ({
-            ...draft,
-            settings: {
-              ...draft.settings,
-              calculationMode: draft.settings.calculationMode === 'classroom' ? 'complete' : 'classroom',
-            },
-          }));
-          onClose();
-        },
-      },
-      {
-        id: 'action-toggle-grid',
-        category: t('palette.categoryView') || 'Vista y Temas',
-        label: project.settings.showGrid ? 'Ocultar Rejilla (Grid)' : 'Mostrar Rejilla (Grid)',
-        icon: Grid,
-        action: () => {
-          updateProjectView((draft) => ({
-            ...draft,
-            settings: { ...draft.settings, showGrid: !draft.settings.showGrid },
-          }));
-          onClose();
-        },
-      },
-      {
-        id: 'action-toggle-snap',
-        category: t('palette.categoryView') || 'Vista y Temas',
-        label: project.settings.snap ? 'Desactivar SNAP Imantación' : 'Activar SNAP Imantación',
-        icon: Magnet,
-        action: () => {
-          updateProjectView((draft) => ({
-            ...draft,
-            settings: { ...draft.settings, snap: !draft.settings.snap },
-          }));
-          onClose();
-        },
-      },
-      {
-        id: 'action-export-json',
-        category: t('palette.categoryActions') || 'Acciones',
-        label: 'Exportar Proyecto como JSON',
-        description: 'Descargar archivo de proyecto structureCo',
-        icon: Download,
-        action: () => {
-          exportProjectJson(project);
-          onClose();
-        },
-      },
-      // Canvas Themes
-      {
-        id: 'canvas-theme-standard',
-        category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Lienzo Estándar structureCo',
-        icon: Eye,
-        action: () => {
-          document.documentElement.removeAttribute('data-canvas-theme');
-          onClose();
-        },
-      },
-      {
-        id: 'canvas-theme-blueprint',
-        category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Tema Blueprint Técnico (Azul Cian)',
-        icon: Eye,
-        action: () => {
-          document.documentElement.setAttribute('data-canvas-theme', 'blueprint');
-          onClose();
-        },
-      },
-      {
-        id: 'canvas-theme-charcoal',
-        category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Tema CAD Charcoal (Grafito Oscuro)',
-        icon: Eye,
-        action: () => {
-          document.documentElement.setAttribute('data-canvas-theme', 'cad-charcoal');
-          onClose();
-        },
-      },
-      {
-        id: 'canvas-theme-editorial',
-        category: t('palette.categoryCanvasTheme') || 'Tema del Lienzo',
-        label: 'Tema Editorial Clean (Papel Técnico)',
-        icon: Eye,
-        action: () => {
-          document.documentElement.setAttribute('data-canvas-theme', 'editorial-clean');
-          onClose();
-        },
-      },
-      // Tools
-      {
-        id: 'tool-node',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Herramienta Nodo',
-        description: 'Insertar nodos en el modelo',
-        icon: Crosshair,
-        shortcut: 'N',
-        action: () => {
-          setActiveTool('node');
-          onClose();
-        },
-      },
-      {
-        id: 'tool-member',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Herramienta Barra / Miembro',
-        description: 'Dibujar elementos entre nodos',
-        icon: Compass,
-        shortcut: 'M',
-        action: () => {
-          setActiveTool('member');
-          onClose();
-        },
-      },
-      {
-        id: 'tool-support',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Herramienta Apoyo',
-        description: 'Asignar condiciones de contorno',
-        icon: Grid,
-        shortcut: 'S',
-        action: () => {
-          setActiveTool('support');
-          onClose();
-        },
-      },
-      {
-        id: 'tool-point-load',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Carga Puntual',
-        description: 'Aplicar fuerza o momento',
-        icon: Magnet,
-        shortcut: 'P',
-        action: () => {
-          setActiveTool('pointLoad');
-          onClose();
-        },
-      },
-      {
-        id: 'tool-distributed-load',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Carga Distribuida',
-        description: 'Carga uniforme o trapezoidal sobre barra',
-        icon: Magnet,
-        shortcut: 'D',
-        action: () => {
-          setActiveTool('distributedLoad');
-          onClose();
-        },
-      },
-      {
-        id: 'tool-dimension',
-        category: t('palette.categoryTools') || 'Herramientas',
-        label: 'Herramienta Cota',
-        description: 'Medir distancia o longitud',
-        icon: FileCode2,
-        shortcut: 'C',
-        action: () => {
-          setActiveTool('dimension');
-          onClose();
-        },
-      },
-      // Quick Standard Sections for Members
-      ...standardSections.slice(0, 8).map((sec) => ({
-        id: `section-${sec.name}`,
-        category: 'Perfiles de Catálogo',
-        label: `Asignar sección ${sec.name}`,
-        description: `${sec.shapeType.toUpperCase()} · A = ${formatFixed(sec.area * 1e4, 1)} cm², I = ${formatFixed(sec.inertiaX * 1e8, 0)} cm⁴`,
-        icon: Box,
-        action: () => {
-          updateProject((draft) => {
-            const targetMembers = selection?.kind === 'member'
-              ? draft.members.filter((m) => m.id === selection.id)
-              : selection?.kind === 'multi'
-                ? draft.members.filter((m) => selection.memberIds.includes(m.id))
-                : draft.members;
-            for (const member of targetMembers) {
-              member.A = sec.area;
-              member.I = sec.inertiaX;
-            }
-            return draft;
-          });
-          onClose();
-        },
-      })),
-      // Direct Member Navigation
-      ...project.members.map((member) => ({
-        id: `member-${member.id}`,
-        category: 'Navegación de Barras',
-        label: `Barra ${member.id} (${member.i} → ${member.j})`,
-        description: `Tipo: ${member.type} · E = ${formatFixed(member.E / 1e6, 0)} GPa`,
-        icon: Compass,
-        action: () => {
-          setSelection({ kind: 'member', id: member.id });
-          onClose();
-        },
-      })),
-      // Direct Node Navigation
-      ...project.nodes.map((node) => ({
-        id: `node-${node.id}`,
-        category: 'Navegación de Nodos',
-        label: `Nodo ${node.id} (X: ${formatFixed(node.x, 2)}, Y: ${formatFixed(node.y, 2)})`,
-        description: `Apoyo: ${node.support.type}`,
-        icon: Crosshair,
-        action: () => {
-          setSelection({ kind: 'node', id: node.id });
-          onClose();
-        },
-      })),
-      // Templates
-      ...exampleProjects.map((ex) => ({
-        id: `template-${ex.name}`,
-        category: t('palette.categoryTemplates') || 'Plantillas',
-        label: `Cargar: ${ex.name}`,
-        description: ex.description,
-        icon: FileDown,
-        action: () => {
-          replaceProject(ex.build());
-          onClose();
-        },
-      })),
-    ];
-    return list;
-  }, [
+  const context = useMemo<CommandContext>(() => ({
     t,
-    analyze,
-    onClose,
-    canUndo,
-    undo,
-    canRedo,
-    redo,
-    theme,
-    setTheme,
-    setActiveTool,
-    replaceProject,
     project,
-    updateProject,
-    updateProjectView,
+    hasAnalysis: Boolean(analysis),
+    isAnalyzing,
+    canUndo,
+    canRedo,
+    classroomMode: project.settings.calculationMode === 'classroom',
+    theme,
+    setActiveTool,
     setSelection,
-    selection,
+    setResultTab,
+    setTheme,
+    updateProjectView,
+    dispatchLayers,
+    analyze,
+    undo,
+    redo,
+  }), [
+    t, project, analysis, isAnalyzing, canUndo, canRedo, theme,
+    setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, dispatchLayers, analyze, undo, redo,
   ]);
 
-  const filteredCommands = useMemo(() => {
-    if (!query.trim()) return commands;
-    const q = query.toLowerCase().trim();
-    return commands.filter(
-      (c) =>
-        c.label.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        (c.description && c.description.toLowerCase().includes(q)) ||
-        (c.shortcut && c.shortcut.toLowerCase().includes(q))
-    );
+  const commands = useMemo<CommandListItem[]>(() => buildCommands(context), [context]);
+
+  /** Ejecuta un comando de la paleta: la cierra y, si abre una superficie que
+   *  monta al abrirse, difiere el efecto un frame para no competir con el
+   *  cierre/restauración de foco de la propia paleta. */
+  const execute = useCallback((command: CommandListItem) => {
+    if (command.deferredOpen) {
+      close();
+      window.requestAnimationFrame(() => command.run());
+      return;
+    }
+    command.run();
+    close();
+  }, [close]);
+
+  const matches = useMemo(() => {
+    const needle = normalize(query.trim());
+    if (!needle) return commands;
+    return commands.filter((command) =>
+      normalize(command.label).includes(needle) || (command.hint ? normalize(command.hint).includes(needle) : false));
   }, [commands, query]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % Math.max(1, filteredCommands.length));
-      return;
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + filteredCommands.length) % Math.max(1, filteredCommands.length));
-      return;
-    }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const selected = filteredCommands[selectedIndex];
-      if (selected) selected.action();
-    }
-  };
+  const enabled = useMemo(() => matches.filter((command) => !command.disabled), [matches]);
+
+  useEffect(() => setActiveIndex(0), [query, open]);
 
   useEffect(() => {
-    if (selectedIndex >= filteredCommands.length) {
-      setSelectedIndex(0);
-    }
-  }, [filteredCommands.length, selectedIndex]);
+    if (!open) return;
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  }, [open]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      close();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [close, open]);
 
-  return (
-    <div
-      className="command-palette-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-    >
-      <div className="command-palette-modal">
-        <div className="command-palette-input-wrap">
-          <Search size={18} aria-hidden="true" />
-          <input
-            ref={inputRef}
-            id={titleId}
-            className="command-palette-input"
-            type="text"
-            placeholder={t('palette.placeholder') || 'Buscar comando, plantilla o acción (Ctrl+K)...'}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-            spellCheck="false"
-          />
-          <span className="command-palette-keycap">ESC</span>
-        </div>
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.querySelector<HTMLElement>('[data-palette-active="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, matches, open]);
 
-        <div className="command-palette-list" ref={listRef} role="listbox">
-          {filteredCommands.length === 0 ? (
-            <div className="empty-small">{t('palette.noResults') || 'No se encontraron comandos'}</div>
-          ) : (
-            filteredCommands.map((item, index) => {
-              const isSelected = index === selectedIndex;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`command-palette-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() => item.action()}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  role="option"
-                  aria-selected={isSelected}
-                >
-                  <span className="command-palette-item-icon">
-                    <Icon size={16} />
-                  </span>
-                  <div className="command-palette-item-text">
-                    <span className="command-palette-item-label">{item.label}</span>
-                    {item.description && (
-                      <span className="command-palette-item-desc">{item.description}</span>
-                    )}
-                  </div>
-                  <span className="command-palette-item-category">{item.category}</span>
-                  {item.shortcut && (
-                    <span className="command-palette-item-shortcut">{item.shortcut}</span>
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
+  if (!open) return null;
 
-        <div className="command-palette-footer">
-          <span>
-            <kbd>↑</kbd> <kbd>↓</kbd> Navegar
-          </span>
-          <span>
-            <kbd>↵</kbd> Ejecutar
-          </span>
-          <span>
-            <kbd>ESC</kbd> Cerrar
-          </span>
-        </div>
+  const move = (delta: number) => {
+    if (enabled.length === 0) return;
+    setActiveIndex((current) => (current + delta + enabled.length) % enabled.length);
+  };
+
+  const onInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') { event.preventDefault(); move(1); }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); move(-1); }
+    else if (event.key === 'Home') { event.preventDefault(); setActiveIndex(0); }
+    else if (event.key === 'End') { event.preventDefault(); setActiveIndex(Math.max(0, enabled.length - 1)); }
+    else if (event.key === 'Enter') { event.preventDefault(); const command = enabled[activeIndex]; if (command) execute(command); }
+  };
+
+  const activeCommandId = enabled[activeIndex]?.id;
+
+  return <div
+    className={`command-palette-backdrop command-palette-backdrop--${presentation}`}
+    data-surface-presentation={presentation}
+    role="presentation"
+    onPointerDown={(event) => {
+    if (event.target === event.currentTarget) close();
+  }}>
+    <div className="command-palette" data-workspace-surface="palette" role="dialog" aria-labelledby={titleId}>
+      <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
+      <div className="command-palette-search">
+        <Search size={17} aria-hidden="true" />
+        <input
+          ref={inputRef}
+          data-surface-focus-key="command-query"
+          type="text"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls={listId}
+          aria-activedescendant={activeCommandId ? `${listId}-${activeCommandId}` : undefined}
+          aria-autocomplete="list"
+          autoComplete="off"
+          placeholder={t('palette.placeholder')}
+          aria-label={t('palette.placeholder')}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={onInputKeyDown}
+        />
+        <kbd>Esc</kbd>
       </div>
+
+      <div className="command-palette-list" id={listId} role="listbox" aria-label={t('palette.title')} ref={listRef}>
+        {matches.length === 0 ? <p className="command-palette-empty">{t('palette.noResults', { query: query.trim() })}</p> : null}
+        {GROUP_ORDER.map((group) => {
+          const groupCommands = matches.filter((command) => command.category === group);
+          if (groupCommands.length === 0) return null;
+          return <section key={group} className="command-palette-group">
+            <h3>{t(GROUP_LABEL_KEYS[group])}</h3>
+            {groupCommands.map((command) => {
+              const Icon = command.icon;
+              const isActive = command.id === activeCommandId;
+              return <button
+                key={command.id}
+                id={`${listId}-${command.id}`}
+                type="button"
+                role="option"
+                /* Sin etiqueta explícita, el nombre accesible concatena
+                   `strong`+`small`+`kbd` sin separación ("NodoN"). */
+                aria-label={[command.label, command.hint, command.shortcut].filter(Boolean).join(' · ')}
+                aria-selected={isActive}
+                aria-disabled={command.disabled}
+                data-palette-active={isActive}
+                className={`command-palette-item${isActive ? ' is-active' : ''}`}
+                disabled={command.disabled}
+                onPointerEnter={() => {
+                  const index = enabled.findIndex((candidate) => candidate.id === command.id);
+                  if (index >= 0) setActiveIndex(index);
+                }}
+                onClick={() => execute(command)}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span className="command-palette-label">
+                  <strong>{command.label}</strong>
+                  {command.hint ? <small>{command.hint}</small> : null}
+                </span>
+                {command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
+              </button>;
+            })}
+          </section>;
+        })}
+      </div>
+
+      <footer className="command-palette-footer">
+        <span>{t('palette.hintNavigate')}</span>
+        <span>{selection && selection.kind !== 'multi' ? t('palette.currentSelection', { id: selection.id }) : t('palette.noSelection')}</span>
+      </footer>
     </div>
-  );
+  </div>;
 };

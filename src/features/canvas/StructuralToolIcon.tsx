@@ -1,7 +1,7 @@
 /**
  * Frontera de compatibilidad: los glifos estructurales canónicos viven en
  * `src/design-system/icons/structural.tsx`. Este módulo conserva la API
- * histórica (tool → icono) que consumen ToolBar y el dock móvil.
+ * histórica (tool → icono) que consume ToolRail (bandeja y dock móvil).
  */
 import type { Tool } from '../../types';
 import {

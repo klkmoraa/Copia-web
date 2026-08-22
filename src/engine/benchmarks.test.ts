@@ -648,4 +648,25 @@ describe('perfilado de fases del analisis completo (AG-011)', () => {
     console.log(`\n[AG-013] viga continua (300 vanos) — antes (con traza) ${before.toFixed(1)} ms · despues (sin traza) ${after.toFixed(1)} ms · speedup ${(before / after).toFixed(2)}x`);
     expect(after).toBeLessThan(before);
   }, 60_000);
+
+  // F3-SPARSE: medición reproducible del backend híbrido en los tres tamaños
+  // acordados. Sigue siendo opt-in porque 1,000 miembros materializan primero
+  // la matriz densa number[][]; precisamente ese límite impide prometer 5k+.
+  it('F3 mide assembly, solve, diagramas, deformada y auditoria en 100/500/1000 miembros', () => {
+    if (process.env.STRUCTURECO_PROFILE_PHASE3 !== '1') return;
+    for (const spans of [100, 500, 1000]) {
+      const model = continuousBeamModel(spans);
+      const heapBefore = process.memoryUsage().heapUsed;
+      beginProfiling();
+      const result = analyzeProject(model, undefined, { includeEducationTrace: false });
+      const timings = endProfiling();
+      const heapDeltaMiB = (process.memoryUsage().heapUsed - heapBefore) / (1024 * 1024);
+      expect(result.success).toBe(true);
+      expect(result.linearSolver?.backend).toBe('sparse-ldlt');
+      expect(result.linearResidual).toBeLessThan(1e-10);
+      printPhaseTable(`F3 viga continua (${spans} vanos)`, result.memberResults.length, timings);
+      // eslint-disable-next-line no-console
+      console.log(`[F3-SPARSE] backend=${result.linearSolver?.backend} residual=${result.linearResidual?.toExponential(3)} condition=${result.conditionEstimate.toExponential(3)} heap-delta=${heapDeltaMiB.toFixed(1)} MiB`);
+    }
+  }, 180_000);
 });

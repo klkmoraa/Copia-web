@@ -1,457 +1,190 @@
-import React, { useState } from 'react';
-import { Box, Layers } from 'lucide-react';
-import type { StandardSection, SectionShapeType } from '../../data/standardSections';
+import { useId, useMemo, useState } from 'react';
+import { Box, Ruler } from 'lucide-react';
 import { toDisplay, unitLabel } from '../../engine/units';
-import type { UnitSystemId } from '../../types';
-import { formatInspectorValue } from './numericFormatting';
+import { useI18n } from '../../i18n/useI18n';
+import type { MemberPropertyOrigin, UnitSystemId } from '../../types';
 import { formatFixed } from '../../utils/numberFormat';
+import { formatInspectorValue } from './numericFormatting';
+import { resolveSectionGeometry, sectionShapeLayout } from './sectionGeometry';
+import { SectionShape, type SectionShapeVariant } from './SectionShape';
 
 export interface SectionViewer2DProps {
-  section?: StandardSection | null;
+  /** Área bruta del miembro (m²) tal como la tiene el modelo. */
   area: number;
+  /** Inercia fuerte del miembro (m⁴). */
   inertia: number;
+  sectionId?: string;
+  sectionOrigin?: MemberPropertyOrigin;
   units: UnitSystemId;
+  /** Axil de referencia (kN) para el mapa de tensiones; 0 lo deja neutro. */
   axialForce?: number;
+  /** Momento de referencia (kN·m) para el mapa de tensiones. */
   bendingMoment?: number;
-  yieldStrength?: number;
 }
 
+const SVG_WIDTH = 200;
+const SVG_HEIGHT = 140;
+const PADDING = 30;
+
 /**
- * Visualizador 2D / 3D Isométrico de sección transversal estructural con cotas y mapa de tensiones.
- * Permite alternar entre la vista técnica de cotas 2D y la extrusión isométrica 3D con tensiones de Navier.
+ * Sección transversal a escala, con cotas y la distribución elástica de Navier.
+ *
+ * Una identidad explícita de catálogo permite dibujar la forma real. En cualquier
+ * otro origen se dibuja la rectangular equivalente h = √(12·I/A), que es la única
+ * forma que A e I determinan sin inventar una identidad.
  */
-export const SectionViewer2D: React.FC<SectionViewer2DProps> = ({
-  section,
-  area,
-  inertia,
-  units,
-  axialForce = 0,
-  bendingMoment = 0,
-}) => {
-  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
-  const shapeType: SectionShapeType = section?.shapeType ?? 'RECT';
-  
-  // Dimensiones en metros
-  const depth = section?.depth ?? (Math.sqrt((12 * inertia) / (area > 0 ? area : 1)) || 0.3);
-  const width = section?.width ?? ((area / (depth > 0 ? depth : 1)) || 0.2);
-  const tf = section?.flangeThickness ?? (depth * 0.1);
-  const tw = section?.webThickness ?? (width * 0.1);
+export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units, axialForce = 0, bendingMoment = 0 }: SectionViewer2DProps) => {
+  const [view, setView] = useState<'dimensions' | 'stress'>('dimensions');
+  const { t } = useI18n();
+  const uid = useId();
+  const gradientId = `section-stress-gradient-${uid}`;
+  const maskId = `section-stress-mask-${uid}`;
 
-  // Módulo elástico W (m³)
-  const Wel = section?.sectionModulusX ?? ((inertia / (depth / 2 > 0 ? depth / 2 : 1)) || 0.0005);
+  const geometry = useMemo(
+    () => resolveSectionGeometry({ area, inertia, sectionId, sectionOrigin }),
+    [area, inertia, sectionId, sectionOrigin],
+  );
 
-  // Tensiones normales elásticas de Navier: sigma = N/A ± M*y/I (en MPa)
-  const sigmaAxial = area > 0 ? (axialForce / area) / 1e6 : 0;
-  const sigmaBending = Wel > 0 ? (Math.abs(bendingMoment) / Wel) / 1e6 : 0;
-  const sigmaTop = sigmaAxial - (bendingMoment >= 0 ? sigmaBending : -sigmaBending);
-  const sigmaBot = sigmaAxial + (bendingMoment >= 0 ? sigmaBending : -sigmaBending);
+  const { section, shapeType, depth, width, modulus } = geometry;
 
-  // Escala gráfica centrada en un viewBox de 200 x 140
-  const svgWidth = 200;
-  const svgHeight = 140;
-  const padding = 28;
-  const drawWidth = svgWidth - padding * 2;
-  const drawHeight = svgHeight - padding * 2;
+  /*
+   * Tensiones normales elásticas σ = N/A ± M/W. Se calculan en unidades base
+   * (kN/m²) y se muestran con la cantidad `elasticModulus`, que comparte
+   * dimensión con la tensión: así la sección lee en la misma familia de
+   * unidades que el resto del inspector y no en un MPa fijo.
+   */
+  const sigmaAxial = area > 0 ? axialForce / area : 0;
+  const sigmaBending = modulus > 0 ? Math.abs(bendingMoment) / modulus : 0;
+  const sigmaTop = toDisplay(sigmaAxial - (bendingMoment >= 0 ? sigmaBending : -sigmaBending), units, 'elasticModulus');
+  const sigmaBottom = toDisplay(sigmaAxial + (bendingMoment >= 0 ? sigmaBending : -sigmaBending), units, 'elasticModulus');
+  const stressUnit = unitLabel(units, 'elasticModulus');
+  /* No hay cantidad `sectionModulus`: W es un volumen, así que se escala con
+     el factor de longitud al cubo y se rotula con esa misma unidad. */
+  const lengthFactor = toDisplay(1, units, 'length');
+  const modulusDisplay = modulus * lengthFactor ** 3;
+  const hasStress = Math.abs(sigmaTop) > 1e-9 || Math.abs(sigmaBottom) > 1e-9;
 
-  const scale = Math.min(drawWidth / Math.max(width, 0.01), drawHeight / Math.max(depth, 0.01)) * 0.90;
-  const pxW = width * scale;
-  const pxH = depth * scale;
-  const pxTf = Math.max(tf * scale, 3);
-  const pxTw = Math.max(tw * scale, 3);
+  /*
+   * σ varía linealmente entre la fibra superior y la inferior (Navier), así que
+   * el degradado es la distribución, no una decoración. La fibra de tensión
+   * nula sólo cae *dentro* del canto si los dos extremos tienen signo opuesto;
+   * con el axil dominando, toda la sección trabaja del mismo lado y no hay
+   * corte que marcar. El color distingue compresión de tracción y la opacidad
+   * lleva la magnitud, relativa a la fibra más cargada de esta misma sección.
+   */
+  const stressSpan = sigmaTop - sigmaBottom;
+  const neutralFraction = Math.abs(stressSpan) > 1e-12 ? sigmaTop / stressSpan : 0;
+  const neutralOffset = neutralFraction > 0 && neutralFraction < 1 ? neutralFraction : null;
+  const peakStress = Math.max(Math.abs(sigmaTop), Math.abs(sigmaBottom));
+  const stressColor = (sigma: number) => sigma < 0 ? 'var(--sc-color-technical-axial)' : 'var(--sc-color-technical-moment)';
+  const stressOpacity = (sigma: number) => peakStress > 0 ? 0.18 + 0.72 * (Math.abs(sigma) / peakStress) : 0;
 
-  // Perfectamente centrado
-  const cx = svgWidth / 2;
-  const cy = svgHeight / 2;
+  const layout = sectionShapeLayout(geometry, { width: SVG_WIDTH, height: SVG_HEIGHT, padding: PADDING });
+  const { left, right, top, bottom, cx, cy, pxWidth, pxHeight } = layout;
 
-  // Renderizado SVG de la forma
-  const renderShape = () => {
-    const left = cx - pxW / 2;
-    const right = cx + pxW / 2;
-    const top = cy - pxH / 2;
-    const bottom = cy + pxH / 2;
+  const renderShape = (variant: SectionShapeVariant = 'draw') =>
+    <SectionShape shapeType={shapeType} layout={layout} variant={variant} />;
 
-    switch (shapeType) {
-      case 'I': {
-        const webLeft = cx - pxTw / 2;
-        const webRight = cx + pxTw / 2;
-        const topFlangeBottom = top + pxTf;
-        const botFlangeTop = bottom - pxTf;
+  /*
+   * En Dimensiones, E.N. es la referencia geométrica central. En Stress debe
+   * ser la fibra de tensión nula real: si el axil domina y toda la sección
+   * trabaja del mismo lado, esa fibra cae fuera del perfil y no hay línea que
+   * mostrar — dibujarla en el centro geométrico sería una E.N. inventada.
+   */
+  const showStressView = view === 'stress' && hasStress;
+  const neutralAxisY = showStressView
+    ? (neutralOffset === null ? null : top + neutralOffset * pxHeight)
+    : cy;
 
-        const pathData = [
-          `M ${left} ${top}`,
-          `H ${right}`,
-          `V ${topFlangeBottom}`,
-          `H ${webRight}`,
-          `V ${botFlangeTop}`,
-          `H ${right}`,
-          `V ${bottom}`,
-          `H ${left}`,
-          `V ${botFlangeTop}`,
-          `H ${webLeft}`,
-          `V ${topFlangeBottom}`,
-          `H ${left}`,
-          'Z',
-        ].join(' ');
+  const lengthUnit = unitLabel(units, 'length');
+  const dimensionWidth = formatFixed(toDisplay(width, units, 'length'), 3, 'inspector');
+  const dimensionDepth = formatFixed(toDisplay(depth, units, 'length'), 3, 'inspector');
 
-        return (
-          <path
-            d={pathData}
-            fill="var(--sc-color-surface-2, var(--surface-2))"
-            stroke="var(--sc-color-action-primary, var(--accent))"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-        );
-      }
-      case 'HSS_RECT': {
-        const inLeft = left + pxTw;
-        const inRight = right - pxTw;
-        const inTop = top + pxTf;
-        const inBottom = bottom - pxTf;
+  return <section className="section-viewer" aria-label={t('inspector.sectionViewer')} data-testid="section-viewer-2d">
+    <header className="section-viewer-header">
+      <div className="section-viewer-title">
+        <strong>{section?.name ?? t('inspector.sectionEquivalent')}</strong>
+        <span>{section ? `${shapeType} · ${section.standard}` : t('inspector.sectionEquivalentHint')}</span>
+      </div>
+      <div className="section-viewer-modes" role="group" aria-label={t('inspector.sectionViewMode')}>
+        <button
+          type="button"
+          className={view === 'dimensions' ? 'active' : ''}
+          aria-pressed={view === 'dimensions'}
+          onClick={() => setView('dimensions')}
+        ><Ruler size={13} aria-hidden="true" /> {t('inspector.sectionViewDimensions')}</button>
+        <button
+          type="button"
+          className={view === 'stress' ? 'active' : ''}
+          aria-pressed={view === 'stress'}
+          disabled={!hasStress}
+          title={hasStress ? undefined : t('inspector.sectionStressUnavailable')}
+          onClick={() => setView('stress')}
+        ><Box size={13} aria-hidden="true" /> {t('inspector.sectionViewStress')}</button>
+      </div>
+    </header>
 
-        return (
-          <g>
-            <rect
-              x={left}
-              y={top}
-              width={pxW}
-              height={pxH}
-              rx="4"
-              fill="var(--sc-color-surface-2, var(--surface-2))"
-              stroke="var(--sc-color-action-primary, var(--accent))"
-              strokeWidth="2"
-            />
-            <rect
-              x={inLeft}
-              y={inTop}
-              width={Math.max(inRight - inLeft, 2)}
-              height={Math.max(inBottom - inTop, 2)}
-              rx="2"
-              fill="var(--sc-color-bg-app, var(--app-bg))"
-              stroke="var(--sc-color-border, var(--border))"
-              strokeWidth="1.2"
-            />
-          </g>
-        );
-      }
-      case 'HSS_ROUND': {
-        const radius = Math.min(pxW, pxH) / 2;
-        const inRadius = Math.max(radius - pxTw, 2);
-        return (
-          <g>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={radius}
-              fill="var(--sc-color-surface-2, var(--surface-2))"
-              stroke="var(--sc-color-action-primary, var(--accent))"
-              strokeWidth="2"
-            />
-            <circle
-              cx={cx}
-              cy={cy}
-              r={inRadius}
-              fill="var(--sc-color-bg-app, var(--app-bg))"
-              stroke="var(--sc-color-border, var(--border))"
-              strokeWidth="1.2"
-            />
-          </g>
-        );
-      }
-      case 'C': {
-        const webRight = left + pxTw;
-        const topFlangeBottom = top + pxTf;
-        const botFlangeTop = bottom - pxTf;
-
-        const pathData = [
-          `M ${left} ${top}`,
-          `H ${right}`,
-          `V ${topFlangeBottom}`,
-          `H ${webRight}`,
-          `V ${botFlangeTop}`,
-          `H ${right}`,
-          `V ${bottom}`,
-          `H ${left}`,
-          'Z',
-        ].join(' ');
-
-        return (
-          <path
-            d={pathData}
-            fill="var(--sc-color-surface-2, var(--surface-2))"
-            stroke="var(--sc-color-action-primary, var(--accent))"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-        );
-      }
-      case 'RECT':
-      default: {
-        return (
-          <rect
-            x={left}
-            y={top}
-            width={pxW}
-            height={pxH}
-            rx="3"
-            fill="var(--sc-color-surface-2, var(--surface-2))"
-            stroke="var(--sc-color-action-primary, var(--accent))"
-            strokeWidth="2"
-          />
-        );
-      }
-    }
-  };
-
-  const dimWidthMm = formatFixed(width * (units === 'kN-m' ? 1000 : 1), 0, 'inspector');
-  const dimDepthMm = formatFixed(depth * (units === 'kN-m' ? 1000 : 1), 0, 'inspector');
-
-  // Renderizado 3D Isométrico extruido
-  const render3DIsometric = () => {
-    const isoX = cx - 26;
-    const isoY = cy + 12;
-    const extX = 54;
-    const extY = -28;
-    const w = pxW * 0.75;
-    const h = pxH * 0.75;
-    const l = isoX - w / 2;
-    const r = isoX + w / 2;
-    const t = isoY - h / 2;
-    const b = isoY + h / 2;
-
-    return (
-      <g className="section-3d-iso-group">
-        {/* Caras extruidas superiores y laterales */}
-        <polygon
-          points={`${l},${t} ${r},${t} ${r + extX},${t + extY} ${l + extX},${t + extY}`}
-          fill="color-mix(in srgb, var(--sc-color-surface-elevated) 85%, var(--sc-color-action-primary) 15%)"
-          stroke="var(--sc-color-border-strong)"
-          strokeWidth="1.2"
-        />
-        <polygon
-          points={`${r},${t} ${r},${b} ${r + extX},${b + extY} ${r + extX},${t + extY}`}
-          fill="color-mix(in srgb, var(--sc-color-surface-2) 70%, var(--sc-color-text-secondary) 30%)"
-          stroke="var(--sc-color-border-strong)"
-          strokeWidth="1.2"
-        />
-
-        {/* Cara frontal con distribución de tensiones de Navier */}
-        <rect
-          x={l}
-          y={t}
-          width={w}
-          height={h}
-          rx="2"
-          fill="url(#stress-gradient-iso)"
-          stroke="var(--sc-color-action-primary, var(--accent))"
-          strokeWidth="1.8"
-        />
-
-        {/* Eje Neutro en perspectiva */}
-        <line
-          x1={l - 12}
-          y1={isoY}
-          x2={r + extX + 12}
-          y2={isoY + extY}
-          stroke="var(--sc-color-brand-secondary)"
-          strokeWidth="1.4"
-          strokeDasharray="4 2"
-        />
-        <text
-          x={l - 14}
-          y={isoY + 3}
-          textAnchor="end"
-          fontSize="7.5"
-          fontWeight="700"
-          fontFamily="var(--sc-font-mono)"
-          fill="var(--sc-color-brand-secondary)"
-        >
-          E.N.
-        </text>
-
-        {/* Gradiente de tensiones */}
+    <div className="section-viewer-canvas">
+      <svg viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} role="img" aria-label={t('inspector.sectionViewerAria', {
+        name: section?.name ?? t('inspector.sectionEquivalent'),
+        depth: dimensionDepth,
+        width: dimensionWidth,
+      })}>
         <defs>
-          <linearGradient id="stress-gradient-iso" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--sc-color-state-info)" stopOpacity="0.85" />
-            <stop offset="50%" stopColor="var(--sc-color-surface-1)" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="var(--sc-color-action-primary)" stopOpacity="0.85" />
+          <linearGradient id={gradientId} x1={cx} y1={top} x2={cx} y2={bottom} gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={stressColor(sigmaTop)} stopOpacity={stressOpacity(sigmaTop)} />
+            {/* `offset` admite la fracción directamente: no hay número que
+                *mostrar* aquí, así que no pasa por el formateador. */}
+            {neutralOffset === null ? null
+              : <stop offset={neutralOffset} stopColor={stressColor(sigmaBottom)} stopOpacity="0" />}
+            <stop offset="100%" stopColor={stressColor(sigmaBottom)} stopOpacity={stressOpacity(sigmaBottom)} />
           </linearGradient>
+          <mask id={maskId} data-testid="section-stress-mask">{renderShape('mask')}</mask>
         </defs>
 
-        {/* Etiquetas de tensiones extremas */}
-        <g transform={`translate(${l - 8}, ${t + 4})`}>
-          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-color-state-info)">
-            σ_sup = {formatFixed(sigmaTop, 1)} MPa
-          </text>
-        </g>
-        <g transform={`translate(${l - 8}, ${b})`}>
-          <text textAnchor="end" fontSize="7.5" fontWeight="700" fontFamily="var(--sc-font-mono)" fill="var(--sc-color-action-primary)">
-            σ_inf = {formatFixed(sigmaBot, 1)} MPa
-          </text>
-        </g>
-      </g>
-    );
-  };
+        {neutralAxisY !== null ? <>
+          <line className="section-neutral-axis" x1={left - 18} y1={neutralAxisY} x2={right + 18} y2={neutralAxisY} />
+          <text className="section-axis-label" x={left - 20} y={neutralAxisY + 3} textAnchor="end">E.N.</text>
+        </> : null}
 
-  return (
-    <div className="section-viewer-2d-card" data-testid="section-viewer-2d">
-      <div className="section-viewer-header">
-        <div className="section-viewer-title">
-          <strong>{section?.name ?? 'Sección Personalizada'}</strong>
-          <span>{shapeType} · {section?.standard ?? 'Genérico'}</span>
-        </div>
-        <div className="section-viewer-mode-toggle" role="group" aria-label="Modo de visualización de sección">
-          <button
-            type="button"
-            className={`section-toggle-btn${viewMode === '2d' ? ' active' : ''}`}
-            onClick={() => setViewMode('2d')}
-            title="Vista 2D de cotas dimensionales"
-          >
-            <Layers size={12} />
-            2D Cotas
-          </button>
-          <button
-            type="button"
-            className={`section-toggle-btn${viewMode === '3d' ? ' active' : ''}`}
-            onClick={() => setViewMode('3d')}
-            title="Vista 3D Isométrica con tensiones de Navier"
-          >
-            <Box size={12} />
-            3D Isométrico
-          </button>
-        </div>
-      </div>
-
-      <div className="section-viewer-canvas-wrap">
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="section-viewer-svg"
-          aria-label={`Dimensiones de sección ${section?.name ?? 'personalizada'}`}
-        >
-          {viewMode === '3d' ? render3DIsometric() : (
-            <>
-              {/* Eje Neutro (N.A.) */}
-              <line
-                x1={cx - pxW / 2 - 18}
-                y1={cy}
-                x2={cx + pxW / 2 + 18}
-                y2={cy}
-                stroke="var(--sc-color-technical-axis, var(--axis))"
-                strokeWidth="1.2"
-                strokeDasharray="4 2"
-              />
-              <text
-                x={cx - pxW / 2 - 20}
-                y={cy + 3}
-                textAnchor="end"
-                fontSize="8"
-                fontWeight="700"
-                fontFamily="var(--sc-font-mono)"
-                fill="var(--sc-color-text-secondary, var(--muted))"
-              >
-                N.A.
-              </text>
-
-              {/* Perfil centrado */}
-              {renderShape()}
-
-              {/* Cota Superior de Ancho (b) */}
-              <g className="dimension-width-group">
-                <line
-                  x1={cx - pxW / 2}
-                  y1={cy - pxH / 2 - 8}
-                  x2={cx + pxW / 2}
-                  y2={cy - pxH / 2 - 8}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={cx - pxW / 2}
-                  y1={cy - pxH / 2 - 12}
-                  x2={cx - pxW / 2}
-                  y2={cy - pxH / 2 - 4}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={cx + pxW / 2}
-                  y1={cy - pxH / 2 - 12}
-                  x2={cx + pxW / 2}
-                  y2={cy - pxH / 2 - 4}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <text
-                  x={cx}
-                  y={cy - pxH / 2 - 12}
-                  textAnchor="middle"
-                  fontSize="8.5"
-                  fontWeight="700"
-                  fontFamily="var(--sc-font-mono)"
-                  fill="var(--sc-color-text-primary, var(--text))"
-                >
-                  b = {dimWidthMm} mm
-                </text>
-              </g>
-
-              {/* Cota Lateral de Peralte (h) */}
-              <g className="dimension-depth-group">
-                <line
-                  x1={cx + pxW / 2 + 10}
-                  y1={cy - pxH / 2}
-                  x2={cx + pxW / 2 + 10}
-                  y2={cy + pxH / 2}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={cx + pxW / 2 + 6}
-                  y1={cy - pxH / 2}
-                  x2={cx + pxW / 2 + 14}
-                  y2={cy - pxH / 2}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <line
-                  x1={cx + pxW / 2 + 6}
-                  y1={cy + pxH / 2}
-                  x2={cx + pxW / 2 + 14}
-                  y2={cy + pxH / 2}
-                  stroke="var(--sc-color-technical-dimension, var(--dimension))"
-                  strokeWidth="1"
-                />
-                <text
-                  x={cx + pxW / 2 + 16}
-                  y={cy}
-                  textAnchor="middle"
-                  fontSize="8.5"
-                  fontWeight="700"
-                  fontFamily="var(--sc-font-mono)"
-                  fill="var(--sc-color-text-primary, var(--text))"
-                  transform={`rotate(90 ${cx + pxW / 2 + 16} ${cy})`}
-                >
-                  h = {dimDepthMm} mm
-                </text>
-              </g>
-            </>
-          )}
-        </svg>
-      </div>
-
-      <div className="section-properties-chips">
-        <div className="section-chip">
-          <small>Área (A)</small>
-          <strong>{formatInspectorValue(toDisplay(area, units, 'area'), unitLabel(units, 'area'))}</strong>
-        </div>
-        <div className="section-chip">
-          <small>Inercia (I)</small>
-          <strong>{formatInspectorValue(toDisplay(inertia, units, 'inertia'), unitLabel(units, 'inertia'))}</strong>
-        </div>
-        <div className="section-chip">
-          <small>Mód. Elástico (W)</small>
-          <strong>{formatFixed(Wel * 1e6, 0, 'inspector')} cm³</strong>
-        </div>
-      </div>
+        {view === 'stress' && hasStress ? <>
+          {/* El degradado se recorta con la sección real; el contorno se dibuja
+              encima para que el perfil siga leyéndose bajo el mapa. */}
+          <rect
+            className="section-stress-fill"
+            data-testid="section-stress-fill"
+            x={left}
+            y={top}
+            width={pxWidth}
+            height={pxHeight}
+            fill={`url(#${gradientId})`}
+            mask={`url(#${maskId})`}
+          />
+          {renderShape('outline')}
+          <text className="section-stress-label" x={right + 6} y={top + 8}>σ {formatInspectorValue(sigmaTop, stressUnit)}</text>
+          <text className="section-stress-label" x={right + 6} y={bottom - 2}>σ {formatInspectorValue(sigmaBottom, stressUnit)}</text>
+        </> : <>
+          {renderShape()}
+          <g className="section-dimension">
+            <line x1={left} y1={top - 9} x2={right} y2={top - 9} />
+            <line x1={left} y1={top - 13} x2={left} y2={top - 5} />
+            <line x1={right} y1={top - 13} x2={right} y2={top - 5} />
+            <text x={cx} y={top - 16} textAnchor="middle">b = {dimensionWidth} {lengthUnit}</text>
+          </g>
+          <g className="section-dimension">
+            <line x1={right + 11} y1={top} x2={right + 11} y2={bottom} />
+            <line x1={right + 7} y1={top} x2={right + 15} y2={top} />
+            <line x1={right + 7} y1={bottom} x2={right + 15} y2={bottom} />
+            <text x={right + 17} y={cy} textAnchor="middle" transform={`rotate(90 ${right + 17} ${cy})`}>h = {dimensionDepth} {lengthUnit}</text>
+          </g>
+        </>}
+      </svg>
     </div>
-  );
+
+    <dl className="section-viewer-chips">
+      <div><dt>A</dt><dd>{formatInspectorValue(toDisplay(area, units, 'area'), unitLabel(units, 'area'))}</dd></div>
+      <div><dt>I</dt><dd>{formatInspectorValue(toDisplay(inertia, units, 'inertia'), unitLabel(units, 'inertia'))}</dd></div>
+      <div><dt>W</dt><dd>{formatInspectorValue(modulusDisplay, `${lengthUnit}³`)}</dd></div>
+    </dl>
+  </section>;
 };

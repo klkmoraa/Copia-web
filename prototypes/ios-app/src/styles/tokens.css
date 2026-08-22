@@ -1,0 +1,264 @@
+/*
+ * StructureCo · iOS prototype tokens
+ * ---------------------------------------------------------------------------
+ * Derivado de src/design-system/tokens.css (Día "papel de grafito" / Noche
+ * "laboratorio nocturno"). Se conserva la identidad — paleta esmeralda, suelo
+ * marfil, materia clay — y se re-mide sólo lo que cambia al pasar a un panel
+ * de 390pt en la mano:
+ *
+ *   · La materia clay baja de escala. Las sombras de escritorio (8/9/19px)
+ *     son enormes en un iPhone; aquí valen la mitad y el canto gana peso.
+ *   · La tipografía pasa a la escala de iOS (11 → 34pt) con SF Pro delante e
+ *     IBM Plex Sans detrás: la marca sobrevive en Android/desktop y en iPhone
+ *     el texto es el del sistema, que es lo que hace que se sienta nativa.
+ *   · Los radios suben: el chasis del iPhone es una superelipse y una card de
+ *     14px dentro de una pantalla de 55px se lee como recorte.
+ *   · Todo lo táctil parte de 44pt.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Marca -------------------------------------------------------- */
+  --green-50: #e8f5ee;
+  --green-100: #d1eddf;
+  --green-200: #a6ddc1;
+  --green-400: #35ad7d;
+  --green-500: #159a72;
+  --green-600: #087e5c;
+  --green-700: #06684c;
+  --green-800: #07543f;
+  --cyan-600: #1f88b8;
+
+  /* ---- Superficies (Día) -------------------------------------------- */
+  --bg-app: #f2eee6;
+  --bg-canvas: #fffdf9;
+  --surface: #fffcf7;
+  --surface-2: #f7f4ee;
+  --surface-elevated: #ffffff;
+  --surface-inset: #efeae1;
+  --surface-pressed: #ede7dd;
+  --chrome: rgba(255, 252, 247, 0.82);
+
+  --text: #23312c;
+  --text-2: #5c6c64;
+  --text-3: #82908a;
+  --text-inverse: #ffffff;
+
+  --border: #ded8ce;
+  --border-soft: #e9e3da;
+  --divider: #e7e0d6;
+
+  --accent: var(--green-600);
+  --accent-hover: var(--green-700);
+  --accent-soft: #e8f5ee;
+  --accent-fg: #ffffff;
+  --brand-2: var(--cyan-600);
+
+  --info: #345fd6;
+  --success: #2b7a3d;
+  --warning: #a87912;
+  --danger: #bd4b3e;
+  --selection: #345fd6;
+  --selection-soft: #dce9ff;
+
+  /* ---- Dominio estructural ------------------------------------------ */
+  --load: #c94f3f;
+  --distributed: #4a9463;
+  --axial: #1f88b8;
+  --shear: #4a9463;
+  --moment: #c94f3f;
+  --deformed: #7d63c9;
+  --reaction: #367db7;
+  --member: #23312c;
+  --node-fill: #fffdf9;
+  --grid: #e8e1d7;
+  --grid-strong: #d9d0c4;
+
+  /* ---- Materia clay (escala móvil) ---------------------------------- */
+  --clay-ink: 83, 72, 55;
+  --clay-light: 255, 255, 255;
+  --shadow-xs: 0 1px 2px rgba(var(--clay-ink), 0.08);
+  --clay-sm:
+    3px 4px 9px rgba(var(--clay-ink), 0.11),
+    -3px -3px 8px rgba(var(--clay-light), 0.9),
+    inset 0 1px 0 rgba(var(--clay-light), 0.86),
+    inset -1px -1px 3px rgba(var(--clay-ink), 0.06);
+  --clay-md:
+    6px 7px 16px rgba(var(--clay-ink), 0.13),
+    -5px -5px 13px rgba(var(--clay-light), 0.92),
+    inset 0 1px 0 rgba(var(--clay-light), 0.88),
+    inset -2px -2px 5px rgba(var(--clay-ink), 0.07);
+  --clay-lg:
+    10px 12px 26px rgba(var(--clay-ink), 0.16),
+    -7px -7px 18px rgba(var(--clay-light), 0.94),
+    inset 0 1px 0 rgba(var(--clay-light), 0.9),
+    inset -3px -3px 7px rgba(var(--clay-ink), 0.08);
+  --clay-pressed:
+    inset 2px 3px 7px rgba(var(--clay-ink), 0.16),
+    inset -2px -2px 5px rgba(var(--clay-light), 0.85),
+    inset 0 1px 0 rgba(var(--clay-light), 0.34);
+  --clay-sheet:
+    0 -6px 20px rgba(var(--clay-ink), 0.14),
+    inset 0 1px 0 rgba(var(--clay-light), 0.9);
+  --clay-edge: 1px solid color-mix(in srgb, var(--border) 58%, white);
+
+  --clay-action-fill: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 76%, white) 0%,
+    var(--accent) 48%,
+    color-mix(in srgb, var(--accent) 82%, black) 100%
+  );
+  --clay-action-shadow:
+    0 4px 10px color-mix(in srgb, var(--accent) 30%, transparent),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -5px 8px color-mix(in srgb, var(--accent) 25%, black 20%);
+  --clay-action-pressed:
+    inset 0 3px 8px color-mix(in srgb, var(--accent) 46%, black 26%),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.22);
+
+  --overlay: rgba(12, 20, 16, 0.34);
+
+  /* ---- Forma --------------------------------------------------------- */
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-sheet: 32px;
+  --r-pill: 999px;
+
+  /* ---- Espaciado (rejilla de 4) -------------------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+
+  --touch: 44px;
+  --tabbar-h: 52px;
+  --navbar-h: 48px;
+
+  /* ---- Tipografía (escala iOS) --------------------------------------- */
+  --font: -apple-system, "SF Pro Text", "SF Pro Display", "IBM Plex Sans",
+    "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, "SF Pro Display", "IBM Plex Sans",
+    "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+
+  --t-caption2: 11px;
+  --t-caption: 12px;
+  --t-footnote: 13px;
+  --t-subhead: 15px;
+  --t-body: 17px;
+  --t-title3: 20px;
+  --t-title2: 22px;
+  --t-title1: 28px;
+  --t-large: 34px;
+
+  --w-regular: 400;
+  --w-medium: 510;
+  --w-semibold: 620;
+  --w-bold: 720;
+
+  /* ---- Motion -------------------------------------------------------- */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.26, 1.08, 0.32, 1);
+  --d-fast: 140ms;
+  --d-base: 240ms;
+  --d-nav: 380ms;
+
+  /* ---- Safe areas ----------------------------------------------------- */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-app: #080e12;
+  --bg-canvas: #0d161b;
+  --surface: #15232b;
+  --surface-2: #101c23;
+  --surface-elevated: #1e313b;
+  --surface-inset: #0b1418;
+  --surface-pressed: #0d161b;
+  --chrome: rgba(21, 35, 43, 0.8);
+
+  --text: #f4f8f6;
+  --text-2: #a6b6b0;
+  --text-3: #8298a1;
+  --text-inverse: #0d161b;
+
+  --border: #2e424b;
+  --border-soft: #24363e;
+  --divider: #20313a;
+
+  --accent: #0e8f68;
+  --accent-hover: #43b88f;
+  --accent-soft: #13382f;
+  --accent-fg: #ffffff;
+  --brand-2: #4aa9d6;
+
+  --info: #72c3df;
+  --success: #78be83;
+  --warning: #f4d75e;
+  --danger: #eb8373;
+  --selection: #72c3df;
+  --selection-soft: #173e50;
+
+  --load: #eb8373;
+  --distributed: #78be83;
+  --axial: #72c3df;
+  --shear: #78be83;
+  --moment: #eb8373;
+  --deformed: #ab93e8;
+  --reaction: #86b9df;
+  --member: #eef4f1;
+  --node-fill: #0d161b;
+  --grid: #1c2d35;
+  --grid-strong: #294049;
+
+  --clay-ink: 0, 0, 0;
+  --clay-light: 86, 122, 134;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --clay-sm:
+    3px 4px 9px rgba(0, 0, 0, 0.42),
+    -3px -3px 8px rgba(var(--clay-light), 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.26);
+  --clay-md:
+    6px 7px 16px rgba(0, 0, 0, 0.48),
+    -5px -5px 13px rgba(var(--clay-light), 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset -2px -2px 5px rgba(0, 0, 0, 0.3);
+  --clay-lg:
+    10px 12px 26px rgba(0, 0, 0, 0.55),
+    -7px -7px 18px rgba(var(--clay-light), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset -3px -3px 7px rgba(0, 0, 0, 0.32);
+  --clay-pressed:
+    inset 2px 3px 7px rgba(0, 0, 0, 0.46),
+    inset -2px -2px 5px rgba(var(--clay-light), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --clay-sheet:
+    0 -6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --clay-edge: 1px solid var(--border);
+
+  --overlay: rgba(0, 0, 0, 0.52);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --d-fast: 0.01ms;
+    --d-base: 0.01ms;
+    --d-nav: 0.01ms;
+  }
+}

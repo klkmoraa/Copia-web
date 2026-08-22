@@ -2,11 +2,11 @@
 /**
  * Local validation for the GitHub Actions workflows under `.github/workflows/`.
  *
- * This never contacts GitHub and never runs a workflow. It checks the things §28 asks for
- * that can actually be checked offline: basic YAML sanity (no tabs, top-level keys present,
+ * This never contacts GitHub and never runs a workflow. It checks the invariants that can
+ * actually be checked offline: basic YAML sanity (no tabs, top-level keys present,
  * balanced document), every `npm run <script>` the workflow invokes exists in
  * `package.json`, every local file path the workflow reads exists in the repository, and
- * none of the operations §28 explicitly prohibits in local CI appear (AI calls, deploy,
+ * none of the operations prohibited by the local CI policy appear (AI calls, deploy,
  * publish, push, tag).
  *
  * No YAML parser dependency is added for this: the check is deliberately a conservative,
@@ -81,7 +81,7 @@ for (const file of workflowFiles) {
     note(relative, 'referencia .nvmrc, que no existe en la raiz del repositorio.');
   }
 
-  // Prohibitions from §28: no AI calls, no deploy, no publish, no destructive/remote git.
+  // Local CI policy: no AI calls, deploy, publish or destructive/remote git.
   // Scanned on the executable text only — comments are free to *explain* these absences
   // (this file's own header does), which would otherwise trip a naive substring match.
   const executableText = lines
@@ -99,7 +99,7 @@ for (const file of workflowFiles) {
     [/actions\/deploy|deploy-pages|netlify|vercel/i, 'despliega'],
   ];
   for (const [pattern, reason] of forbidden) {
-    if (pattern.test(executableText)) note(relative, `${reason}; el programa 0.8.1 no permite esto en CI local.`);
+    if (pattern.test(executableText)) note(relative, `${reason}; la política del CI local no lo permite.`);
   }
 }
 

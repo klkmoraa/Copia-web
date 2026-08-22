@@ -57,7 +57,7 @@ export function ToolButton({
   >
     <span className="sc-tool-button__icon" aria-hidden="true">{loading ? <Spinner size="sm" label={loadingLabel} decorative /> : icon}</span>
     <span className="sc-tool-button__copy"><strong>{label}</strong>{detail && !compact ? <small>{detail}</small> : null}</span>
-    {shortcut ? <kbd className="sc-tool-keycap">{shortcut}</kbd> : null}
+    {shortcut && !compact ? <kbd>{shortcut}</kbd> : null}
   </button>;
 }
 

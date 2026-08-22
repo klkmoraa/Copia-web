@@ -1,11 +1,18 @@
 import type { MemberInitialEffect, MemberLoad, MemberModel, NodalLoad, NodeModel, PrescribedDisplacement, ProjectModel, Selection } from '../types';
 
-const nextId = (prefix: string, ids: Iterable<string>): string => {
+/**
+ * Primer ID libre de una familia. Se exporta para que toda ruta que cree
+ * entidades —pegar, dividir, duplicar o insertar una geometría generada—
+ * reparta identidad con exactamente la misma regla.
+ */
+export const nextEntityId = (prefix: string, ids: Iterable<string>): string => {
   const used = new Set(ids);
   let index = 1;
   while (used.has(`${prefix}${index}`)) index += 1;
   return `${prefix}${index}`;
 };
+
+const nextId = nextEntityId;
 
 const interpolate = (start: number, end: number, ratio: number) => start + (end - start) * ratio;
 
@@ -91,6 +98,7 @@ export type ModelClipboard =
   | { kind: 'multi'; nodes: NodeModel[]; members: MemberModel[]; nodalLoads: NodalLoad[]; memberLoads: MemberLoad[]; prescribedDisplacements: PrescribedDisplacement[]; initialEffects: MemberInitialEffect[] };
 
 type ModelSelection = Exclude<Selection, null>;
+export type StructuralSelection = Exclude<ModelSelection, { kind: 'nodalLoad' } | { kind: 'memberLoad' }>;
 
 export const structuralSelectionFromIds = (nodeIds: Iterable<string>, memberIds: Iterable<string>): Selection => {
   const nodes = [...new Set(nodeIds)];
@@ -108,6 +116,20 @@ export const toggleStructuralSelection = (selection: Selection, target: { kind: 
   if (set.has(target.id)) set.delete(target.id);
   else set.add(target.id);
   return structuralSelectionFromIds(nodeIds, memberIds);
+};
+
+/** Removes a structural selection and every dependent load, effect, and prescribed displacement. */
+export const deleteStructuralSelection = (project: ProjectModel, selection: StructuralSelection): void => {
+  const nodeIds = new Set(selection.kind === 'node' ? [selection.id] : selection.kind === 'multi' ? selection.nodeIds : []);
+  const memberIds = new Set(selection.kind === 'member' ? [selection.id] : selection.kind === 'multi' ? selection.memberIds : []);
+  for (const member of project.members) if (nodeIds.has(member.i) || nodeIds.has(member.j)) memberIds.add(member.id);
+
+  project.nodes = project.nodes.filter((node) => !nodeIds.has(node.id));
+  project.members = project.members.filter((member) => !memberIds.has(member.id));
+  project.nodalLoads = project.nodalLoads.filter((load) => !nodeIds.has(load.nodeId));
+  project.memberLoads = project.memberLoads.filter((load) => !memberIds.has(load.memberId));
+  project.prescribedDisplacements = (project.prescribedDisplacements ?? []).filter((item) => !nodeIds.has(item.nodeId));
+  project.memberInitialEffects = (project.memberInitialEffects ?? []).filter((effect) => !memberIds.has(effect.memberId));
 };
 
 /** Creates a detached, serializable snapshot of the selected structural object. */
@@ -489,6 +511,20 @@ export interface EnsureNodeResult {
   splitMemberId?: string;
 }
 
+export type MemberCreationTemplate = Omit<MemberModel, 'id' | 'i' | 'j'>;
+
+export interface CreateMemberAtPointInput {
+  startNodeId: string;
+  point: { x: number; y: number };
+  template: MemberCreationTemplate;
+}
+
+export interface CreateMemberAtPointResult {
+  memberId: string;
+  nodeId: string;
+  created: boolean;
+}
+
 /** Reuses a coincident node or creates a connected joint when the point lies on a member. */
 export const ensureNodeAtPoint = (project: ProjectModel, point: { x: number; y: number }): EnsureNodeResult => {
   const tolerance = projectTopologyTolerance(project);
@@ -510,4 +546,28 @@ export const ensureNodeAtPoint = (project: ProjectModel, point: { x: number; y: 
   const nodeId = nextId('N', project.nodes.map((node) => node.id));
   project.nodes.push({ id: nodeId, ...point, support: { type: 'none' } });
   return { nodeId, created: true };
+};
+
+/** Creates one member intention while keeping endpoint topology inside the domain boundary. */
+export const createMemberAtPoint = (project: ProjectModel, input: CreateMemberAtPointInput): CreateMemberAtPointResult => {
+  const start = project.nodes.find((node) => node.id === input.startNodeId);
+  if (!start) throw new Error(`No existe el nodo ${input.startNodeId}.`);
+  if (Math.hypot(input.point.x - start.x, input.point.y - start.y) <= 1e-10) {
+    throw new Error('Los extremos del miembro deben estar separados.');
+  }
+
+  const endpoint = ensureNodeAtPoint(project, input.point);
+  const existing = project.members.find((member) =>
+    (member.i === start.id && member.j === endpoint.nodeId)
+    || (member.i === endpoint.nodeId && member.j === start.id));
+  if (existing) return { memberId: existing.id, nodeId: endpoint.nodeId, created: false };
+
+  const memberId = nextId('M', project.members.map((member) => member.id));
+  project.members.push({
+    id: memberId,
+    i: start.id,
+    j: endpoint.nodeId,
+    ...structuredClone(input.template),
+  });
+  return { memberId, nodeId: endpoint.nodeId, created: true };
 };

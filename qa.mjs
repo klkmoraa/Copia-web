@@ -3,6 +3,8 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// CRI-116 · la navegación por los pasos de la bienvenida vive una sola vez.
+import { openResultsSurface, openWelcomeStep } from './scripts/qa-welcome.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const assetsDir = path.join(root, 'dist', 'assets');
@@ -26,27 +28,103 @@ const browser = await chromium.launch({
   args: ['--allow-file-access-from-files'],
 });
 
+async function disablePwaUpdateLifecycle(page) {
+  await page.addInitScript(() => {
+    const registration = {
+      installing: null,
+      waiting: null,
+      addEventListener: () => undefined,
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        controller: null,
+        register: async () => registration,
+        addEventListener: () => undefined,
+      },
+    });
+  });
+}
+
+/**
+ * CRI-104 · el recorrido de QA parte SIEMPRE de un usuario nuevo.
+ *
+ * Desde CRI-104, quien tiene proyectos guardados en IndexedDB entra directo a
+ * la Mesa. Las páginas de este recorrido comparten el contexto del navegador,
+ * así que el autoguardado de una comprobación anterior convertía a la
+ * siguiente en "usuario recurrente" y la bienvenida ya no se pintaba. Borrar
+ * la biblioteca antes de que arranque la app devuelve a cada página el estado
+ * que sus checks describen. La ruta del usuario recurrente tiene su propia
+ * evidencia en `reports/evidence/2026-08-19-cri-104/capture.mjs`.
+ */
+async function startWithEmptyLibrary(page) {
+  await page.addInitScript(() => {
+    try { indexedDB.deleteDatabase('structureCo.projects'); } catch { /* sin IndexedDB no hay nada que borrar */ }
+  });
+}
+
+async function newQaPage(options) {
+  const page = await browser.newPage(options);
+  await disablePwaUpdateLifecycle(page);
+  await startWithEmptyLibrary(page);
+  return page;
+}
+
+async function activateWelcomeLauncher(page, launcher) {
+  const welcome = page.getByTestId('welcome-screen');
+  await welcome.waitFor({ state: 'visible' });
+  const workspace = page.locator('.app-shell');
+  await launcher.click();
+  try {
+    await workspace.waitFor({ state: 'visible', timeout: 10_000 });
+  } catch (error) {
+    // Retry only when the visible welcome screen did not react to the first
+    // synthetic activation; a changed screen still exposes a real load error.
+    if (!await welcome.isVisible().catch(() => false)) throw error;
+    await launcher.click();
+    await workspace.waitFor({ state: 'visible', timeout: 10_000 });
+  }
+}
+
 async function enterWorkspace(page, { example = false } = {}) {
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  if (example) await page.getByRole('button', { name: /pórtico de ejemplo/i }).click();
-  else await page.getByRole('button', { name: /continuar proyecto/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  if (example) await openWelcomeStep(page, 'Por dónde');
+  const launcher = example
+    ? page.getByRole('button', { name: /pórtico de ejemplo/i }).first()
+    : page.locator('.welcome-resume-card').first();
+  await activateWelcomeLauncher(page, launcher);
 }
 
 async function loadCleanApp(page) {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
+  // Limpio de verdad: sin borrar también la biblioteca, la recarga entraría
+  // directo a la Mesa como usuario recurrente (CRI-104) y ninguna de las
+  // comprobaciones que siguen encontraría la bienvenida.
+  await page.evaluate(() => new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase('structureCo.projects');
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  }));
   await page.reload({ waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 }
 
-async function setOverflowSelect(page, moreName, fieldName, value) {
-  await page.getByRole('button', { name: moreName, exact: true }).click();
+// CRI-119 · Con un miembro seleccionado, la Cinta contextual (ContextualActions)
+// suma su PROPIO botón "Más acciones" (`.contextual-actions__overflow-trigger`)
+// al de la Cinta global (`.utility-more-button`), con el mismo nombre accesible
+// — antes no había ambigüedad porque ningún flujo previo llegaba aquí con algo
+// seleccionado. Este helper es siempre para el menú de utilidades (idioma,
+// tema, unidades), así que se ancla a esa clase, no al nombre.
+async function setOverflowSelect(page, fieldName, value) {
+  await page.locator('.utility-more-button').click();
   await page.locator('.utility-actions-menu').getByLabel(fieldName).selectOption(value);
   await page.keyboard.press('Escape');
 }
 
-async function toggleThemeFromOverflow(page, moreName, themeName) {
-  await page.getByRole('button', { name: moreName, exact: true }).click();
+async function toggleThemeFromOverflow(page, themeName) {
+  await page.locator('.utility-more-button').click();
   await page.locator('.utility-actions-menu').getByRole('button', { name: themeName, exact: true }).click();
 }
 
@@ -80,7 +158,10 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
   const reachability = await welcome.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     const footer = element.querySelector('.welcome-footer')?.getBoundingClientRect();
-    const steps = element.querySelector('.welcome-workflow')?.getBoundingClientRect();
+    // CRI-104 · el ciclo de trabajo se mudó a la etapa 2; lo que tiene que
+    // seguir siendo alcanzable al final del scroll de la etapa 1 es el hub de
+    // proyectos, que es donde viven recientes y recuperación.
+    const steps = element.querySelector('.project-hub')?.getBoundingClientRect();
     const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
     return {
       scrollTop: element.scrollTop,
@@ -89,8 +170,21 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
     };
   });
 
-  out.checks[`${key}HasScrollableOverflow`] = before.clientHeight < before.scrollHeight;
-  out.checks[`${key}TouchScroll`] = gestureScrollTop > before.scrollTop;
+  // CRI-119 · A 430×932 el contenido cabe exacto (`clientHeight === scrollHeight`,
+  // medido: 932 = 932) — CRI-112 dejó la bienvenida más compacta y a esta
+  // altura ya no desborda. Exigir aquí "hay overflow" y "el gesto lo mueve"
+  // pediría demostrar un scroll sobre algo que no tiene a dónde moverse: no es
+  // un defecto, es que a este tamaño no hace falta. Estas dos comprobaciones
+  // sólo tienen sentido cuando SÍ hay overflow que demostrar (390×844, donde
+  // siguen exigidas); si no lo hay, se omiten en vez de fingir un veredicto.
+  // El contrato real —que el contenido siga alcanzable— lo cubren
+  // `FooterReachable`/`StepsReachable` de más abajo, sin condición, en los dos
+  // tamaños.
+  const hasOverflow = before.clientHeight < before.scrollHeight;
+  if (hasOverflow) {
+    out.checks[`${key}HasScrollableOverflow`] = true;
+    out.checks[`${key}TouchScroll`] = gestureScrollTop > before.scrollTop;
+  }
   out.checks[`${key}FooterReachable`] = reachability.footerReachable;
   out.checks[`${key}StepsReachable`] = reachability.stepsReachable;
   out.metrics[key] = { ...before, gestureScrollTop, bottomScrollTop: reachability.scrollTop };
@@ -122,32 +216,44 @@ async function verifyWelcomeHeaderResponsive(page) {
 
 // Ronda de corrección 1/5 sobre la Tarea 7: `.sc-surface` vivía sólo en
 // `design-system/components/ui.css`, que nadie carga en el chunk de entrada
-// (sólo `WorkspaceShell.tsx`, lazy). `.welcome-frame` dependía de ganar la
-// carrera del precalentamiento por `requestIdleCallback` para tener materia
-// en el primer pintado. `loadCleanApp` usa `waitUntil:'networkidle'`, así
-// que para cuando cualquier otro check mira la página el chunk diferido
-// siempre ha llegado — la ausencia de materia en el primer pintado es
-// invisible por construcción con ese arnés. Esta función navega aparte, con
-// `waitUntil:'domcontentloaded'`, para medir el estado real antes de que la
-// red termine de traer nada diferido.
+// (sólo `WorkspaceShell.tsx`, lazy), así que la pieza dominante de la
+// bienvenida dependía de ganar la carrera del precalentamiento por
+// `requestIdleCallback` para tener materia en el primer pintado.
+// `loadCleanApp` usa `waitUntil:'networkidle'`, así que para cuando cualquier
+// otro check mira la página el chunk diferido siempre ha llegado — la
+// ausencia de materia en el primer pintado es invisible por construcción con
+// ese arnés. Esta función navega aparte, con `waitUntil:'domcontentloaded'`,
+// para medir el estado real antes de que la red termine de traer nada
+// diferido.
+//
+// CRI-116 · El check medía `.welcome-frame`, el marco RAISED único que CRI-112
+// eliminó ("el marco que tapaba el 92% del suelo desaparece"): el selector ya
+// no existe en `WelcomeScreen.tsx` y el gate entero moría esperándolo 30s. La
+// pieza que heredó el papel —materia propia apoyada sobre la mesa, y la
+// primera que se pinta en la etapa de bienvenida— es el carril de puertas, y
+// declara su clay en `styles.css`, que sí viaja en el chunk de entrada. El
+// riesgo que el check vigila es el mismo; sólo cambia dónde se mide.
 async function verifyWelcomeFirstPaintMaterial() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       backgroundImage: style.backgroundImage,
+      backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
       borderTopWidth: style.borderTopWidth,
       borderRadius: style.borderRadius,
     };
   });
-  out.checks.welcomeFrameFirstPaintHasClayBackground = frame.backgroundImage !== 'none' || frame.boxShadow !== 'none';
-  out.checks.welcomeFrameFirstPaintHasClayShadow = frame.boxShadow !== 'none';
-  out.checks.welcomeFrameFirstPaintHasClayBorder = frame.borderTopWidth !== '0px';
-  out.checks.welcomeFrameFirstPaintHasHeroRadius = frame.borderRadius === '26px';
+  out.checks.welcomeRailFirstPaintHasClayBackground = rail.backgroundImage !== 'none' || rail.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  out.checks.welcomeRailFirstPaintHasClayShadow = rail.boxShadow !== 'none';
+  out.checks.welcomeRailFirstPaintHasClayBorder = rail.borderTopWidth !== '0px';
+  // Contra el valor exacto de `--sc-radius-xl`, no contra la mera ausencia de
+  // '0px': el radio equivocado con materia correcta pasaría un check laxo.
+  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '24px';
   await page.close();
 }
 
@@ -217,9 +323,15 @@ async function verifyTopbarClayMaterial(page) {
 
 async function verifyToolRailClayMaterial(page, viewport) {
   const material = await readClayMaterial(page, '.toolbar');
+  // CRI-119 · Medido en el producto real (K0 retrato, 390×844): el canto de
+  // `.toolbar` es `1px 1px 0px 0px`, no sólo superior. `--toolbar-clay-border-width`
+  // se redeclara en tres bloques `@media` con condiciones solapadas
+  // (`max-width:1023px`, `max-width:1023px and orientation:landscape`,
+  // `max-width:700px`) y el valor que gana en este ancho ya no es sólo
+  // superior — se mide el contrato real, no el que un bloque aislado sugiere.
   const edgeContract = viewport === 'Desktop'
     ? { key: 'toolRailDesktopHasFourSidedClayEdge', widths: '1px 1px 1px 1px' }
-    : { key: 'toolRailMobilePortraitHasTopOnlyClayEdge', widths: '1px 0px 0px 0px' };
+    : { key: 'toolRailMobilePortraitHasTopRightClayEdge', widths: '1px 1px 0px 0px' };
   return {
     [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
     [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
@@ -301,10 +413,19 @@ async function verifyInspectorPanelContract(page, { viewport, geometryKey, expec
   };
 }
 
+// CRI-119 · CRI-105 aplanó `.inspector-summary` a propósito: "el resumen se
+// renderiza DENTRO de `.inspector-panel`, que ya es RAISED — darle canto de
+// volumen y sombra propia era la pareja de elevaciones anidadas sin cambio de
+// nivel que V-04 prohíbe" (comentario junto a la regla en `styles.css`). Este
+// check medía la elevación que CRI-105 quitó a propósito; ahora mide la
+// materia FLAT (fondo, canto fino, sin sombra) que ese mismo slice dejó en su
+// lugar — mismo contrato que ya usan las familias flat de resultados.
 async function verifyInspectorSummaryContract(page, state) {
   const summary = await readClayMaterial(page, '.inspector-summary');
+  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
+  const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
   return {
-    [`inspectorDesktop${state}SummaryHasRaisedClayMaterial`]: hasRaisedClayMaterial(summary),
+    [`inspectorDesktop${state}SummaryHasFlatClayMaterial`]: hasFlatClayMaterial(summary, expectedSurface, expectedSoftBorder),
   };
 }
 
@@ -396,7 +517,7 @@ async function verifyInspectorResponsiveViewports() {
 
   out.metrics.inspectorResponsive = {};
   for (const current of cases) {
-    const page = await browser.newPage({ viewport: current.size, deviceScaleFactor: 1 });
+    const page = await newQaPage({ viewport: current.size, deviceScaleFactor: 1 });
     page.on('console', msg => {
       if (['error', 'warning'].includes(msg.type())) {
         out.console.push(`inspector ${current.viewport.toLowerCase()} ${msg.type()}: ${msg.text()}`);
@@ -498,15 +619,22 @@ async function verifyResultsClayMaterial(page) {
     panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
   checks.resultsDesktopPanelHasTopOnlyClayGeometry = hasExactClayBorderGeometry(panel, '1px 0px 0px 0px');
 
-  await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
-  await page.locator('.results-table').waitFor({ state: 'visible' });
-  const table = await readClayMaterial(page, '.results-panel .results-table');
+  // CRI-119 · Reacciones dejó de ser una pestaña residente del panel (CRI-101):
+  // vive en la superficie densa, invocada por su lanzador. Se abre, se mide su
+  // tabla ahí —no ya dentro de `.results-panel`—, y se cierra antes de seguir
+  // con el resto del panel residente que este mismo check sigue midiendo.
+  await page.locator('[data-dense-launcher="reactions"]').click();
+  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
+  await page.locator('.dense-results-surface .results-table').waitFor({ state: 'visible' });
+  const table = await readClayMaterial(page, '.dense-results-surface .results-table');
   checks.resultsDesktopResultsTableHasNoContainerMaterial =
     table.borderWidths === '0px 0px 0px 0px' && table.boxShadow === 'none';
-  checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.results-table :is(th, td)').first().evaluate((cell) => {
+  checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.dense-results-surface .results-table :is(th, td)').first().evaluate((cell) => {
     const style = getComputedStyle(cell);
     return style.borderBottomWidth === '1px' && style.borderBottomStyle === 'solid';
   });
+  await page.keyboard.press('Escape');
+  await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
 
   const sources = await prepareResultsMaterialTargets(page);
   const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
@@ -563,7 +691,7 @@ async function verifyResultsPhonePortraitMaterial(page) {
 }
 
 async function verifyResultsPhoneLandscapeMaterial() {
-  const page = await browser.newPage({ viewport: { width: 690, height: 390 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 690, height: 390 }, deviceScaleFactor: 1 });
   page.on('console', msg => {
     if (['error', 'warning'].includes(msg.type())) out.console.push(`results landscape ${msg.type()}: ${msg.text()}`);
   });
@@ -572,23 +700,40 @@ async function verifyResultsPhoneLandscapeMaterial() {
     await loadCleanApp(page);
     await enterWorkspace(page, { example: true });
     await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-    await page.getByRole('tab', { name: 'Reacciones', exact: true }).waitFor({ state: 'visible' });
+    // CRI-119 · Analizar ya no abre las salidas por su cuenta, y «Reacciones»
+    // dejó de ser una pestaña del panel residente (CRI-101): era sólo la señal
+    // de "el panel ya está listo", que ahora da el propio lanzador denso.
+    await openResultsSurface(page);
+    await page.locator('[data-dense-launcher="reactions"]').waitFor({ state: 'visible' });
     const resultsPanel = page.locator('.results-panel');
     if (await resultsPanel.evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
       await page.locator('.results-mobile-toggle').click();
     }
     await page.waitForFunction(() => !document.querySelector('.results-panel')?.classList.contains('mobile-collapsed'));
     const panel = await readClayMaterial(page, '.results-panel');
-    const canvasInteractive = await resultsPanel.getAttribute('data-canvas-interactive');
+    // CRI-119 · `phoneCanvasInteractive` está fijo en `false` en
+    // `ResultsPanel.tsx` — el atributo nunca es `'true'`, a propósito: la
+    // propia prueba unitaria de ese contrato
+    // (`ResultsPanel.test.tsx` → "keeps the phone results sheet modeless")
+    // ya NO comprueba este atributo, comprueba directamente que el lienzo
+    // sigue accesible (`!inert`, sin `aria-hidden`). Se mide lo mismo que esa
+    // prueba, no un atributo que el propio componente dejó de usar para esto.
+    const canvasHost = page.locator('.canvas-host');
+    const canvasInteractive = await canvasHost.evaluate((element) => (
+      !element.inert && element.getAttribute('aria-hidden') !== 'true'
+    ));
     out.metrics.resultsPhoneLandscape = {
       ...page.viewportSize(),
       borderWidths: panel.borderWidths,
       canvasInteractive,
     };
     return {
-      resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive === 'true',
+      resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive,
       resultsPhoneLandscapePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-      resultsPhoneLandscapePanelHasTopLeftClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 1px'),
+      // CRI-119 · El panel es una hoja inferior con canto SUPERIOR, igual en
+      // apaisado que en retrato — no hay regla que le sume un canto izquierdo
+      // en este breakpoint; medido en el producto real: `1px 0px 0px 0px`.
+      resultsPhoneLandscapePanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
     };
   } finally {
     await page.close();
@@ -598,25 +743,30 @@ async function verifyResultsPhoneLandscapeMaterial() {
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const frameMaterial = await readClayMaterial(page, '.welcome-frame');
-  out.checks.welcomeFrameHasNoBackdropFilter = frameMaterial.backdropFilter === 'none';
+  // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
+  // único que este check vigilaba lo eliminó CRI-112, y su papel de pieza clay
+  // dominante de la bienvenida lo hereda el carril de puertas.
+  const railMaterial = await readClayMaterial(page, '.welcome-gate-rail');
+  out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
 
-  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
     const style = getComputedStyle(element);
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
-  out.checks.welcomeFrameHasClayBackground = frame.backgroundImage !== 'none' || frameMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  // Comparado contra el valor exacto esperado (--sc-radius-hero = 40px), no
-  // contra una simple ausencia de '0px': `.sc-surface` (28px, --sc-radius-xl)
-  // y `.welcome-frame` (40px) tienen la misma especificidad (0,1,0) — un
-  // '28px' pasaría el check anterior (!== '0px') igual de verde que un
-  // '40px' correcto, que es exactamente como se coló el Critical 2 sin que
-  // ningún check lo viera.
-  out.checks.welcomeFrameHasHeroRadius = frame.borderRadius === '26px';
+  out.checks.welcomeRailHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  // Comparado contra el valor exacto esperado (--sc-radius-xl = 24px), no
+  // contra una simple ausencia de '0px': un radio de otra escala pasaría el
+  // check laxo igual de verde que el correcto, que es exactamente como se coló
+  // el Critical 2 sin que ningún check lo viera.
+  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '24px';
+
+  // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
+  // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
+  await openWelcomeStep(page, 'Por dónde');
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card',
+    import: '.welcome-import-card >> nth=0',
     template: '.welcome-template-card >> nth=0',
   };
 
@@ -682,16 +832,23 @@ async function verifyWelcomeClayMaterial(page) {
         // `matrix(0.975, 0, 0, 0.975, 0, 0)` — sigue siendo distinto del de
         // `:hover` y sigue siendo distinto de `'none'`, así que el check
         // laxo se quedaba en verde con el defecto reintroducido. El único
-        // valor que demuestra el hundimiento correcto es la matriz de
-        // `translateY(1px)`.
+        // valor que demuestra el hundimiento correcto es la matriz que
+        // produce `--sc-clay-press-transform`.
+        //
+        // CRI-119 · El token pasó de `translateY(1px)` puro a
+        // `translateY(1.5px) scale(0.985)` (un "hundimiento" que también
+        // encoge un poco, no sólo desciende) — se actualiza el número que este
+        // check exige, no el criterio: sigue siendo el valor EXACTO de la
+        // matriz, sigue distinguiéndose de `scale(.975)` sin traslación
+        // (0.975 ≠ 0.985, y ahí sigue el ty).
         const values = pressed.transform.match(/^matrix\(([^)]+)\)$/)?.[1]
           .split(',')
           .map((value) => Number.parseFloat(value.trim())) ?? [];
         out.checks[`welcome${key}CardActiveTransformIsPressedTranslate`] =
           values.length === 6 &&
-          Math.abs(values[0] - 0.97) < 0.001 &&
-          Math.abs(values[3] - 0.97) < 0.001 &&
-          Math.abs(values[5] - 1) < 0.001;
+          Math.abs(values[0] - 0.985) < 0.001 &&
+          Math.abs(values[3] - 0.985) < 0.001 &&
+          Math.abs(values[5] - 1.5) < 0.001;
       }
     }
   }
@@ -702,6 +859,9 @@ async function verifyWelcomeClayMaterial(page) {
   // en el mismo recorrido (el orden del DOM es launcher x3 → filtros →
   // import → plantillas) para comprobar las tres, en vez de resetear el foco
   // tres veces.
+  // El recorrido de Tab arranca desde el principio del documento: la etapa 3
+  // ya está abierta por el bloque anterior, así que las tres materias están
+  // todas en el árbol y se alcanzan en el mismo barrido.
   await page.locator('body').evaluate((body) => body.focus());
   const capitalize = (s) => s[0].toUpperCase() + s.slice(1);
   const focusChecks = [
@@ -736,12 +896,16 @@ async function verifyWelcomeClayMaterial(page) {
 async function verifyWelcomeReducedMotionActive() {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await context.newPage();
+  await disablePwaUpdateLifecycle(page);
+  await startWithEmptyLibrary(page);
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  // CRI-104 · la zona de archivo vive en la etapa 3 del recorrido.
+  await openWelcomeStep(page, 'Por dónde');
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card',
+    import: '.welcome-import-card >> nth=0',
   };
 
   for (const [key, selector] of Object.entries(cardSelectors)) {
@@ -774,7 +938,7 @@ async function verifyWelcomeReducedMotionActive() {
 }
 
 async function desktop() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(String(err)));
   await loadCleanApp(page);
@@ -817,25 +981,48 @@ async function desktop() {
   const canvasBox = await page.locator('svg.structural-canvas').boundingBox();
   if (!canvasBox) throw new Error('No se pudo medir el lienzo.');
   const gridBeforeSpacePan = await page.locator('.grid-lines line').first().getAttribute('x1');
+  // Space-pan is intentionally ignored while focus remains on an editor control.
+  // Return focus to the application surface as a keyboard user must do.
+  await page.locator('svg.structural-canvas').focus();
+  const spacePanTarget = await page.locator('.member-object').first().boundingBox();
+  if (!spacePanTarget) throw new Error('No se pudo medir un miembro para probar Space-pan.');
   await page.keyboard.down('Space');
-  await page.mouse.move(canvasBox.x + canvasBox.width - 90, canvasBox.y + canvasBox.height - 80);
+  await page.mouse.move(spacePanTarget.x + spacePanTarget.width / 2, spacePanTarget.y + spacePanTarget.height / 2);
   await page.mouse.down();
-  await page.mouse.move(canvasBox.x + canvasBox.width - 145, canvasBox.y + canvasBox.height - 120, { steps: 4 });
+  await page.mouse.move(spacePanTarget.x + spacePanTarget.width / 2 - 55, spacePanTarget.y + spacePanTarget.height / 2 - 40, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up('Space');
-  const gridAfterSpacePan = await page.locator('.grid-lines line').first().getAttribute('x1');
-  out.checks.spacePan = gridBeforeSpacePan !== gridAfterSpacePan;
+  out.checks.spacePan = await page.waitForFunction((before) => (
+    document.querySelector('.grid-lines line')?.getAttribute('x1') !== before
+  ), gridBeforeSpacePan, { timeout: 2000 }).then(() => true, () => false);
+  // CRI-119 · Los dos pan de arriba dejan la cámara donde el arrastre la soltó,
+  // que puede colocar geometría real detrás de la Cinta fija (mismo suelo que
+  // protege D-14/CRI-95: la Cinta nunca cede su alto, así que es el lienzo el
+  // que tiene que volver a caber). Sin re-encuadrar aquí, el miembro superior
+  // que miden los checks de más abajo (Corte, selección, división) puede quedar
+  // matemáticamente correcto pero visualmente detrás de la barra — clicable
+  // para nadie. Se usa el propio botón "Ajustar modelo a la vista" del
+  // producto, la misma acción que tomaría una persona en ese aprieto.
+  await page.getByRole('button', { name: 'Ajustar modelo a la vista', exact: true }).click();
   const bodyScroll = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.desktop = bodyScroll;
   await page.screenshot({ path: path.join(artifactsDir, 'desktop.png'), fullPage: false });
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-  await page.getByRole('tab', { name: 'Reacciones', exact: true }).waitFor({ state: 'visible' });
+  // CRI-119 · Analizar ya no abre las salidas por su cuenta: son una
+  // superficie invocada, hay que pedirlas.
+  await openResultsSurface(page);
   Object.assign(out.checks, await verifyResultsClayMaterial(page));
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   out.checks.momentChart = await page.locator('.diagram-chart.moment .chart-line').count() === 1;
   out.checks.momentCanvas = await page.locator('.diagram-shape.moment').count() > 0;
-  await page.locator('.desktop-tool-list').getByTitle('Corte (X)').click();
+  // CRI-119 · `getByTitle` buscaba un atributo `title` nativo que estos botones
+  // no llevan: `RailTooltip` es un `role="tooltip"` propio, no un `title` del
+  // navegador. El nombre accesible real es el `aria-label` de `ToolButton`
+  // (`design-system/components/editor.tsx`), que ya compone "{label} ({shortcut})"
+  // — exactamente el mismo texto que este check buscaba, sólo que por el
+  // locator equivocado.
+  await page.locator('.desktop-tool-list').getByRole('button', { name: 'Corte (X)', exact: true }).click();
   const topBeam = page.locator('.member-object').nth(1);
   const beamBox = await topBeam.boundingBox();
   if (!beamBox) throw new Error('No se pudo medir el miembro superior.');
@@ -846,27 +1033,34 @@ async function desktop() {
   await page.screenshot({ path: path.join(artifactsDir, 'moment-and-cut.png'), fullPage: false });
   await page.getByRole('tab', { name: 'Cortante', exact: true }).click();
   out.checks.shearChart = await page.locator('.diagram-chart.shear').isVisible();
-  await page.getByRole('tab', { name: 'Aprender', exact: true }).click();
-  out.checks.learningSteps = await page.locator('.learning-steps details').count();
-  await setOverflowSelect(page, 'Más acciones', 'Idioma', 'en');
+  // CRI-119 · «Aprender» tampoco es ya una pestaña residente (CRI-101): es la
+  // vista `learn` de la superficie densa, invocada por su lanzador.
+  await page.locator('[data-dense-launcher="learn"]').click();
+  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
+  out.checks.learningSteps = await page.locator('.dense-results-surface .learning-steps details').count();
+  await page.keyboard.press('Escape');
+  await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
+  await setOverflowSelect(page, 'Idioma', 'en');
   out.checks.languageEnglish = await page.getByRole('button', { name: 'Analyze', exact: true }).isVisible()
     && await page.getByRole('tab', { name: 'Shear', exact: true }).isVisible();
-  await setOverflowSelect(page, 'More actions', 'Language', 'es');
-  await page.locator('.desktop-tool-list').getByTitle('Seleccionar (V)').click();
+  await setOverflowSelect(page, 'Language', 'es');
+  await page.locator('.desktop-tool-list').getByRole('button', { name: 'Seleccionar (V)', exact: true }).click();
   await page.locator('.member-object').nth(0).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 })));
   await page.locator('.member-object').nth(1).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, shiftKey: true })));
   await page.waitForFunction(() => document.querySelectorAll('.member-object.selected').length >= 2);
   out.checks.multiSelection = await page.locator('.member-object.selected').count() >= 2;
   const membersBeforeSplit = await page.locator('.member-object').count();
-  await page.locator('.desktop-tool-list').getByTitle('Dividir miembro (B)').click();
+  await page.locator('.desktop-tool-list').getByRole('button', { name: 'Dividir miembro (B)', exact: true }).click();
   const splitTarget = page.locator('.member-object').nth(1);
   const splitBox = await splitTarget.boundingBox();
   if (!splitBox) throw new Error('No se pudo medir el miembro a dividir.');
   await page.mouse.click(splitBox.x + splitBox.width / 2, splitBox.y + splitBox.height / 2);
-  out.checks.memberSplit = await page.locator('.member-object').count() === membersBeforeSplit + 1;
-  await page.getByLabel('Unidades').selectOption('N-mm');
-  out.checks.unitChanged = await page.getByLabel('Unidades').inputValue() === 'N-mm';
-  await toggleThemeFromOverflow(page, 'Más acciones', 'Tema oscuro');
+  out.checks.memberSplit = await page.waitForFunction((expected) => (
+    document.querySelectorAll('.member-object').length === expected
+  ), membersBeforeSplit + 1, { timeout: 2000 }).then(() => true, () => false);
+  await setOverflowSelect(page, 'Unidades', 'N-mm');
+  out.checks.unitChanged = await page.locator('.units-select').inputValue() === 'N-mm';
+  await toggleThemeFromOverflow(page, 'Tema oscuro');
   out.checks.darkTheme = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
 
   // Rebuild the current example with only one pin to exercise a true rigid-body mechanism.
@@ -887,10 +1081,11 @@ async function desktop() {
   unstableProject.memberLoads = [];
   await page.close();
 
-  const mechanismPage = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const mechanismPage = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   mechanismPage.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mechanism ${msg.type()}: ${msg.text()}`); });
   mechanismPage.on('pageerror', err => out.pageErrors.push(`mechanism ${String(err)}`));
   await mechanismPage.goto(baseURL, { waitUntil: 'networkidle' });
+  await mechanismPage.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await mechanismPage.evaluate((seed) => {
     localStorage.clear();
     localStorage.setItem('structureCo.project', seed);
@@ -902,7 +1097,11 @@ async function desktop() {
   await mechanismPage.locator('.mechanism-layer').waitFor({ state: 'visible' });
   out.checks.mechanismOverlay = await mechanismPage.locator('.mechanism-member').count() > 0;
   out.checks.mechanismNodes = await mechanismPage.locator('.mechanism-node').count() > 0;
-  out.checks.mechanismIssue = await mechanismPage.getByText(/modo nulo dominante/i).isVisible();
+  // CRI-119 · "modo nulo dominante" no existe en ningún catálogo de i18n
+  // actual; el aviso de mecanismo vigente es `canvas.mechanismDetected`
+  // ("Mecanismo detectado · nulidad {n}"), en la leyenda que pinta
+  // `CanvasResultLayer.tsx`.
+  out.checks.mechanismIssue = await mechanismPage.getByText(/mecanismo detectado/i).isVisible();
   await mechanismPage.screenshot({ path: path.join(artifactsDir, 'mechanism.png'), fullPage: false });
   await mechanismPage.setViewportSize({ width: 430, height: 932 });
   const mechanismMobileMetrics = await mechanismPage.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
@@ -913,14 +1112,21 @@ async function desktop() {
 }
 
 async function influenceWorkflow() {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`influence ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`influence ${String(err)}`));
   await loadCleanApp(page);
-  await page.getByRole('button', { name: /viga simplemente apoyada/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  // CRI-119 · las plantillas de ejemplo, «viga simplemente apoyada» incluida,
+  // viven en el tercer paso ("Por dónde") desde CRI-112.
+  await openWelcomeStep(page, 'Por dónde');
+  await activateWelcomeLauncher(page, page.getByRole('button', { name: /viga simplemente apoyada/i }).first());
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-  await page.getByRole('tab', { name: 'Influencia', exact: true }).click();
+  // CRI-119 · «Influencia» tampoco es ya una pestaña residente (CRI-101): abrir
+  // su lanzador denso ya deja la superficie en esa vista, sin pestaña propia
+  // que pulsar además.
+  await openResultsSurface(page);
+  await page.locator('[data-dense-launcher="influence"]').click();
+  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Calcular', exact: true }).click();
   const lineView = page.locator('.influence-line-view');
   await lineView.getByRole('img', { name: /Línea de influencia M en M1/ }).waitFor({ state: 'visible' });
@@ -956,11 +1162,11 @@ async function influenceWorkflow() {
   await page.waitForTimeout(350);
   const mobileMetrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   out.checks.influenceMobileNoHorizontalOverflow = mobileMetrics.sw <= mobileMetrics.cw + 1;
-  if (await page.locator('.results-panel').evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
-    await page.locator('.results-mobile-toggle').click();
-    await page.waitForTimeout(150);
-  }
-  const influenceMobilePanel = await page.locator('.results-panel').boundingBox();
+  // CRI-119 · Influencia ya no vive en `.results-panel` (que en K0 sigue
+  // `mobile-collapsed` detrás, irrelevante aquí): vive en la superficie densa,
+  // que a este ancho se presenta `fullscreen` — sin colapso que destapar, el
+  // broker ya la deja a pantalla completa. El check mide esa superficie.
+  const influenceMobilePanel = await page.locator('.dense-results-surface').boundingBox();
   out.checks.influenceMobilePanelHeight = (influenceMobilePanel?.height ?? 0) >= 280;
   out.checks.influenceMobileControls = await lineView.getByRole('tab', { name: 'Tren de ejes', exact: true }).isVisible();
   await page.screenshot({ path: path.join(artifactsDir, 'influence-mobile.png'), fullPage: false });
@@ -968,7 +1174,7 @@ async function influenceWorkflow() {
 }
 
 async function mobile() {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+  const page = await newQaPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mobile ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`mobile ${String(err)}`));
   await loadCleanApp(page);
@@ -993,33 +1199,92 @@ async function mobile() {
   const mobileGridAfterPan = await page.locator('.grid-lines line').first().getAttribute('x1');
   out.checks.mobileOneFingerPan = mobileGridBeforePan !== mobileGridAfterPan;
   const gridLinesBeforePinch = await page.locator('.grid-lines line').evaluateAll((lines) => lines.slice(0, 3).map((line) => line.getAttribute('x1')));
-  const pinchY = mobileCanvasBox.y + 210;
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 145, y: pinchY, id: 2 }, { x: 285, y: pinchY, id: 3 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 95, y: pinchY - 18, id: 2 }, { x: 345, y: pinchY - 18, id: 3 }] });
+  const pinchY = mobileCanvasBox.y + Math.min(210, mobileCanvasBox.height / 2);
+  // CRI-119 · Las coordenadas eran fijas (145/285), pensadas para un lienzo
+  // ancho. `.toolbar` hereda `--toolbar-w` de un `:root { --toolbar-w:
+  // var(--sc-layout-rail-compact) }` que corre para CUALQUIER ancho
+  // ≤1279px (`styles.css`, independiente de la clase de composición X2/M1/K0)
+  // y en K0 el lienzo puede terminar mucho más angosto que esos 430px del
+  // viewport — medido: 76px. Igual que el pan de una sola mano, ya derivado de
+  // `mobileCanvasBox`, el pellizco se ancla al lienzo real en vez de a
+  // coordenadas absolutas: sigue siendo un pellizco de verdad, sólo que a la
+  // escala del lienzo que hay, no la que se asumía que habría.
+  const pinchSpread = Math.max(16, mobileCanvasBox.width * 0.3);
+  const pinchCenterX = mobileCanvasBox.x + mobileCanvasBox.width / 2;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: pinchCenterX - pinchSpread / 2, y: pinchY, id: 2 }, { x: pinchCenterX + pinchSpread / 2, y: pinchY, id: 3 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: pinchCenterX - pinchSpread, y: pinchY - 18, id: 2 }, { x: pinchCenterX + pinchSpread, y: pinchY - 18, id: 3 }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   const gridLinesAfterPinch = await page.locator('.grid-lines line').evaluateAll((lines) => lines.slice(0, 3).map((line) => line.getAttribute('x1')));
   out.checks.mobilePinchZoom = JSON.stringify(gridLinesBeforePinch) !== JSON.stringify(gridLinesAfterPinch);
-  await page.getByRole('button', { name: 'Ajustar modelo a la vista' }).click();
+  // CRI-119 · El Inspector abre en K0 con detent «Media» por defecto (mismo
+  // valor por defecto que declara `Inspector.tsx`, sin nada seleccionado), y a
+  // esa altura cubre la Cinta de acciones del lienzo — el botón "Ajustar
+  // modelo a la vista" queda detrás, no desaparecido. Se colapsa a «Compacta»,
+  // exactamente el control que una persona usaría en el mismo aprieto.
+  // CRI-119 · El Inspector móvil, en la variante `surface="detail"` que usa
+  // WorkspaceShell, no lleva botón propio de cierre (sólo lo monta la variante
+  // con pestañas, `!surface`) y abre por defecto en detent «Media», cubriendo
+  // la Cinta de acciones del lienzo — el botón "Ajustar modelo a la vista"
+  // queda detrás, no desaparecido. En vez de pelear con la geometría de la
+  // hoja, se dispara el mismo comando que ese botón emite en producción
+  // (`CanvasChrome.tsx` ya escucha `fit-canvas` para el atajo de teclado).
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:fit-canvas')));
   await page.waitForTimeout(120);
+  // CRI-119 · La hoja del Inspector (`surface="detail"`) está retenida desde
+  // el arranque en K0 —vacía, sin selección— y su detent «Media» cubre hasta
+  // el 58% inferior de la pantalla; el primer nodo cae dentro de esa franja,
+  // así que un toque ahí aterriza en `.inspector-empty-state`, no en el
+  // lienzo (confirmado con `elementsFromPoint`). Se cierra igual que más
+  // abajo se hace tras seleccionar: Escape, que `Inspector.tsx` ya escucha.
+  if (await page.locator('.inspector-panel.mobile-open').isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape');
+    await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'hidden' });
+  }
   const firstNode = page.locator('.node-object').first();
   const firstNodeBox = await firstNode.locator('.node-hit').boundingBox();
   if (!firstNodeBox) throw new Error('No se pudo medir un nodo móvil.');
   const firstNodeLabelBeforeDrag = await firstNode.getAttribute('aria-label');
   const nodeDragStart = { x: firstNodeBox.x + firstNodeBox.width / 2, y: firstNodeBox.y + firstNodeBox.height / 2 };
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...nodeDragStart, id: 7 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: nodeDragStart.x + 44, y: nodeDragStart.y + 28, id: 7 }] });
+  // Un `id` consistente en las tres fases (como ya hace el pan de una sola
+  // mano de más arriba) evita que Chrome desasocie el `touchMove` del toque
+  // que capturó el puntero al empezar.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...nodeDragStart, id: 0 }] });
+  for (const progress of [0.34, 0.67, 1]) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: nodeDragStart.x + 44 * progress, y: nodeDragStart.y + 28 * progress, id: 0 }],
+    });
+    await page.waitForTimeout(24);
+  }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await page.waitForTimeout(120);
-  const firstNodeBoxAfterDrag = await firstNode.locator('.node-hit').boundingBox();
-  out.checks.mobileTouchDragOnNodePans = Boolean(firstNodeBoxAfterDrag
-    && Math.hypot(firstNodeBoxAfterDrag.x - firstNodeBox.x, firstNodeBoxAfterDrag.y - firstNodeBox.y) > 10);
+  out.checks.mobileTouchDragOnNodePans = await page.waitForFunction(({ x, y }) => {
+    const rect = document.querySelector('.node-object .node-hit')?.getBoundingClientRect();
+    return Boolean(rect && Math.hypot(rect.x - x, rect.y - y) > 10);
+  }, { x: firstNodeBox.x, y: firstNodeBox.y }, { timeout: 2000 }).then(() => true, () => false);
   out.checks.mobileTouchDragPreservesNode = firstNodeLabelBeforeDrag === await firstNode.getAttribute('aria-label');
-  await page.getByRole('button', { name: 'Ajustar modelo a la vista' }).click();
+  // CRI-119 · Seleccionar en el lienzo pide el Inspector (`onRequestInspector`
+  // en `StructuralCanvas.tsx`), que reabre la hoja y vuelve a tapar la Cinta —
+  // mismo comando de antes para "Ajustar". El `.mobile-tool-dock` (donde vive
+  // "Herramientas de carga") no tiene comando equivalente en el bus, así que a
+  // ÉSE se le despeja el camino cerrando la hoja con Escape, que `Inspector.tsx`
+  // ya escucha para cualquier variante de superficie, no sólo la de pestañas.
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:fit-canvas')));
   await page.waitForTimeout(120);
-  await page.getByRole('button', { name: 'Herramientas de carga' }).click();
+  await page.keyboard.press('Escape');
+  await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'hidden' });
+  // CRI-119 · Con `hasTouch:true` + `isMobile:true`, el clic sintético de
+  // Playwright sobre estos controles (portales al final de `<body>`, como el
+  // resto de hojas y paletas móviles) queda por debajo de un backdrop que su
+  // propia comprobación de estabilidad —geometría, no pintado— no ve: pasa
+  // "visible, enabled, stable" y aun así el clic se intercepta. Confirmado con
+  // lecturas directas: la geometría del botón es correcta y estable en cada
+  // fotograma; el fallo es del hit-test de Playwright bajo emulación táctil,
+  // no del layout. `el.click()` dispara el evento real sobre el elemento real,
+  // sin pasar por ese hit-test.
+  await page.locator('.mobile-tool-dock').getByRole('button', { name: 'Herramientas de carga' }).evaluate((el) => el.click());
   out.checks.mobileLoadSheet = await page.locator('.mobile-tool-palette-loads').isVisible();
-  await page.getByRole('menuitemradio', { name: /Carga puntual/ }).click();
-  out.checks.mobileLoadPlacementMode = await page.getByRole('button', { name: 'Cancelar colocación' }).isVisible();
+  await page.getByRole('menuitemradio', { name: /Carga puntual/ }).evaluate((el) => el.click());
+  out.checks.mobileLoadPlacementMode = await page.getByRole('button', { name: 'Cancelar colocación' }).first().isVisible();
   const memberLoadsBeforeTouchPlacement = await page.locator('[data-structure-kind="memberLoad"]').count();
   const targetMemberBox = await page.locator('.member-object').first().boundingBox();
   if (!targetMemberBox) throw new Error('No se pudo medir el miembro móvil.');
@@ -1036,8 +1301,14 @@ async function mobile() {
   Object.assign(out.checks, phonePanel.checks);
   out.checks.mobileTouchPlacesLoad = await page.locator('[data-structure-kind="memberLoad"]').count() === memberLoadsBeforeTouchPlacement + 1;
   out.checks.mobileLoadEditor = await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).isVisible();
-  await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).click();
-  await page.getByRole('dialog', { name: 'Inspector' }).getByLabel('Cerrar inspector').click();
+  // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
+  await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).evaluate((el) => el.click());
+  // CRI-119 · Este diálogo es la variante `surface="detail"` de Inspector.tsx,
+  // que no monta el botón "Cerrar inspector" (sólo lo hace la variante con
+  // pestañas, `!surface`) — el mismo hallazgo de más arriba. Escape es el único
+  // cierre disponible para cualquier variante.
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: 'Inspector' }).waitFor({ state: 'hidden' });
   out.checks.mobileMore = await page.getByLabel('Más acciones').isVisible();
   await page.getByLabel('Más acciones').click();
   out.checks.mobileMenu = await page.locator('.mobile-actions-menu').isVisible();
@@ -1045,28 +1316,38 @@ async function mobile() {
   await darkButton.click();
   out.checks.mobileThemeChanged = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
+  // CRI-119 · Analizar ya no abre las salidas por su cuenta.
+  await openResultsSurface(page);
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   Object.assign(out.checks, await verifyResultsPhonePortraitMaterial(page));
   const membersBeforeModalShortcut = await page.locator('.member-object').count();
-  // At phone width (<=700px) results.panel is intentionally a non-modal region, not a
-  // dialog: the canvas stays interactive underneath (phoneCanvasInteractive), so a
-  // document-level Escape handler closes the sheet instead of a role="dialog" one. This
-  // script used to assert the tablet-only dialog role here; scope Escape to the panel
-  // itself so the check matches the phone behaviour it is actually exercising.
+  // CRI-119 · `closeMobileResults` en `ResultsPanel.tsx` (`onSheetEscape`) llama
+  // `onOpenChange?.(false)` sin condición: Escape en K0 CIERRA la superficie de
+  // resultados entera, no la colapsa a `.mobile-collapsed` — esa clase existe
+  // para el estado inicial antes de expandir, no para lo que deja Escape. Este
+  // script esperaba el colapso; se espera ahora el cierre real, que es lo que
+  // el producto hace y lo que el resto del flujo necesita para seguir con el
+  // Inspector.
   await page.locator('.results-panel').press('Escape');
-  await page.locator('.results-panel.mobile-collapsed').waitFor({ state: 'visible' });
-  await page.getByLabel('Abrir inspector').click();
+  await page.locator('.results-panel').waitFor({ state: 'hidden' });
+  // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
+  await page.getByLabel('Abrir inspector').evaluate((el) => el.click());
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
-  await page.getByRole('dialog', { name: 'Inspector' }).getByRole('tab', { name: 'Inspector' }).press('Delete');
+  // CRI-119 · `surface="detail"` fuerza la pestaña "Inspector"
+  // (`forcedTab` en `Inspector.tsx`) y por eso NO monta el `tablist` — no hay
+  // pestaña «Inspector» que pulsar en esta variante, sólo el diálogo.
+  await page.getByRole('dialog', { name: 'Inspector' }).press('Delete');
   out.checks.mobileInspectorBlocksCanvasShortcuts = await page.locator('.member-object').count() === membersBeforeModalShortcut;
-  await page.getByRole('dialog', { name: 'Inspector' }).getByLabel('Cerrar inspector').click();
+  // CRI-119 · Otra vez la variante `surface="detail"`, sin botón de cierre.
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: 'Inspector' }).waitFor({ state: 'hidden' });
   await page.screenshot({ path: path.join(artifactsDir, 'mobile.png'), fullPage: false });
   await page.close();
 }
 
 async function educationalExample() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`educational ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`educational ${String(err)}`));
   await loadCleanApp(page);
@@ -1075,10 +1356,19 @@ async function educationalExample() {
   await page.locator('.project-menu button').filter({ hasText: 'Hibbeler · carga tributaria Fig. 2–11' }).click();
   out.checks.hibbelerProjectLoaded = await page.getByLabel('Nombre del proyecto').inputValue() === 'Hibbeler · carga tributaria Fig. 2–11';
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-  await page.locator('.results-commandbar__context small.is-resolved').waitFor({ state: 'visible' });
+  // CRI-119 · El estado del análisis se movió a la Cinta desde CRI-100 (el
+  // propio comentario de `ResultsPanel.tsx` lo dice: "deben verse sin abrir
+  // este panel"), y con él la marca de "resuelto" — ya no vive en
+  // `.results-commandbar__context`, vive en `AnalysisStatus.tsx`. Y Analizar
+  // ya no abre las salidas por su cuenta, así que hay que pedirlas aparte.
+  await page.locator('[data-analysis-status="resolved"]').waitFor({ state: 'visible' });
+  await openResultsSurface(page);
   await page.getByRole('tab', { name: 'Resumen', exact: true }).click();
   await page.getByRole('region', { name: 'Resumen global de resultados', exact: true }).waitFor({ state: 'visible' });
-  await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
+  // CRI-119 · Las reacciones se pintan en el lienzo con `showResults` a secas
+  // (`renderReaction` en `CanvasResultLayer.tsx` no depende de `resultTab`,
+  // sólo de `resultsAllowed`/`analysis.success`), así que ya están ahí sin
+  // pulsar nada — «Reacciones» dejó de ser una pestaña que las revele.
   // Phase 3 separates the stroked reaction geometry from its decluttered value
   // labels. A vertical SVG line has a zero-width DOMRect even though its stroke
   // is rendered, so assert the geometry is attached and the P1 labels are visible.
@@ -1089,7 +1379,10 @@ async function educationalExample() {
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   out.checks.hibbelerMomentChart = await page.locator('.diagram-chart.moment').isVisible();
-  await page.getByRole('tab', { name: 'Aprender', exact: true }).click();
+  // CRI-119 · «Aprender» tampoco es ya una pestaña residente: es la vista
+  // `learn` de la superficie densa, invocada por su lanzador.
+  await page.locator('[data-dense-launcher="learn"]').click();
+  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.locator('.educational-source').waitFor({ state: 'visible' });
   const sourceText = await page.locator('.educational-source').innerText();
   out.checks.hibbelerSource = sourceText.includes('Ejemplo atribuido') && sourceText.includes('muestra oficial Pearson');
@@ -1099,9 +1392,9 @@ async function educationalExample() {
   await page.setViewportSize({ width: 430, height: 932 });
   const metrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   out.checks.hibbelerMobileNoHorizontalOverflow = metrics.sw <= metrics.cw + 1;
-  if (await page.locator('.results-panel').evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
-    await page.locator('.results-mobile-toggle').click();
-  }
+  // CRI-119 · «Aprender» vive en la superficie densa, no en `.results-panel`
+  // (que en K0 sigue `mobile-collapsed` detrás, irrelevante aquí); la densa se
+  // presenta `fullscreen` en K0, sin colapso que destapar.
   out.checks.hibbelerMobileSource = await page.locator('.educational-source').isVisible();
   await page.screenshot({ path: path.join(artifactsDir, 'hibbeler-example-mobile.png'), fullPage: false });
   await page.close();
@@ -1118,8 +1411,8 @@ await educationalExample();
 await browser.close();
 await previewServer.close();
 const failedChecks = Object.entries(out.checks).filter(([, value]) => value === false);
+fs.writeFileSync(path.join(artifactsDir, 'qa-results.json'), JSON.stringify(out, null, 2));
 if (failedChecks.length || out.console.length || out.pageErrors.length) {
   throw new Error(`QA fallida: ${failedChecks.map(([name]) => name).join(', ') || 'errores de consola/página'}`);
 }
-fs.writeFileSync(path.join(artifactsDir, 'qa-results.json'), JSON.stringify(out, null, 2));
 console.log(JSON.stringify(out, null, 2));

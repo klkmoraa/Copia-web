@@ -44,10 +44,6 @@ export const TOOL_REGISTRY: readonly ToolDefinition[] = [
   { id: 'delete', group: 'edit', labelKey: 'toolbar.delete', detailKey: 'toolbar.deleteDetail', shortcut: '⌫', mobile: 'more', classroomAdvanced: true, destructive: true },
 ] as const;
 
-export const TOOL_BY_ID = new Map<Tool, ToolDefinition>(
-  TOOL_REGISTRY.map((definition) => [definition.id, definition]),
-);
-
 export const TOOL_SHORTCUTS = new Map<string, Tool>(
   TOOL_REGISTRY.flatMap((definition) => definition.activationKey
     ? [[definition.activationKey, definition.id] as const]

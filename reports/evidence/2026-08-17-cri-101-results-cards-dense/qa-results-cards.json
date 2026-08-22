@@ -1,0 +1,320 @@
+{
+  "checks": [
+    {
+      "name": "extremo · cinco datos a la vez (light)",
+      "ok": true,
+      "detail": {
+        "label": "N máx. absoluto",
+        "value": "-65",
+        "unit": "kN",
+        "position": "M1 · x 0 m",
+        "reliability": "Confiable",
+        "provenance": "Explicar este valor",
+        "provenanceLevel": "flat"
+      }
+    },
+    {
+      "name": "extremo · procedencia dentro de la tarjeta es plana (light)",
+      "ok": true,
+      "detail": "flat"
+    },
+    {
+      "name": "copy prohibido ausente (light)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "sin overflow horizontal X2 (light)",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440
+      }
+    },
+    {
+      "name": "extremo · cinco datos a la vez (dark)",
+      "ok": true,
+      "detail": {
+        "label": "N máx. absoluto",
+        "value": "-65",
+        "unit": "kN",
+        "position": "M1 · x 0 m",
+        "reliability": "Confiable",
+        "provenance": "Explicar este valor",
+        "provenanceLevel": "flat"
+      }
+    },
+    {
+      "name": "extremo · procedencia dentro de la tarjeta es plana (dark)",
+      "ok": true,
+      "detail": "flat"
+    },
+    {
+      "name": "copy prohibido ausente (dark)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "sin overflow horizontal X2 (dark)",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440
+      }
+    },
+    {
+      "name": "favorable y desfavorable · misma materia medida",
+      "ok": true,
+      "detail": {
+        "favourable": {
+          "value": "36.3484",
+          "negative": false,
+          "background": "rgb(255, 252, 247)",
+          "backgroundImage": "none",
+          "border": "1px solid color(srgb 0.924941 0.911294 0.888549)",
+          "boxShadow": "rgba(83, 72, 55, 0.17) 13px 15px 34px 0px, rgba(255, 255, 255, 0.95) -10px -10px 24px 0px, rgba(255, 255, 255, 0.9) 0px 1px 0px 0px inset, rgba(83, 72, 55, 0.09) -3px -3px 7px 0px inset",
+          "valueColor": "rgb(35, 49, 44)",
+          "level": "raised"
+        },
+        "unfavourable": {
+          "value": "-65",
+          "negative": true,
+          "background": "rgb(255, 252, 247)",
+          "backgroundImage": "none",
+          "border": "1px solid color(srgb 0.924941 0.911294 0.888549)",
+          "boxShadow": "rgba(83, 72, 55, 0.17) 13px 15px 34px 0px, rgba(255, 255, 255, 0.95) -10px -10px 24px 0px, rgba(255, 255, 255, 0.9) 0px 1px 0px 0px inset, rgba(83, 72, 55, 0.09) -3px -3px 7px 0px inset",
+          "valueColor": "rgb(35, 49, 44)",
+          "level": "raised"
+        }
+      }
+    },
+    {
+      "name": "tabla BASE dentro de tarjeta RAISED",
+      "ok": true,
+      "detail": {
+        "frameLevel": "raised",
+        "frameShadow": "rgba(83, 72, 55, 0.17) 13px 15px 34px 0px, rgba(255, 255, 255, 0.95) -10px -10px 24px 0px, rgba(255, 255, 255, 0.9) 0px 1px 0px 0px inset, rgba(83, 72, 55, 0.09) -3px -3px 7px 0px inset",
+        "wrapShadow": "none",
+        "wrapBorder": "0px",
+        "rowShadow": "none",
+        "cellShadow": "none",
+        "cellRadius": "0px",
+        "greenChecksPerRow": 0
+      }
+    },
+    {
+      "name": "dense no es residente en X2",
+      "ok": true,
+      "detail": {
+        "resident": 0
+      }
+    },
+    {
+      "name": "dense se presenta como drawer en X2",
+      "ok": true,
+      "detail": {
+        "kind": "drawer",
+        "level": "sheet",
+        "modal": "true"
+      }
+    },
+    {
+      "name": "sin overflow horizontal con dense abierta en X2",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 1440,
+        "innerWidth": 1440
+      }
+    },
+    {
+      "name": "copy prohibido ausente en dense (X2)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "dense devuelve el foco al lanzador en X2",
+      "ok": true,
+      "detail": "reactions"
+    },
+    {
+      "name": "dense no es residente en M1",
+      "ok": true,
+      "detail": {
+        "resident": 0
+      }
+    },
+    {
+      "name": "dense se presenta como drawer en M1",
+      "ok": true,
+      "detail": {
+        "kind": "drawer",
+        "level": "sheet",
+        "modal": "true"
+      }
+    },
+    {
+      "name": "sin overflow horizontal con dense abierta en M1",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 1100,
+        "innerWidth": 1100
+      }
+    },
+    {
+      "name": "copy prohibido ausente en dense (M1)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "dense devuelve el foco al lanzador en M1",
+      "ok": true,
+      "detail": "reactions"
+    },
+    {
+      "name": "dense no es residente en K0",
+      "ok": true,
+      "detail": {
+        "resident": 0
+      }
+    },
+    {
+      "name": "dense se presenta como fullscreen en K0",
+      "ok": true,
+      "detail": {
+        "kind": "fullscreen",
+        "level": "modal",
+        "modal": "true"
+      }
+    },
+    {
+      "name": "sin overflow horizontal con dense abierta en K0",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 390,
+        "innerWidth": 390
+      }
+    },
+    {
+      "name": "copy prohibido ausente en dense (K0)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "dense devuelve el foco al lanzador en K0",
+      "ok": true,
+      "detail": "reactions"
+    },
+    {
+      "name": "dense no es residente en K0-landscape",
+      "ok": true,
+      "detail": {
+        "resident": 0
+      }
+    },
+    {
+      "name": "dense se presenta como fullscreen en K0-landscape",
+      "ok": true,
+      "detail": {
+        "kind": "fullscreen",
+        "level": "modal",
+        "modal": "true"
+      }
+    },
+    {
+      "name": "sin overflow horizontal con dense abierta en K0-landscape",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 844,
+        "innerWidth": 844
+      }
+    },
+    {
+      "name": "copy prohibido ausente en dense (K0-landscape)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "dense devuelve el foco al lanzador en K0-landscape",
+      "ok": true,
+      "detail": "reactions"
+    },
+    {
+      "name": "EN en K0 · la interfaz está realmente en inglés",
+      "ok": true,
+      "detail": {
+        "english": true
+      }
+    },
+    {
+      "name": "EN en K0 · etiquetas de extremo y procedencia sin desbordar",
+      "ok": true,
+      "detail": [
+        {
+          "label": "N absolute max.",
+          "labelOverflow": false,
+          "valueOverflow": false,
+          "provenanceOverflow": false,
+          "cardOverflow": false
+        },
+        {
+          "label": "V absolute max.",
+          "labelOverflow": false,
+          "valueOverflow": false,
+          "provenanceOverflow": false,
+          "cardOverflow": false
+        },
+        {
+          "label": "M absolute max.",
+          "labelOverflow": false,
+          "valueOverflow": false,
+          "provenanceOverflow": false,
+          "cardOverflow": false
+        },
+        {
+          "label": "Vertical displacement v",
+          "labelOverflow": false,
+          "valueOverflow": false,
+          "provenanceOverflow": false,
+          "cardOverflow": false
+        }
+      ]
+    },
+    {
+      "name": "EN en K0 · sin overflow horizontal",
+      "ok": true,
+      "detail": {
+        "scrollWidth": 390,
+        "innerWidth": 390
+      }
+    },
+    {
+      "name": "Datasheet sin cardificar: celdas planas y sin tarjetas por fila",
+      "ok": true,
+      "detail": {
+        "cellShadow": "none",
+        "cellRadius": "0px",
+        "rowShadow": "none",
+        "cardsInsideGrid": 0
+      }
+    }
+  ],
+  "failures": [],
+  "shots": [
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/extreme-card-x2-day.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/provenance-open-x2-day.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/extreme-grid-x2-day.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/extreme-grid-x2-grayscale.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/summary-x2-grayscale.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/extreme-card-x2-night.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/provenance-open-x2-night.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/extreme-grid-x2-night.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/favourable-vs-unfavourable-x2-day.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/flat-table-inside-raised-card-x2-day.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/dense-x2-reactions.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/dense-m1-reactions.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/dense-k0-reactions.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/dense-k0-landscape-reactions.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/summary-k0-english.png",
+    "reports/evidence/2026-08-17-cri-101-results-cards-dense/datasheet-not-cardified-x2-day.png"
+  ]
+}

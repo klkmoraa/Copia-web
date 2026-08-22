@@ -1,9 +1,9 @@
-import { memo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import type { MemberLoad, MemberModel, NodeModel, ProjectModel, Selection } from '../../types';
+import { memo, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import type { MemberLoad, MemberModel, NodeModel, ProjectModel } from '../../types';
 import type { CanvasSelectionVisualState } from './selectionVisuals';
 import type { EditorLayerState } from './editorLayers';
 import type { ResultTab } from '../../store/ProjectContext';
-import { toDisplay, unitLabel } from '../../engine/units';
+import { toDisplay } from '../../engine/units';
 import {
   distributedIntensityAt,
   grossRatioFromFlexible,
@@ -12,7 +12,10 @@ import {
   toGlobalVector,
 } from '../../graphics/structureGeometry';
 import { formatFixed } from '../../utils/numberFormat';
+import { elasticIndexPaint } from '../results/elasticDemand';
 import type { TranslationKey } from '../../i18n/catalogs';
+import type { CandidateTarget } from './candidatePicker';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 
 export type StructuralTarget =
   | { kind: 'background' }
@@ -38,42 +41,38 @@ export interface CanvasGeometryLayerProps {
   toScreen: (x: number, y: number) => { x: number; y: number };
   camera: { scale: number };
   selectionVisualState: CanvasSelectionVisualState;
+  candidatePreview: CandidateTarget | null;
   learningFocus: { nodeIds: string[]; memberIds: string[] } | null;
   memberStartId: string | null;
   layers: EditorLayerState;
   loadsLayerVisible: boolean;
+  /**
+   * η por barra cuando la capa `heatmap` está activa. Vacío significa "sin mapa
+   * de calor": la barra conserva su color de dibujo técnico.
+   */
+  heatmapRatios: ReadonlyMap<string, number>;
+  /** `true` mientras la capa está encendida: es lo que hace visible «no evaluado». */
+  demandMapActive: boolean;
   resultTab: ResultTab;
   units: Units;
   forceLabel: string;
   momentLabel: string;
   distributedLabel: string;
   t: Translate;
-  /** P6: demand ratio η per member id [0..∞]. Used when layers.heatmap is true. */
-  heatmapRatios?: Map<string, number>;
   onObjectPointerDown: (event: ReactPointerEvent, target: StructuralTarget) => void;
-  onSelect: (target: Selection) => void;
-  onLoadKeyDown: (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => void;
+  onObjectKeyDown: (event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => void;
   onShowCut: (event: ReactPointerEvent, member: MemberModel) => void;
   onCutLeave: () => void;
 }
 
 const CanvasGeometryLayerImpl = ({
-  slot, project, nodeMap, memberMap, toScreen, camera, selectionVisualState, learningFocus, memberStartId,
-  layers, loadsLayerVisible, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
-  heatmapRatios,
-  onObjectPointerDown, onSelect, onLoadKeyDown, onShowCut, onCutLeave,
+  slot, project, nodeMap, memberMap, toScreen, camera, selectionVisualState, candidatePreview, learningFocus, memberStartId,
+  layers, loadsLayerVisible, heatmapRatios, demandMapActive, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
+  onObjectPointerDown, onObjectKeyDown, onShowCut, onCutLeave,
 }: CanvasGeometryLayerProps) => {
+  const view = readCanvasViewSettings(project);
   const selectedNodeIds = selectionVisualState.nodeIds;
   const selectedMemberIds = selectionVisualState.memberIds;
-
-  /** P6: computes heatmap stroke color for a demand ratio η. */
-  const heatmapColor = (ratio: number): string => {
-    if (ratio >= 1.0) return 'var(--sc-color-state-critical)';
-    if (ratio >= 0.85) return 'var(--sc-color-state-error)';
-    if (ratio >= 0.6) return 'var(--sc-color-state-warning)';
-    if (ratio >= 0.3) return 'var(--sc-color-action-primary)';
-    return 'var(--sc-color-state-success)';
-  };
 
   const renderSupport = (node: NodeModel) => {
     if (node.support.type === 'none') return null;
@@ -160,14 +159,16 @@ const CanvasGeometryLayerImpl = ({
     const p = toScreen(node.x, node.y);
     const magnitude = Math.hypot(load.fx, load.fy);
     const selected = selectionVisualState.nodalLoadId === load.id;
+    const previewed = candidatePreview?.kind === 'nodalLoad' && candidatePreview.id === load.id;
     if (magnitude > 1e-9) {
       const ux = load.fx / magnitude; const uy = -load.fy / magnitude;
       const length = 54;
       const start = { x: p.x - ux * length, y: p.y - uy * length };
       const end = { x: p.x - ux * 8, y: p.y - uy * 8 };
       return (
-        <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(magnitude, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+        <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}${previewed ? ' candidate-preview' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} data-candidate-preview={previewed ? 'true' : undefined} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(magnitude, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => onObjectKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
           {selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}
+          {previewed ? <line className="candidate-preview-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}
           <line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
           {arrowPath(start.x, start.y, end.x, end.y)}
         </g>
@@ -175,8 +176,9 @@ const CanvasGeometryLayerImpl = ({
     }
     if (Math.abs(load.mz) > 1e-9) {
       const momentPath = `M ${p.x - 20} ${p.y - 8} A 22 22 0 1 1 ${p.x + 17} ${p.y - 14}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(load.mz, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}${previewed ? ' candidate-preview' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} data-candidate-preview={previewed ? 'true' : undefined} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(load.mz, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => onObjectKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
         {selected ? <path className="load-selection-halo" d={momentPath} /> : null}
+        {previewed ? <path className="candidate-preview-halo" d={momentPath} /> : null}
         <path className="load-hit" d={momentPath} />
         <path d={momentPath} fill="none" markerEnd="url(#arrow-purple)" />
       </g>;
@@ -194,6 +196,7 @@ const CanvasGeometryLayerImpl = ({
       return toScreen(point.x, point.y);
     };
     const selected = selectionVisualState.memberLoadId === load.id;
+    const previewed = candidatePreview?.kind === 'memberLoad' && candidatePreview.id === load.id;
     if (load.type === 'point') {
       const base = stationOf(load.position ?? 0.5);
       const px = load.px ?? 0; const py = load.py ?? 0; const mag = Math.hypot(px, py) || 1;
@@ -201,7 +204,7 @@ const CanvasGeometryLayerImpl = ({
       const ux = gx / mag; const uy = -gy / mag;
       const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
       const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(mag, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}${previewed ? ' candidate-preview' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} data-candidate-preview={previewed ? 'true' : undefined} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(mag, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onObjectKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}{previewed ? <line className="candidate-preview-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
     }
     if (load.type === 'moment') {
       const base = stationOf(load.position ?? 0.5);
@@ -209,7 +212,7 @@ const CanvasGeometryLayerImpl = ({
       const path = clockwise
         ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
         : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}${previewed ? ' candidate-preview' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} data-candidate-preview={previewed ? 'true' : undefined} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onObjectKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}{previewed ? <path className="candidate-preview-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
     }
     const visibleLoadedLength = axis.length * camera.scale * Math.abs(load.end - load.start);
     const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
@@ -228,7 +231,7 @@ const CanvasGeometryLayerImpl = ({
     const average = (qStartMagnitude + qEndMagnitude) / 2;
     const hitStart = stationOf(load.start);
     const hitEnd = stationOf(load.end);
-    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.distributedLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(average, units, 'distributedForce'), 2), unit: distributedLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
+    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}${previewed ? ' candidate-preview' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} data-candidate-preview={previewed ? 'true' : undefined} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.distributedLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(average, units, 'distributedForce'), 2), unit: distributedLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onObjectKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}{previewed ? <line className="candidate-preview-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
   };
 
   if (slot === 'members') {
@@ -238,39 +241,47 @@ const CanvasGeometryLayerImpl = ({
           const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j); if (!ni || !nj) return null;
           const a = toScreen(ni.x, ni.y); const b = toScreen(nj.x, nj.y);
           const selected = selectedMemberIds.includes(member.id);
+          const previewed = candidatePreview?.kind === 'member' && candidatePreview.id === member.id;
           const learningHighlighted = learningFocus?.memberIds.includes(member.id) ?? false;
+          const demandRatio = heatmapRatios.get(member.id);
+          // Gancho de diagnóstico, no un número en pantalla: se redondea sin
+          // `toFixed` para no depender del locale ni de la política de
+          // presentación, que gobierna sólo lo que el usuario lee.
+          const demandAttribute = demandRatio === undefined ? undefined : String(Math.round(demandRatio * 1000) / 1000);
+          const paint = demandRatio === undefined ? null : elasticIndexPaint(demandRatio);
+          /* Un miembro que no pudo evaluarse no puede quedarse con su trazo
+             técnico normal: sería indistinguible de uno con η baja. Se marca como
+             **no evaluado** y la leyenda cuenta cuántos son. */
+          const unevaluated = demandMapActive && demandRatio === undefined;
           return (
             <g
               key={member.id}
               data-structure-object
               data-structure-kind="member"
               data-structure-id={member.id}
-              className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}`}
+              data-demand-ratio={demandAttribute}
+              data-demand-at-reference={paint?.atReference ? 'true' : undefined}
+              data-demand-saturated={paint?.saturated ? 'true' : undefined}
+              data-elastic-index={unevaluated ? 'unevaluated' : paint ? 'evaluated' : undefined}
+              /* El color térmico viaja como custom property y no como `stroke`:
+                 así la selección y el foco pedagógico siguen ganando por CSS. */
+              style={paint === null ? undefined : { '--member-demand-color': paint.color } as CSSProperties}
+              className={`member-object ${selected ? 'selected' : ''}${previewed ? ' candidate-preview' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}${paint === null ? '' : ' has-demand'}${unevaluated ? ' is-unevaluated' : ''}`}
+              data-candidate-preview={previewed ? 'true' : undefined}
               role="button"
               tabIndex={0}
               aria-keyshortcuts="Enter Space"
               aria-label={t('canvas.memberAria', { id: member.id, i: member.i, j: member.j })}
               aria-pressed={selected}
               onPointerDown={(event) => onObjectPointerDown(event, { kind: 'member', id: member.id })}
-              onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSelect({ kind: 'member', id: member.id });
-                }
-              }}
+              onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => onObjectKeyDown(event, { kind: 'member', id: member.id })}
               onPointerMove={(event) => onShowCut(event, member)}
               onPointerLeave={onCutLeave}
             >
               {selected ? <line className="member-selection-halo" x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null}
+              {previewed ? <line className="candidate-preview-halo" x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null}
               <line className="member-hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-              <line
-                className="member-line"
-                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                {...(layers.heatmap && heatmapRatios ? (() => {
-                  const ratio = heatmapRatios.get(member.id) ?? 0;
-                  return { stroke: heatmapColor(ratio), strokeWidth: selected ? 5 : 3.5 };
-                })() : {})}
-              />
+              <line className="member-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
               {member.type === 'frame' && ((member.rigidOffsetI ?? 0) > 0 || (member.rigidOffsetJ ?? 0) > 0) ? (() => {
                 const length = Math.hypot(nj.x - ni.x, nj.y - ni.y);
                 const ti = length > 0 ? (member.rigidOffsetI ?? 0) / length : 0;
@@ -279,68 +290,7 @@ const CanvasGeometryLayerImpl = ({
                 const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
                 return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
               })() : null}
-              {layers.dimensions || selected ? (() => {
-                const length = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-                const displayLength = formatFixed(toDisplay(length, units, 'length'), 2);
-                const unit = unitLabel(units, 'length');
-                const dx = nj.x - ni.x;
-                const dy = nj.y - ni.y;
-                const angleDeg = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 180;
-                
-                // Normal perpendicular en pantalla
-                const screenDx = b.x - a.x;
-                const screenDy = b.y - a.y;
-                const screenLen = Math.max(1, Math.hypot(screenDx, screenDy));
-                const nx = -screenDy / screenLen;
-                const ny = screenDx / screenLen;
-                
-                // Offset de la cota según el ángulo
-                const offsetDist = selected ? 32 : 24;
-                const p1 = { x: a.x + nx * offsetDist, y: a.y + ny * offsetDist };
-                const p2 = { x: b.x + nx * offsetDist, y: b.y + ny * offsetDist };
-                const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-                
-                // Extensiones nodales
-                const ext1Start = { x: a.x + nx * 4, y: a.y + ny * 4 };
-                const ext1End = { x: a.x + nx * (offsetDist + 6), y: a.y + ny * (offsetDist + 6) };
-                const ext2Start = { x: b.x + nx * 4, y: b.y + ny * 4 };
-                const ext2End = { x: b.x + nx * (offsetDist + 6), y: b.y + ny * (offsetDist + 6) };
-                
-                // Ticks a 45° tipo CAD
-                const tickLen = 5;
-                const tickUx = (screenDx - screenDy) / (screenLen * Math.SQRT2);
-                const tickUy = (screenDy + screenDx) / (screenLen * Math.SQRT2);
-
-                return (
-                  <g className={`cad-dimension-overlay${selected ? ' is-selected' : ''}`} pointerEvents="none">
-                    {/* Líneas de extensión */}
-                    <line className="cad-dim-extension" x1={ext1Start.x} y1={ext1Start.y} x2={ext1End.x} y2={ext1End.y} />
-                    <line className="cad-dim-extension" x1={ext2Start.x} y1={ext2Start.y} x2={ext2End.x} y2={ext2End.y} />
-                    {/* Línea de cota principal */}
-                    <line className="cad-dim-line" x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} />
-                    {/* Ticks oblicuos CAD 45° */}
-                    <line className="cad-dim-tick" x1={p1.x - tickUx * tickLen} y1={p1.y - tickUy * tickLen} x2={p1.x + tickUx * tickLen} y2={p1.y + tickUy * tickLen} />
-                    <line className="cad-dim-tick" x1={p2.x - tickUx * tickLen} y1={p2.y - tickUy * tickLen} x2={p2.x + tickUx * tickLen} y2={p2.y + tickUy * tickLen} />
-                    {/* Píldora numérica de cota */}
-                    <g transform={`translate(${mid.x} ${mid.y})`}>
-                      <rect className="cad-dim-badge-bg" x="-32" y="-10" width="64" height="20" rx="6" />
-                      <text className="cad-dim-badge-text" x="0" y="3.5" textAnchor="middle">
-                        {displayLength} {unit}
-                      </text>
-                    </g>
-                    {/* Detalle secundario en barra seleccionada */}
-                    {selected && (
-                      <g transform={`translate(${mid.x} ${mid.y + 16})`}>
-                        <rect className="cad-dim-subbadge-bg" x="-42" y="-7" width="84" height="14" rx="4" />
-                        <text className="cad-dim-subbadge-text" x="0" y="3" textAnchor="middle">
-                          θ={formatFixed(angleDeg, 1)}° · Δx={formatFixed(toDisplay(Math.abs(dx), units, 'length'), 2)}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                );
-              })() : null}
-              {layers.dimensions && project.settings.showLocalAxes ? (() => {
+              {layers.dimensions && view.showLocalAxes ? (() => {
                 const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
                 const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
                 const ux = (b.x - a.x) / length; const uy = (b.y - a.y) / length;
@@ -356,34 +306,32 @@ const CanvasGeometryLayerImpl = ({
 
   return <>
     <g className="support-layer">{project.nodes.map(renderSupport)}</g>
-    {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
+    {loadsLayerVisible && view.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
     <g className="node-layer">
       {project.nodes.map((node) => {
         const p = toScreen(node.x, node.y);
         const selected = selectedNodeIds.includes(node.id);
+        const previewed = candidatePreview?.kind === 'node' && candidatePreview.id === node.id;
         const start = memberStartId === node.id;
         const learningHighlighted = learningFocus?.nodeIds.includes(node.id) ?? false;
         return (
           <g
             key={node.id}
-            className={`node-object ${selected ? 'selected' : ''} ${start ? 'member-start' : ''} ${learningHighlighted ? 'learning-highlight' : ''}`}
+            className={`node-object ${selected ? 'selected' : ''}${previewed ? ' candidate-preview' : ''} ${start ? 'member-start' : ''} ${learningHighlighted ? 'learning-highlight' : ''}`}
             data-structure-object
             data-structure-kind="node"
             data-structure-id={node.id}
+            data-candidate-preview={previewed ? 'true' : undefined}
             role="button"
             tabIndex={0}
             aria-keyshortcuts="Enter Space"
             aria-label={t('canvas.nodeAria', { id: node.id, x: formatFixed(node.x, 3), y: formatFixed(node.y, 3) })}
             aria-pressed={selected}
             onPointerDown={(event) => onObjectPointerDown(event, { kind: 'node', id: node.id })}
-            onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onSelect({ kind: 'node', id: node.id });
-              }
-            }}
+            onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => onObjectKeyDown(event, { kind: 'node', id: node.id })}
           >
             {selected ? <><circle className="node-selection-halo" cx={p.x} cy={p.y} r="14" /><path className="node-selection-cross" d={`M ${p.x - 18} ${p.y} H ${p.x + 18} M ${p.x} ${p.y - 18} V ${p.y + 18}`} /></> : null}
+            {previewed ? <circle className="candidate-preview-ring" cx={p.x} cy={p.y} r="18" /> : null}
             <circle className="node-hit" cx={p.x} cy={p.y} r="20" />
             <circle className="node-dot" cx={p.x} cy={p.y} r="7" />
             {node.internalHinge ? <circle className="internal-hinge-symbol" cx={p.x} cy={p.y} r="11" /> : null}

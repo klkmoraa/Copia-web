@@ -76,25 +76,6 @@ const fieldStyle: CSSProperties = {
   color: 'var(--muted)',
 };
 
-const inputStyle: CSSProperties = {
-  width: '100%',
-  minWidth: 0,
-  border: '1px solid var(--border)',
-  borderRadius: 7,
-  padding: '7px 8px',
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  fontVariantNumeric: 'tabular-nums',
-};
-
-const secondaryButtonStyle: CSSProperties = {
-  border: '1px solid var(--border)',
-  borderRadius: 8,
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  padding: '8px 10px',
-};
-
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.max(minimum, Math.min(maximum, value));
 
@@ -553,14 +534,14 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
         <label style={fieldStyle}><span>{t('influence.targetResponse')}</span><div className="response-selector" role="group" aria-label={t('influence.responseGroup')}>
           {(['N', 'V', 'M'] as const).map((item) => <button type="button" aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} key={item} onClick={() => { invalidate(); setQuantity(item); }}>{item}</button>)}
         </div></label>
-        <label style={fieldStyle}><span>{t('influence.targetMember')}</span><select style={inputStyle} value={targetMemberId} onChange={(event) => {
+        <label style={fieldStyle}><span>{t('influence.targetMember')}</span><select className="influence-field-control" value={targetMemberId} onChange={(event) => {
           const memberId = event.currentTarget.value;
           invalidate();
           setTargetMemberId(memberId);
           setTargetX(memberDeformableLength(project, memberId) / 2);
         }}>{deformableMembers.map((member) => <option value={member.id} key={member.id}>{member.label ? `${member.id} · ${member.label}` : member.id}</option>)}</select></label>
-        <label style={fieldStyle}><span>{t('influence.cutLimit')}</span><select style={inputStyle} value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">{t('influence.right')}</option><option value="left">{t('influence.left')}</option></select></label>
-        <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" style={secondaryButtonStyle} disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
+        <label style={fieldStyle}><span>{t('influence.cutLimit')}</span><select className="influence-field-control" value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">{t('influence.right')}</option><option value="left">{t('influence.left')}</option></select></label>
+        <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" className="influence-secondary-btn" disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
       </div>
       <label style={fieldStyle}>
         <span>{t('influence.targetSection', { length: formatFixed(targetLengthDisplay, 3), unit: lengthUnit })}</span>
@@ -575,7 +556,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
       </label>
       <div style={rowStyle}>
         <small style={{ flex: '1 1 280px', color: 'var(--muted)' }}>{pathSummary}</small>
-        <button type="button" disabled={busy || !frameMembers.length || !deformableMembers.length} onClick={calculate}>{busy ? t('influence.calculating') : t('influence.calculate')}</button>
+        <button type="button" className="influence-calculate-btn" disabled={busy || !frameMembers.length || !deformableMembers.length} onClick={calculate}>{busy ? t('influence.calculating') : t('influence.calculate')}</button>
       </div>
       {displayedError ? <div className="issue-card error" role="alert"><span className="issue-icon">!</span><div><strong>{t('influence.calculationErrorTitle')}</strong><p>{displayedError}</p></div></div> : null}
     </div>
@@ -586,8 +567,8 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     </div>
 
     {subtab === 'train' ? <div className="education-stage" style={{ display: 'grid', gap: 10 }}>
-      <div style={rowStyle}><strong style={{ fontSize: 11, flex: 1 }}>{t('influence.localEditor', { count: axles.length })}</strong><label style={{ ...fieldStyle, gridTemplateColumns: 'auto 100px', alignItems: 'center' }}><span>{t('influence.impact')}</span><input aria-label={t('influence.impactFactor')} style={inputStyle} type="number" min={1} step={0.01} value={impactFactor} onChange={(event) => { if (!Number.isFinite(event.currentTarget.valueAsNumber)) return; invalidate(); setImpactFactor(event.currentTarget.valueAsNumber); }} /></label><button type="button" style={secondaryButtonStyle} disabled={axles.length >= 4} onClick={addAxle}>{t('influence.addAxle')}</button></div>
-      <div className="table-wrap"><table className="results-table"><thead><tr><th>{t('influence.axle')}</th><th>{t('influence.positiveLoad', { unit: forceUnit })}</th><th>{t('influence.offset', { unit: lengthUnit })}</th><th>{t('influence.action')}</th></tr></thead><tbody>{axles.map((axle, index) => <tr key={axle.id ?? index}><td><strong>{axle.id ?? `E${index + 1}`}</strong></td><td><input aria-label={t('influence.axleLoad', { index: index + 1 })} style={inputStyle} type="number" min={0} step="any" value={toDisplay(axle.P, units, 'force')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { P: fromDisplay(event.currentTarget.valueAsNumber, units, 'force') }); }} /></td><td><input aria-label={t('influence.axleOffset', { index: index + 1 })} style={inputStyle} type="number" step="any" value={toDisplay(axle.offset, units, 'length')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { offset: fromDisplay(event.currentTarget.valueAsNumber, units, 'length') }); }} /></td><td><button type="button" style={secondaryButtonStyle} disabled={axles.length <= 1} onClick={() => removeAxle(index)}>{t('influence.remove')}</button></td></tr>)}</tbody></table></div>
+      <div style={rowStyle}><strong style={{ fontSize: 11, flex: 1 }}>{t('influence.localEditor', { count: axles.length })}</strong><label style={{ ...fieldStyle, gridTemplateColumns: 'auto 100px', alignItems: 'center' }}><span>{t('influence.impact')}</span><input aria-label={t('influence.impactFactor')} className="influence-field-control" type="number" min={1} step={0.01} value={impactFactor} onChange={(event) => { if (!Number.isFinite(event.currentTarget.valueAsNumber)) return; invalidate(); setImpactFactor(event.currentTarget.valueAsNumber); }} /></label><button type="button" className="influence-secondary-btn" disabled={axles.length >= 4} onClick={addAxle}>{t('influence.addAxle')}</button></div>
+      <div className="table-wrap"><table className="results-table"><thead><tr><th>{t('influence.axle')}</th><th>{t('influence.positiveLoad', { unit: forceUnit })}</th><th>{t('influence.offset', { unit: lengthUnit })}</th><th>{t('influence.action')}</th></tr></thead><tbody>{axles.map((axle, index) => <tr key={axle.id ?? index}><td><strong>{axle.id ?? `E${index + 1}`}</strong></td><td><input aria-label={t('influence.axleLoad', { index: index + 1 })} className="influence-field-control" type="number" min={0} step="any" value={toDisplay(axle.P, units, 'force')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { P: fromDisplay(event.currentTarget.valueAsNumber, units, 'force') }); }} /></td><td><input aria-label={t('influence.axleOffset', { index: index + 1 })} className="influence-field-control" type="number" step="any" value={toDisplay(axle.offset, units, 'length')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { offset: fromDisplay(event.currentTarget.valueAsNumber, units, 'length') }); }} /></td><td><button type="button" className="influence-secondary-btn" disabled={axles.length <= 1} onClick={() => removeAxle(index)}>{t('influence.remove')}</button></td></tr>)}</tbody></table></div>
       <small style={{ color: 'var(--muted)' }}>{t('influence.trainHelp')}</small>
     </div> : null}
 

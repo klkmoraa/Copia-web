@@ -1,9 +1,4 @@
-import type { AnalysisResult, ProjectModel } from '../types';
-import { createCalculationReport, type CalculationReportOptions } from './calculationPdf';
-import { createPortableBundle } from './portableBundle';
-import { STRUCTURECO_BUNDLE_MIME } from './portableTypes';
-
-export const downloadPortableBytes = (bytes: Uint8Array, filename: string, mimeType: string): void => {
+export const downloadPortableBytes =(bytes: Uint8Array, filename: string, mimeType: string): void => {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeType }));
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -34,22 +29,4 @@ export const shareOrDownloadPortableBytes = async (
   }
   downloadPortableBytes(bytes, filename, mimeType);
   return 'downloaded';
-};
-
-export const downloadCalculationReport = async (
-  project: ProjectModel,
-  analysis: AnalysisResult,
-  options?: CalculationReportOptions,
-): Promise<void> => {
-  const report = await createCalculationReport(project, analysis, options);
-  downloadPortableBytes(report.bytes, report.filename, 'application/pdf');
-};
-
-export const downloadStructureCoBundle = async (
-  project: ProjectModel,
-  analysis: AnalysisResult,
-  options?: CalculationReportOptions,
-): Promise<void> => {
-  const bundle = await createPortableBundle(project, analysis, options);
-  downloadPortableBytes(bundle.bytes, bundle.filename, STRUCTURECO_BUNDLE_MIME);
 };

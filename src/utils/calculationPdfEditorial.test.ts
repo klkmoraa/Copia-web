@@ -100,6 +100,16 @@ describe('memoria de calculo: calidad editorial', () => {
     expect(all).toMatch(/Advertencias del analisis/);
   }, 60_000);
 
+  it('comunica calidad numérica sin convertir success en aprobación estructural', async () => {
+    const { pages } = await buildReport();
+    const all = pages.map((page) => page.text).join('\n');
+    expect(all).toMatch(/CALIDAD NUMERICA/);
+    expect(all).toMatch(/ESTABLE/);
+    expect(all).toMatch(/condicion k1/i);
+    expect(all).toMatch(/no evalua seguridad estructural/i);
+    expect(all).not.toMatch(/EQUILIBRIO APROBADO/);
+  }, 60_000);
+
   it('declara la version real de la aplicacion, no una constante olvidada', async () => {
     const { pages, report } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');

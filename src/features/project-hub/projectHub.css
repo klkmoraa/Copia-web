@@ -1,0 +1,249 @@
+/*
+ * Project Hub · misma materia clay que el editor.
+ *
+ * Antes se apoyaba en `--line`, `--surface-raised` y `--shadow-sm`, tokens que
+ * el sistema no define: el navegador los descartaba y el hub quedaba plano,
+ * sin canto ni volumen, en medio de una pantalla de arcilla. Ahora consume los
+ * mismos roles semánticos que el resto de la aplicación, con los tres estados
+ * canónicos — elevado en reposo, táctil en hover, rehundido al pulsar.
+ */
+.project-hub {
+  margin-top: var(--sc-space-6);
+  padding: var(--sc-space-5);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+
+.project-hub__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-4);
+  margin-bottom: var(--sc-space-3);
+  color: var(--sc-color-text-secondary);
+}
+
+.project-hub__header h2 {
+  margin: 2px 0 0;
+  font-family: var(--sc-font-display);
+  font-size: var(--sc-font-size-panel);
+  color: var(--sc-color-text-primary);
+}
+
+.project-hub__eyebrow {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-bold);
+  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.project-hub__list { display: grid; gap: var(--sc-space-2); }
+
+.project-hub__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-3);
+  padding: 11px var(--sc-space-3);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-xs);
+  transition: var(--sc-transition-control);
+}
+
+.project-hub__row:hover { box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
+
+.project-hub__identity { min-width: 0; display: grid; gap: 2px; }
+.project-hub__identity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-hub__identity small { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); }
+.project-hub__identity form,
+.project-hub__actions { display: flex; align-items: center; gap: var(--sc-space-1); }
+
+.project-hub__identity input {
+  min-width: 12rem;
+  min-height: var(--sc-control-height-sm);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-surface-2);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  color: var(--sc-color-text-primary);
+  font: inherit;
+}
+
+.project-hub__identity button,
+.project-hub__actions button,
+.project-hub__recoveries button {
+  min-height: var(--sc-control-height-sm);
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.project-hub__identity button:hover,
+.project-hub__actions button:hover,
+.project-hub__recoveries button:hover { box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
+
+.project-hub__identity button:active,
+.project-hub__actions button:active,
+.project-hub__recoveries button:active {
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
+
+.project-hub__error { color: var(--sc-color-state-error-foreground); }
+.project-hub__empty { color: var(--sc-color-text-muted); }
+
+.project-hub__recoveries { margin-top: var(--sc-space-3); }
+.project-hub__recoveries summary {
+  cursor: pointer;
+  color: var(--sc-color-text-secondary);
+  font-weight: var(--sc-font-weight-bold);
+}
+.project-hub__recoveries button { margin: var(--sc-space-2) var(--sc-space-2) 0 0; }
+
+@media (max-width: 680px) {
+  .project-hub__row { align-items: stretch; flex-direction: column; }
+  .project-hub__actions { justify-content: flex-end; }
+  .project-hub__identity input { min-width: 0; width: 100%; }
+}
+
+@media (pointer: coarse) {
+  .project-hub__identity button,
+  .project-hub__actions button,
+  .project-hub__recoveries button { min-height: var(--sc-size-target-touch); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-hub__row,
+  .project-hub__row:hover,
+  .project-hub__identity button:hover,
+  .project-hub__actions button:hover,
+  .project-hub__recoveries button:hover,
+  .project-hub__identity button:active,
+  .project-hub__actions button:active,
+  .project-hub__recoveries button:active { transform: none; transition: none; }
+}
+
+/* CRI-104 · La recuperación deja de ser una línea gris al pie del hub.
+   Sigue siendo el mismo `<details>` sobre los mismos `RecoveryRecord` —no
+   cambia el almacenamiento ni el comportamiento— pero se abre por defecto y
+   se marca como lo que es: trabajo protegido que hay que poder ver de un
+   vistazo. El aviso no depende sólo del color: lleva su propio canto y el
+   recuento en el resumen. */
+.project-hub__recoveries {
+  margin-top: var(--sc-space-4);
+  padding: var(--sc-space-3);
+  border: 1px solid color-mix(in srgb, var(--sc-color-state-warning) 45%, var(--sc-color-border-soft));
+  border-radius: var(--sc-radius-sm);
+  background: color-mix(in srgb, var(--sc-color-state-warning) 8%, transparent);
+}
+
+.project-hub__recoveries summary {
+  color: var(--sc-color-state-warning-foreground);
+}
+
+/* CRI-104 · El hub vive DENTRO de `.welcome-frame`, que ya es la superficie
+   RAISED. Aquí vuelve a BASE —canto suave, sin elevación— para no repetir el
+   nivel dentro de sí mismo. Las filas de proyecto conservan su relieve: son
+   controles, no un panel anidado. Esta regla va al final del archivo a
+   propósito: la hoja del hub se inyecta con su chunk perezoso, después de
+   `material.css`, así que su materia se decide aquí. */
+.project-hub {
+  margin-top: 0;
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   CRI-112 · La biblioteca como tabla técnica
+   --------------------------------------------------------------------------
+   Filas alineadas por columnas con encabezado real. Es la forma que
+   corresponde a los datos que el repositorio guarda de verdad —nombre, última
+   edición y revisión—: sin miniatura, una tarjeta no añadiría nada a una fila
+   y ocuparía el triple. Ni columna "Tipo" (no existe) ni columna "Estado" (es
+   copy prohibido por `success ≠ reliable ≠ safe`).
+   ========================================================================== */
+
+.project-hub { margin-top: 0; padding: var(--sc-space-4); }
+/* CRI-112 (ajuste final) · con pocas filas la tabla no necesita el mismo
+   respiro que cuando es la pieza más densa de la pantalla — encabezado y
+   padding se acercan un paso sin perder separación de las acciones. */
+.project-hub__header { margin-bottom: var(--sc-space-2); }
+
+/* Sin proyectos y sin copias recuperables, la biblioteca casi desaparece: una
+   línea discreta en vez de un panel entero para decir una frase. Se despliega
+   sola en cuanto hay algo — y la recuperación, por ser justo lo que fuerza el
+   despliegue, nunca puede quedar menos alcanzable que antes. */
+.project-hub--collapsed {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.project-hub--collapsed .project-hub__header { display: none; }
+.project-hub--collapsed .project-hub__empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--sc-color-text-muted);
+}
+
+/* Rejilla compartida por el encabezado y por cada fila, declarada una vez:
+   si las columnas se desalinean, se desalinean juntas y se ve. */
+.project-hub__columns,
+.project-hub__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--sc-space-3);
+}
+
+.project-hub__columns {
+  padding: 0 var(--sc-space-3) 6px;
+  border-bottom: 1px solid var(--sc-color-divider);
+  margin-bottom: var(--sc-space-2);
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-bold);
+  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.project-hub__updated,
+.project-hub__revision {
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-variant-numeric: var(--sc-numeric-variant);
+  color: var(--sc-color-text-muted);
+  white-space: nowrap;
+}
+
+/* En K0 la tabla no cabe en cuatro columnas: la fila se pliega en dos —
+   identidad y acciones arriba, datos debajo— en vez de recortar campos. */
+@media (max-width: 700px) {
+  .project-hub__columns { display: none; }
+  .project-hub__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+  .project-hub__identity { grid-column: 1; }
+  .project-hub__actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .project-hub__updated { grid-column: 1; }
+  .project-hub__revision { grid-column: 1; }
+}

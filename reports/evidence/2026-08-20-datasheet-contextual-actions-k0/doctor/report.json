@@ -1,0 +1,218 @@
+{
+  "checks": [
+    {
+      "name": "x2 · doctor abierto con hallazgos",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "x2 · doctor · hay un hallazgo localizable",
+      "ok": true
+    },
+    {
+      "name": "x2 · doctor · Localizar degrada a peek y no cierra",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "x2 · doctor · peek conserva la lista de hallazgos",
+      "ok": true,
+      "detail": {
+        "before": 4,
+        "after": 4
+      }
+    },
+    {
+      "name": "x2 · doctor · en peek el fondo no queda inert y el foco no queda huérfano",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "x2 · doctor · restaurar devuelve la superficie y su lista",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "x2 · doctor · restaurar devuelve el comportamiento modal",
+      "ok": true,
+      "detail": {
+        "inert": true
+      }
+    },
+    {
+      "name": "k0-portrait · doctor abierto con hallazgos",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-portrait · doctor · hay un hallazgo localizable",
+      "ok": true
+    },
+    {
+      "name": "k0-portrait · doctor · Localizar degrada a peek y no cierra",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-portrait · doctor · peek conserva la lista de hallazgos",
+      "ok": true,
+      "detail": {
+        "before": 4,
+        "after": 4
+      }
+    },
+    {
+      "name": "k0-portrait · doctor · en peek el fondo no queda inert y el foco no queda huérfano",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-portrait · doctor · restaurar devuelve la superficie y su lista",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-portrait · doctor · restaurar devuelve el comportamiento modal",
+      "ok": true,
+      "detail": {
+        "inert": true
+      }
+    },
+    {
+      "name": "k0-landscape · doctor abierto con hallazgos",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-landscape · doctor · hay un hallazgo localizable",
+      "ok": true
+    },
+    {
+      "name": "k0-landscape · doctor · Localizar degrada a peek y no cierra",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-landscape · doctor · peek conserva la lista de hallazgos",
+      "ok": true,
+      "detail": {
+        "before": 4,
+        "after": 4
+      }
+    },
+    {
+      "name": "k0-landscape · doctor · en peek el fondo no queda inert y el foco no queda huérfano",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "findings": 4,
+        "inert": false,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-landscape · doctor · restaurar devuelve la superficie y su lista",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "extent": "default",
+        "peekHandle": false,
+        "findings": 4,
+        "inert": true,
+        "focusOnBody": false,
+        "focusInInert": false
+      }
+    },
+    {
+      "name": "k0-landscape · doctor · restaurar devuelve el comportamiento modal",
+      "ok": true,
+      "detail": {
+        "inert": true
+      }
+    }
+  ],
+  "failures": []
+}

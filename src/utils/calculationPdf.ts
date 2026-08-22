@@ -83,12 +83,3 @@ export const createCalculationReport = async (
   const bytes = await attachPortablePayload(context);
   return { bytes, filename: `${safeFilename(project.name)}-memoria-calculo.pdf`, payload };
 };
-
-export const createCalculationReportBlob = async (
-  project: ProjectModel,
-  analysis: AnalysisResult,
-  options?: CalculationReportOptions,
-): Promise<Blob> => {
-  const report = await createCalculationReport(project, analysis, options);
-  return new Blob([report.bytes as BlobPart], { type: 'application/pdf' });
-};

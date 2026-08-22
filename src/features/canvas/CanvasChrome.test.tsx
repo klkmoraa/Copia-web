@@ -25,12 +25,13 @@ describe('CanvasChrome', () => {
       showHelp
       layers={createEditorLayerState()}
       dispatchLayers={dispatchLayers}
+      resultTab="moment"
+      setResultTab={vi.fn()}
       snapEnabled
       gridEnabled={false}
       coordinateReadoutRef={coordinateReadoutRef}
       lengthLabel="m"
       scale={102}
-      hasAnalysis={false}
       onCancelPlacement={onCancelPlacement}
       onZoomIn={onZoomIn}
       onZoomOut={onZoomOut}

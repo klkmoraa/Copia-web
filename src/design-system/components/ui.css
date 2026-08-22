@@ -1,4 +1,20 @@
-/* StructureCo isolated component library. All colors and motion resolve through Phase 4 tokens. */
+/* StructureCo isolated component library. All colors and motion resolve through Phase 4 tokens.
+ *
+ * MATERIA CLAY — una sola gramática, y vive aquí porque el Design System es
+ * quien posee estos componentes. Tres estados, sin excepciones:
+ *
+ *   · reposo           → superficie elevada (`--sc-shadow-clay-xs`)
+ *   · hover            → un punto más de elevación (`--sc-shadow-clay-sm`)
+ *   · activo / elegido → cavidad rehundida (`--sc-shadow-clay-pressed`)
+ *
+ * Antes esta materia estaba reescrita al final de `styles.css` con selectores
+ * duplicados (`.sc-button.sc-button--primary`) que sólo existían para ganar la
+ * cascada a este archivo. `ui.css` se carga después que `styles.css` (el
+ * WorkspaceShell es lazy), así que declararla aquí gana sin duplicar nada y sin
+ * un solo `!important`. Lo que queda en `styles.css` son estilos de feature.
+ *
+ * Los campos son la excepción deliberada: un input es una cavidad en reposo,
+ * no un objeto elevado, y por eso arrancan ya rehundidos. */
 
 :where(
   .sc-button,
@@ -64,8 +80,14 @@
   opacity: 0.62;
 }
 
+/* El hundimiento de toda la librería sale del mismo token.
+   Antes esta regla escribía `scale(0.975)` a mano: un segundo hundimiento, con
+   otra magnitud que la del resto del sistema, y —lo importante— fuera del
+   alcance de `prefers-reduced-motion`, que sólo puede apagar el token. Los
+   segmentos, que no tienen regla `:active` propia, se hundían por aquí y
+   seguían desplazándose con el movimiento reducido activado. */
 :where(.sc-button, .sc-icon-button, .sc-segmented button, .sc-popover__trigger, .sc-tool-button, .sc-layer-toggle):not(:disabled):active {
-  transform: scale(0.975);
+  transform: var(--sc-clay-press-transform);
   transition-duration: var(--sc-motion-press);
 }
 
@@ -98,14 +120,37 @@
 .sc-button__icon svg { width: 100%; height: 100%; }
 .sc-button__label { min-width: 0; }
 
-.sc-button--primary { background: var(--sc-color-action-primary); color: var(--sc-color-action-foreground); border-color: var(--sc-color-action-primary); }
-.sc-button--primary:not(:disabled):hover { background: var(--sc-color-action-hover); border-color: var(--sc-color-action-hover); }
-.sc-button--secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); }
-.sc-button--secondary:not(:disabled):hover { background: var(--sc-color-surface-2); border-color: var(--sc-color-action-primary); }
+/* Acción primaria: la única pieza rellena de marca, con la arcilla teñida.
+   El canto no es decorativo. El relleno lima mide 1,8:1 contra el marfil, así
+   que es `--sc-color-action-edge` (3,84:1) quien cumple el suelo no textual de
+   3:1 y define la silueta del control. No lo devuelvas a `transparent`. */
+.sc-button--primary {
+  border-color: var(--sc-color-action-edge);
+  background: var(--sc-gradient-clay-action);
+  color: var(--sc-color-action-foreground);
+  box-shadow: var(--sc-shadow-clay-action);
+}
+.sc-button--primary:not(:disabled):hover {
+  background: var(--sc-gradient-clay-action);
+  box-shadow: var(--sc-shadow-clay-action-hover);
+  transform: translateY(-1px);
+}
+.sc-button--primary:not(:disabled):active { box-shadow: var(--sc-shadow-clay-action-pressed); transform: var(--sc-clay-press-transform); }
+
+.sc-button--secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); box-shadow: var(--sc-shadow-clay-xs); }
+.sc-button--secondary:not(:disabled):hover { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-action-edge); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-button--secondary:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
+/* `ghost` es la excepción por definición: en reposo no hay objeto que elevar.
+   Gana materia al tocarlo y la pierde al soltarlo, como el resto. */
 .sc-button--ghost { background: transparent; color: var(--sc-color-text-secondary); border-color: transparent; }
-.sc-button--ghost:not(:disabled):hover { background: var(--sc-color-surface-2); color: var(--sc-color-text-primary); }
-.sc-button--danger { background: var(--sc-color-state-error); color: var(--sc-color-action-foreground); border-color: var(--sc-color-state-error); }
-.sc-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-state-error) 84%, var(--sc-color-text-primary)); }
+.sc-button--ghost:not(:disabled):hover { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.sc-button--ghost:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
+/* Relleno y tinta medidos como pareja (#c93028 con blanco = 5,33:1). Antes
+   heredaba la tinta de la acción primaria; ahora esa tinta es oscura y sobre el
+   rojo habría caído por debajo del suelo. */
+.sc-button--danger { background: var(--sc-color-error-solid); color: var(--sc-color-error-on-solid); border-color: transparent; box-shadow: var(--sc-shadow-clay-xs); }
+.sc-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-error-solid) 84%, var(--sc-color-text-primary)); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-button--danger:not(:disabled):active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
 
 .sc-icon-button {
   width: var(--sc-control-height-md);
@@ -116,13 +161,26 @@
 }
 .sc-icon-button--sm { width: var(--sc-control-height-sm); height: var(--sc-control-height-sm); }
 .sc-icon-button--touch { width: var(--sc-control-height-touch); height: var(--sc-control-height-touch); }
-.sc-icon-button--primary { background: var(--sc-color-action-primary); color: var(--sc-color-action-foreground); }
-.sc-icon-button--secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); }
+/* Genérico primero, variantes después: así cada variante puede corregir el
+   reposo/hover neutro sin necesitar más peso del que ya tiene. */
+.sc-icon-button:not(:disabled):hover { background: var(--sc-color-surface-elevated); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-icon-button:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
+.sc-icon-button--secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); box-shadow: var(--sc-shadow-clay-xs); }
 .sc-icon-button--ghost { background: transparent; color: var(--sc-color-text-secondary); }
-.sc-icon-button--danger { background: color-mix(in srgb, var(--sc-color-state-error) 10%, var(--sc-color-surface-1)); color: var(--sc-color-state-error); }
-.sc-icon-button:not(:disabled):hover { background: var(--sc-color-surface-2); color: var(--sc-color-text-primary); }
-.sc-icon-button--primary:not(:disabled):hover { background: var(--sc-color-action-hover); color: var(--sc-color-action-foreground); }
+.sc-icon-button--danger { background: color-mix(in srgb, var(--sc-color-state-error) 10%, var(--sc-color-surface-1)); color: var(--sc-color-state-error); box-shadow: var(--sc-shadow-clay-xs); }
 .sc-icon-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-state-error) 16%, var(--sc-color-surface-1)); color: var(--sc-color-state-error); }
+/* Abierto no es "resaltado", es un botón que se quedó pulsado — mismo gesto
+   que `.sc-popover__trigger[aria-expanded='true']`. */
+.sc-icon-button[aria-expanded='true']:not(:disabled),
+.sc-icon-button[aria-expanded='true']:not(:disabled):hover {
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-ink);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
+.sc-icon-button--primary { border-color: var(--sc-color-action-edge); background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); }
+.sc-icon-button--primary:not(:disabled):hover { background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action-hover); }
+.sc-icon-button--primary:not(:disabled):active { background: var(--sc-gradient-clay-action); box-shadow: var(--sc-shadow-clay-action-pressed); }
 
 /* Form controls ---------------------------------------------------------- */
 
@@ -145,16 +203,20 @@
 }
 
 .sc-field__label small { color: var(--sc-color-text-muted); font-weight: var(--sc-font-weight-regular); }
+/* Un campo es una cavidad, no un objeto: arranca rehundido y se queda ahí. Lo
+   que cambia al enfocarlo es el canto, no la profundidad — subirlo a elevado
+   contradiría el gesto de "escribir dentro". */
 .sc-field__control,
 .sc-unit-field__control {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--sc-space-2);
-  border: var(--sc-border-width) solid var(--sc-color-border);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-md);
-  background: var(--sc-color-surface-1);
+  background: var(--sc-color-surface-2);
   color: var(--sc-color-text-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
   transition: var(--sc-transition-control);
 }
 .sc-field__control--sm { min-height: var(--sc-control-height-sm); }
@@ -192,9 +254,18 @@
 .sc-unit-field__error { color: var(--sc-color-state-error-foreground); }
 .sc-field.has-error .sc-field__control,
 .sc-unit-field.has-error .sc-unit-field__control { border-color: var(--sc-color-state-error); }
+/* CRI-117 · Un campo apagado sigue mostrando su valor y su unidad: eso es
+   contenido que hay que leer, no un affordance apagado, así que aquí manda el
+   piso de texto (4,5:1) y no la exención de WCAG 1.4.3 para «inactive user
+   interface components». La opacidad compuesta hacía ese piso inalcanzable —a
+   0,62 sobre la superficie haría falta una tinta casi negra para medir 4,5:1—,
+   así que la señal de deshabilitado la lleva entera el color. */
 .sc-field.is-disabled,
-.sc-unit-field.is-disabled { color: var(--sc-color-text-disabled); opacity: 0.62; }
+.sc-unit-field.is-disabled { color: var(--sc-color-text-disabled-content); }
 
+/* La pista es la ranura y las teclas son las que se elevan. Marcada = hundida:
+   antes la elegida era la única *elevada*, que es el gesto contrario al que
+   describe el resto del sistema. */
 .sc-segmented {
   min-width: 0;
   display: inline-grid;
@@ -202,23 +273,30 @@
   grid-auto-columns: minmax(max-content, 1fr);
   gap: var(--sc-space-1);
   padding: var(--sc-space-1);
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: var(--sc-color-surface-2);
+  box-shadow: var(--sc-shadow-clay-pressed);
 }
 .sc-segmented button {
   min-height: var(--sc-control-height-md);
   border: 0;
-  border-radius: calc(var(--sc-radius-md) - var(--sc-space-1));
+  border-radius: var(--sc-radius-control);
   padding: 0 var(--sc-space-3);
-  background: transparent;
+  background: var(--sc-color-surface-1);
   color: var(--sc-color-text-secondary);
+  box-shadow: var(--sc-shadow-clay-xs);
   font-size: var(--sc-font-size-label);
   font-weight: var(--sc-font-weight-semibold);
   white-space: nowrap;
 }
 .sc-segmented--sm button { min-height: var(--sc-control-height-sm); }
-.sc-segmented button:not(:disabled):hover { color: var(--sc-color-text-primary); }
-.sc-segmented button[aria-checked='true'] { background: var(--sc-color-surface-1); color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-clay-sm); }
+.sc-segmented button:not(:disabled):not([aria-checked='true']):hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-segmented button[aria-checked='true'] {
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
 
 /* Tooltip and popover ---------------------------------------------------- */
 
@@ -229,10 +307,10 @@
   width: max-content;
   max-width: 240px;
   padding: var(--sc-space-2) var(--sc-space-3);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-control);
   background: var(--sc-color-text-primary);
   color: var(--sc-color-bg-app);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-shadow-clay-sm);
   font-size: var(--sc-font-size-caption);
   line-height: var(--sc-line-height-compact);
   opacity: 0;
@@ -267,9 +345,18 @@
   border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-1);
   color: var(--sc-color-text-primary);
+  box-shadow: var(--sc-shadow-clay-xs);
 }
-.sc-popover__trigger:not(:disabled):hover,
-.sc-popover__trigger[aria-expanded='true'] { border-color: var(--sc-color-action-primary); background: var(--sc-color-surface-2); }
+.sc-popover__trigger:not(:disabled):hover { border-color: var(--sc-color-action-primary); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+/* Abierto no es "resaltado", es un botón que se quedó pulsado. */
+.sc-popover__trigger[aria-expanded='true'],
+.sc-popover__trigger[aria-expanded='true']:not(:disabled):hover {
+  border-color: var(--sc-color-action-primary);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
 .sc-popover__surface {
   position: absolute;
   z-index: var(--sc-z-popover);
@@ -277,7 +364,7 @@
   width: min(320px, calc(100vw - (var(--sc-space-4) * 2)));
   padding: var(--sc-space-4);
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-lg);
+  border-radius: var(--sc-radius-panel);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
   box-shadow: var(--sc-shadow-clay-floating);
@@ -298,7 +385,8 @@
   animation: sc-fade-in var(--sc-motion-standard) var(--sc-ease-enter) both;
 }
 .sc-overlay--dialog { place-items: center; }
-.sc-overlay--drawer { padding: 0; }
+.sc-overlay--drawer,
+.sc-overlay--fullscreen { padding: 0; }
 .sc-modal-surface {
   min-width: 0;
   min-height: 0;
@@ -313,9 +401,10 @@
 .sc-modal-surface--dialog {
   width: min(560px, calc(100vw - (var(--sc-space-5) * 2)));
   max-height: min(720px, calc(100dvh - (var(--sc-space-5) * 2)));
-  border-radius: var(--sc-radius-lg);
+  border-radius: var(--sc-radius-modal);
 }
 .sc-modal-surface--drawer { position: absolute; }
+.sc-modal-surface--fullscreen { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
 .sc-modal-surface--right { inset: 0 0 0 auto; width: min(420px, 100vw); border-radius: var(--sc-radius-sheet) 0 0 var(--sc-radius-sheet); }
 .sc-modal-surface--left { inset: 0 auto 0 0; width: min(420px, 100vw); border-radius: 0 var(--sc-radius-sheet) var(--sc-radius-sheet) 0; }
 .sc-modal-surface--bottom { inset: auto 0 0; width: 100%; max-height: min(76dvh, 720px); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
@@ -336,9 +425,68 @@
   background: var(--sc-color-surface-2);
   color: var(--sc-color-text-secondary);
 }
-.sc-modal-surface__close:hover { color: var(--sc-color-text-primary); }
+.sc-modal-surface__close { box-shadow: var(--sc-shadow-clay-xs); }
+.sc-modal-surface__close:hover { background: var(--sc-color-surface-elevated); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-sm); }
+.sc-modal-surface__close:active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
 .sc-modal-surface__body { min-height: 0; padding: var(--sc-space-5); overflow: auto; overscroll-behavior: contain; }
 .sc-modal-surface__footer { justify-content: flex-end; border-top: var(--sc-border-width) solid var(--sc-color-border-soft); background: color-mix(in srgb, var(--sc-color-surface-2) 58%, var(--sc-color-surface-1)); }
+
+/* Peek: a drawer/fullscreen surface shrunk to a handle, never unmounted --- */
+
+/*
+ * `peek` is a state of `drawer`/`fullscreen`, not a new presentation: the
+ * overlay stops dimming and blocking the canvas (D-11, R-4), and the surface
+ * itself collapses to its handle while `.sc-modal-surface__body` stays in the
+ * DOM — `inert`, off-screen for layout, but never removed — so its scroll
+ * position and any unapplied draft survive untouched.
+ */
+.sc-overlay--peek { background: transparent; pointer-events: none; animation: none; }
+.sc-overlay--peek .sc-modal-surface { pointer-events: auto; }
+/*
+ * `!important` here is deliberate: every feature surface (Datasheet, Doctor,
+ * …) carries its own `.sc-modal-surface--bottom`/`--right` sizing override
+ * (own CSS file, own specificity tier), and `peek` has to win over all of
+ * them unconditionally — it is a state layered on top of the presentation,
+ * not one more entry the normal cascade should get to out-specificity.
+ */
+.sc-modal-surface--peek {
+  grid-template-rows: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(280px, calc(100vw - (var(--sc-space-5) * 2))) !important;
+  max-height: none !important;
+  border-radius: var(--sc-radius-card) !important;
+  transition: inset var(--sc-motion-standard) var(--sc-ease-emphasized, ease);
+}
+.sc-modal-surface--peek.sc-modal-surface--right,
+.sc-modal-surface--peek.sc-modal-surface--left { inset: auto var(--sc-space-4) var(--sc-space-4) auto !important; }
+.sc-modal-surface--peek.sc-modal-surface--bottom { inset: auto var(--sc-space-4) var(--sc-space-4) !important; }
+.sc-modal-surface--peek.sc-modal-surface--fullscreen { inset: auto var(--sc-space-4) var(--sc-space-4) auto !important; }
+.sc-modal-surface--peek .sc-modal-surface__body,
+.sc-modal-surface--peek .sc-modal-surface__footer { display: none !important; }
+.sc-modal-surface__peek-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-3);
+  width: 100%;
+  min-height: var(--sc-control-height-touch);
+  padding: var(--sc-space-3) var(--sc-space-4);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.sc-modal-surface__peek-handle:hover { background: var(--sc-color-surface-2); }
+.sc-modal-surface__peek-handle:active { background: var(--sc-color-surface-inset); }
+.sc-modal-surface__peek-handle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-modal-surface--peek { transition: none; }
+}
 
 /* Tabs and accordion ----------------------------------------------------- */
 
@@ -356,9 +504,16 @@
   white-space: nowrap;
 }
 .sc-tabs__list button::after { content: ''; position: absolute; left: var(--sc-space-2); right: var(--sc-space-2); bottom: 0; height: var(--sc-border-width-strong); border-radius: var(--sc-border-width-strong); background: transparent; }
-.sc-tabs__list button:not(:disabled):hover { color: var(--sc-color-text-primary); }
-.sc-tabs__list button[aria-selected='true'] { color: var(--sc-color-action-primary); }
-.sc-tabs__list button[aria-selected='true']::after { background: var(--sc-color-action-primary); }
+.sc-tabs__list button:not(:disabled):not([aria-selected='true']):hover { color: var(--sc-color-text-primary); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
+/* La pestaña abierta es la que se hundió: el subrayado sigue marcando cuál es,
+   la cavidad dice que está dentro. */
+.sc-tabs__list button[aria-selected='true'] {
+  border-radius: var(--sc-radius-sm) var(--sc-radius-sm) 0 0;
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+.sc-tabs__list button[aria-selected='true']::after { background: var(--sc-color-action-ink); }
 .sc-tabs__panel { padding: var(--sc-space-4) 0; outline: none; }
 .sc-tabs--vertical { display: grid; grid-template-columns: minmax(140px, 0.34fr) minmax(0, 1fr); gap: var(--sc-space-4); }
 .sc-tabs--vertical .sc-tabs__list { flex-direction: column; border-right: var(--sc-border-width) solid var(--sc-color-border); border-bottom: 0; }
@@ -403,7 +558,7 @@
   gap: var(--sc-space-2);
   padding: 0 var(--sc-space-2);
   border: var(--sc-border-width) solid var(--sc-color-border);
-  border-radius: 999px;
+  border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-2);
   color: var(--sc-color-text-secondary);
   font-size: var(--sc-font-size-caption);
@@ -424,7 +579,7 @@
   gap: var(--sc-space-3);
   padding: var(--sc-space-3) var(--sc-space-4);
   border: var(--sc-border-width) solid var(--sc-banner-color);
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: color-mix(in srgb, var(--sc-banner-color) 7%, var(--sc-color-surface-1));
   color: var(--sc-color-text-primary);
 }
@@ -461,19 +616,17 @@
 .sc-tool-button {
   --sc-tool-color: var(--sc-color-tool-navigation);
   width: 100%;
-  min-height: 42px;
+  min-height: 54px;
   display: grid;
   grid-template-columns: var(--sc-size-icon-tool) minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--sc-space-3);
-  padding: 0 var(--sc-space-3);
-  border: var(--sc-border-width) solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-sm);
-  background: var(--sc-color-surface-2);
-  color: var(--sc-color-text-secondary);
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border: var(--sc-border-width) solid transparent;
+  border-radius: var(--sc-radius-md);
+  background: transparent;
+  color: var(--sc-color-text-primary);
   text-align: left;
-  box-shadow: var(--sc-shadow-clay-xs);
-  transition: background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard), box-shadow var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
 }
 .sc-tool-button--structure { --sc-tool-color: var(--sc-color-tool-structure); }
 .sc-tool-button--load { --sc-tool-color: var(--sc-color-tool-point-load); }
@@ -482,39 +635,31 @@
 .sc-tool-button--dimension { --sc-tool-color: var(--sc-color-tool-dimension); }
 .sc-tool-button--cut { --sc-tool-color: var(--sc-color-tool-cut); }
 .sc-tool-button--destructive { --sc-tool-color: var(--sc-color-tool-destructive); }
-.sc-tool-button:not(:disabled):hover {
-  background: var(--sc-color-surface-elevated);
-  border-color: var(--sc-color-border);
-  color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-xs);
-  transform: translateY(-2px);
-}
-.sc-tool-button.is-active {
-  background: var(--sc-color-action-primary);
-  border-color: var(--sc-color-action-primary);
+/* Tecla de arcilla. La herramienta se reconoce por el color del icono; el
+   estado, por el volumen — elegida = hundida, nunca rellena de color. */
+.sc-tool-button:not(:disabled) { background: var(--sc-color-surface-1); border-color: color-mix(in srgb, var(--sc-color-border) 58%, var(--sc-color-surface-elevated)); box-shadow: var(--sc-shadow-clay-xs); }
+.sc-tool-button:not(:disabled):hover { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
+.sc-tool-button.is-active,
+.sc-tool-button.is-active:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--sc-tool-color) 26%, var(--sc-color-border));
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-tool-color);
   box-shadow: var(--sc-shadow-clay-pressed);
-  color: var(--sc-color-action-foreground);
-  transform: translateY(1px);
+  transform: var(--sc-clay-press-transform);
 }
+.sc-tool-button.is-active kbd { color: color-mix(in srgb, var(--sc-tool-color) 74%, var(--sc-color-text-secondary)); }
+.sc-tool-button:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
 .sc-tool-button__icon { width: var(--sc-size-icon-tool); height: var(--sc-size-icon-tool); display: grid; place-items: center; color: var(--sc-tool-color); }
-.sc-tool-button.is-active .sc-tool-button__icon { color: var(--sc-color-action-primary); }
 .sc-tool-button__copy { min-width: 0; display: grid; gap: 2px; }
-.sc-tool-button__copy strong { overflow: hidden; text-overflow: ellipsis; font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-semibold); white-space: nowrap; color: inherit; }
-.sc-tool-button.is-active .sc-tool-button__copy strong { color: var(--sc-color-action-primary); font-weight: 750; }
+.sc-tool-button__copy strong { overflow: hidden; text-overflow: ellipsis; font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-semibold); white-space: nowrap; }
 .sc-tool-button__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
 .sc-tool-button kbd { color: var(--sc-color-text-muted); font: inherit; font-size: var(--sc-font-size-caption); }
-.sc-tool-button.is-active kbd {
-  background: color-mix(in srgb, var(--sc-color-action-primary) 14%, var(--sc-color-surface-inset));
-  color: var(--sc-color-action-primary);
-  border-color: color-mix(in srgb, var(--sc-color-action-primary) 30%, transparent);
-  box-shadow: inset 1px 1.5px 2px rgba(0, 0, 0, 0.45);
-}
 .sc-tool-button.is-compact { width: var(--sc-control-height-touch); min-height: var(--sc-control-height-touch); grid-template-columns: 1fr; justify-items: center; padding: 0; }
 .sc-tool-button.is-compact .sc-tool-button__copy { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 
 .sc-tool-group { display: grid; gap: var(--sc-space-2); }
 .sc-tool-group > h3 { margin: 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); font-weight: var(--sc-font-weight-bold); letter-spacing: 0.06em; text-transform: uppercase; }
-.sc-tool-group__items { display: grid; gap: 6px; }
+.sc-tool-group__items { display: grid; gap: var(--sc-space-1); }
 .sc-tool-group.is-compact .sc-tool-group__items { grid-template-columns: repeat(auto-fit, var(--sc-control-height-touch)); }
 
 .sc-status-strip {
@@ -526,7 +671,7 @@
   gap: var(--sc-space-3);
   padding: var(--sc-space-3) var(--sc-space-4);
   border: var(--sc-border-width) solid color-mix(in srgb, var(--sc-status-color) 28%, var(--sc-color-border));
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: color-mix(in srgb, var(--sc-status-color) 6%, var(--sc-color-surface-1));
 }
 .sc-status-strip--ready { --sc-status-color: var(--sc-color-action-primary); }
@@ -571,15 +716,22 @@
 .sc-result-metric__detail { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); }
 
 .sc-layer-toggle { width: 100%; min-height: 56px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-3); border: var(--sc-border-width) solid transparent; border-radius: var(--sc-radius-md); background: transparent; color: var(--sc-color-text-primary); text-align: left; }
-.sc-layer-toggle:not(:disabled):hover { background: var(--sc-color-surface-2); }
-.sc-layer-toggle.is-checked { border-color: color-mix(in srgb, var(--sc-color-action-primary) 24%, var(--sc-color-border)); background: color-mix(in srgb, var(--sc-color-action-primary) 5%, var(--sc-color-surface-1)); }
+.sc-layer-toggle:not(:disabled) { background: var(--sc-color-surface-1); border-color: color-mix(in srgb, var(--sc-color-border) 58%, var(--sc-color-surface-elevated)); box-shadow: var(--sc-shadow-clay-xs); }
+.sc-layer-toggle:not(:disabled):hover { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-layer-toggle.is-checked,
+.sc-layer-toggle.is-checked:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 24%, var(--sc-color-border));
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
 .sc-layer-toggle__icon { width: var(--sc-control-height-sm); height: var(--sc-control-height-sm); display: grid; place-items: center; border-radius: var(--sc-radius-sm); background: var(--sc-color-surface-2); color: var(--sc-color-action-primary); }
 .sc-layer-toggle__copy { min-width: 0; display: grid; gap: 2px; }
 .sc-layer-toggle__copy strong { font-size: var(--sc-font-size-label); }
 .sc-layer-toggle__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
-.sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: 999px; background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
+.sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: var(--sc-radius-pill); background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-layer-toggle__switch i { width: 16px; height: 16px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); transition: transform var(--sc-motion-fast) var(--sc-ease-standard); }
-.sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-primary); }
+.sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-ink); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch i { transform: translateX(14px); }
 
 .sc-numeric-value { display: inline-flex; align-items: baseline; gap: var(--sc-space-1); color: var(--sc-color-text-primary); font-family: var(--sc-font-mono); font-size: inherit; font-variant-numeric: var(--sc-numeric-variant); white-space: nowrap; }
@@ -615,6 +767,17 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sc-spinner__ring { animation: none; opacity: 0.72; }
+  /* El hundimiento ya lo apaga `--sc-clay-press-transform` desde el token. Aquí
+     queda el otro medio gesto: la elevación de hover. El relieve permanece —
+     lo que se retira es el desplazamiento, no la lectura del estado. */
+  .sc-button--primary:not(:disabled):hover,
+  .sc-button--secondary:not(:disabled):hover,
+  .sc-button--danger:not(:disabled):hover,
+  .sc-icon-button:not(:disabled):hover,
+  .sc-segmented button:not(:disabled):not([aria-checked='true']):hover,
+  .sc-popover__trigger:not(:disabled):hover,
+  .sc-tool-button:not(:disabled):hover,
+  .sc-layer-toggle:not(:disabled):hover { transform: none; }
 }
 
 /* `.sc-surface` (la materia de `Surface`, tarea 3) se movió a `src/styles.css`:

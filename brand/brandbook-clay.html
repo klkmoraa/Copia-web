@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#FFFDF9">
+  <meta name="description" content="Brandbook canónico de StructureCo · dirección CRI-12C menta/esmeralda.">
+  <title>StructureCo · Brandbook canónico CRI-12C</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --app: #f7f4ee;
+      --canvas: #fffdf9;
+      --surface: #fffcf7;
+      --raised: #ffffff;
+      --inset: #f1ede5;
+      --border: #ded8ce;
+      --border-strong: #b9afa1;
+      --text: #23312c;
+      --muted: #607068;
+      --quiet: #6b7871;
+      --brand: #1aa57a;
+      --brand-hover: #159a72;
+      --brand-pressed: #148f69;
+      --brand-stroke: #087e5c;
+      --brand-ink: #02140f;
+      --brand-soft: color-mix(in srgb, var(--brand) 8%, var(--surface));
+      --shear: #468c09;
+      --shear-area: #daefc8;
+      --influence: #d85ac9;
+      --influence-area: #f2c2e6;
+      --success: #2d7c36;
+      --aula: #c94a8f;
+      --moment: #ed4b46;
+      --error: #d92e28;
+      --focus: #6a5df2;
+      --selection: #6a5df2;
+      --selection-soft: #dce9ff;
+      --axial: #0f95d1;
+      --deformed: #8b5cf6;
+      --reaction: #3a72e3;
+      --warning: #d9720a;
+      --ambient: color-mix(in srgb, var(--brand) 4%, transparent);
+      --shadow-raised:
+        8px 10px 20px rgba(74, 62, 44, .10),
+        -7px -7px 16px rgba(255, 255, 255, .78),
+        inset 0 1px 0 rgba(255, 255, 255, .88);
+      --shadow-floating:
+        18px 22px 42px rgba(61, 50, 36, .16),
+        -10px -10px 24px rgba(255, 255, 255, .82),
+        inset 0 1px 0 rgba(255, 255, 255, .9);
+      --shadow-pressed:
+        inset 4px 5px 10px rgba(87, 70, 45, .16),
+        inset -3px -3px 8px rgba(255, 255, 255, .68);
+      --edge: 1px solid var(--border);
+      --radius-control: 10px;
+      --radius-card: 18px;
+      --radius-panel: 24px;
+      --radius-modal: 28px;
+      --motion-fast: 140ms;
+      --motion-standard: 220ms;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-synthesis: none;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --app: #0a1116;
+      --canvas: #0d161b;
+      --surface: #15232b;
+      --raised: #1e313b;
+      --inset: #0d161b;
+      --border: #33474f;
+      --border-strong: #58717a;
+      --text: #f4f8f6;
+      --muted: #a6b6b0;
+      --quiet: #8fa19b;
+      --selection-soft: #223050;
+      --ambient: transparent;
+      --shadow-raised:
+        8px 9px 18px rgba(0, 0, 0, .50),
+        -6px -6px 14px rgba(62, 92, 102, .18),
+        inset 0 1px 0 rgba(255, 255, 255, .06);
+      --shadow-floating:
+        17px 19px 36px rgba(0, 0, 0, .58),
+        -10px -10px 22px rgba(62, 92, 102, .22),
+        inset 0 1px 0 rgba(255, 255, 255, .06);
+      --shadow-pressed:
+        inset 3px 4px 8px rgba(0, 0, 0, .46),
+        inset -2px -2px 6px rgba(77, 108, 118, .20),
+        inset 0 1px 0 rgba(255, 255, 255, .04);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 0;
+      background:
+        linear-gradient(115deg, var(--ambient), transparent 34%),
+        var(--app);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+    ::selection { background: var(--selection-soft); color: var(--text); }
+    a { color: inherit; text-underline-offset: 3px; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+      box-shadow: none;
+    }
+    h1, h2, h3, p { margin-block-start: 0; }
+    h1, h2, h3 { letter-spacing: -.035em; line-height: 1.08; text-wrap: balance; }
+    section[id] { scroll-margin-top: 92px; }
+    h1 { max-width: 16ch; font-size: clamp(2.55rem, 7vw, 6rem); margin-block-end: 1.25rem; }
+    h2 { font-size: clamp(2rem, 4.5vw, 4rem); margin-block-end: .85rem; }
+    h3 { font-size: 1.12rem; margin-block-end: .55rem; }
+    p { max-width: 72ch; color: var(--muted); }
+    code, .mono, .ratio, .hex, .section-index {
+      font-family: "IBM Plex Mono", "Cascadia Mono", monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .skip-link {
+      position: fixed;
+      inset: 12px auto auto 12px;
+      z-index: 100;
+      padding: 10px 14px;
+      border: var(--edge);
+      border-radius: var(--radius-control);
+      background: var(--raised);
+      transform: translateY(-180%);
+    }
+    .skip-link:focus { transform: none; }
+
+    .topbar {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 68px;
+      padding: 10px clamp(16px, 4vw, 54px);
+      border-block-end: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+      background: color-mix(in srgb, var(--app) 90%, transparent);
+      backdrop-filter: blur(16px);
+    }
+    .brand-lockup { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 750; }
+    .brand-mark {
+      width: 28px;
+      aspect-ratio: 1;
+      background: var(--brand-stroke);
+      -webkit-mask: url("./logo.svg") center / contain no-repeat;
+      mask: url("./logo.svg") center / contain no-repeat;
+    }
+    .brand-lockup small { color: var(--quiet); font-size: .72rem; font-weight: 520; }
+    .theme-switcher {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border: var(--edge);
+      border-radius: 999px;
+      background: var(--inset);
+      box-shadow: var(--shadow-pressed);
+    }
+    .theme-switcher button {
+      min-width: 44px;
+      min-height: 36px;
+      padding: 0 13px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .theme-switcher button[aria-pressed="true"] {
+      border-color: var(--brand-stroke);
+      background: var(--brand);
+      color: var(--brand-ink);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .page { width: min(1480px, 100%); margin-inline: auto; overflow: clip; }
+    .wrap { width: min(1240px, calc(100% - 32px)); margin-inline: auto; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
+      align-items: center;
+      gap: clamp(28px, 6vw, 88px);
+      min-height: calc(100vh - 68px);
+      padding-block: clamp(64px, 10vw, 140px);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-block-end: 18px;
+      color: var(--brand-stroke);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 24px; height: 2px; background: currentColor; }
+    .hero-lede { max-width: 62ch; font-size: clamp(1rem, 1.8vw, 1.28rem); }
+    .hero-axiom {
+      display: grid;
+      gap: 12px;
+      margin-block-start: 28px;
+    }
+    .hero-axiom strong {
+      display: block;
+      padding: 13px 16px;
+      border-inline-start: 3px solid var(--brand-stroke);
+      background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+      font-size: clamp(1rem, 1.8vw, 1.28rem);
+    }
+
+    .instrument {
+      position: relative;
+      min-height: 500px;
+      padding: 28px;
+      border: var(--edge);
+      border-radius: var(--radius-modal);
+      background: var(--surface);
+      box-shadow: var(--shadow-floating);
+    }
+    .instrument::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      border-radius: calc(var(--radius-modal) - 8px);
+      pointer-events: none;
+    }
+    .instrument-grid {
+      position: absolute;
+      inset: 80px 28px 28px;
+      border-radius: var(--radius-card);
+      background-image:
+        linear-gradient(color-mix(in srgb, var(--border) 48%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--border) 48%, transparent) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-color: var(--canvas);
+      overflow: hidden;
+    }
+    .instrument-header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; }
+    .instrument-title { display: grid; }
+    .instrument-title small { color: var(--quiet); }
+    .instrument-action {
+      min-height: 44px;
+      padding-inline: 18px;
+      border: 1px solid var(--brand-stroke);
+      border-radius: var(--radius-control);
+      background: linear-gradient(160deg, color-mix(in srgb, var(--brand) 78%, white), var(--brand));
+      color: var(--brand-ink);
+      font: inherit;
+      font-weight: 760;
+      box-shadow:
+        0 5px 11px color-mix(in srgb, var(--brand) 28%, transparent),
+        inset 0 1.5px 0 rgba(255, 255, 255, .38);
+    }
+    .instrument svg { position: absolute; inset: 104px 42px 54px; width: calc(100% - 84px); height: calc(100% - 158px); overflow: visible; }
+
+    .section {
+      padding-block: clamp(74px, 10vw, 132px);
+      border-block-start: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    }
+    .section-heading {
+      display: grid;
+      grid-template-columns: 84px minmax(0, 1fr);
+      gap: 20px;
+      margin-block-end: clamp(34px, 5vw, 68px);
+    }
+    .section-index { color: var(--brand-stroke); font-size: .82rem; font-weight: 750; }
+    .section-heading p { font-size: 1.05rem; }
+
+    .contract-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .contract-card, .card {
+      min-width: 0;
+      padding: 24px;
+      border: var(--edge);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      box-shadow: var(--shadow-raised);
+    }
+    .contract-card { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; }
+    .contract-card .mono { color: var(--brand-stroke); font-size: .77rem; font-weight: 800; }
+    .contract-card p { margin: 0; font-size: .93rem; }
+    .contract-card.is-wide { grid-column: span 2; }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .swatch {
+      position: relative;
+      min-height: 182px;
+      padding: 16px;
+      border: var(--edge);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .swatch-color {
+      height: 92px;
+      margin: -16px -16px 14px;
+      border-block-end: 1px solid color-mix(in srgb, var(--border-strong) 55%, transparent);
+      background: var(--swatch);
+    }
+    .swatch strong, .swatch small { display: block; }
+    .swatch small { color: var(--muted); }
+    .swatch .hex { margin-block-start: 6px; color: var(--text); font-size: .78rem; }
+    .state-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-block-start: 18px;
+      border: 1px solid var(--brand-stroke);
+      border-radius: var(--radius-control);
+      overflow: hidden;
+      color: var(--brand-ink);
+    }
+    .state-strip span { min-height: 54px; display: grid; place-items: center; padding: 7px; font-size: .78rem; font-weight: 760; text-align: center; }
+    .state-strip span:nth-child(1) { background: var(--brand); }
+    .state-strip span:nth-child(2) { background: var(--brand-hover); }
+    .state-strip span:nth-child(3) { background: var(--brand-pressed); }
+
+    .anatomy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-block-start: 22px;
+    }
+    .anatomy {
+      position: relative;
+      min-height: 250px;
+      padding: 22px;
+      border: var(--edge);
+      border-radius: var(--radius-panel);
+      background: var(--canvas);
+      overflow: hidden;
+    }
+    .anatomy svg { width: 100%; height: 160px; margin-block-start: 10px; overflow: visible; }
+    .anatomy .label-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding-inline: 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: .75rem;
+      font-weight: 680;
+    }
+
+    .gate-table { display: grid; gap: 8px; margin-block-start: 28px; }
+    .gate-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.5fr) 96px repeat(4, minmax(70px, .75fr)) 90px 70px;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      font-size: .8rem;
+    }
+    .gate-row.is-head { border: 0; background: transparent; color: var(--quiet); font-size: .72rem; font-weight: 750; text-transform: uppercase; }
+    .gate-row .role { display: flex; align-items: center; gap: 9px; font-weight: 720; }
+    .gate-dot { width: 14px; height: 14px; flex: none; border-radius: 4px; background: var(--dot); border: 1px solid color-mix(in srgb, var(--text) 24%, transparent); }
+    .pass { color: var(--success); font-weight: 800; }
+    .not-applicable { color: var(--quiet); }
+    .pair-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-block-start: 18px; }
+    .pair-card { padding: 16px; border: var(--edge); border-radius: 14px; background: var(--surface); }
+    .pair-sample { min-height: 54px; display: grid; place-items: center; margin-block-end: 10px; border: 1px solid var(--brand-stroke); border-radius: 10px; font-weight: 800; }
+
+    .cvd-note {
+      display: flex;
+      gap: 12px;
+      margin-block: 22px;
+      padding: 16px;
+      border-inline-start: 3px solid var(--focus);
+      background: var(--selection-soft);
+      color: var(--text);
+    }
+    .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .mode-card {
+      min-width: 0;
+      padding: 18px;
+      border: var(--edge);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+    }
+    .mode-card h3 { display: flex; justify-content: space-between; gap: 10px; font-size: 1rem; }
+    .mode-card h3 span { color: var(--quiet); font: 600 .68rem/1.4 "IBM Plex Mono", monospace; letter-spacing: 0; }
+    .signal-list { display: grid; gap: 8px; }
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--canvas);
+      font-size: .76rem;
+      font-weight: 700;
+    }
+    .signal-visual { width: 46px; height: 18px; flex: none; color: var(--signal); }
+    .signal-visual.fill { border: 1px solid var(--brand-stroke); border-radius: 6px; background: var(--signal); }
+    .signal-visual.area { border: 2px solid var(--signal); background: var(--signal-area); }
+    .signal-visual.dashed { border-block-start: 3px dashed var(--signal); }
+    .signal-visual.continuous { border-block-start: 3px solid var(--signal); }
+    .signal-visual.status { border: 3px solid var(--signal); border-radius: 999px; }
+    .mode-card.is-gray .signal-list { filter: grayscale(1); }
+    .mode-card.is-deuteranopia .signal-list { filter: url("#deuteranopia"); }
+    .mode-card.is-protanopia .signal-list { filter: url("#protanopia"); }
+    .group-label { margin: 28px 0 10px; color: var(--brand-stroke); font: 800 .75rem/1.4 "IBM Plex Mono", monospace; text-transform: uppercase; }
+
+    .surface-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+    .surface-card {
+      min-height: 160px;
+      padding: 16px;
+      border: var(--edge);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+    }
+    .surface-card strong { display: block; }
+    .surface-card small { color: var(--quiet); }
+    .surface-card.base { background: var(--app); box-shadow: none; }
+    .surface-card.inset { background: var(--inset); box-shadow: var(--shadow-pressed); }
+    .surface-card.raised { box-shadow: var(--shadow-raised); }
+    .surface-card.floating { box-shadow: var(--shadow-floating); }
+    .surface-card.sheet { border-radius: var(--radius-panel) var(--radius-panel) 8px 8px; box-shadow: var(--shadow-floating); }
+    .surface-card.modal { border-color: var(--border-strong); border-radius: var(--radius-modal); box-shadow: var(--shadow-floating); }
+    .light-rule {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-block-start: 22px;
+    }
+    .light-rule .card { min-height: 166px; }
+    .pressed-demo {
+      display: grid;
+      place-items: center;
+      min-height: 58px;
+      margin-block-start: 15px;
+      border: var(--edge);
+      border-radius: var(--radius-control);
+      background: var(--inset);
+      box-shadow: var(--shadow-pressed);
+      font-weight: 740;
+    }
+
+    .type-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; }
+    .type-sample { min-height: 240px; }
+    .type-sample .display { font-size: clamp(2.3rem, 6vw, 5.5rem); font-weight: 760; line-height: .98; letter-spacing: -.05em; }
+    .type-sample .technical { font: 600 clamp(1rem, 2.5vw, 1.45rem)/1.5 "IBM Plex Mono", monospace; }
+    .open-decision {
+      padding: 18px;
+      border: 1px dashed var(--warning);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+    }
+
+    .product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .welcome-preview, .results-preview { min-height: 380px; }
+    .preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block-end: 15px; border-block-end: 1px solid var(--border); }
+    .preview-content { padding-block-start: 22px; }
+    .project-card {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-block-start: 10px;
+      padding: 12px;
+      border: var(--edge);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow-raised);
+    }
+    .project-thumb { width: 48px; height: 48px; border: var(--edge); border-radius: 10px; background: linear-gradient(145deg, var(--brand-soft), var(--inset)); }
+    .project-card small { display: block; color: var(--quiet); }
+    .result-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; margin-block-start: 10px; padding: 14px; border: var(--edge); border-radius: 14px; background: var(--surface); }
+    .result-icon { width: 36px; height: 36px; display: grid; place-items: center; border: 2px solid var(--success); border-radius: 999px; color: var(--success); font-weight: 800; }
+    .result-row small { display: block; color: var(--quiet); }
+    .copy-do, .copy-dont { margin-block-start: 12px; padding: 12px; border-radius: 10px; font-size: .86rem; }
+    .copy-do { border-inline-start: 3px solid var(--success); background: color-mix(in srgb, var(--success) 8%, var(--surface)); }
+    .copy-dont { border-inline-start: 3px solid var(--error); background: color-mix(in srgb, var(--error) 8%, var(--surface)); text-decoration: line-through; }
+
+    .system-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .icon-row { display: flex; flex-wrap: wrap; gap: 10px; margin-block-start: 18px; }
+    .icon-object {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border: var(--edge);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow-raised);
+    }
+    .icon-object svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .focus-demo {
+      display: inline-grid;
+      place-items: center;
+      min-height: 48px;
+      margin: 18px 6px 6px;
+      padding-inline: 18px;
+      border: 1px solid var(--brand-stroke);
+      border-radius: var(--radius-control);
+      outline: 3px solid var(--focus);
+      outline-offset: 4px;
+      background: var(--brand);
+      color: var(--brand-ink);
+      font-weight: 780;
+    }
+    .selection-demo {
+      min-height: 72px;
+      margin-block-start: 18px;
+      border: 3px solid var(--selection);
+      border-radius: 12px;
+      background: var(--selection-soft);
+      box-shadow: none;
+    }
+    .motion-demo {
+      display: grid;
+      place-items: center;
+      width: 72px;
+      height: 72px;
+      margin-block-start: 18px;
+      border: 1px solid var(--brand-stroke);
+      border-radius: 18px;
+      background: var(--brand);
+      color: var(--brand-ink);
+      box-shadow: var(--shadow-raised);
+      transition: transform var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+    }
+    .motion-demo:hover { transform: translateY(-2px); box-shadow: var(--shadow-floating); }
+    .motion-demo:active { transform: translateY(1px); box-shadow: var(--shadow-pressed); }
+
+    .responsive-grid { display: grid; grid-template-columns: 1.35fr 1fr .7fr; gap: 16px; align-items: stretch; }
+    .shell {
+      min-width: 0;
+      min-height: 320px;
+      padding: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-card);
+      background: var(--canvas);
+      overflow: hidden;
+    }
+    .shell-bar { height: 34px; margin-block-end: 10px; border: var(--edge); border-radius: 9px; background: var(--surface); }
+    .shell-body { display: grid; grid-template-columns: 64px minmax(0, 1fr) 92px; gap: 8px; height: 240px; }
+    .shell.medium .shell-body { grid-template-columns: 52px minmax(0, 1fr); }
+    .shell.medium .shell-inspector { display: none; }
+    .shell.compact .shell-body { grid-template-columns: 1fr; grid-template-rows: 1fr 46px; }
+    .shell.compact .shell-rail { order: 2; }
+    .shell.compact .shell-inspector { display: none; }
+    .shell-rail, .shell-inspector, .shell-canvas { border: var(--edge); border-radius: 10px; background: var(--surface); }
+    .shell-canvas {
+      position: relative;
+      background:
+        linear-gradient(color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--border) 45%, transparent) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 18px 18px;
+    }
+    .shell-canvas::after { content: ""; position: absolute; inset: 45% 12%; border-block-start: 3px solid var(--shear); background: linear-gradient(160deg, transparent 49%, color-mix(in srgb, var(--shear-area) 70%, transparent) 50%); }
+    .shell-label { display: block; margin-block-end: 8px; color: var(--brand-stroke); font: 750 .72rem/1.4 "IBM Plex Mono", monospace; }
+
+    .final-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .check {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 14px;
+      border: var(--edge);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .check::before { content: "✓"; color: var(--success); font-weight: 900; }
+    .check p { margin: 0; font-size: .9rem; }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 22px;
+      padding-block: 34px 48px;
+      border-block-start: 1px solid var(--border);
+      color: var(--quiet);
+      font-size: .82rem;
+    }
+
+    @media (max-width: 1050px) {
+      .hero { grid-template-columns: 1fr; min-height: auto; }
+      .instrument { min-height: 430px; }
+      .contract-grid, .system-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .palette-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .surface-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .light-rule, .pair-grid, .mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .gate-row { grid-template-columns: minmax(145px, 1.4fr) 90px repeat(4, minmax(64px, .65fr)) 76px 58px; font-size: .73rem; }
+    }
+
+    @media (max-width: 720px) {
+      body { font-size: 15px; }
+      .topbar { align-items: flex-start; min-height: 84px; padding: 10px 14px; }
+      .brand-lockup small { display: none; }
+      .theme-switcher button { min-width: 40px; padding-inline: 10px; font-size: .82rem; }
+      .wrap { width: min(100% - 24px, 1240px); }
+      .hero { padding-block: 56px 74px; }
+      .instrument { min-height: 390px; padding: 20px; }
+      .instrument-grid { inset: 72px 20px 20px; }
+      .instrument svg { inset: 94px 28px 42px; width: calc(100% - 56px); height: calc(100% - 136px); }
+      .instrument-title small { display: none; }
+      .section-heading { grid-template-columns: 1fr; gap: 6px; }
+      .contract-grid, .palette-grid, .anatomy-grid, .type-grid, .product-grid, .system-grid, .responsive-grid, .final-checks { grid-template-columns: 1fr; }
+      .contract-card.is-wide { grid-column: auto; }
+      .surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .light-rule, .pair-grid, .mode-grid { grid-template-columns: 1fr; }
+      .gate-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 6px 10px;
+        padding: 13px;
+      }
+      .gate-row.is-head { display: none; }
+      .gate-row .ratio:not(.worst) { display: none; }
+      .gate-row .hex { grid-column: 1; }
+      .gate-row .worst::before { content: "peor "; color: var(--quiet); }
+      .gate-row .status { grid-column: 3; grid-row: 1 / span 2; }
+      .responsive-grid .shell { min-height: 280px; }
+      footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+      }
+      .motion-demo:hover, .motion-demo:active { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <svg width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="deuteranopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          .367322 .860646 -.227968 0 0
+          .280085 .672501  .047413 0 0
+         -.011820 .042940  .968881 0 0
+          0       0        0       1 0"/>
+      </filter>
+      <filter id="protanopia" color-interpolation-filters="linearRGB">
+        <feColorMatrix type="matrix" values="
+          .152286 1.052583 -.204868 0 0
+          .114503  .786281  .099216 0 0
+         -.003882 -.048116 1.051998 0 0
+          0        0        0       1 0"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand-lockup" href="#contenido" aria-label="StructureCo, volver al inicio del Brandbook">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>structureCo <small>Brandbook canónico · CRI-12C</small></span>
+    </a>
+    <div class="theme-switcher" aria-label="Tema del Brandbook">
+      <button type="button" data-theme-choice="light" aria-pressed="true">Día</button>
+      <button type="button" data-theme-choice="dark" aria-pressed="false">Noche</button>
+    </div>
+  </header>
+
+  <main class="page" id="contenido">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div>
+        <span class="eyebrow">Dirección oficial · V-01 / V-02</span>
+        <h1 id="hero-title">Precisión menta sobre una mesa técnica cálida.</h1>
+        <p class="hero-lede">La identidad lima se retira de la marca. StructureCo adopta menta/esmeralda medida para Día y Noche; la lima queda reservada al cortante V y a la carga distribuida.</p>
+        <div class="hero-axiom">
+          <strong>“Instrumento Clay de precisión sobre una mesa técnica cálida.”</strong>
+          <strong>“Clay para el cascarón. Plano y exacto para la ingeniería.”</strong>
+        </div>
+      </div>
+
+      <article class="instrument" aria-label="Instrumento StructureCo con diagrama técnico plano">
+        <div class="instrument-header">
+          <span class="instrument-title"><strong>Viga B-03</strong><small>Combinación 1.2D + 1.6L</small></span>
+          <button class="instrument-action" type="button">Calcular</button>
+        </div>
+        <div class="instrument-grid" aria-hidden="true"></div>
+        <svg viewBox="0 0 520 330" role="img" aria-label="Viga con cortante lima, influencia discontinua y deformada continua">
+          <path d="M54 82H466" stroke="var(--text)" stroke-width="9" stroke-linecap="round"/>
+          <path d="M62 80L218 175L360 104L458 80Z" fill="var(--shear-area)" fill-opacity=".58" stroke="var(--shear)" stroke-width="4"/>
+          <path class="qa-deformed" d="M62 247C152 192 248 300 458 215" fill="none" stroke="var(--deformed)" stroke-width="4"/>
+          <path class="qa-influence" d="M62 210C166 115 294 118 458 196L458 210Z" fill="var(--influence-area)" fill-opacity=".45" stroke="var(--influence)" stroke-width="4" stroke-dasharray="11 8"/>
+          <circle cx="62" cy="82" r="8" fill="var(--canvas)" stroke="var(--text)" stroke-width="3"/>
+          <circle cx="458" cy="82" r="8" fill="var(--canvas)" stroke="var(--text)" stroke-width="3"/>
+          <text x="72" y="49" fill="var(--shear)" font-family="IBM Plex Mono, monospace" font-size="17" font-weight="700">V · lima</text>
+          <text x="71" y="227" fill="var(--influence)" font-family="IBM Plex Mono, monospace" font-size="17" font-weight="700">influencia · dashed</text>
+          <text x="299" y="284" fill="var(--deformed)" font-family="IBM Plex Mono, monospace" font-size="17" font-weight="700">deformada · continuous</text>
+        </svg>
+      </article>
+    </section>
+
+    <section class="section" id="contrato">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">01 · V-01…V-14</span>
+          <div>
+            <h2>El contrato visual, sin decisiones implícitas.</h2>
+            <p>Estas catorce reglas gobiernan el Brandbook y la implementación. Ninguna referencia externa puede sustituirlas.</p>
+          </div>
+        </header>
+        <div class="contract-grid">
+          <article class="contract-card is-wide"><span class="mono">V-01 · VISIÓN</span><h3>Instrumento Clay de precisión sobre una mesa técnica cálida.</h3><p>La interfaz se siente material y cercana; los datos siguen siendo exactos.</p></article>
+          <article class="contract-card"><span class="mono">V-02 · LÍMITE</span><h3>Clay para el cascarón.</h3><p>Plano y exacto para la ingeniería: canvas, vigas, cotas, curvas y valores no reciben volumen decorativo.</p></article>
+          <article class="contract-card"><span class="mono">V-03 · GRAMÁTICA</span><h3>BASE · INSET · RAISED · FLOATING · SHEET · MODAL</h3><p>Cada superficie declara su relación física; no existe una profundidad genérica.</p></article>
+          <article class="contract-card"><span class="mono">V-04 · LUZ</span><h3>Una sola luz arriba-izquierda.</h3><p>Canto obligatorio de 1px. Pressed invierte la luz y elimina toda sombra exterior. La profundidad escala por tamaño y función física, nunca por importancia semántica.</p></article>
+          <article class="contract-card"><span class="mono">V-05 · RADIOS</span><h3>Radio por rol.</h3><p>Control 10px · card 18px · panel/sheet 24px · modal 28px · pill 999px.</p></article>
+          <article class="contract-card"><span class="mono">V-06 · TIPOGRAFÍA</span><h3>IBM Plex Sans + IBM Plex Mono.</h3><p>El serif editorial sigue abierto. Ningún serif entra a valores, unidades, tablas, labels del canvas ni Datasheet.</p></article>
+          <article class="contract-card"><span class="mono">V-07 · COLOR</span><h3>Un significado, un HEX.</h3><p>Los roles semánticos se declaran una vez y no cambian entre Día y Noche.</p></article>
+          <article class="contract-card"><span class="mono">V-08 · INGENIERÍA</span><h3>Color + anatomía.</h3><p>Cortante usa lima con área; influencia usa fucsia frío con área y línea siempre discontinua.</p></article>
+          <article class="contract-card"><span class="mono">V-09 · NOCHE</span><h3>Grafito frío profundo.</h3><p>Nunca negro puro ni halo verde ambiental. Cuatro niveles materiales siguen legibles.</p></article>
+          <article class="contract-card"><span class="mono">V-10 · RESULTS</span><h3>success ≠ reliable ≠ safe.</h3><p>Terminar un cálculo no permite afirmar “seguro”, “certificado”, “cumple” ni equivalentes.</p></article>
+          <article class="contract-card"><span class="mono">V-11 · WELCOME</span><h3>Trabajo primero.</h3><p>La marca está presente, pero proyectos y acciones ocupan la jerarquía principal.</p></article>
+          <article class="contract-card"><span class="mono">V-12 · ICONOS</span><h3>Stroke 1.8.</h3><p>Lucide o geometría equivalente; las señales técnicas heredan el rol, las acciones neutras heredan el texto.</p></article>
+          <article class="contract-card"><span class="mono">V-13 · MOTION</span><h3>Funcional y sobrio.</h3><p>El movimiento confirma causa y efecto; reduced-motion elimina desplazamientos no esenciales.</p></article>
+          <article class="contract-card"><span class="mono">V-14 · ACCESIBILIDAD</span><h3>Contrato verificable.</h3><p>Contraste medido, focus-visible, significado independiente del color, targets táctiles y cero overflow.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="color">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">02 · COLOR</span>
+          <div>
+            <h2>Menta para actuar. Lima para leer V.</h2>
+            <p>Los cuatro fondos del gate salen de los tokens reales: canvas Día <span class="hex">#FFFDF9</span>, surface Día <span class="hex">#FFFCF7</span>, canvas Noche <span class="hex">#0D161B</span> y surface Noche <span class="hex">#15232B</span>.</p>
+          </div>
+        </header>
+
+        <div class="palette-grid">
+          <article class="swatch" style="--swatch:var(--brand)"><div class="swatch-color"></div><strong>Brand fill · action</strong><small>Menta principal, una sola en Día/Noche.</small><span class="hex">#1AA57A</span></article>
+          <article class="swatch" style="--swatch:var(--brand-stroke)"><div class="swatch-color"></div><strong>Brand stroke</strong><small>Canto, trazo, snap y hover técnico.</small><span class="hex">#087E5C</span></article>
+          <article class="swatch" style="--swatch:var(--brand-ink)"><div class="swatch-color"></div><strong>Brand ink</strong><small>Tinta sobre rellenos de marca; no es tinta sobre fondos nocturnos.</small><span class="hex">#02140F</span></article>
+          <article class="swatch" style="--swatch:var(--shear)"><div class="swatch-color"></div><strong>Shear V · distributed</strong><small>Lima profunda; ya no representa identidad.</small><span class="hex">#468C09</span></article>
+          <article class="swatch" style="--swatch:var(--influence)"><div class="swatch-color"></div><strong>Influence edge</strong><small>Fucsia frío medido, siempre discontinuo.</small><span class="hex">#D85AC9</span></article>
+          <article class="swatch" style="--swatch:var(--success)"><div class="swatch-color"></div><strong>Success · moved</strong><small>Verde profundo separado de marca y cortante.</small><span class="hex">#2D7C36</span></article>
+          <article class="swatch" style="--swatch:var(--aula)"><div class="swatch-color"></div><strong>Aula · unchanged</strong><small>Acento de experiencia, no resultado.</small><span class="hex">#C94A8F</span></article>
+          <article class="swatch" style="--swatch:var(--focus)"><div class="swatch-color"></div><strong>Focus + selection stroke</strong><small>Índigo independiente de la nueva menta.</small><span class="hex">#6A5DF2</span></article>
+        </div>
+
+        <div class="state-strip" aria-label="Estados de acción">
+          <span>Action<br><span class="hex">#1AA57A</span></span>
+          <span>Hover<br><span class="hex">#159A72</span></span>
+          <span>Pressed<br><span class="hex">#148F69</span></span>
+        </div>
+
+        <div class="anatomy-grid">
+          <article class="anatomy">
+            <div class="label-row"><span class="pill">V / distributed</span><span class="pill">deep stroke + tint</span></div>
+            <svg viewBox="0 0 440 170" role="img" aria-label="Cortante lima con trazo profundo y área">
+              <path d="M28 85H414" stroke="var(--text)" stroke-width="7" stroke-linecap="round"/>
+              <path d="M35 85L175 25L286 138L407 85Z" fill="var(--shear-area)" fill-opacity=".72" stroke="var(--shear)" stroke-width="4"/>
+              <text x="35" y="20" fill="var(--shear)" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="700">+12.80 kN</text>
+            </svg>
+          </article>
+          <article class="anatomy">
+            <div class="label-row"><span class="pill">influence</span><span class="pill">pastel area + measured dashed edge</span></div>
+            <svg viewBox="0 0 440 170" role="img" aria-label="Línea de influencia fucsia con área pastel y trazo discontinuo">
+              <path d="M28 85H414" stroke="var(--text)" stroke-width="7" stroke-linecap="round"/>
+              <path class="qa-influence" d="M35 85C120 18 258 26 407 120L407 85Z" fill="var(--influence-area)" fill-opacity=".72" stroke="var(--influence)" stroke-width="4" stroke-dasharray="10 7"/>
+              <text x="35" y="20" fill="var(--influence)" font-family="IBM Plex Mono, monospace" font-size="15" font-weight="700">IL · dashed siempre</text>
+            </svg>
+          </article>
+        </div>
+
+        <h3 style="margin-top:44px">Gate WCAG · contraste contra los cuatro fondos</h3>
+        <p>Los roles de trazo, canto, control o estado deben llegar a 3:1. Los rellenos de área se validan por su canto medido. Brand ink se valida como tinta sobre los tres rellenos de acción.</p>
+        <div class="gate-table" role="table" aria-label="Tabla cromática CRI-91">
+          <div class="gate-row is-head" role="row"><span>Rol</span><span>HEX</span><span>Canvas D</span><span>Surface D</span><span>Canvas N</span><span>Surface N</span><span>Peor</span><span>Gate</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--brand)"></i>Brand fill</span><span class="hex">#1AA57A</span><span class="ratio">3.08</span><span class="ratio">3.06</span><span class="ratio">5.84</span><span class="ratio">5.13</span><span class="ratio worst">3.06</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--brand-hover)"></i>Brand hover</span><span class="hex">#159A72</span><span class="ratio">3.51</span><span class="ratio">3.48</span><span class="ratio">5.14</span><span class="ratio">4.51</span><span class="ratio worst">3.48</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--brand-pressed)"></i>Brand pressed</span><span class="hex">#148F69</span><span class="ratio">4.00</span><span class="ratio">3.97</span><span class="ratio">4.50</span><span class="ratio">3.95</span><span class="ratio worst">3.95</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--brand-stroke)"></i>Brand stroke</span><span class="hex">#087E5C</span><span class="ratio">4.98</span><span class="ratio">4.95</span><span class="ratio">3.62</span><span class="ratio">3.17</span><span class="ratio worst">3.17</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--brand-ink)"></i>Brand ink</span><span class="hex">#02140F</span><span class="ratio">18.63</span><span class="ratio">18.49</span><span class="ratio">1.03</span><span class="ratio">1.18</span><span class="ratio worst not-applicable">pair</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--shear)"></i>Shear stroke</span><span class="hex">#468C09</span><span class="ratio">4.12</span><span class="ratio">4.09</span><span class="ratio">4.37</span><span class="ratio">3.84</span><span class="ratio worst">3.84</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--shear-area)"></i>Shear area</span><span class="hex">#DAEFC8</span><span class="ratio">1.20</span><span class="ratio">1.20</span><span class="ratio">14.95</span><span class="ratio">13.13</span><span class="ratio worst not-applicable">edge</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--influence)"></i>Influence edge</span><span class="hex">#D85AC9</span><span class="ratio">3.32</span><span class="ratio">3.30</span><span class="ratio">5.42</span><span class="ratio">4.76</span><span class="ratio worst">3.30</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--influence-area)"></i>Influence area</span><span class="hex">#F2C2E6</span><span class="ratio">1.52</span><span class="ratio">1.50</span><span class="ratio">11.88</span><span class="ratio">10.43</span><span class="ratio worst not-applicable">edge</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--success)"></i>Success · moved</span><span class="hex">#2D7C36</span><span class="ratio">5.11</span><span class="ratio">5.07</span><span class="ratio">3.53</span><span class="ratio">3.10</span><span class="ratio worst">3.10</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--aula)"></i>Aula · unchanged</span><span class="hex">#C94A8F</span><span class="ratio">4.25</span><span class="ratio">4.22</span><span class="ratio">4.23</span><span class="ratio">3.72</span><span class="ratio worst">3.72</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--moment)"></i>Moment · unchanged</span><span class="hex">#ED4B46</span><span class="ratio">3.63</span><span class="ratio">3.60</span><span class="ratio">4.96</span><span class="ratio">4.36</span><span class="ratio worst">3.60</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--error)"></i>Error · unchanged</span><span class="hex">#D92E28</span><span class="ratio">4.73</span><span class="ratio">4.69</span><span class="ratio">3.81</span><span class="ratio">3.34</span><span class="ratio worst">3.34</span><span class="status pass">PASS</span></div>
+          <div class="gate-row" role="row"><span class="role"><i class="gate-dot" style="--dot:var(--focus)"></i>Focus / selection</span><span class="hex">#6A5DF2</span><span class="ratio">4.63</span><span class="ratio">4.60</span><span class="ratio">3.89</span><span class="ratio">3.41</span><span class="ratio worst">3.41</span><span class="status pass">PASS</span></div>
+        </div>
+
+        <div class="pair-grid" aria-label="Pares de relleno y tinta">
+          <article class="pair-card"><div class="pair-sample" style="background:var(--brand);color:var(--brand-ink)">Action</div><strong class="ratio">#1AA57A / #02140F · 6.04:1</strong><small class="pass">PASS</small></article>
+          <article class="pair-card"><div class="pair-sample" style="background:var(--brand-hover);color:var(--brand-ink)">Hover</div><strong class="ratio">#159A72 / #02140F · 5.31:1</strong><small class="pass">PASS</small></article>
+          <article class="pair-card"><div class="pair-sample" style="background:var(--brand-pressed);color:var(--brand-ink)">Pressed</div><strong class="ratio">#148F69 / #02140F · 4.65:1</strong><small class="pass">PASS</small></article>
+          <article class="pair-card"><div class="pair-sample" style="background:var(--success);color:#fff;border-color:var(--success)">Éxito</div><strong class="ratio">#2D7C36 / #FFFFFF · 5.19:1</strong><small class="pass">PASS</small></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="separacion">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">03 · CVD</span>
+          <div>
+            <h2>La separación no depende sólo del matiz.</h2>
+            <p>La simulación reproduce las matrices Machado 2009, severidad 100. Es evidencia de QA visual, no una medición clínica. Etiqueta, forma, área y patrón permanecen como canales independientes.</p>
+          </div>
+        </header>
+
+        <div class="cvd-note"><strong>Veredicto:</strong><span>success <b>MOVED</b> a <span class="hex">#2D7C36</span> porque <span class="hex">#2F9A2A</span> se acercaba a marca/cortante. Aula <b>UNCHANGED</b>: el canto de influencia frío y discontinuo conserva separación.</span></div>
+
+        <div class="group-label">Grupo A · brand / shear V / success</div>
+        <div class="mode-grid">
+          <article class="mode-card"><h3>Color <span>ΔE min 23.54</span></h3><div class="signal-list">
+            <div class="signal"><i class="signal-visual fill" style="--signal:var(--brand)"></i>Brand menta</div>
+            <div class="signal"><i class="signal-visual area" style="--signal:var(--shear);--signal-area:var(--shear-area)"></i>Cortante V</div>
+            <div class="signal"><i class="signal-visual status" style="--signal:var(--success)"></i>Success</div>
+          </div></article>
+          <article class="mode-card is-gray"><h3>Grayscale <span>ΔE min 5.98</span></h3><div class="signal-list">
+            <div class="signal"><i class="signal-visual fill" style="--signal:var(--brand)"></i>Brand menta</div>
+            <div class="signal"><i class="signal-visual area" style="--signal:var(--shear);--signal-area:var(--shear-area)"></i>Cortante V</div>
+            <div class="signal"><i class="signal-visual status" style="--signal:var(--success)"></i>Success</div>
+          </div></article>
+          <article class="mode-card is-deuteranopia"><h3>Deuteranopia <span>ΔE min 22.14</span></h3><div class="signal-list">
+            <div class="signal"><i class="signal-visual fill" style="--signal:var(--brand)"></i>Brand menta</div>
+            <div class="signal"><i class="signal-visual area" style="--signal:var(--shear);--signal-area:var(--shear-area)"></i>Cortante V</div>
+            <div class="signal"><i class="signal-visual status" style="--signal:var(--success)"></i>Success</div>
+          </div></article>
+          <article class="mode-card is-protanopia"><h3>Protanopia <span>ΔE min 21.95</span></h3><div class="signal-list">
+            <div class="signal"><i class="signal-visual fill" style="--signal:var(--brand)"></i>Brand menta</div>
+            <div class="signal"><i class="signal-visual area" style="--signal:var(--shear);--signal-area:var(--shear-area)"></i>Cortante V</div>
+            <div class="signal"><i class="signal-visual status" style="--signal:var(--success)"></i>Success</div>
+          </div></article>
+        </div>
+
+        <div class="group-label">Grupo B · influence / Aula</div>
+        <div class="mode-grid">
+          <article class="mode-card"><h3>Color <span>ΔE 24.41</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia</div><div class="signal"><i class="signal-visual fill" style="--signal:var(--aula)"></i>Aula</div></div></article>
+          <article class="mode-card is-gray"><h3>Grayscale <span>ΔE 7.03</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia</div><div class="signal"><i class="signal-visual fill" style="--signal:var(--aula)"></i>Aula</div></div></article>
+          <article class="mode-card is-deuteranopia"><h3>Deuteranopia <span>ΔE 24.72</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia</div><div class="signal"><i class="signal-visual fill" style="--signal:var(--aula)"></i>Aula</div></div></article>
+          <article class="mode-card is-protanopia"><h3>Protanopia <span>ΔE 23.10</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia</div><div class="signal"><i class="signal-visual fill" style="--signal:var(--aula)"></i>Aula</div></div></article>
+        </div>
+
+        <div class="group-label">Grupo C · influence / moment / error</div>
+        <div class="mode-grid">
+          <article class="mode-card"><h3>Color <span>IL/M ΔE 72.98</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia · dashed</div><div class="signal"><i class="signal-visual continuous" style="--signal:var(--moment)"></i>Momento M · continuous</div><div class="signal"><i class="signal-visual status" style="--signal:var(--error)"></i>Error + icono</div></div></article>
+          <article class="mode-card is-gray"><h3>Grayscale <span>IL/M ΔE 2.71 + patrón</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia · dashed</div><div class="signal"><i class="signal-visual continuous" style="--signal:var(--moment)"></i>Momento M · continuous</div><div class="signal"><i class="signal-visual status" style="--signal:var(--error)"></i>Error + icono</div></div></article>
+          <article class="mode-card is-deuteranopia"><h3>Deuteranopia <span>IL/M ΔE 74.00</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia · dashed</div><div class="signal"><i class="signal-visual continuous" style="--signal:var(--moment)"></i>Momento M · continuous</div><div class="signal"><i class="signal-visual status" style="--signal:var(--error)"></i>Error + icono</div></div></article>
+          <article class="mode-card is-protanopia"><h3>Protanopia <span>IL/M ΔE 70.33</span></h3><div class="signal-list"><div class="signal"><i class="signal-visual dashed" style="--signal:var(--influence)"></i>Influencia · dashed</div><div class="signal"><i class="signal-visual continuous" style="--signal:var(--moment)"></i>Momento M · continuous</div><div class="signal"><i class="signal-visual status" style="--signal:var(--error)"></i>Error + icono</div></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="materia">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">04 · V-03/04/05</span>
+          <div>
+            <h2>La profundidad describe física, no prestigio.</h2>
+            <p>Una sola luz arriba-izquierda. Todo objeto Clay conserva canto de 1px; pressed invierte la luz y no tiene sombra exterior.</p>
+          </div>
+        </header>
+        <div class="surface-grid">
+          <article class="surface-card base"><strong>BASE</strong><small>Mesa / app. Sin elevación.</small></article>
+          <article class="surface-card inset"><strong>INSET</strong><small>Campos, trays, segmentos.</small></article>
+          <article class="surface-card raised"><strong>RAISED</strong><small>Card o control manipulable.</small></article>
+          <article class="surface-card floating"><strong>FLOATING</strong><small>Popover contextual.</small></article>
+          <article class="surface-card sheet"><strong>SHEET</strong><small>Panel que nace de un borde.</small></article>
+          <article class="surface-card modal"><strong>MODAL</strong><small>Interrupción centrada.</small></article>
+        </div>
+        <div class="light-rule">
+          <article class="card"><span class="mono">LUZ</span><h3>Arriba-izquierda</h3><p>La sombra oscura cae abajo-derecha; no se mezclan fuentes.</p></article>
+          <article class="card"><span class="mono">CANTO</span><h3>1px obligatorio</h3><p>El borde sostiene el objeto incluso cuando la sombra pierde contraste.</p></article>
+          <article class="card"><span class="mono">PRESSED</span><h3>Sin sombra exterior</h3><div class="pressed-demo">Luz invertida</div></article>
+          <article class="card"><span class="mono">ESCALA</span><h3>Por función física</h3><p>Un modal es más profundo por separación espacial; no porque sea “más importante”.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="tipografia">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">05 · V-06</span>
+          <div>
+            <h2>Dos familias vigentes. Una decisión abierta.</h2>
+            <p>IBM Plex Sans organiza interfaz y lectura. IBM Plex Mono sostiene magnitudes, unidades y código técnico.</p>
+          </div>
+        </header>
+        <div class="type-grid">
+          <article class="card type-sample"><span class="mono">IBM PLEX SANS</span><p class="display">Diseña.<br>Analiza.<br>Decide.</p><p>Interfaz, navegación, títulos, ayudas y contenido editorial vigente.</p></article>
+          <article class="card type-sample"><span class="mono">IBM PLEX MONO</span><p class="technical">V = +12.80 kN<br>M = −24.36 kN·m<br>δ = 8.42 mm<br>LC-04 · B-03</p><p>Valores, unidades, tablas, canvas labels y Datasheet.</p></article>
+        </div>
+        <div class="open-decision" style="margin-top:18px"><strong>Serif editorial: OPEN.</strong> CRI-91 no elige familia, peso ni uso. No se incorpora ningún serif a la autoridad vigente.</div>
+      </div>
+    </section>
+
+    <section class="section" id="producto">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">06 · V-09/10/11</span>
+          <div>
+            <h2>Día y Noche comparten significado.</h2>
+            <p>Noche reasigna materia neutral, no roles semánticos. El trabajo manda sobre la marca y un resultado calculado nunca se presenta como garantía.</p>
+          </div>
+        </header>
+        <div class="product-grid">
+          <article class="card welcome-preview">
+            <div class="preview-toolbar"><span class="brand-lockup"><i class="brand-mark" aria-hidden="true"></i>structureCo</span><span class="pill">V-11 · Welcome</span></div>
+            <div class="preview-content">
+              <span class="eyebrow">Tus proyectos</span>
+              <h3 style="font-size:2rem">Continúa donde trabajabas.</h3>
+              <p>Marca presente; proyectos, estado y siguiente acción primero.</p>
+              <div class="project-card"><i class="project-thumb"></i><span><strong>Viga de transferencia</strong><small>12 nodos · editado hoy</small></span><span aria-hidden="true">→</span></div>
+              <div class="project-card"><i class="project-thumb"></i><span><strong>Pórtico de ejemplo</strong><small>4 nodos · análisis anterior</small></span><span aria-hidden="true">→</span></div>
+            </div>
+          </article>
+          <article class="card results-preview">
+            <div class="preview-toolbar"><strong>Resultados · B-03</strong><span class="pill">V-10 · copy</span></div>
+            <div class="preview-content">
+              <div class="result-row"><span class="result-icon">✓</span><span><strong>Cálculo terminado</strong><small>Se evaluaron 12 combinaciones. Revisa avisos y supuestos.</small></span></div>
+              <div class="copy-do"><strong>SÍ:</strong> “Cálculo terminado. Revisa los resultados y las advertencias antes de decidir.”</div>
+              <div class="copy-dont"><strong>NO:</strong> “La estructura es segura / certificada / cumple.”</div>
+              <p style="margin-top:18px"><b>success ≠ reliable ≠ safe.</b> La finalización del algoritmo describe proceso, no confiabilidad normativa ni seguridad.</p>
+            </div>
+          </article>
+        </div>
+
+        <h3 style="margin-top:36px">Cuatro niveles de Noche</h3>
+        <p>Grafito frío profundo, nunca negro puro: app <span class="hex">#0A1116</span> · canvas/inset <span class="hex">#0D161B</span> · surface <span class="hex">#15232B</span> · raised <span class="hex">#1E313B</span>. No existe halo verde ambiental.</p>
+      </div>
+    </section>
+
+    <section class="section" id="sistema">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">07 · V-12/13/14</span>
+          <div>
+            <h2>Detalle visual que también se puede probar.</h2>
+            <p>Iconografía de 1.8, motion funcional, focus-visible separado del canto y selección por trazo + relleno suave.</p>
+          </div>
+        </header>
+        <div class="system-grid">
+          <article class="card">
+            <span class="mono">ICONOGRAFÍA · 1.8</span>
+            <h3>Trazo consistente.</h3>
+            <div class="icon-row" aria-label="Ejemplos de iconografía">
+              <span class="icon-object"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M4 12h4m8 0h4M12 4v4m0 8v4"/></svg></span>
+              <span class="icon-object" style="color:var(--shear)"><svg viewBox="0 0 24 24"><path d="M4 18 9 7l5 9 6-10"/><path d="M4 20h16"/></svg></span>
+              <span class="icon-object" style="color:var(--moment)"><svg viewBox="0 0 24 24"><path d="M5 15a7 7 0 1 1 4 4"/><path d="m5 15 1 5 5-1"/></svg></span>
+              <span class="icon-object" style="color:var(--influence)"><svg viewBox="0 0 24 24"><path d="M3 17c4-1 6-9 9-9s5 8 9 9" stroke-dasharray="4 3"/></svg></span>
+            </div>
+          </article>
+          <article class="card">
+            <span class="mono">FOCUS-VISIBLE</span>
+            <h3>Índigo, sin glow.</h3>
+            <div class="focus-demo">Focus sobre menta</div>
+            <p style="margin-top:18px">El outline queda separado del canto; no eleva ni ilumina el control.</p>
+          </article>
+          <article class="card">
+            <span class="mono">SELECTION</span>
+            <h3>Stroke + soft fill.</h3>
+            <div class="selection-demo" aria-label="Selección con trazo y relleno suave"></div>
+            <p style="margin-top:18px">Nunca glow. El contorno conserva lectura en grayscale.</p>
+          </article>
+          <article class="card">
+            <span class="mono">MOTION</span>
+            <h3>Respuesta, no espectáculo.</h3>
+            <div class="motion-demo" aria-label="Demostración de hover y pressed">press</div>
+            <p style="margin-top:18px">Hover informa disponibilidad; pressed invierte la materia. Reduced-motion elimina el desplazamiento.</p>
+          </article>
+          <article class="card">
+            <span class="mono">SIGNIFICADO</span>
+            <h3>Más de un canal.</h3>
+            <p>Influencia = fucsia + dashed + área + etiqueta. Cortante = lima + área + V. Error = rojo + icono + texto.</p>
+          </article>
+          <article class="card">
+            <span class="mono">TARGETS</span>
+            <h3>44px cuando se toca.</h3>
+            <p>El objetivo táctil no depende del tamaño visual del glifo. Estados disabled conservan nombre accesible.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="responsive">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">08 · RESPONSIVE</span>
+          <div>
+            <h2>La misma autoridad en tres composiciones.</h2>
+            <p>Expanded mantiene rail + canvas + inspector. Medium retira el inspector persistente. Compact prioriza canvas y mueve herramientas al borde inferior.</p>
+          </div>
+        </header>
+        <div class="responsive-grid">
+          <article><span class="shell-label">EXPANDED</span><div class="shell expanded"><div class="shell-bar"></div><div class="shell-body"><i class="shell-rail"></i><i class="shell-canvas"></i><i class="shell-inspector"></i></div></div></article>
+          <article><span class="shell-label">MEDIUM</span><div class="shell medium"><div class="shell-bar"></div><div class="shell-body"><i class="shell-rail"></i><i class="shell-canvas"></i><i class="shell-inspector"></i></div></div></article>
+          <article><span class="shell-label">COMPACT</span><div class="shell compact"><div class="shell-bar"></div><div class="shell-body"><i class="shell-rail"></i><i class="shell-canvas"></i><i class="shell-inspector"></i></div></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="implementacion">
+      <div class="wrap">
+        <header class="section-heading">
+          <span class="section-index">09 · HANDOFF</span>
+          <div>
+            <h2>Autoridad canónica y checklist de implementación.</h2>
+            <p>Este archivo es el único Brandbook. <code>tokens.css</code> implementa sus valores; Component Lab demuestra los roles reales sin duplicar la paleta oficial.</p>
+          </div>
+        </header>
+        <div class="final-checks">
+          <div class="check"><p><b>Brand:</b> fill <span class="hex">#1AA57A</span>, hover <span class="hex">#159A72</span>, pressed <span class="hex">#148F69</span>, stroke <span class="hex">#087E5C</span>, ink <span class="hex">#02140F</span>.</p></div>
+          <div class="check"><p><b>Shear / distributed:</b> canto <span class="hex">#468C09</span> + área <span class="hex">#DAEFC8</span>.</p></div>
+          <div class="check"><p><b>Influence:</b> canto <span class="hex">#D85AC9</span> + área <span class="hex">#F2C2E6</span> + patrón discontinuo obligatorio.</p></div>
+          <div class="check"><p><b>Success:</b> MOVED a <span class="hex">#2D7C36</span>. <b>Aula:</b> UNCHANGED en <span class="hex">#C94A8F</span>.</p></div>
+          <div class="check"><p><b>Preservados:</b> momento <span class="hex">#ED4B46</span>, error <span class="hex">#D92E28</span>, focus/selection <span class="hex">#6A5DF2</span>, axial, deformada, reacción, cota, eje y canario.</p></div>
+          <div class="check"><p><b>Dark:</b> sólo neutrales, fondos, superficies, bordes, tintas y materia Clay; sin nueva excepción semántica.</p></div>
+          <div class="check"><p><b>Engineering:</b> influencia nunca continuous; deformada permanece continuous.</p></div>
+          <div class="check"><p><b>Logo:</b> geometría fija, sin Clay, sombras, animación ni alteración de proporción.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <span>StructureCo · Brandbook canónico · CRI-12C menta/esmeralda</span>
+    <span class="mono">Revisión 2026-08-16 · CRI-91</span>
+  </footer>
+
+  <script>
+    const root = document.documentElement;
+    const buttons = [...document.querySelectorAll('[data-theme-choice]')];
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    const setTheme = (theme) => {
+      root.dataset.theme = theme;
+      themeColor.content = theme === 'dark' ? '#0D161B' : '#FFFDF9';
+      buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme)));
+    };
+    buttons.forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeChoice)));
+  </script>
+</body>
+</html>

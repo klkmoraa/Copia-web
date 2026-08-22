@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { standardSections, type SectionShapeType, type StandardSection } from '../../data/standardSections';
+import { findStandardSection, standardSections, type SectionShapeType, type StandardSection } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
-import type { UnitSystemId } from '../../types';
+import type { MemberPropertyOrigin, UnitSystemId } from '../../types';
 import { formatInspectorValue } from './numericFormatting';
 
 const SHAPE_ORDER: readonly SectionShapeType[] = ['I', 'HSS_RECT', 'HSS_ROUND', 'C', 'L', 'RECT'];
@@ -31,21 +30,19 @@ const SECTION_LABEL_KEYS: Readonly<Record<string, TranslationKey>> = {
 
 /**
  * Selecciona un perfil comercial del catálogo estándar y aplica A e I al miembro
- * activo. Recuerda el perfil elegido para que el usuario lo siga viendo en pantalla,
- * pero solo mientras el miembro conserve esos valores: si A o I se editan a mano, el
- * selector vuelve al placeholder en lugar de mentir sobre el perfil aplicado. El
- * remontaje por selección (`key` en el llamador) evita arrastrar el perfil de un
- * miembro al siguiente.
+ * activo. La selección visible se resuelve exclusivamente mediante la identidad
+ * persistida del miembro; A e I no se usan para adivinarla.
  */
 export const SectionPresetSelector = ({
   units,
-  current,
+  selectedId,
+  origin,
   disabled,
   onSelect,
 }: {
   units: UnitSystemId;
-  /** Valores vigentes del miembro; si dejan de coincidir, el perfil deja de mostrarse. */
-  current: { A: number; I: number };
+  selectedId?: string;
+  origin?: MemberPropertyOrigin;
   disabled?: boolean;
   onSelect: (section: StandardSection) => void;
 }) => {
@@ -54,25 +51,29 @@ export const SectionPresetSelector = ({
     const key = SECTION_LABEL_KEYS[section.id];
     return key ? t(key) : section.name;
   };
-  const [selectedId, setSelectedId] = useState('');
-  const selected = standardSections.find((section) => section.id === selectedId);
-  const activeId = selected && selected.area === current.A && selected.inertiaX === current.I
-    ? selectedId
-    : '';
+  const selected = origin === 'catalog' && selectedId ? findStandardSection(selectedId) : undefined;
+  const activeId = selected?.id ?? '';
+  const identityLabel = origin === 'custom'
+    ? t('inspector.identityCustom')
+    : origin === 'imported'
+      ? t('inspector.identityImported')
+      : origin === 'catalog'
+        ? t('inspector.identityCatalogUnavailable')
+        : t('inspector.identityLegacy');
   return (
     <label className={`select-field${disabled ? ' is-disabled' : ''}`}>
       <span>{t('inspector.sectionPreset')}<small>{t('inspector.sectionPresetHint')}</small></span>
       <select
         value={activeId}
+        data-identity-origin={origin ?? 'legacy'}
         disabled={disabled}
         onChange={(event) => {
           const section = standardSections.find((item) => item.id === event.target.value);
           if (!section) return;
-          setSelectedId(section.id);
           onSelect(section);
         }}
       >
-        <option value="" disabled>{t('inspector.sectionPresetPlaceholder')}</option>
+        <option value="" disabled>{identityLabel}</option>
         {SHAPE_ORDER.map((shapeType) => {
           const items = standardSections.filter((section) => section.shapeType === shapeType);
           if (items.length === 0) return null;

@@ -1,3 +1,9 @@
+import type {
+  LinearSolverDiagnostics,
+  LinearSolverFallbackReason,
+  LinearSolverPolicy,
+} from '../types';
+
 export type Matrix = number[][];
 
 export const zeros = (rows: number, cols: number): Matrix =>
@@ -48,6 +54,7 @@ export interface LinearSolveResult {
   pivotRatio: number;
   relativeResidual: number;
   refinementIterations: number;
+  diagnostics: LinearSolverDiagnostics;
 }
 
 interface LUFactorization {
@@ -228,10 +235,10 @@ const findSingleDofConstraints = (matrix: Matrix): ConstraintElimination | null 
       if (significant > 1) break;
       column = m;
     }
-    // A duplicated target column would make the two equations fight over the
-    // same unknown; leaving the row in place keeps its zero diagonal, the
-    // factorization refuses it and the dense path takes over.
-    if (significant !== 1 || column === i || removed[column]) continue;
+    // A multi-DOF constraint or duplicated target cannot be reduced as a
+    // Dirichlet condition. Report that gate directly instead of attempting an
+    // LDLT factorization that is already known to be inapplicable.
+    if (significant !== 1 || column === i || removed[column]) return null;
     removed[i] = 1;
     removed[column] = 1;
     steps.push({ constraintRow: i, dofColumn: column, coefficient: row[column] });
@@ -462,22 +469,34 @@ const buildDenseSolver = (matrix: Matrix): GenericSolver => {
  * Returns `null` whenever the fast path is not applicable or not trustworthy;
  * every such case is answered by the dense factorization exactly as before.
  */
-const buildHybridSolver = (matrix: Matrix): GenericSolver | null => {
+interface HybridSolverAttempt {
+  solver: GenericSolver | null;
+  fallbackReason?: LinearSolverFallbackReason;
+  reducedDimension?: number;
+}
+
+const attemptHybridSolver = (matrix: Matrix): HybridSolverAttempt => {
   const n = matrix.length;
-  if (n < SPARSE_MIN_SIZE) return null;
+  if (n < SPARSE_MIN_SIZE) return { solver: null, fallbackReason: 'below-size-threshold' };
   const elimination = findSingleDofConstraints(matrix);
-  if (!elimination) return null;
+  if (!elimination) return { solver: null, fallbackReason: 'constraints-not-reducible' };
   const { steps, keep } = elimination;
   const size = keep.length;
-  if (size < SPARSE_MIN_SIZE) return null;
+  if (size < SPARSE_MIN_SIZE) {
+    return { solver: null, fallbackReason: 'reduced-system-below-threshold', reducedDimension: size };
+  }
 
   const order = reverseCuthillMcKee(matrix, keep);
   const csr = buildLowerCSR(matrix, keep, order);
   const symbolic = symbolicLDLT(csr);
   // Fill-in past this point erases the advantage over a dense factorization.
-  if (symbolic.fill > 0.25 * size * size) return null;
+  if (symbolic.fill > 0.25 * size * size) {
+    return { solver: null, fallbackReason: 'excessive-fill', reducedDimension: size };
+  }
   const factorization = numericLDLT(csr, symbolic);
-  if (!factorization) return null;
+  if (!factorization) {
+    return { solver: null, fallbackReason: 'non-positive-pivot', reducedDimension: size };
+  }
 
   const position = new Array<number>(size);
   for (let index = 0; index < size; index += 1) position[order[index]] = index;
@@ -509,14 +528,19 @@ const buildHybridSolver = (matrix: Matrix): GenericSolver | null => {
   };
 
   return {
-    solve,
-    // Only reached for a symmetric augmented system, where the transpose solve
-    // is the same operation.
-    solveTranspose: solve,
-    minPivot: factorization.minPivot,
-    maxPivot: factorization.maxPivot,
+    solver: {
+      solve,
+      // Only reached for a symmetric augmented system, where the transpose solve
+      // is the same operation.
+      solveTranspose: solve,
+      minPivot: factorization.minPivot,
+      maxPivot: factorization.maxPivot,
+    },
+    reducedDimension: size,
   };
 };
+
+const buildHybridSolver = (matrix: Matrix): GenericSolver | null => attemptHybridSolver(matrix).solver;
 
 const estimateInverseOneNorm = (solver: GenericSolver, n: number): number => {
   let x = Array(n).fill(1 / n);
@@ -559,7 +583,11 @@ const relativeResidual = (matrix: Matrix, x: number[], vector: number[]): number
  * the same residual against the original matrix, so the choice is invisible to
  * the caller.
  */
-export const solveLinearSystem = (matrix: Matrix, vector: number[]): LinearSolveResult => {
+export const solveLinearSystem = (
+  matrix: Matrix,
+  vector: number[],
+  options: { backend?: LinearSolverPolicy } = {},
+): LinearSolveResult => {
   const n = matrix.length;
   if (n === 0 || matrix.some((row) => row.length !== n) || vector.length !== n) {
     throw new Error('El sistema lineal no es cuadrado.');
@@ -568,7 +596,24 @@ export const solveLinearSystem = (matrix: Matrix, vector: number[]): LinearSolve
     throw new Error('El sistema lineal contiene valores no finitos.');
   }
 
-  const solver = buildHybridSolver(matrix) ?? buildDenseSolver(matrix);
+  const policy = options.backend ?? 'auto';
+  const hybridAttempt = policy === 'auto' ? attemptHybridSolver(matrix) : null;
+  const solver = hybridAttempt?.solver ?? buildDenseSolver(matrix);
+  const diagnostics: LinearSolverDiagnostics = hybridAttempt?.solver
+    ? {
+        policy,
+        backend: 'sparse-ldlt',
+        fallbackReason: undefined,
+        dimension: n,
+        reducedDimension: hybridAttempt.reducedDimension,
+      }
+    : {
+        policy,
+        backend: 'dense-lu',
+        fallbackReason: policy === 'dense' ? 'forced-dense' : hybridAttempt?.fallbackReason,
+        dimension: n,
+        ...(hybridAttempt?.reducedDimension === undefined ? {} : { reducedDimension: hybridAttempt.reducedDimension }),
+      };
   let x = solver.solve(vector);
   let residual = relativeResidual(matrix, x, vector);
   let refinementIterations = 0;
@@ -585,7 +630,7 @@ export const solveLinearSystem = (matrix: Matrix, vector: number[]): LinearSolve
 
   const pivotRatio = solver.maxPivot / Math.max(solver.minPivot, Number.MIN_VALUE);
   const conditionEstimate = matrixOneNorm(matrix) * estimateInverseOneNorm(solver, n);
-  return { x, conditionEstimate, pivotRatio, relativeResidual: residual, refinementIterations };
+  return { x, conditionEstimate, pivotRatio, relativeResidual: residual, refinementIterations, diagnostics };
 };
 
 export interface NullSpaceResult {

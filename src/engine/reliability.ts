@@ -1,12 +1,13 @@
 import type {
   AnalysisResult,
+  NumericQualityState,
   ReliabilityCheck,
   ReliabilityCheckId,
   ReliabilityLevel,
   ResultReliability,
 } from '../types';
 
-export type { ReliabilityCheck, ReliabilityCheckId, ReliabilityLevel, ResultReliability };
+export type { NumericQualityState, ReliabilityCheck, ReliabilityCheckId, ReliabilityLevel, ResultReliability };
 
 const LEVEL_ORDER: Record<ReliabilityLevel, number> = {
   reliable: 0,
@@ -214,3 +215,19 @@ export const classifyAnalysisReliability = (result: AnalysisResult): ResultRelia
 /** Returns the stored classification, or derives it for results built elsewhere. */
 export const resolveReliability = (result: AnalysisResult): ResultReliability =>
   result.reliability ?? classifyAnalysisReliability(result);
+
+/**
+ * Maps the engine contract to the five presentation states used by results and
+ * exports. This is deliberately a numerical-quality state, never a structural
+ * safety or probabilistic reliability classification.
+ */
+export const resolveNumericQualityState = (
+  result?: AnalysisResult | null,
+): NumericQualityState => {
+  if (!result) return 'unavailable';
+  const reliability = resolveReliability(result);
+  if (reliability.level === 'failed' || !reliability.usable) return 'failed';
+  if (reliability.level === 'reliable') return 'stable';
+  if (reliability.level === 'limited') return 'limited';
+  return 'unreliable';
+};

@@ -46,6 +46,31 @@ afterEach(() => {
 });
 
 describe('TopBar portable export', () => {
+  it('opens Space 3D from the workspace top bar', async () => {
+    const user = userEvent.setup();
+    const onOpenSpace3D = vi.fn();
+    render(<TopBarHarness><TopBar onOpenSpace3D={onOpenSpace3D} /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: /abrir space 3d/i }));
+
+    expect(onOpenSpace3D).toHaveBeenCalledOnce();
+  });
+
+  it('renders document identity, global action, and status as the only three top bar zones (CRI-95)', () => {
+    render(<TopBarHarness><TopBar onOpenSpace3D={() => {}} /></TopBarHarness>);
+    const bar = document.querySelector('.topbar')!;
+    const zones = [...bar.querySelectorAll('[data-topbar-zone]')].map((zone) => zone.getAttribute('data-topbar-zone'));
+    expect(zones).toEqual(['document', 'actions', 'status']);
+    const statusStyles = getComputedStyle(bar.querySelector('[data-topbar-zone="status"]')!);
+    expect(statusStyles.minWidth).not.toBe('0px');
+    expect(bar.querySelector('[data-topbar-cluster="document"]')).not.toBeNull();
+    // El contexto de análisis (D-09) viaja dentro de `actions`, no como zona propia.
+    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="context"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="actions"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-zone="status"]')).not.toBeNull();
+    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(4);
+  });
+
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {
     const user = userEvent.setup();
     const project = createDefaultProject();
@@ -163,58 +188,87 @@ describe('TopBar copy project JSON', () => {
 });
 
 describe('TopBar information architecture', () => {
-  it('announces local-first and offline states without relying on color', async () => {
+  it('places Model Doctor and Estado in the protected status zone and opens the Doctor directly', async () => {
+    const user = userEvent.setup();
+    const openDoctor = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-model-doctor', openDoctor);
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
 
-    expect(status?.dataset.storageState).toBe('local');
-    expect(status?.textContent).toContain('Local');
-    expect(status?.querySelector('svg')).not.toBeNull();
-    expect(status?.tabIndex).toBe(0);
-    const description = document.getElementById(status?.getAttribute('aria-describedby') ?? '');
-    expect(description?.textContent).toContain('Guardado localmente');
+    const status = container.querySelector<HTMLElement>('[data-topbar-zone="status"]')!;
+    const doctor = within(status).getByRole('button', { name: 'Model Doctor' });
+    expect(doctor.classList.contains('topbar-command-button')).toBe(true);
+    expect(within(status).queryByRole('button', { name: /paleta de comandos/i })).toBeNull();
+    // Estado (AnalysisStatus) vive en la misma zona protegida que Doctor: los
+    // dos son la afirmación más crítica del producto y nunca degradan (CRI-95).
+    expect(within(status).getByText('Listo para analizar')).toBeTruthy();
+    await user.click(doctor);
+
+    expect(openDoctor).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('announces local-first and offline states through a single accessible live region', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
+    const chip = container.querySelector<HTMLElement>('.topbar-status-zone .autosave-state')!;
+
+    expect(chip.dataset.storageState).toBe('local');
+    expect(chip.textContent).toContain('Local');
+    expect(chip.querySelector('svg')).not.toBeNull();
+    expect(chip.getAttribute('aria-live')).toBe('polite');
+    // La descripción completa ("Guardado localmente...") sobrevive al
+    // icono-only de Compact porque no depende de un `title` ni desaparece con
+    // la etiqueta corta (GAP-1 · D-14 · CRI-95).
+    expect(chip.querySelector('.sr-only')?.textContent).toContain('Guardado localmente');
+
+    // El duplicado del menú de desbordamiento no repite el `aria-live`: una
+    // sola región lo anuncia (evita la doble locución del riesgo declarado).
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const overflowMirror = container.querySelector<HTMLElement>('.mobile-storage-state');
+    expect(overflowMirror?.getAttribute('aria-live')).toBeNull();
+    expect(overflowMirror?.textContent).toContain('Local');
+    await user.keyboard('{Escape}');
 
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
     window.dispatchEvent(new Event('offline'));
 
-    await waitFor(() => expect(status?.dataset.storageState).toBe('offline'));
-    expect(status?.textContent).toContain('Sin conexión');
-    expect(status?.getAttribute('aria-live')).toBe('polite');
-    expect(status?.title).toContain('Puedes seguir trabajando');
-    expect(description?.textContent).toContain('Puedes seguir trabajando');
+    await waitFor(() => expect(chip.dataset.storageState).toBe('offline'));
+    expect(chip.textContent).toContain('Sin conexión');
+    expect(chip.getAttribute('aria-live')).toBe('polite');
+    expect(chip.querySelector('.sr-only')?.textContent).toContain('Puedes seguir trabajando');
   });
 
-  it('distinguishes a load failure from a save failure', () => {
+  it('distinguishes a load failure from a save failure', async () => {
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    const chip = container.querySelector<HTMLElement>('.topbar-status-zone .autosave-state')!;
 
-    expect(status?.dataset.storageState).toBe('load-error');
-    expect(status?.textContent).toContain('Error al cargar');
-    expect(status?.title).toContain('No se pudo abrir la copia local');
+    expect(chip.dataset.storageState).toBe('load-error');
+    expect(chip.textContent).toContain('Error al cargar');
+    expect(chip.querySelector('.sr-only')?.textContent).toContain('No se pudo abrir la copia local');
   });
 
-  it('prioritizes the actionable offline state over a recovered backup notice', () => {
+  it('prioritizes the actionable offline state over a recovered backup notice', async () => {
     localStorage.setItem(PROJECT_BACKUP_KEY, JSON.stringify(createDefaultProject()));
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
 
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    const chip = container.querySelector<HTMLElement>('.topbar-status-zone .autosave-state')!;
 
-    expect(status?.dataset.storageState).toBe('offline');
-    expect(status?.textContent).toMatch(/Sin conexi/);
+    expect(chip.dataset.storageState).toBe('offline');
+    expect(chip.textContent).toMatch(/Sin conexi/);
   });
 
-  it('keeps a local-load error visible when the browser is also offline', () => {
+  it('keeps a local-load error visible when the browser is also offline', async () => {
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
 
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    const chip = container.querySelector<HTMLElement>('.topbar-status-zone .autosave-state')!;
 
-    expect(status?.dataset.storageState).toBe('load-error');
-    expect(status?.textContent).toContain('Error al cargar');
+    expect(chip.dataset.storageState).toBe('load-error');
+    expect(chip.textContent).toContain('Error al cargar');
   });
 
   it('returns focus to the project menu trigger after closing Import Center', async () => {
@@ -232,13 +286,13 @@ describe('TopBar information architecture', () => {
     await waitFor(() => expect(document.activeElement).toBe(projectMenuTrigger));
   });
 
-  it('groups document, context, and actions without losing secondary controls', async () => {
+  it('groups document, action, and status without losing secondary controls', async () => {
     const user = userEvent.setup();
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     expect(container.querySelector('[data-topbar-zone="document"]')).not.toBeNull();
-    expect(container.querySelector('[data-topbar-zone="context"]')).not.toBeNull();
     expect(container.querySelector('[data-topbar-zone="actions"]')).not.toBeNull();
+    expect(container.querySelector('[data-topbar-zone="status"]')).not.toBeNull();
 
     const projectName = screen.getByRole('textbox', { name: 'Nombre del proyecto' });
     expect(projectName.getAttribute('title')).toBe(projectName.getAttribute('value'));
@@ -261,14 +315,11 @@ describe('TopBar information architecture', () => {
     const user = userEvent.setup();
     const onToggleInspector = vi.fn();
     const onToggleFullCanvas = vi.fn();
-    const onToggleToolRail = vi.fn();
     render(<TopBarHarness><TopBar layoutActions={{
       inspectorCollapsed: false,
       fullCanvas: false,
-      toolRailCompact: false,
       onToggleInspector,
       onToggleFullCanvas,
-      onToggleToolRail,
     }} /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
@@ -279,8 +330,9 @@ describe('TopBar information architecture', () => {
     await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
     expect(onToggleFullCanvas).toHaveBeenCalledOnce();
 
+    // La compacidad del riel dejó de ser una intención del usuario (CRI-89): la
+    // decide la clase de composición, así que su conmutador ya no existe.
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
-    await user.click(screen.getByRole('button', { name: 'Contraer herramientas' }));
-    expect(onToggleToolRail).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Contraer herramientas' })).toBeNull();
   });
 });
