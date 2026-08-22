@@ -253,7 +253,7 @@ async function verifyWelcomeFirstPaintMaterial() {
   out.checks.welcomeRailFirstPaintHasClayBorder = rail.borderTopWidth !== '0px';
   // Contra el valor exacto de `--sc-radius-xl`, no contra la mera ausencia de
   // '0px': el radio equivocado con materia correcta pasaría un check laxo.
-  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '24px';
+  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '14px';
   await page.close();
 }
 
@@ -272,7 +272,7 @@ async function verifyWelcomeFirstPaintMaterial() {
  * Reads the real composed material for a selector through Chromium's
  * getComputedStyle. Tasks 4-9 reuse this because jsdom does not render CSS.
  */
-async function readClayMaterial(page, selector) {
+async function readComposedMaterial(page, selector) {
   return page.$eval(selector, (el) => {
     const style = window.getComputedStyle(el);
     return {
@@ -313,74 +313,87 @@ async function readResolvedColorToken(page, token) {
   }, token);
 }
 
-async function verifyTopbarClayMaterial(page) {
-  const material = await readClayMaterial(page, '.topbar');
+/* La barra unificada es CRISTAL: material translúcido que desenfoca y satura
+   lo que pasa por debajo, más un filete inferior. Lo contrario de lo que
+   vigilaba la versión anterior de este check, que exigía ausencia de
+   `backdrop-filter` y una sombra de arcilla con capas interiores. */
+async function verifyTopbarMaterial(page) {
+  const material = await readComposedMaterial(page, '.topbar');
   return {
-    topbarHasNoBackdropFilter: material.backdropFilter === 'none',
-    topbarHasClayShadow: material.boxShadow.includes('inset'),
+    topbarHasTranslucentMaterial: /blur\(/.test(material.backdropFilter) && /saturate\(/.test(material.backdropFilter),
+    // El navegador redondea 0.5px a 1px al computar un borde; lo que se afirma
+    // es que el canto existe y está SÓLO abajo, no su medida subpíxel.
+    topbarHasBottomHairlineOnly: material.borderStyles === 'none none solid none',
+    topbarHasNoProjectedShadow: material.boxShadow === 'none',
   };
 }
 
-async function verifyToolRailClayMaterial(page, viewport) {
-  const material = await readClayMaterial(page, '.toolbar');
-  // CRI-119 · Medido en el producto real (K0 retrato, 390×844): el canto de
-  // `.toolbar` es `1px 1px 0px 0px`, no sólo superior. `--toolbar-hairline-width`
-  // se redeclara en tres bloques `@media` con condiciones solapadas
-  // (`max-width:1023px`, `max-width:1023px and orientation:landscape`,
-  // `max-width:700px`) y el valor que gana en este ancho ya no es sólo
-  // superior — se mide el contrato real, no el que un bloque aislado sugiere.
-  const edgeContract = viewport === 'Desktop'
-    ? { key: 'toolRailDesktopHasFourSidedClayEdge', widths: '1px 1px 1px 1px' }
-    : { key: 'toolRailMobilePortraitHasTopRightClayEdge', widths: '1px 1px 0px 0px' };
+/* La barra lateral y la barra superior son la misma pieza de cristal doblada,
+   así que comparten contrato: material translúcido y un solo canto, el que da
+   al contenido. Medido en el producto real en los dos anchos —el riel no
+   cambia de materia entre escritorio y móvil, sólo de sitio. */
+async function verifyToolRailMaterial(page, viewport) {
+  const material = await readComposedMaterial(page, '.toolbar');
   return {
-    [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
-    [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
-    [edgeContract.key]: material.borderWidths === edgeContract.widths,
+    [`toolRail${viewport}HasTranslucentMaterial`]: /blur\(/.test(material.backdropFilter) && /saturate\(/.test(material.backdropFilter),
+    [`toolRail${viewport}HasSingleHairlineEdge`]: material.borderStyles.split(' ').filter((style) => style === 'solid').length === 1,
+    [`toolRail${viewport}HasNoProjectedShadow`]: material.boxShadow === 'none',
   };
 }
 
-async function verifyCanvasChromeClayMaterial(page) {
-  const badge = await readClayMaterial(page, '.canvas-mode-badge');
-  const controls = await readClayMaterial(page, '.canvas-controls');
-  const expectedBorderColor = await readResolvedColorToken(page, '--sc-color-border-canvas-chrome');
+/* El chrome del lienzo es donde el material se gana el sueldo: al ser
+   translúcido, la estructura de debajo se sigue viendo A TRAVÉS del control en
+   vez de quedar tapada por una pastilla opaca. Por eso aquí no se afirma un
+   borde medido —ya no lleva ninguno— sino el material y el anillo especular de
+   medio píxel que le da grosor de cristal. */
+async function verifyCanvasChromeMaterial(page) {
+  const badge = await readComposedMaterial(page, '.canvas-mode-badge');
+  const controls = await readComposedMaterial(page, '.canvas-controls');
   const materials = [badge, controls];
-  const hasNoBackdropFilter = (material) =>
-    material.backdropFilter === 'none' && material.webkitBackdropFilter === 'none';
-  const hasMeasuredBorder = (material) =>
-    material.borderTopWidth === '1px' &&
-    material.borderTopStyle === 'solid' &&
-    material.borderTopColor === expectedBorderColor;
-  const hasFloatingClayShadow = (material) =>
-    (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2;
+  const isTranslucent = (material) =>
+    /blur\(/.test(material.backdropFilter) || /blur\(/.test(material.webkitBackdropFilter);
+  const hasNoPaintedBorder = (material) => material.borderStyles === 'none none none none';
+  const hasSpecularRing = (material) => (material.boxShadow.match(/\binset\b/g) ?? []).length === 1;
 
   return {
-    canvasChromeHasNoBackdropFilter: materials.every(hasNoBackdropFilter),
-    canvasChromeHasMeasuredBorder: materials.every(hasMeasuredBorder),
-    canvasChromeHasFloatingClayShadow: materials.every(hasFloatingClayShadow),
+    canvasChromeHasTranslucentMaterial: materials.every(isTranslucent),
+    canvasChromeHasNoPaintedBorder: materials.every(hasNoPaintedBorder),
+    canvasChromeHasSpecularRing: materials.every(hasSpecularRing),
   };
 }
 
-function hasRaisedClayMaterial(material) {
+/* RAISED es un plano OPACO con canto y sin volumen propio: un panel acoplado
+   no está despegado de nada, así que no proyecta y no lleva luz interior. Lo
+   que lo separa de lo que tiene debajo es el filete y el valor del fondo. */
+function hasRaisedMaterial(material) {
   const widths = material.borderWidths.split(' ');
   const styles = material.borderStyles.split(' ');
   const hasSolidEdge = widths.some((width, index) => width !== '0px' && styles[index] === 'solid');
   return material.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
     hasSolidEdge &&
-    (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2 &&
+    !material.boxShadow.includes('inset') &&
     material.backdropFilter === 'none' &&
     material.webkitBackdropFilter === 'none';
 }
 
-function hasExactClayBorderGeometry(material, expectedWidths) {
+function hasExactBorderGeometry(material, expectedWidths) {
   return material.borderWidths === expectedWidths &&
     material.borderStyles === 'solid solid solid solid';
 }
 
-function hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder) {
-  return material.background === expectedSurface &&
-    material.borderTopWidth === '1px' &&
-    material.borderTopStyle === 'solid' &&
-    material.borderTopColor === expectedSoftBorder &&
+/* FLAT es la ausencia deliberada de materia en una zona técnica densa: un
+   relleno de la jerarquía de fills, sin canto visible y sin sombra. Antes era
+   superficie opaca más borde suave; ahora un dato no es una pieza.
+ *
+ * El canto se declara `0.5px solid transparent` y no `0`: reservar el hueco
+ * evita que la caja salte cuando un estado le pinta un borde de verdad. Por eso
+ * lo que se afirma es que el canto es INVISIBLE, no que no exista — exigir
+ * `border-style: none` daría rojo sobre una implementación correcta. */
+function hasFlatMaterial(material, allowedBackgrounds) {
+  const borderIsInvisible = material.borderStyles === 'none none none none' ||
+    /^(rgba\(0, 0, 0, 0\)|transparent)$/.test(material.borderTopColor);
+  return allowedBackgrounds.includes(material.backgroundColor) &&
+    borderIsInvisible &&
     material.boxShadow === 'none';
 }
 
@@ -403,29 +416,30 @@ async function openInspectorFromSelection(page) {
 }
 
 async function verifyInspectorPanelContract(page, { viewport, geometryKey, expectedWidths }) {
-  const panel = await readClayMaterial(page, '.inspector-panel');
+  const panel = await readComposedMaterial(page, '.inspector-panel');
   return {
     checks: {
-      [`inspector${viewport}PanelHasRaisedClayMaterial`]: hasRaisedClayMaterial(panel),
+      [`inspector${viewport}PanelHasRaisedMaterial`]: hasRaisedMaterial(panel),
       [geometryKey]: panel.borderWidths === expectedWidths,
     },
     material: panel,
   };
 }
 
-// CRI-119 · CRI-105 aplanó `.inspector-summary` a propósito: "el resumen se
-// renderiza DENTRO de `.inspector-panel`, que ya es RAISED — darle canto de
-// volumen y sombra propia era la pareja de elevaciones anidadas sin cambio de
-// nivel que V-04 prohíbe" (comentario junto a la regla en `styles.css`). Este
-// check medía la elevación que CRI-105 quitó a propósito; ahora mide la
-// materia FLAT (fondo, canto fino, sin sombra) que ese mismo slice dejó en su
-// lugar — mismo contrato que ya usan las familias flat de resultados.
+// El resumen de selección es una AGRUPACIÓN dentro del panel, no una tarjeta
+// apoyada sobre él: se renderiza dentro de `.inspector-panel`, que ya es
+// RAISED, así que darle sombra propia sería elevar una elevación sin cambiar de
+// nivel. Conserva el canto suave —eso es lo que lo lee como grupo— y pierde la
+// materia. No es FLAT: una zona flat no tiene canto visible, y ésta sí.
 async function verifyInspectorSummaryContract(page, state) {
-  const summary = await readClayMaterial(page, '.inspector-summary');
-  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
+  const summary = await readComposedMaterial(page, '.inspector-summary');
   const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
   return {
-    [`inspectorDesktop${state}SummaryHasFlatClayMaterial`]: hasFlatClayMaterial(summary, expectedSurface, expectedSoftBorder),
+    [`inspectorDesktop${state}SummaryIsGroupedNotElevated`]:
+      summary.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+      summary.borderTopColor === expectedSoftBorder &&
+      summary.boxShadow === 'none' &&
+      summary.backdropFilter === 'none',
   };
 }
 
@@ -478,17 +492,16 @@ async function verifyInspectorFlatFamilies(page) {
     return familySources;
   }, inspectorFlatFamilies);
 
-  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
-  const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
+  const expectedFill = await readResolvedColorToken(page, '--sc-color-fill-quaternary');
   const checks = {};
   try {
     for (const family of inspectorFlatFamilies) {
       const selector = sources[family.key] === 'real'
         ? `.inspector-panel ${family.selector}`
         : `[data-qa-inspector-flat-family="${family.key}"]`;
-      const material = await readClayMaterial(page, selector);
+      const material = await readComposedMaterial(page, selector);
       checks[`inspectorDesktopFlat${family.key}HasFlatMaterial`] =
-        hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
+        hasFlatMaterial(material, [expectedFill]);
     }
   } finally {
     await page.evaluate(() => document.querySelector('[data-qa-inspector-flat-probes]')?.remove());
@@ -504,13 +517,13 @@ async function verifyInspectorResponsiveViewports() {
     {
       viewport: 'Tablet',
       size: { width: 900, height: 1024 },
-      geometryKey: 'inspectorTabletPanelHasLeftOnlyClayGeometry',
+      geometryKey: 'inspectorTabletPanelHasLeftOnlyGeometry',
       expectedWidths: '0px 0px 0px 1px',
     },
     {
       viewport: 'Landscape',
       size: { width: 844, height: 390 },
-      geometryKey: 'inspectorLandscapePanelHasLeftOnlyClayGeometry',
+      geometryKey: 'inspectorLandscapePanelHasLeftOnlyGeometry',
       expectedWidths: '0px 0px 0px 1px',
     },
   ];
@@ -613,11 +626,11 @@ async function prepareResultsMaterialTargets(page) {
 
 async function verifyResultsClayMaterial(page) {
   const checks = {};
-  const panel = await readClayMaterial(page, '.results-panel');
-  checks.resultsDesktopPanelHasRaisedClayMaterial = hasRaisedClayMaterial(panel);
+  const panel = await readComposedMaterial(page, '.results-panel');
+  checks.resultsDesktopPanelHasRaisedMaterial = hasRaisedMaterial(panel);
   checks.resultsDesktopPanelHasNoBackdropFilter =
     panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
-  checks.resultsDesktopPanelHasTopOnlyClayGeometry = hasExactClayBorderGeometry(panel, '1px 0px 0px 0px');
+  checks.resultsDesktopPanelHasTopOnlyGeometry = hasExactBorderGeometry(panel, '1px 0px 0px 0px');
 
   // CRI-119 · Reacciones dejó de ser una pestaña residente del panel (CRI-101):
   // vive en la superficie densa, invocada por su lanzador. Se abre, se mide su
@@ -626,7 +639,7 @@ async function verifyResultsClayMaterial(page) {
   await page.locator('[data-dense-launcher="reactions"]').click();
   await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.locator('.dense-results-surface .results-table').waitFor({ state: 'visible' });
-  const table = await readClayMaterial(page, '.dense-results-surface .results-table');
+  const table = await readComposedMaterial(page, '.dense-results-surface .results-table');
   checks.resultsDesktopResultsTableHasNoContainerMaterial =
     table.borderWidths === '0px 0px 0px 0px' && table.boxShadow === 'none';
   checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.dense-results-surface .results-table :is(th, td)').first().evaluate((cell) => {
@@ -637,21 +650,20 @@ async function verifyResultsClayMaterial(page) {
   await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
 
   const sources = await prepareResultsMaterialTargets(page);
-  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
-  const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
+  const expectedFill = await readResolvedColorToken(page, '--sc-color-fill-quaternary');
   try {
     for (const family of resultsFlatFamilies) {
       const selector = sources[family.key] === 'real'
         ? `.results-panel ${family.selector}`
         : `[data-qa-results-flat-family="${family.key}"]`;
-      const material = await readClayMaterial(page, selector);
+      const material = await readComposedMaterial(page, selector);
       checks[`resultsDesktopFlat${family.key}HasFlatMaterial`] =
-        hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
+        hasFlatMaterial(material, [expectedFill]);
     }
     const substitutionSelector = sources.EducationNumericalSubstitution === 'real'
       ? '.results-panel .education-numerical-substitution'
       : '[data-qa-results-numerical-substitution]';
-    const substitution = await readClayMaterial(page, substitutionSelector);
+    const substitution = await readComposedMaterial(page, substitutionSelector);
     checks.resultsDesktopEducationNumericalSubstitutionIsIntegrated =
       hasTransparentBackground(substitution) &&
       substitution.borderWidths === '0px 0px 0px 0px' &&
@@ -668,7 +680,7 @@ async function verifyResultsClayMaterial(page) {
 
   try {
     await page.emulateMedia({ media: 'print' });
-    const printPanel = await readClayMaterial(page, '.results-panel');
+    const printPanel = await readComposedMaterial(page, '.results-panel');
     checks.resultsPrintPanelHasTransparentBackground = hasTransparentBackground(printPanel);
     checks.resultsPrintPanelHasNoBorder = printPanel.borderWidths === '0px 0px 0px 0px';
     checks.resultsPrintPanelHasNoShadow = printPanel.boxShadow === 'none';
@@ -679,14 +691,14 @@ async function verifyResultsClayMaterial(page) {
 }
 
 async function verifyResultsPhonePortraitMaterial(page) {
-  const panel = await readClayMaterial(page, '.results-panel');
+  const panel = await readComposedMaterial(page, '.results-panel');
   out.metrics.resultsPhonePortrait = {
     ...page.viewportSize(),
     borderWidths: panel.borderWidths,
   };
   return {
-    resultsPhonePortraitPanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-    resultsPhonePortraitPanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
+    resultsPhonePortraitPanelHasRaisedMaterial: hasRaisedMaterial(panel),
+    resultsPhonePortraitPanelHasTopOnlyGeometry: hasExactBorderGeometry(panel, '1px 0px 0px 0px'),
   };
 }
 
@@ -710,7 +722,7 @@ async function verifyResultsPhoneLandscapeMaterial() {
       await page.locator('.results-mobile-toggle').click();
     }
     await page.waitForFunction(() => !document.querySelector('.results-panel')?.classList.contains('mobile-collapsed'));
-    const panel = await readClayMaterial(page, '.results-panel');
+    const panel = await readComposedMaterial(page, '.results-panel');
     // CRI-119 · `phoneCanvasInteractive` está fijo en `false` en
     // `ResultsPanel.tsx` — el atributo nunca es `'true'`, a propósito: la
     // propia prueba unitaria de ese contrato
@@ -729,11 +741,11 @@ async function verifyResultsPhoneLandscapeMaterial() {
     };
     return {
       resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive,
-      resultsPhoneLandscapePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
+      resultsPhoneLandscapePanelHasRaisedMaterial: hasRaisedMaterial(panel),
       // CRI-119 · El panel es una hoja inferior con canto SUPERIOR, igual en
       // apaisado que en retrato — no hay regla que le sume un canto izquierdo
       // en este breakpoint; medido en el producto real: `1px 0px 0px 0px`.
-      resultsPhoneLandscapePanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
+      resultsPhoneLandscapePanelHasTopOnlyGeometry: hasExactBorderGeometry(panel, '1px 0px 0px 0px'),
     };
   } finally {
     await page.close();
@@ -746,7 +758,7 @@ async function verifyWelcomeSurfaceMaterial(page) {
   // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
   // único que este check vigilaba lo eliminó CRI-112, y su papel de figura
   // dominante de la bienvenida lo hereda el carril de puertas.
-  const railMaterial = await readClayMaterial(page, '.welcome-gate-rail');
+  const railMaterial = await readComposedMaterial(page, '.welcome-gate-rail');
   out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
 
   const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
@@ -754,11 +766,11 @@ async function verifyWelcomeSurfaceMaterial(page) {
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
   out.checks.welcomeRailHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  // Comparado contra el valor exacto esperado (--sc-radius-xl = 24px), no
-  // contra una simple ausencia de '0px': un radio de otra escala pasaría el
+  // Comparado contra el valor exacto esperado (--sc-radius-xl → panel, 14px),
+  // no contra una simple ausencia de '0px': un radio de otra escala pasaría el
   // check laxo igual de verde que el correcto, que es exactamente como se coló
   // el Critical 2 sin que ningún check lo viera.
-  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '24px';
+  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '14px';
 
   // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
   // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
@@ -786,17 +798,16 @@ async function verifyWelcomeSurfaceMaterial(page) {
     await page.waitForTimeout(220);
     const hovered = await readState();
 
-    out.checks[`welcome${key}CardHoverBoxShadowChanges`] = hovered.boxShadow !== resting.boxShadow;
-    out.checks[`welcome${key}CardHoverBorderColorChanges`] = hovered.borderColor !== resting.borderColor;
-    // `.welcome-template-card` sigue siendo `m.button` con `layout` (el reflow
-    // de `AnimatePresence` del filtro): motion posee el canal `transform` de
-    // ese nodo via estilo inline, que gana siempre sobre `:hover`/`:active`
-    // en CSS, así que ahí el desplazamiento se omite a propósito (ver el
-    // comentario en `.welcome-template-card` de `styles.css`). El borde y la
-    // sombra siguen cambiando, así que el estado no depende sólo de un signo.
-    if (key !== 'template') {
-      out.checks[`welcome${key}CardHoverTransformChanges`] = hovered.transform !== resting.transform && hovered.transform !== 'none';
-    }
+    // Un control del sistema no se despega de la ventana al pasar por encima:
+    // se tiñe. Lo que este check exige ya no es que la SOMBRA cambie —ninguna
+    // lo hace— sino que el hover se note en el plano: relleno o canto.
+    out.checks[`welcome${key}CardHoverTintChanges`] =
+      hovered.backgroundColor !== resting.backgroundColor || hovered.borderColor !== resting.borderColor;
+    // El desplazamiento en hover se retiró del sistema entero: era la firma de
+    // la identidad anterior y ningún control del sistema lo hace. Lo que este
+    // check afirma ahora es lo contrario — que la tarjeta NO se mueve al pasar
+    // el puntero, para que un `translateY` copiado de una regla vieja se vea.
+    out.checks[`welcome${key}CardHoverDoesNotLift`] = hovered.transform === resting.transform;
 
     const box = await locator.boundingBox();
     if (box) {
@@ -835,20 +846,20 @@ async function verifyWelcomeSurfaceMaterial(page) {
         // valor que demuestra el hundimiento correcto es la matriz que
         // produce `--sc-press-transform`.
         //
-        // CRI-119 · El token pasó de `translateY(1px)` puro a
-        // `translateY(1.5px) scale(0.985)` (un "hundimiento" que también
-        // encoge un poco, no sólo desciende) — se actualiza el número que este
-        // check exige, no el criterio: sigue siendo el valor EXACTO de la
-        // matriz, sigue distinguiéndose de `scale(.975)` sin traslación
-        // (0.975 ≠ 0.985, y ahí sigue el ty).
+        // El token pasó de `translateY(1.5px) scale(0.985)` a `scale(0.97)`
+        // limpio: un control del sistema no desciende al pulsarse, encoge. Se
+        // actualiza el número que este check exige, no el criterio — sigue
+        // siendo el valor EXACTO de la matriz, y ahora además exige que NO
+        // haya traslación, que es justo la parte que se retiró.
         const values = pressed.transform.match(/^matrix\(([^)]+)\)$/)?.[1]
           .split(',')
           .map((value) => Number.parseFloat(value.trim())) ?? [];
-        out.checks[`welcome${key}CardActiveTransformIsPressedTranslate`] =
+        out.checks[`welcome${key}CardActiveTransformIsPressedScale`] =
           values.length === 6 &&
-          Math.abs(values[0] - 0.985) < 0.001 &&
-          Math.abs(values[3] - 0.985) < 0.001 &&
-          Math.abs(values[5] - 1.5) < 0.001;
+          Math.abs(values[0] - 0.97) < 0.001 &&
+          Math.abs(values[3] - 0.97) < 0.001 &&
+          Math.abs(values[4]) < 0.001 &&
+          Math.abs(values[5]) < 0.001;
       }
     }
   }
@@ -945,13 +956,13 @@ async function desktop() {
   await verifyWelcomeHeaderResponsive(page);
   await verifyWelcomeSurfaceMaterial(page);
   await enterWorkspace(page, { example: true });
-  Object.assign(out.checks, await verifyTopbarClayMaterial(page));
-  Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));
-  Object.assign(out.checks, await verifyCanvasChromeClayMaterial(page));
+  Object.assign(out.checks, await verifyTopbarMaterial(page));
+  Object.assign(out.checks, await verifyToolRailMaterial(page, 'Desktop'));
+  Object.assign(out.checks, await verifyCanvasChromeMaterial(page));
   await page.locator('.inspector-summary.is-empty').waitFor({ state: 'visible' });
   const desktopPanel = await verifyInspectorPanelContract(page, {
     viewport: 'Desktop',
-    geometryKey: 'inspectorDesktopPanelHasFourSidedClayGeometry',
+    geometryKey: 'inspectorDesktopPanelHasFourSidedGeometry',
     expectedWidths: '1px 1px 1px 1px',
   });
   Object.assign(out.checks, desktopPanel.checks);
@@ -1184,7 +1195,7 @@ async function mobile() {
   await page.reload({ waitUntil: 'networkidle' });
   await verifyWelcomeMobileScroll(page, cdp, { width: 430, height: 932 });
   await enterWorkspace(page, { example: true });
-  Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Mobile'));
+  Object.assign(out.checks, await verifyToolRailMaterial(page, 'Mobile'));
   const metrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.mobile = metrics;
   out.checks.mobileNoHorizontalOverflow = metrics.sw <= metrics.cw + 1;
@@ -1295,7 +1306,7 @@ async function mobile() {
   await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
   const phonePanel = await verifyInspectorPanelContract(page, {
     viewport: 'Phone',
-    geometryKey: 'inspectorPhonePanelHasBottomSheetClayGeometry',
+    geometryKey: 'inspectorPhonePanelHasBottomSheetGeometry',
     expectedWidths: '1px 1px 0px 1px',
   });
   Object.assign(out.checks, phonePanel.checks);
