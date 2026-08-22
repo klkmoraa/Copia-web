@@ -266,7 +266,7 @@
   position: absolute;
   z-index: 26;
   left: 50%;
-  bottom: 16px;
+  bottom: var(--sc-chrome-tier-1);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30px;
   align-items: stretch;
@@ -364,24 +364,11 @@
 }
 
 .contextual-actions[data-shell-class='K0'] {
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   width: min(560px, calc(100% - 20px));
 }
 
-/* Preserve the existing Inspector route without letting its floating trigger
-   cover the required zócalo disclosure in Compact. */
-@media (max-width: 1023px) {
-  .app-shell:has(.contextual-actions) .mobile-inspector-toggle {
-    top: 12px;
-    bottom: auto;
-  }
-}
-
 @media (max-height: 600px) and (orientation: landscape) {
-  .contextual-actions[data-shell-class='K0'] {
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    padding: 6px;
-  }
+  .contextual-actions[data-shell-class='K0'] { padding: 6px; }
 
   .contextual-actions[data-shell-class='K0'] .contextual-actions__overflow {
     max-height: min(56vh, 250px);

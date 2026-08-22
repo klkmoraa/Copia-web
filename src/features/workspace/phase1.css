@@ -135,7 +135,7 @@
   .inspector-panel.mobile-open[data-mobile-detent='compact'] { height:min(34dvh,320px); }
   .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(58dvh,540px); }
   .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
-  .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:calc(76px + env(safe-area-inset-bottom)); min-height:44px; }
+  .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:var(--sc-chrome-tier-2); min-height:44px; }
   .repeat-preview { top:calc(var(--canvas-safe-top) + 8px); }
   .results-panel.results-mode-focused { position:fixed; inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); width:100%; height:var(--sc-visual-viewport-height,100dvh)!important; min-height:0; max-height:none; z-index:calc(var(--sc-z-modal) + 1); border-radius:0; }
 }
@@ -146,4 +146,96 @@
 
 @media (prefers-reduced-motion:reduce) {
   .repeat-action-control,.repeat-action-control:hover,.repeat-action-control:active,.repeat-preview button:active { transform:none; transition:none; }
+}
+
+/* ---------------------------------------------------------------------------
+   La barra inferior de Compact (`CompactBottomBar.tsx`).
+
+   Es una fila del shell, no un flotante. Antes este borde lo disputaban cuatro
+   piezas —dock de seis herramientas, pill de lanzadores, zócalo de selección y
+   entrada por coordenadas— y el pill se posaba encima del dock. Ahora hay un
+   suelo (`--sc-chrome-floor`) y todo lo demás se apila sobre él.
+
+   Materia: la barra de pestañas del sistema es material translúcido con un
+   filete de medio píxel arriba y NINGUNA proyección — no está despegada de
+   nada, está pegada al borde de la ventana.
+   -------------------------------------------------------------------------- */
+.compact-bar {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: var(--sc-space-1);
+  height: var(--sc-chrome-floor);
+  padding: 0 max(var(--sc-space-2), env(safe-area-inset-right)) env(safe-area-inset-bottom) max(var(--sc-space-2), env(safe-area-inset-left));
+  background: var(--sc-material-thick);
+  -webkit-backdrop-filter: var(--sc-material-blur-thick);
+  backdrop-filter: var(--sc-material-blur-thick);
+  border-top: var(--sc-hairline);
+  box-shadow: none;
+}
+
+.compact-bar__slot {
+  min-width: 0;
+  height: var(--sc-control-height-touch);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--sc-motion-control) var(--sc-ease-standard), background-color var(--sc-motion-control) var(--sc-ease-standard);
+}
+
+.compact-bar__icon { display: grid; place-items: center; }
+.compact-bar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-medium);
+  line-height: 1;
+}
+
+/* Ningún control se eleva bajo el dedo: se tiñe. */
+.compact-bar__slot:active { background: var(--sc-color-fill-quaternary); }
+.compact-bar__slot[aria-expanded='true'] {
+  color: var(--sc-color-action-primary);
+  font-weight: var(--sc-font-weight-semibold);
+}
+.compact-bar__slot[aria-expanded='true'] .compact-bar__label { font-weight: var(--sc-font-weight-semibold); }
+
+/* La ranura de herramienta enseña su VALOR: el nombre de la activa, no la
+   palabra «Herramientas». Por eso su etiqueta pesa como la de un valor. */
+.compact-bar__tool .compact-bar__label { font-weight: var(--sc-font-weight-semibold); color: var(--sc-color-text-primary); }
+
+/* «Analizar» no es un destino: es LA acción, y el acento está reservado a la
+   acción. Va aparte de las ranuras y es lo único azul de la barra. */
+.compact-bar__analyze {
+  width: var(--sc-control-height-touch);
+  height: var(--sc-control-height-touch);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  margin-left: var(--sc-space-1);
+  border: 0;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+.compact-bar__analyze:active:not(:disabled) { transform: var(--sc-press-transform); }
+.compact-bar__analyze:disabled { opacity: 0.5; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .compact-bar__slot, .compact-bar__analyze { transition: none; }
+  .compact-bar__analyze:active:not(:disabled) { transform: none; }
 }

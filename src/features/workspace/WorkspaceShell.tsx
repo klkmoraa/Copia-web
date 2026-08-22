@@ -12,6 +12,7 @@ import { useProject } from '../../store/ProjectContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
+import { CompactBottomBar } from './CompactBottomBar';
 import { ShellCompositionProvider } from './ShellCompositionProvider';
 import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
@@ -50,6 +51,8 @@ const WorkspaceBrokerContent = ({
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
+  /** Compact es la única clase con barra inferior: es su ranura del pulgar. */
+  const compact = shellClass === 'K0';
   const broker = useSurfacePresentation();
   const { openSurface, closeSurface, toggleSurface, markSurfaceReady, setSurfaceExtent } = broker;
   const detail = broker.stateFor('detail');
@@ -311,7 +314,11 @@ const WorkspaceBrokerContent = ({
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
       {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
     </div>}
-    floatingActions={<div className="workspace-surface-launcher">
+    /* En Compact los lanzadores viven en la barra inferior, que es una fila del
+       shell y no un flotante: el pill que había aquí se posaba literalmente
+       encima del dock de herramientas. Fuera de Compact siguen siendo chrome
+       del lienzo, donde sí hay sitio y no compiten con nada. */
+    floatingActions={compact ? null : <div className="workspace-surface-launcher">
       <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
       <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
       <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
@@ -321,7 +328,9 @@ const WorkspaceBrokerContent = ({
           denso (resumen, reacciones, influencia, aprender). */}
       <button type="button" onClick={(event) => openSurface('results', event.currentTarget)} aria-label={t('results.outputs')}>{t('results.outputs')}</button>
     </div>}
-    footer={<div className="professional-note">{t('app.professionalNote')}</div>}
+    footer={compact
+      ? <CompactBottomBar onOpenSurface={openSurface} isSurfaceActive={(surface) => broker.stateFor(surface).status === 'active'} />
+      : <div className="professional-note">{t('app.professionalNote')}</div>}
   />;
 };
 

@@ -48,6 +48,14 @@ export interface WorkspaceCommands {
    * shares the workspace selection, so it needs no payload of its own.
    */
   'open-datasheet': void;
+  /**
+   * Raise the tool palette sheet. En Compact la barra inferior enseña la
+   * herramienta ACTIVA en una sola ranura —un ítem de barra enseña su valor, no
+   * su categoría— y el resto del catálogo vive en la hoja que ya existía para
+   * «Más»; este comando es lo que las conecta sin que la barra tenga que saber
+   * cómo está montado el riel.
+   */
+  'open-tool-palette': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
   /**

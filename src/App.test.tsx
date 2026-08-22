@@ -145,7 +145,11 @@ const renderExampleApp = async (user: ReturnType<typeof userEvent.setup>) => {
 const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
   const topbar = within(document.querySelector('.topbar') as HTMLElement);
   await user.click(topbar.getByRole('button', { name: /más acciones/i }));
-  return screen.findByRole('dialog', { name: /más acciones/i });
+  /* Una sola definición de contenido, dos presentaciones: popover anclado en
+     X2/M1, hoja inferior en Compact —donde el popover con `right:0` se
+     desplegaba fuera del viewport—. La prueba acepta las dos porque lo que
+     afirma es que el destino existe, no cómo se presenta. */
+  return screen.findByRole('dialog', { name: /más acciones|menú del documento/i });
 };
 
 /**
@@ -896,21 +900,26 @@ describe('structureCo app shell', () => {
     await user.click(member!);
     const before = container.querySelectorAll('.member-object').length;
 
-    // 1 · La hoja del Inspector convive: no aísla el fondo.
-    fireEvent.click(container.querySelector('.mobile-inspector-toggle')!);
+    // 1 · La hoja del Inspector convive: no aísla el fondo. En Compact se abre
+    // desde la ranura «Inspector» de la barra inferior — el pill flotante que
+    // hacía de lanzador se posaba encima del dock de herramientas y ya no
+    // existe.
+    fireEvent.click(document.querySelector('[data-compact-bar-slot="detail"]')!);
     await screen.findByRole('dialog', { name: /inspector/i });
     expect(shell.inert).toBeFalsy();
     expect(shell.hasAttribute('aria-hidden')).toBe(false);
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(container.querySelector('.mobile-inspector-toggle')));
+    await waitFor(() => expect(document.activeElement).toBe(document.querySelector('[data-compact-bar-slot="detail"]')));
     expect(container.querySelectorAll('.member-object')).toHaveLength(before);
 
     // 2 · Bajo una superficie MODAL el fondo sí queda aislado y el atajo del
     // lienzo no llega: ni borra ni abre la paleta.
     await user.click(member!);
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
+    // En Compact el lanzador del Doctor es la ranura de la barra inferior: la
+    // nav bar del teléfono lleva marca, título y `⋯`, y nada más.
+    await user.click(document.querySelector<HTMLButtonElement>('[data-compact-bar-slot="doctor"]')!);
     await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     expect(shell.inert).toBe(true);
     expect(shell.getAttribute('aria-hidden')).toBe('true');

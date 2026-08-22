@@ -509,6 +509,27 @@
   --sc-layout-gutter: 16px;
   --sc-layout-reading: 1120px;
 
+  /* ---- La pila del borde inferior -----------------------------------
+     Con el dedo, todo el chrome invocado nace del mismo borde: la barra de
+     pestañas, el zócalo de la selección, la entrada por coordenadas y el aviso.
+     Antes cada pieza elegía su propio `bottom` a mano —12px, 16px, 70px, 76px—
+     y ninguna sabía de las otras, así que se tapaban entre ellas en cuanto dos
+     coincidían. Aquí hay UN suelo y tres escalones que se apilan contra el alto
+     REAL del control que llevan encima, no contra un número copiado: si la
+     densidad táctil cambia, la pila entera se mueve sola.
+
+     `--sc-dock-height` la publica el shell: vale 0 mientras no haya barra
+     inferior (X2 y M1), y el alto de la barra en Compact. */
+  --sc-dock-height: 0px;
+  --sc-chrome-gap: var(--sc-space-2);
+  --sc-chrome-floor: calc(var(--sc-dock-height) + env(safe-area-inset-bottom, 0px));
+  /* 1 · zócalo contextual de la selección. */
+  --sc-chrome-tier-1: calc(var(--sc-chrome-floor) + var(--sc-chrome-gap));
+  /* 2 · entrada rápida, sobre el zócalo. */
+  --sc-chrome-tier-2: calc(var(--sc-chrome-tier-1) + var(--sc-control-height-touch) + var(--sc-chrome-gap));
+  /* 3 · avisos, sobre todo lo demás. */
+  --sc-chrome-tier-3: calc(var(--sc-chrome-tier-2) + var(--sc-control-height-touch) + var(--sc-chrome-gap));
+
   --sc-density-row-compact: 26px;
   --sc-density-row-comfortable: 32px;
   --sc-density-row-touch: 44px;

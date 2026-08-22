@@ -1,61 +1,20 @@
-import {
-  BoxSelect,
-  ChevronRight,
-  CircleDot,
-  Component,
-  Crosshair,
-  Delete,
-  GitCommitHorizontal,
-  Grid3x3,
-  Hand,
-  Move,
-  MousePointer2,
-  MoreHorizontal,
-  MoveDiagonal2,
-  RotateCcw,
-  Ruler,
-  Search,
-  Scissors,
-  Sigma,
-  type LucideIcon,
-} from 'lucide-react';
+import { BoxSelect, ChevronRight, Grid3x3, Move, MoreHorizontal, Search } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import type { Tool } from '../../types';
 import { ToolButton as EditorToolButton, type ToolTone } from '../../design-system/components/editor';
-import { STRUCTURAL_TOOL_IDS, StructuralToolIcon } from './StructuralToolIcon';
+import { ToolGlyph } from './StructuralToolIcon';
 import {
   TOOL_GROUPS,
   TOOL_REGISTRY,
   type ToolDefinition,
   toolsInGroup,
 } from './toolRegistry';
-import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
 
-const toolIcons: Record<Tool, LucideIcon> = {
-  select: MousePointer2,
-  pan: Hand,
-  node: CircleDot,
-  member: GitCommitHorizontal,
-  support: Component,
-  pointLoad: MoveDiagonal2,
-  distributedLoad: Sigma,
-  moment: RotateCcw,
-  dimension: Ruler,
-  split: Scissors,
-  cut: Crosshair,
-  delete: Delete,
-};
-
-const ToolGlyph = ({ definition, size = 22 }: { definition: ToolDefinition; size?: number }) => {
-  const Icon = toolIcons[definition.id];
-  return STRUCTURAL_TOOL_IDS.has(definition.id)
-    ? <StructuralToolIcon tool={definition.id} />
-    : <Icon size={size} strokeWidth={1.8} />;
-};
 
 const toolTones: Record<Tool, ToolTone> = {
   select: 'navigation',
@@ -223,10 +182,18 @@ const setAppShellMobileInert = (inert: boolean) => {
 export const ToolRail = () => {
   const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
-  const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
+  /* Una sola hoja de herramientas (Compact). Antes eran dos —«Cargas» y
+     «Más»— colgando de dos ranuras del dock, y las cuatro herramientas
+     `primary` no estaban en ninguna: sólo existían como botones del dock. Al
+     pasar el dock a UNA ranura que enseña la herramienta activa, la hoja tiene
+     que ser el catálogo completo o habría herramientas inalcanzables. */
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const paletteRef = useRef<HTMLElement>(null);
+  /* Quién abrió la hoja. El disparador vive ahora en la barra inferior, que es
+     otro componente y no puede pasar una ref por el bus de comandos; se
+     recuerda el elemento enfocado en el momento de abrir, que es exactamente lo
+     que hay que devolver al cerrar y funciona sea cual sea el llamador. */
+  const paletteOpenerRef = useRef<HTMLElement | null>(null);
   const { shellClass } = useShellComposition();
   const previousShellClassRef = useRef(shellClass);
   /** Expanded (`X2`) lleva etiqueta; Medium (`M1`) y Compact (`K0`) son icon-only. */
@@ -238,25 +205,18 @@ export const ToolRail = () => {
   const visibleTools = classroom && !revealAdvanced
     ? TOOL_REGISTRY.filter((tool) => !tool.classroomAdvanced)
     : TOOL_REGISTRY;
-  const mobilePrimaryTools = TOOL_REGISTRY.filter((tool) => tool.mobile === 'primary');
-  const mobilePaletteTools = TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu);
-  const loadToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'loads' && tool.id === activeTool);
-  const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
-  const loadGroupHighlighted = mobileMenu ? mobileMenu === 'loads' : loadToolActive;
-  const moreGroupHighlighted = mobileMenu ? mobileMenu === 'more' : moreToolActive;
+  const mobilePaletteTools = visibleTools;
   const canEditSelection = selection?.kind === 'node'
     || selection?.kind === 'member'
     || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
 
   const selectTool = (tool: Tool) => {
     setActiveTool(tool);
-    if (mobileMenu) closeMobileMenu();
-    else setMobileMenu(null);
+    if (paletteOpen) closeMobileMenu();
   };
 
   const openCommandPaletteFromMobile = () => {
-    moreMenuButtonRef.current?.focus({ preventScroll: true });
-    setMobileMenu(null);
+    setPaletteOpen(false);
     emitWorkspaceCommand('open-command-palette');
   };
 
@@ -271,19 +231,25 @@ export const ToolRail = () => {
   };
 
   const closeMobileMenu = (restoreFocus = true) => {
-    const closingMenu = mobileMenu;
-    setMobileMenu(null);
+    const wasOpen = paletteOpen;
+    setPaletteOpen(false);
     // Do not wait for the effect cleanup: the selected portal action may open
     // an immediate canvas interaction on the following animation frame.
     setAppShellMobileInert(false);
-    if (!restoreFocus || !closingMenu) return;
-    window.requestAnimationFrame(() => {
-      (closingMenu === 'loads' ? loadMenuButtonRef : moreMenuButtonRef).current?.focus();
-    });
+    if (!restoreFocus || !wasOpen) return;
+    const opener = paletteOpenerRef.current;
+    window.requestAnimationFrame(() => opener?.focus());
   };
 
+  /* La barra inferior de Compact pide la hoja por comando: no conoce —ni debe
+     conocer— cómo está montado el riel. */
+  useEffect(() => onWorkspaceCommand('open-tool-palette', () => {
+    paletteOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPaletteOpen(true);
+  }), []);
+
   useEffect(() => {
-    if (!mobileMenu) return undefined;
+    if (!paletteOpen) return undefined;
     const palette = paletteRef.current;
     setAppShellMobileInert(true);
     const focusFrame = window.requestAnimationFrame(() => paletteRef.current?.querySelector<HTMLButtonElement>('.mobile-palette-tool')?.focus());
@@ -318,7 +284,7 @@ export const ToolRail = () => {
     };
     // closeMobileMenu intentionally captures the currently open sheet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mobileMenu]);
+  }, [paletteOpen]);
 
   // Las hojas de herramientas sólo existen como presentación en Compact: al
   // salir de `K0` dejan de tener destino. Igual que el `change` de la media
@@ -327,24 +293,24 @@ export const ToolRail = () => {
   useEffect(() => {
     if (previousShellClassRef.current === shellClass) return;
     previousShellClassRef.current = shellClass;
-    if (shellClass !== 'K0') setMobileMenu(null);
+    if (shellClass !== 'K0') setPaletteOpen(false);
   }, [shellClass]);
 
-  const paletteTitle = mobileMenu === 'loads' ? t('toolbar.addLoad') : t('toolbar.moreSheetTitle');
-  const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
+  const paletteTitle = t('toolbar.label');
+  const paletteDescription = t('toolbar.moreSheetDescription');
   const paletteGroups = TOOL_GROUPS.filter((group) =>
     mobilePaletteTools.some((tool) => tool.group === group.id)
       || (group.id === 'edit' && canEditSelection)
       // Generar no es una herramienta del registro y no depende de la
       // selección, pero pertenece a «Crear»: sin esto su grupo no existiría en
       // la hoja y la única vía en compacto sería la paleta de comandos.
-      || (group.id === 'create' && mobileMenu === 'more'),
+      || group.id === 'create',
   );
-  const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
+  const mobilePalette = paletteOpen && typeof document !== 'undefined' ? createPortal(<>
     <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
     <section
       ref={paletteRef}
-      className={`mobile-tool-palette mobile-tool-palette-${mobileMenu}`}
+      className="mobile-tool-palette"
       role="dialog"
       aria-modal="true"
       aria-label={paletteTitle}
@@ -399,7 +365,7 @@ export const ToolRail = () => {
 
   return (
     <>
-      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
+      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${paletteOpen ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
         <div className="desktop-tool-list">
           {TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
@@ -462,38 +428,6 @@ export const ToolRail = () => {
         <div className="toolbar-spacer" />
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>
 
-        <nav className="mobile-tool-dock" aria-label={t('toolbar.primary')}>
-          {mobilePrimaryTools.map((definition) => <RegisteredToolButton
-            key={definition.id}
-            definition={definition}
-            label={t(definition.labelKey)}
-            active={activeTool === definition.id}
-            className="mobile-dock-tool"
-            onSelect={selectTool}
-          />)}
-          <button
-            ref={loadMenuButtonRef}
-            className={`sc-tool-button sc-tool-button--load mobile-tool-group tool-button tool-pointLoad mobile-dock-tool${loadGroupHighlighted ? ' is-active' : ''}`}
-            aria-label={t('toolbar.loads')}
-            aria-expanded={mobileMenu === 'loads'}
-            aria-haspopup="dialog"
-            onClick={() => setMobileMenu((current) => current === 'loads' ? null : 'loads')}
-          >
-            <span className="sc-tool-button__icon" aria-hidden="true"><StructuralToolIcon tool="pointLoad" /></span>
-            <span className="sc-tool-button__copy"><strong>{t('toolbar.loadsShort')}</strong></span>
-          </button>
-          <button
-            ref={moreMenuButtonRef}
-            className={`sc-tool-button sc-tool-button--navigation mobile-tool-group tool-button mobile-dock-tool${moreGroupHighlighted ? ' is-active' : ''}`}
-            aria-label={t('toolbar.more')}
-            aria-expanded={mobileMenu === 'more'}
-            aria-haspopup="dialog"
-            onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
-          >
-            <span className="sc-tool-button__icon" aria-hidden="true"><MoreHorizontal size={22} strokeWidth={1.8} /></span>
-            <span className="sc-tool-button__copy"><strong>{t('toolbar.moreShort')}</strong></span>
-          </button>
-        </nav>
       </aside>
       {mobilePalette}
     </>

@@ -39,6 +39,8 @@ import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
+import { useShellComposition } from '../workspace/useShellComposition';
+import { Drawer } from '../../design-system/components/overlays';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { PDeltaConfig } from '../../types';
@@ -89,6 +91,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
   const classroomSession = useClassroomSession();
+  /* Compact convierte la barra en una nav bar de tres ranuras: marca, título del
+     documento y `⋯`. Lo que se retira no se pierde —analizar, doctor, vista y
+     resultados viven en la barra inferior; historial, exportación y las cuatro
+     decisiones de análisis, en la hoja de `⋯`—: se retira de AQUÍ, que es donde
+     nueve controles en 390px truncaban el nombre del proyecto a «P…». */
+  const { shellClass } = useShellComposition();
+  const compact = shellClass === 'K0';
   const reducedMotion = useReducedMotion();
   const popoverMotionProps = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
@@ -136,7 +145,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     if (!menuOpen) return undefined;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest('.project-menu, .project-menu-toggle, .export-wrap, .mobile-actions-wrap, .analysis-setup-wrap')) closeMenus();
+      /* `.topbar-overflow-sheet` está en la lista porque en Compact el
+         desbordamiento se PORTA a `document.body`: sin él, un `pointerdown`
+         sobre un botón de la propia hoja contaba como «fuera» y la cerraba
+         antes de que el `click` llegara a su destino. La hoja además trae su
+         propio velo, que es quien la cierra por fuera. */
+      if (!target?.closest('.project-menu, .project-menu-toggle, .export-wrap, .mobile-actions-wrap, .analysis-setup-wrap, .topbar-overflow-sheet')) closeMenus();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -359,6 +373,70 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const exportPngCommand = command('export:png');
   const exportPrintCommand = command('export:print');
 
+  /* El contenido del desbordamiento, definido UNA vez y consumido por sus dos
+     presentaciones. En X2/M1 es un popover anclado al disparador; en Compact es
+     una hoja inferior, porque un popover con `right:0` colgado de un botón que
+     NO está en el borde derecho se despliega fuera del viewport — medido a
+     390px: 155px de la hoja quedaban fuera de pantalla, con las etiquetas
+     cortadas. Ninguna cantidad de recolocación arregla eso; lo que estaba mal
+     era la presentación, no su posición. */
+  const overflowContent = <>
+    <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
+      <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={16} /> {undoCommand.label}</button>
+      <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={16} /> {redoCommand.label}</button>
+    </div>
+
+    <div className="menu-section">
+      <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
+      <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
+      {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
+          de tocar Estado/Doctor (orden de degradación · CRI-95). */}
+      <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
+      {/* Los mismos campos que el popover de la barra, no una
+          segunda copia: una sola definición consumida por las dos
+          presentaciones. En el desbordamiento, elegir cierra. */}
+      <AnalysisContextFields onCommit={() => setShowMobileMenu(false)} />
+    </div>
+
+    <div className="menu-section">
+      <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
+      <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
+      <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
+    </div>
+
+    {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
+      <div className="menu-section-title">{t('menu.sectionViews')}</div>
+      {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
+        <Box size={16} /> {t('space3d.open')}
+      </button> : null}
+      <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+        {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
+        {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
+      </button>
+      <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
+        {layoutActions.fullCanvas ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+      </button>
+    </div> : null}
+
+    <div className="menu-section">
+      <div className="menu-section-title">{t('menu.sectionExport')}</div>
+      <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+      <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+      <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
+      <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+      <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
+      <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
+      <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
+    </div>
+
+    {/* El chip de persistencia de la Cinta (zona `status`) ya es la
+        única región `aria-live` de este estado; este es su duplicado
+        visible del desbordamiento y no vuelve a anunciarse solo. */}
+    <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+    {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
+  </>;
+
   return (
     <header ref={topbarRef} className="topbar">
       <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document" data-topbar-cluster="document">
@@ -416,7 +494,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
-        <div className="topbar-context-zone" data-topbar-cluster="context">
+        {compact ? null : <div className="topbar-context-zone" data-topbar-cluster="context">
           {/* CUATRO decisiones, UN ítem de barra.
               Antes eran cuatro `<select>` con su etiqueta encima, y a 1280 px
               las etiquetas se recortaban a «Caso o com…», «Modo de cál…»,
@@ -448,12 +526,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
               ) : null}
             </AnimatePresence>
           </div>
-        </div>
+        </div>}
         <div className="topbar-command-cluster" data-topbar-cluster="actions">
         {/* Grupos, no una fila de seis iconos sueltos: superficies · historial ·
             exportación · resto. El separador de medio píxel entre grupos lo pone
-            el CSS, que es donde vive el reparto visual. */}
-        <div className="topbar-tool-group" role="group" aria-label={t('menu.sectionViews')}>
+            el CSS, que es donde vive el reparto visual.
+
+            En Compact no hay grupos: la nav bar lleva marca, título y `⋯`, y
+            nada más. Hoja de datos, 3D, historial y exportación siguen estando
+            —en la hoja de `⋯`, que es la MISMA definición— y analizar está en la
+            barra inferior, sobre el pulgar. */}
+        {compact ? null : <><div className="topbar-tool-group" role="group" aria-label={t('menu.sectionViews')}>
           <IconButton
             variant="secondary"
             className="icon-button datasheet-launcher"
@@ -488,71 +571,22 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
               </m.div>
             ) : null}
           </AnimatePresence>
-        </div>
+        </div></>}
         <div className="mobile-actions-wrap utility-actions-wrap topbar-tool-group">
           <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
-          <AnimatePresence>
+          {compact ? null : <AnimatePresence>
             {showMobileMenu ? (
               <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
-                <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={16} /> {undoCommand.label}</button>
-                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={16} /> {redoCommand.label}</button>
-                </div>
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
-                  {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
-                      de tocar Estado/Doctor (orden de degradación · CRI-95). */}
-                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
-                  {/* Los mismos campos que el popover de la barra, no una
-                      segunda copia: una sola definición consumida por las dos
-                      presentaciones. En el desbordamiento, elegir cierra. */}
-                  <AnalysisContextFields onCommit={() => setShowMobileMenu(false)} />
-                </div>
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
-                  <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
-                </div>
-
-                {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
-                  <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
-                    <Box size={16} /> {t('space3d.open')}
-                  </button> : null}
-                  <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
-                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
-                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
-                  </button>
-                  <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
-                    {layoutActions.fullCanvas ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                    {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
-                  </button>
-                </div> : null}
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionExport')}</div>
-                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
-                  <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
-                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                  <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
-                  <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
-                  <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
-                </div>
-
-                {/* El chip de persistencia de la Cinta (zona `status`) ya es la
-                    única región `aria-live` de este estado; este es su duplicado
-                    visible del desbordamiento y no vuelve a anunciarse solo. */}
-                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
-                {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
+                {overflowContent}
               </m.div>
             ) : null}
-          </AnimatePresence>
+          </AnimatePresence>}
         </div>
-        <Button
+        {/* En Compact «Analizar» es el botón de acento de la barra inferior:
+            aquí sería el segundo, y dos botones con el mismo rótulo y el mismo
+            acento no son redundancia inofensiva —son dos estados que mantener
+            de acuerdo. */}
+        {compact ? null : <Button
           className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
           variant="primary"
           size="touch"
@@ -561,7 +595,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           loadingLabel={t('analysis.runningLabel')}
           leadingIcon={<Play size={16} fill="currentColor" />}
           aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
-        >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
+        >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>}
         </div>
       </div>
 
@@ -585,7 +619,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             y Doctor son la afirmación más crítica del producto (D-14 · CRI-95):
             nunca desaparecen ni pierden su etiqueta accesible, sea cual sea la
             clase de composición. */}
-        <button
+        {compact ? null : <button
           type="button"
           className="topbar-command-button model-doctor-launcher"
           onClick={modelDoctorCommand.run}
@@ -594,7 +628,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         >
           <Wrench size={16} aria-hidden="true" />
           <span>{modelDoctorCommand.label}</span>
-        </button>
+        </button>}
         <AnalysisStatus
           projectId={project.id}
           analysis={analysis}
@@ -603,6 +637,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
+      {compact ? <Drawer
+        open={showMobileMenu}
+        onOpenChange={(open) => { if (!open) setShowMobileMenu(false); }}
+        title={t('shell.documentMenu')}
+        side="bottom"
+        closeLabel={t('toolbar.close')}
+        className="topbar-overflow-sheet"
+      >{overflowContent}</Drawer> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
         open
         currentProjectName={project.name}
