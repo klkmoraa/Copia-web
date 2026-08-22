@@ -11,6 +11,7 @@ import {
   type RefObject,
 } from 'react';
 import { SurfacePresentationContext, type SurfacePresentationContextValue } from './SurfacePresentationContext';
+import { claimShellInert } from './shellInert';
 import type { ShellClass } from './shellComposition';
 import {
   activateSurfaceIntent,
@@ -18,6 +19,7 @@ import {
   closeSurfaceIntent,
   createSurfaceBrokerState,
   isModalPresentation,
+  latest,
   openSurfaceIntent,
   resolveSurfaceActivity,
   setSurfaceExtent as setSurfaceExtentIntent,
@@ -100,7 +102,16 @@ export const SurfacePresentationProvider = ({
     const returnTarget = returnFocusRefs.current.get(surface);
     const nextState = closeSurfaceIntent(stateRef.current, surface);
     const nextActivity = resolveSurfaceActivity(shellClass, nextState);
-    const resumedSurface = BROKER_SURFACE_IDS.find((candidate) => nextActivity[candidate].status === 'active');
+    // Adónde vuelve el foco: a la superficie que el usuario activó más
+    // recientemente entre las que siguen vivas, no a la primera del array.
+    // `.find()` sobre `BROKER_SURFACE_IDS` devolvía `detail` siempre que
+    // estuviera activa, así que cerrar la Datasheet con la capa `view` en uso
+    // mandaba el foco al Inspector. `latest()` es el criterio que el resto del
+    // módulo ya usa para exactamente esta pregunta.
+    const resumedSurface = latest(
+      BROKER_SURFACE_IDS.filter((candidate) => nextActivity[candidate].status === 'active'),
+      nextState,
+    );
     dispatch({ type: 'close', surface });
     setReadiness((current) => ({ ...current, [surface]: false }));
     window.requestAnimationFrame(() => {
@@ -167,19 +178,14 @@ export const SurfacePresentationProvider = ({
     && readiness[surface]
   ));
 
+  // El broker RECLAMA la inercia del fondo; no la guarda ni la restaura. Antes
+  // capturaba `background.inert` como estado de reposo, pero ese valor podía ser
+  // de otro dueño —la hoja táctil del riel de herramientas escribe el mismo
+  // atributo—, y entonces el broker lo "restauraba" a `true` al cerrar y dejaba
+  // el shell entero inerte sin ningún modal abierto. Ver `shellInert.ts`.
   useLayoutEffect(() => {
     if (!activeModal) return undefined;
-    const background = backgroundRef.current;
-    if (!background) return undefined;
-    const previousInert = background.inert;
-    const previousAriaHidden = background.getAttribute('aria-hidden');
-    background.inert = true;
-    background.setAttribute('aria-hidden', 'true');
-    return () => {
-      background.inert = previousInert;
-      if (previousAriaHidden === null) background.removeAttribute('aria-hidden');
-      else background.setAttribute('aria-hidden', previousAriaHidden);
-    };
+    return claimShellInert(backgroundRef.current, `broker:${activeModal}`);
   }, [activeModal, backgroundRef]);
 
   const context = useMemo<SurfacePresentationContextValue>(() => ({

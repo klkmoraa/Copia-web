@@ -147,3 +147,45 @@
 @media (prefers-reduced-motion:reduce) {
   .repeat-action-control,.repeat-action-control:hover,.repeat-action-control:active,.repeat-preview button:active { transform:none; transition:none; }
 }
+
+/* CABECERA DE HOJA
+   -------------------------------------------------------------------------
+   Una hoja del sistema enseña por dónde se agarra y por dónde se cierra. El
+   asa es decorativa —`aria-hidden`, porque lo que cierra es el botón— y existe
+   para que el borde superior se lea como el canto de una hoja y no como el de
+   un panel que apareció por sorpresa.
+
+   Sólo se pinta en presentación `sheet`: en `dock` y en `inset` el panel no es
+   una hoja y no se cierra tocando fuera. */
+.inspector-sheet-header { display:none; }
+.inspector-panel[data-surface-presentation='sheet'] .inspector-sheet-header {
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex:0 0 auto;
+  padding:var(--sc-space-2) max(var(--sc-space-2),env(safe-area-inset-right)) 0 max(var(--sc-space-2),env(safe-area-inset-left));
+}
+.inspector-sheet-grabber {
+  position:absolute;
+  top:var(--sc-space-2);
+  left:50%;
+  width:36px;
+  height:5px;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-fill-secondary);
+  transform:translateX(-50%);
+}
+.inspector-sheet-close {
+  display:grid;
+  place-items:center;
+  width:var(--sc-control-height-touch);
+  height:var(--sc-control-height-touch);
+  border:0;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-fill-quaternary);
+  color:var(--sc-color-text-secondary);
+  transition:var(--sc-transition-control);
+}
+.inspector-sheet-close:hover { background:var(--sc-color-fill-tertiary); color:var(--sc-color-text-primary); }
+.inspector-sheet-close:active { background:var(--sc-color-fill-secondary); }

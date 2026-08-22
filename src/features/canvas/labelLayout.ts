@@ -6,6 +6,12 @@ export type SmartLabelTone = 'neutral' | 'selection' | 'force' | 'shear' | 'mome
 export interface SmartLabelCandidate {
   id: string;
   text: string;
+  /**
+   * Segunda línea opcional. Existe para los extremos del diagrama, que dicen
+   * dos cosas —cuánto vale y en qué estación— y que hasta ahora se pintaban
+   * fuera de este solver, con anclaje fijo y sin evitar a nadie.
+   */
+  secondaryText?: string;
   anchor: { x: number; y: number };
   priority: SmartLabelPriority;
   tone?: SmartLabelTone;
@@ -24,12 +30,19 @@ export interface SmartLabelRect {
 export interface PlacedSmartLabel extends SmartLabelCandidate {
   rect: SmartLabelRect;
   leader: boolean;
+  lines: 1 | 2;
 }
 
 export type SmartLabelDetail = 'essential' | 'standard' | 'detailed';
 
 const LABEL_HEIGHT = 22;
+const LABEL_LINE_HEIGHT = 11;
 const LABEL_GAP = 8;
+
+const linesOf = (candidate: SmartLabelCandidate): 1 | 2 => (candidate.secondaryText ? 2 : 1);
+const heightOf = (candidate: SmartLabelCandidate): number => (
+  LABEL_HEIGHT + (linesOf(candidate) - 1) * LABEL_LINE_HEIGHT
+);
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -46,16 +59,20 @@ const defaultMinimumScale = (priority: SmartLabelPriority): number => {
   return 90;
 };
 
-const estimatedWidth = (text: string, availableWidth: number): number =>
-  Math.min(availableWidth, Math.max(34, text.length * 6.5 + 18));
+const estimatedWidth = (candidate: SmartLabelCandidate, availableWidth: number): number => {
+  // La caja la marca la línea más larga: una etiqueta de dos líneas es tan
+  // ancha como su peor línea, no como la suma.
+  const longest = Math.max(candidate.text.length, candidate.secondaryText?.length ?? 0);
+  return Math.min(availableWidth, Math.max(34, longest * 6.5 + 18));
+};
 
 const rectAt = (
   candidate: SmartLabelCandidate,
   offset: { x: number; y: number },
   bounds: CanvasSafeRect,
 ): SmartLabelRect => {
-  const width = estimatedWidth(candidate.text, bounds.width);
-  const height = Math.min(LABEL_HEIGHT, bounds.height);
+  const width = estimatedWidth(candidate, bounds.width);
+  const height = Math.min(heightOf(candidate), bounds.height);
   const desiredX = candidate.anchor.x + offset.x - width / 2;
   const desiredY = candidate.anchor.y + offset.y - height / 2;
   return {
@@ -141,7 +158,7 @@ export const layoutSmartLabels = (
 
     const center = rectCenter(selectedRect);
     const leader = Math.hypot(center.x - preferredCenter.x, center.y - preferredCenter.y) > 12;
-    placed.push({ ...candidate, rect: selectedRect, leader });
+    placed.push({ ...candidate, rect: selectedRect, leader, lines: linesOf(candidate) });
   }
 
   return placed;

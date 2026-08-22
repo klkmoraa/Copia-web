@@ -897,14 +897,26 @@ describe('structureCo app shell', () => {
     const before = container.querySelectorAll('.member-object').length;
 
     // 1 · La hoja del Inspector convive: no aísla el fondo.
-    fireEvent.click(container.querySelector('.mobile-inspector-toggle')!);
+    // El lanzador ALTERNA desde que su `aria-expanded` dejó de mentir: antes
+    // sólo abría, y anunciaba «expandido» sin poder plegar nada. Seleccionar un
+    // miembro en teléfono ya deja la hoja abierta, así que aquí se pliega y se
+    // vuelve a desplegar CON el lanzador: así queda él como disparador y el
+    // foco tiene que volverle al cerrar, que es lo que este caso comprueba.
+    const launcher = () => container.querySelector<HTMLElement>('.mobile-inspector-toggle')!;
+    if (screen.queryByRole('dialog', { name: /inspector/i })) {
+      fireEvent.click(launcher());
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
+      expect(launcher().getAttribute('aria-expanded')).toBe('false');
+    }
+    fireEvent.click(launcher());
     await screen.findByRole('dialog', { name: /inspector/i });
+    expect(launcher().getAttribute('aria-expanded')).toBe('true');
     expect(shell.inert).toBeFalsy();
     expect(shell.hasAttribute('aria-hidden')).toBe(false);
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(container.querySelector('.mobile-inspector-toggle')));
+    await waitFor(() => expect(document.activeElement).toBe(launcher()));
     expect(container.querySelectorAll('.member-object')).toHaveLength(before);
 
     // 2 · Bajo una superficie MODAL el fondo sí queda aislado y el atajo del

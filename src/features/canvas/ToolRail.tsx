@@ -34,6 +34,7 @@ import {
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
+import { claimShellInert } from '../workspace/shellInert';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -204,13 +205,27 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <kbd>Ctrl K</kbd>
 </button>;
 
-/** The portal sheet owns inertness; restore it synchronously when it closes. */
+/**
+ * La hoja del riel RECLAMA la inercia del fondo, no la escribe.
+ *
+ * Escribía `.app-shell.inert` directamente, sin saber que el broker de
+ * superficies escribe el mismo atributo y guarda su valor previo para
+ * restaurarlo. Con la hoja abierta, el broker capturaba `true` como estado de
+ * reposo. Ahora las dos reclamaciones se cuentan y el fondo vuelve a estar vivo
+ * cuando lo suelta la última (`shellInert.ts`).
+ *
+ * Se suelta de forma síncrona al cerrar y no en la limpieza del efecto, porque
+ * la acción elegida en la hoja puede abrir una interacción de lienzo en el
+ * fotograma siguiente.
+ */
+let releaseShellInert: (() => void) | null = null;
 const setAppShellMobileInert = (inert: boolean) => {
-  const background = document.querySelector<HTMLElement>('.app-shell');
-  if (!background) return;
-  background.inert = inert;
-  if (inert) background.setAttribute('aria-hidden', 'true');
-  else background.removeAttribute('aria-hidden');
+  if (inert) {
+    releaseShellInert ??= claimShellInert(document.querySelector<HTMLElement>('.app-shell'), 'toolRail:sheet');
+    return;
+  }
+  releaseShellInert?.();
+  releaseShellInert = null;
 };
 
 /**

@@ -115,12 +115,12 @@ const InspectorContent = ({
     onClose?.();
   };
 
-  const resizeFromPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const resizeFromPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!resizeOrigin || !onDesktopWidthChange) return;
     onDesktopWidthChange(clampInspectorWidth(resizeOrigin.width + resizeOrigin.clientX - event.clientX));
   };
 
-  const resizeFromKeyboard = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+  const resizeFromKeyboard = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (!onDesktopWidthChange) return;
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
@@ -165,15 +165,20 @@ const InspectorContent = ({
       hidden={status !== 'active'}
       data-mobile-detent={sheet ? mobileDetent : undefined}
     >
-      {presentation === 'dock' && onDesktopWidthChange ? <button
-        type="button"
+      {/* `role="separator"` sobre un `<button>` destruía el rol de botón y
+          dejaba un separador enfocable cuyo `aria-valuenow` se leía como un
+          número pelado. Un separador redimensionable es un `div` con rol
+          explícito, foco propio y `aria-valuetext` con la unidad. */}
+      {presentation === 'dock' && onDesktopWidthChange ? <div
         className="inspector-resize-handle"
         role="separator"
+        tabIndex={0}
         aria-label={t('inspector.resize')}
         aria-orientation="vertical"
         aria-valuemin={MIN_INSPECTOR_WIDTH}
         aria-valuemax={MAX_INSPECTOR_WIDTH}
         aria-valuenow={desktopWidth}
+        aria-valuetext={`${desktopWidth} px`}
         onKeyDown={resizeFromKeyboard}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -183,6 +188,22 @@ const InspectorContent = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
+      {/* CABECERA DE HOJA · Una hoja del sistema se cierra tocando fuera o con
+          su propio control; nunca sólo con una tecla que en táctil no existe.
+          Este bloque no estaba: el único cierre del panel vivía dentro de la
+          barra de pestañas, que se renderiza bajo `{!surface ? …}` — y los tres
+          sitios que montan `Inspector` pasan `surface`, así que era código
+          muerto desde que el broker tomó el control de las superficies. En
+          teléfono la hoja sólo se podía cerrar con `Escape`. */}
+      {sheet ? <div className="inspector-sheet-header">
+        <span className="inspector-sheet-grabber" aria-hidden="true" />
+        <button
+          type="button"
+          className="inspector-sheet-close"
+          aria-label={t('inspector.close')}
+          onClick={onClose}
+        ><X size={18} /></button>
+      </div> : null}
       {sheet && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
         {(['compact', 'medium', 'large'] as const).map((detent) => <button
           key={detent}
@@ -195,7 +216,6 @@ const InspectorContent = ({
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
         <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>
         <button id="inspector-tab-display" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'display'} tabIndex={tab === 'display' ? 0 : -1} className={tab === 'display' ? 'active' : ''} onClick={() => setTab('display')} onKeyDown={(event) => onTabKeyDown(event, 2)}>{t('inspector.viewTab')}</button>
-        <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button>
       </div> : null}
 
       <div id={surface ? `${surface}-tabpanel` : 'inspector-tabpanel'} className="inspector-scroll" role={surface ? undefined : 'tabpanel'} aria-labelledby={surface ? undefined : `inspector-tab-${activeTab}`}>

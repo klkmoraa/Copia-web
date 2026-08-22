@@ -75,17 +75,30 @@ const renderLayer = (resultTab: ResultTab, overrides: Record<string, unknown> = 
 const stamps = () => [...document.querySelectorAll('[data-critical-point]')];
 
 describe('CanvasResultLayer critical M/V stamps', () => {
-  it('marks Mmax and Mmin with the value and the station the analysis reported', () => {
+  it('marca Mmax y Mmin con el valor y la estación que reportó el análisis', () => {
     renderLayer('moment');
     expect(stamps().map((stamp) => stamp.getAttribute('data-critical-point')))
       .toEqual(['B1:moment:max', 'B1:moment:min']);
 
-    const texts = [...document.querySelectorAll('.critical-point-value, .critical-point-station')]
-      .map((element) => element.textContent);
-    expect(texts).toEqual([
-      'Mmax 45.00 kN·m', 'x 3.00 m',
-      'Mmin -12.00 kN·m', 'x 6.00 m',
+    // El valor y la estación siguen SIENDO de esta capa —viajan en el `title`
+    // de cada marca, que es lo que lee la tecnología de asistencia—, pero ya no
+    // los PINTA aquí: el texto visible lo coloca `layoutSmartLabels`, que
+    // resuelve colisiones. Antes se pintaban en los dos sitios a la vez y se
+    // pisaban entre sí sobre el dibujo.
+    expect(stamps().map((stamp) => stamp.querySelector('title')?.textContent)).toEqual([
+      'B1 · Mmax 45.00 kN·m · x 3.00 m',
+      'B1 · Mmin -12.00 kN·m · x 6.00 m',
     ]);
+  });
+
+  it('no vuelve a pintar el texto del extremo en esta capa', () => {
+    // El sello con anclaje fijo se retiró entero. Si alguien lo reintroduce,
+    // el producto vuelve a tener dos sistemas de etiquetas y una de las dos
+    // copias no evita a nadie.
+    renderLayer('moment');
+    expect(document.querySelectorAll('.critical-point-stamp')).toHaveLength(0);
+    expect(document.querySelectorAll('.critical-point-value')).toHaveLength(0);
+    expect(document.querySelectorAll('.critical-point-station')).toHaveLength(0);
   });
 
   it('anchors the stamp on the diagram ordinate, not on the bare member axis', () => {
@@ -100,7 +113,7 @@ describe('CanvasResultLayer critical M/V stamps', () => {
   it('follows the tab: shear is stamped as V, and axial gets no stamps', () => {
     renderLayer('shear');
     expect(document.querySelector('.critical-point-layer')?.getAttribute('class')).toContain('is-shear');
-    expect(document.querySelector('.critical-point-value')?.textContent).toBe('Vmax 30.00 kN');
+    expect(stamps()[0]?.querySelector('title')?.textContent).toContain('Vmax 30.00 kN');
     cleanup();
 
     renderLayer('axial');

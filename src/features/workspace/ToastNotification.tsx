@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { useI18n } from '../../i18n/useI18n';
@@ -17,6 +17,14 @@ export const ToastNotification = () => {
   const { t } = useI18n();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const reducedMotion = useReducedMotion();
+  /* Los temporizadores de retirada se guardaban en ningún sitio, así que
+     desmontar la mesa dejaba hasta cuatro `setTimeout` vivos apuntando a un
+     `setState` de un componente que ya no existe. */
+  const timersRef = useRef(new Set<number>());
+  useEffect(() => () => {
+    for (const timer of timersRef.current) window.clearTimeout(timer);
+    timersRef.current.clear();
+  }, []);
 
   useEffect(() => onWorkspaceCommand('show-toast', (payload) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -31,14 +39,16 @@ export const ToastNotification = () => {
     setToasts((previous) => [...previous.slice(-3), toast]);
 
     if (toast.durationMs > 0) {
-      window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
+        timersRef.current.delete(timer);
         setToasts((current) => current.filter((item) => item.id !== id));
       }, toast.durationMs);
+      timersRef.current.add(timer);
     }
   }), []);
 
   return (
-    <div className="sc-toast-container" role="region" aria-label={t('toast.regionLabel')}>
+    <div className="sc-toast-container" role="region" aria-label={t('toast.regionLabel')} aria-live="polite" aria-atomic="false">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => {
           const Icon = toast.tone === 'success' ? CheckCircle2
@@ -54,8 +64,10 @@ export const ToastNotification = () => {
               exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: -10 }}
               transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 420, damping: 28 }}
               className={`sc-toast-card sc-toast-card--${toast.tone}`}
-              role="status"
-              aria-live="polite"
+              /* Sin `role="status"` propio: la región viva es el contenedor
+                 estable de arriba, que ya está en el documento cuando la
+                 tarjeta entra. Una región creada en el mismo momento que su
+                 contenido no se anuncia. */
               aria-atomic="true"
             >
               <span className="sc-toast-card__icon" aria-hidden="true"><Icon size={18} /></span>

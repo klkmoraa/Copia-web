@@ -206,7 +206,13 @@ export const isModalPresentation = (presentation: SurfacePresentation): boolean 
   presentation === 'drawer' || presentation === 'fullscreen'
 );
 
-const latest = (surfaces: readonly SurfaceId[], state: SurfaceBrokerState): SurfaceId | undefined => (
+/**
+ * La superficie ACTIVADA más recientemente de un conjunto. El orden que importa
+ * es el de activación, nunca el del array: `BROKER_SURFACE_IDS` empieza por
+ * `detail`, así que un `.find()` sobre él devuelve siempre `detail` cuando está
+ * activa, esté o no relacionada con lo que el usuario acaba de cerrar.
+ */
+export const latest = (surfaces: readonly SurfaceId[], state: SurfaceBrokerState): SurfaceId | undefined => (
   [...surfaces].sort((left, right) => state.surfaces[left].activation - state.surfaces[right].activation).at(-1)
 );
 

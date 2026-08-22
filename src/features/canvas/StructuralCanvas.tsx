@@ -1905,7 +1905,14 @@ export const StructuralCanvas = ({
         event.preventDefault();
         setActiveTool(shortcutTool);
       }
-      if (event.key === 'Escape') {
+      // `Escape` sólo limpia la sesión de edición si NADIE lo ha atendido ya.
+      // Este manejador vive en `window` y el de la hoja del Inspector en
+      // `document`, que dispara antes y hace `preventDefault`: sin esta guarda,
+      // un solo `Escape` cerraba la hoja Y de paso borraba selección, corte,
+      // inicio de miembro y borrador de entrada rápida, y devolvía la
+      // herramienta a `select`. `ResultsPanel` e `Inspector` ya guardan así; el
+      // lienzo era el único que no.
+      if (event.key === 'Escape' && !event.defaultPrevented) {
         if (duplicateDraft) {
           setDuplicateDraft(null);
           return;
@@ -1919,7 +1926,10 @@ export const StructuralCanvas = ({
         setCut(null);
         setActiveTool('select');
       }
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Borrar exige foco en el lienzo, igual que los atajos de una letra de
+      // arriba: sin la guarda, `Backspace` con el foco en cualquier otra parte
+      // del shell destruía la selección del modelo.
+      if ((event.key === 'Delete' || event.key === 'Backspace') && canvasHasFocus) {
         event.preventDefault();
         deleteSelection();
       }
@@ -2222,12 +2232,24 @@ export const StructuralCanvas = ({
           const offsetModel = point.value * diagramPixelScaleFor(project, resultTab, globalDiagramMax, result) / camera.scale;
           const anchor = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
           const outward = point.value * side >= 0 ? 1 : -1;
+          const symbol = quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M';
+          const extreme = point.kind === 'maximum' ? 'max' : point.kind === 'minimum' ? 'min' : null;
+          /* UN SOLO SISTEMA DE ETIQUETAS.
+             Los extremos se pintaban DOS veces: este chip, que pasa por el
+             solver, y un sello aparte en `CanvasResultLayer` con anclaje fijo
+             que no evitaba a nadie. En la evidencia de la fase 2 se pisaban
+             entre sí y encima de las cargas. El sello aportaba dos cosas que el
+             chip no tenía —el rótulo `Mmax`/`Mmin` y la estación— y las dos se
+             mudan aquí, donde hay colisiones, prioridades y línea guía. */
           smartLabelCandidates.push({
             id: `result:${member.id}:${quantity}:${point.kind}:${index}`,
-            text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${quantityUnit}`,
+            text: extreme
+              ? `${symbol}${extreme} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${quantityUnit}`
+              : `${symbol} = ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${quantityUnit}`,
+            secondaryText: extreme ? `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}` : undefined,
             anchor,
-            priority: point.kind === 'maximum' || point.kind === 'minimum' ? 2 : 3,
-            forceVisible: point.kind === 'maximum' || point.kind === 'minimum',
+            priority: extreme ? 2 : 3,
+            forceVisible: Boolean(extreme),
             tone: quantity,
             preferredOffset: { x: nx * outward * 28, y: -ny * outward * 28 - 6 },
           });
@@ -2268,7 +2290,8 @@ export const StructuralCanvas = ({
       return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
         {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
         <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
-        <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
+        <text x={label.rect.x + 8} y={label.rect.y + (label.lines === 2 ? 13 : 15)}>{label.text}</text>
+        {label.secondaryText ? <text className="smart-label-station" x={label.rect.x + 8} y={label.rect.y + 24}>{label.secondaryText}</text> : null}
       </g>;
     })}
   </g>, [camera.scale, placedSmartLabels]);

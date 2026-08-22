@@ -251,12 +251,14 @@ const CanvasResultLayerImpl = ({
         const tip = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
         const value = `${symbol}${extreme === 'max' ? 'max' : 'min'} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${valueUnit}`;
         const station = `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}`;
-        // El sello se aparta hacia el lado libre del diagrama, nunca hacia la
-        // barra: ahí es donde ya hay geometría y etiquetas de modelo.
-        const away = Math.sign(offsetModel) || 1;
-        const width = Math.max(value.length, station.length) * 5.1 + 11;
-        const anchorX = Math.min(Math.max(tip.x + nx * away * 9, 4), Math.max(size.width - width - 4, 4));
-        const anchorY = Math.min(Math.max(tip.y + ny * away * 9 - 11, 4), Math.max(size.height - 30, 4));
+        /* SÓLO EL TALLO Y EL PUNTO.
+           Aquí se pintaba además un sello de dos líneas con anclaje fijo, que
+           repetía el valor que el chip del solver ya dice y que no evitaba a
+           nadie: en la evidencia de la fase 2 se solapaba con las cargas y
+           consigo mismo. El texto se mudó a `layoutSmartLabels`
+           (`StructuralCanvas.tsx`), que ya resuelve colisiones, prioridad,
+           recorte contra el área segura y línea guía. Lo que queda es la marca
+           geométrica —de dónde sale el valor—, que ningún solver puede dar. */
         return <g
           key={`${member.id}-${key}-${extreme}`}
           className={`critical-point-marker is-${extreme}`}
@@ -266,11 +268,6 @@ const CanvasResultLayerImpl = ({
           <title>{`${member.id} · ${value} · ${station}`}</title>
           <line className="critical-point-stem" x1={base.x} y1={base.y} x2={tip.x} y2={tip.y} />
           <circle className="critical-point-dot" cx={tip.x} cy={tip.y} r="3.2" />
-          <g transform={`translate(${anchorX} ${anchorY})`}>
-            <rect className="critical-point-stamp" width={width} height="25" rx="6" />
-            <text className="critical-point-value" x="6" y="11">{value}</text>
-            <text className="critical-point-station" x="6" y="20">{station}</text>
-          </g>
         </g>;
       });
     });

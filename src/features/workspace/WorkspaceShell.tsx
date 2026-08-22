@@ -9,6 +9,7 @@ import { ClassroomGuide } from '../classroom/ClassroomGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
+import { analysisSignature } from '../../engine/projectSignature';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
@@ -44,7 +45,7 @@ const WorkspaceBrokerContent = ({
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
-  const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
+  const modelDoctorToastRef = useRef<{ projectId: string; model: string; signature: string }>({ projectId, model: '', signature: '' });
   const { t } = useI18n();
   const { project, analysis, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
   const { activeTool } = useWorkspaceUI();
@@ -61,6 +62,35 @@ const WorkspaceBrokerContent = ({
   const datasheet = broker.stateFor('datasheet');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
+
+  /* Cuál de las tres superficies del inspector está presentada como hoja y
+     activa. Sólo puede haber una a la vez en las clases que usan `sheet`, así
+     que la primera que cumple las dos condiciones ES la velada. */
+  const sheetSurface = (['detail', 'analysisSetup', 'view'] as const)
+    .find((id) => broker.stateFor(id).presentation === 'sheet' && broker.stateFor(id).status === 'active');
+
+  /**
+   * Abrir y cerrar el Inspector de detalle, definido UNA vez.
+   *
+   * Había dos fuentes de verdad para lo mismo —`detail.open` del broker y
+   * `layout.inspectorCollapsed`, que es la que se persiste— y sólo el
+   * interruptor de la barra superior escribía las dos. Abrir el Inspector desde
+   * el lienzo o desde el lanzador flotante dejaba `inspectorCollapsed` en
+   * `true`, así que al salir de lienzo completo el panel NO volvía —la rama
+   * `else if (!layout.inspectorCollapsed)` leía el valor rancio— y ese mismo
+   * valor era el que se guardaba para la siguiente sesión.
+   */
+  const openDetail = useCallback((trigger?: HTMLElement) => {
+    openSurface('detail', trigger);
+    setPreference('inspectorCollapsed', false);
+  }, [openSurface, setPreference]);
+  const closeDetail = useCallback(() => {
+    closeSurface('detail');
+    setPreference('inspectorCollapsed', true);
+  }, [closeSurface, setPreference]);
+  const toggleDetail = useCallback((trigger?: HTMLElement) => {
+    if (detail.open) closeDetail(); else openDetail(trigger);
+  }, [closeDetail, detail.open, openDetail]);
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
 
@@ -112,7 +142,26 @@ const WorkspaceBrokerContent = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  /**
+   * El aviso del Model Doctor sólo depende de lo que el Model Doctor LEE.
+   *
+   * Este efecto dependía de `project`, cuya identidad cambia en cada edición
+   * —el store reparte un clon profundo por cambio—, así que cambiar de unidades,
+   * de idioma, de capa visible o de escala de diagrama disparaba un `import()`
+   * dinámico, un `buildModelDoctorReport` entero sobre todo el modelo, un
+   * map+sort de los hallazgos y un `JSON.stringify`, en el hilo principal, para
+   * llegar al mismo resultado. El ref sólo silenciaba el toast; el trabajo se
+   * hacía igual.
+   *
+   * `analysisSignature` es la identidad de todo lo que el análisis —y con él el
+   * diagnóstico— lee: geometría, apoyos, cargas y modo de cálculo. Está
+   * memoizada por objeto de proyecto en un `WeakMap`, y el resto del producto ya
+   * la calcula para cada cambio, así que aquí sale de la caché.
+   */
+  const modelSignature = analysisSignature(project);
   useEffect(() => {
+    if (modelDoctorToastRef.current.projectId === project.id
+      && modelDoctorToastRef.current.model === modelSignature) return undefined;
     let current = true;
     void import('../model-doctor/modelDoctorDiagnostics').then(({ buildModelDoctorReport }) => {
       if (!current) return;
@@ -127,7 +176,7 @@ const WorkspaceBrokerContent = ({
       const previous = modelDoctorToastRef.current.projectId === project.id
         ? modelDoctorToastRef.current.signature
         : '';
-      modelDoctorToastRef.current = { projectId: project.id, signature };
+      modelDoctorToastRef.current = { projectId: project.id, model: modelSignature, signature };
       if (report.total === 0 || signature === previous) return;
       emitWorkspaceCommand('show-toast', {
         message: t('modelDoctor.toastTitle'),
@@ -136,7 +185,10 @@ const WorkspaceBrokerContent = ({
       });
     });
     return () => { current = false; };
-  }, [project, t]);
+    // `project` se lee dentro, pero lo que decide si hay que releerlo es su
+    // firma: incluirlo en las dependencias reintroduciría el defecto entero.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelSignature, project.id, t]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -236,13 +288,7 @@ const WorkspaceBrokerContent = ({
         fullCanvas: layout.fullCanvas,
         onToggleInspector: () => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
-          if (detail.open) {
-            closeSurface('detail');
-            setPreference('inspectorCollapsed', true);
-          } else {
-            openSurface('detail');
-            setPreference('inspectorCollapsed', false);
-          }
+          toggleDetail();
         },
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
@@ -262,7 +308,7 @@ const WorkspaceBrokerContent = ({
     toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
-      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
+      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openDetail()} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
         status={results.status}
@@ -306,13 +352,29 @@ const WorkspaceBrokerContent = ({
         onRestore={restoreDoctor}
       /></Suspense> : null}
     </>}
+    /* El velo de la hoja. `.mobile-inspector-backdrop` llevaba estilo, animación
+       y regla de lienzo completo desde hace ciclos, pero NADIE lo renderizaba:
+       el slot `backdrop` de `AppShellLayout` nunca recibía valor. Sin él, una
+       hoja abierta en teléfono no se cerraba tocando fuera —que es como se
+       cierra una hoja en el sistema— y tapaba el lienzo sin decir que lo tapaba. */
+    backdrop={sheetSurface ? <button
+      type="button"
+      className="mobile-inspector-backdrop"
+      aria-label={t('inspector.close')}
+      onClick={() => closeSurface(sheetSurface)}
+    /> : null}
     inspector={<div className="workspace-surfaces">
       {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={() => closeSurface('detail')} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
       {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
     </div>}
     floatingActions={<div className="workspace-surface-launcher">
-      <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
+      {/* Alterna. Antes sólo abría, pero anunciaba `aria-expanded="true"` en
+          cuanto la superficie estaba activa: a un lector de pantalla se le
+          prometía que pulsar lo plegaría, y no hacía nada. `aria-controls`
+          apuntaba además a un id que no existe mientras la superficie no está
+          retenida. */}
+      <button className="mobile-inspector-toggle" onClick={(event) => toggleDetail(event.currentTarget)} aria-label={detail.open ? t('inspector.close') : t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls={broker.isRetained('detail') ? 'workspace-detail' : undefined}><SlidersHorizontal size={20} /></button>
       <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
       <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
       {/* Results ya no es residente en ninguna clase (CRI-100): estado y

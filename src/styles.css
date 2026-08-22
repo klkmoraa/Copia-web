@@ -559,7 +559,11 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
   stroke:none;
   vector-effect:non-scaling-stroke;
 }
-.smart-label text { fill:currentColor; font-size:10px; font-weight:var(--sc-font-weight-medium); letter-spacing:0; font-feature-settings:"tnum"; }
+.smart-label text { fill:currentColor; font-size:var(--sc-font-size-caption); font-weight:var(--sc-font-weight-medium); letter-spacing:0; font-feature-settings:"tnum"; }
+/* La estación de un extremo (`x 3.00 m`) es la segunda línea del mismo chip.
+   Se distingue de la primera por peso y opacidad, no por otro color: el color
+   de la etiqueta ya dice de qué magnitud habla. */
+.smart-label .smart-label-station { font-weight:var(--sc-font-weight-regular); opacity:.72; }
 .smart-label.priority-0 text,.smart-label.priority-1 text { font-weight:var(--sc-font-weight-semibold); }
 .smart-label.priority-3 { opacity:.92; }
 .smart-label-leader { stroke:currentColor; stroke-width:1.2; stroke-dasharray:3 3; opacity:.65; vector-effect:non-scaling-stroke; }
@@ -699,7 +703,6 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .inspector-tabs button { border: 0; background: transparent; position: relative; color: var(--muted); font-size: 13px; }
 .inspector-tabs button.active { color: var(--text); font-weight:590; }
 .inspector-tabs button.active::after { content: ''; position: absolute; height: 2px; background: var(--accent-ink); left: 8px; right: 8px; bottom: -1px; }
-.mobile-inspector-close { display:none; }
 .mobile-inspector-backdrop { display:none; }
 .inspector-scroll { overflow-y: auto; min-height: 0; padding: 12px 16px 32px; }
 .inspector-section { padding: 9px 0 15px; border-bottom: 1px solid var(--border-soft); }
@@ -1039,7 +1042,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .center-stage { grid-column:1; grid-row:1 / span 2; }
   .inspector-panel { position:absolute; z-index:31; left:0; right:0; top:auto; bottom:0; width:100%; height:min(72vh,660px); --inspector-hairline-width:1px 1px 0; border-radius:var(--sc-radius-panel) 18px 0 0; display:none; padding-bottom:env(safe-area-inset-bottom); }
   .inspector-panel::before { content:''; width:42px; height:5px; border-radius:var(--sc-radius-xs); background:var(--border); position:absolute; left:50%; top:7px; transform:translateX(-50%); }
-  .inspector-tabs { grid-template-columns:repeat(3,minmax(0,1fr)) 46px; padding-top:10px;height:60px;flex-basis:60px; }.mobile-inspector-close { display:grid!important; place-items:center; width:36px; height:36px; align-self:center; justify-self:center; border-radius:var(--sc-radius-control)!important; color:var(--muted)!important; }.mobile-inspector-close:hover { background:var(--surface-2)!important; color:var(--text)!important; }.mobile-inspector-close::after { display:none; }
+  .inspector-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); padding-top:10px;height:60px;flex-basis:60px; }
   .mobile-inspector-backdrop { display:block; position:absolute; z-index:var(--sc-z-topbar); inset:0; border:0; background:var(--sc-color-overlay-soft); }
   .results-panel { min-height:180px; max-height:58dvh; }
   .results-body { padding-bottom:calc(70px + env(safe-area-inset-bottom)); }
@@ -1793,7 +1796,6 @@ button:not(:disabled):active,.selection-card:active {
     clip-path:inset(0 0 0 0 round 18px 18px 0 0);
     transition-delay:0s;
   }
-  .mobile-inspector-close { width:44px!important; height:44px!important; }
   .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) { font-size:var(--sc-font-size-label); }
 }
 
@@ -4244,23 +4246,6 @@ button:not(:disabled):active,.selection-card:active {
 .critical-point-stem { stroke:var(--critical-color); stroke-width:1; stroke-dasharray:3 2; opacity:.6; }
 .critical-point-dot { fill:var(--critical-color); stroke:var(--canvas-bg); stroke-width:1.2; }
 .critical-point-marker.is-min .critical-point-dot { fill:var(--canvas-bg); stroke:var(--critical-color); stroke-width:2; }
-.critical-point-stamp {
-  fill:color-mix(in srgb,var(--critical-color) 10%,var(--sc-color-surface-1));
-  stroke:none;
-}
-.critical-point-value {
-  fill:var(--critical-color);
-  font-family:var(--sc-font-mono);
-  font-size:10px;
-  font-weight:var(--sc-font-weight-semibold);
-  font-variant-numeric:var(--sc-numeric-variant);
-}
-.critical-point-station {
-  fill:var(--muted);
-  font-family:var(--sc-font-mono);
-  font-size:10px;
-  font-variant-numeric:var(--sc-numeric-variant);
-}
 
 /* --- Tarjeta contextual del corte: η y estación ------------------------ */
 .cut-demand-badge {

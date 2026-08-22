@@ -56,11 +56,32 @@ const classroomProgressCopy: Record<ClassroomProgressStepId, { title: Translatio
   analysis: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
 };
 
+/**
+ * El almacenamiento del navegador puede LANZAR, no sólo devolver `null`: en
+ * Safari privado y con las cookies de sitio bloqueadas, el propio acceso tira
+ * una excepción. Ésta se hacía dentro del inicializador de `useState`, así que
+ * la excepción caía en pleno render del panel de resultados y se llevaba la
+ * mesa entera. `useWorkspaceLayoutPreferences` y `editorLayers` ya protegen sus
+ * accesos; éstos dos eran los que faltaban.
+ */
 const readResultsMode = (): ResultsPanelMode => {
   if (typeof window === 'undefined') return 'expanded';
-  const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
-  if (stored === 'focused') return 'expanded';
-  return stored === 'compact' || stored === 'expanded' ? stored : 'expanded';
+  try {
+    const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
+    if (stored === 'focused') return 'expanded';
+    return stored === 'compact' || stored === 'expanded' ? stored : 'expanded';
+  } catch {
+    return 'expanded';
+  }
+};
+
+const persistResultsMode = (mode: ResultsPanelMode): void => {
+  try {
+    window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Una preferencia de presentación que no se puede guardar no es un error
+    // que contarle a nadie: la sesión sigue, sólo no se recuerda.
+  }
 };
 
 // Results ya no consulta el ancho: `K0` es su modo móvil y `phone` su
@@ -179,7 +200,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
   }, []);
   useEffect(() => {
-    if (panelMode !== 'focused') window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
+    if (panelMode !== 'focused') persistResultsMode(panelMode);
     if (isMobile) return;
     if (panelMode === 'compact') setHeight(190);
     else if (panelMode === 'expanded') setHeight((current) => Math.max(current, 320));

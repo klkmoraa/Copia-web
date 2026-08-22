@@ -826,11 +826,24 @@ describe('Inspector advanced, locked, and validation states', () => {
     const onClose = vi.fn();
     renderInspector(createInspectorProject(), { modal: true, onClose });
 
-    expect(screen.getByRole('dialog', { name: 'Inspector' }).hasAttribute('aria-modal')).toBe(false);
-    const last = screen.getByRole('button', { name: 'Cerrar inspector' });
-    last.focus();
+    const panel = screen.getByRole('dialog', { name: 'Inspector' });
+    expect(panel.hasAttribute('aria-modal')).toBe(false);
+
+    // El cierre existe UNA vez y es alcanzable. Vivía dentro de la barra de
+    // pestañas, que sólo se pinta sin `surface` —y los tres sitios que montan
+    // el Inspector pasan `surface`—, así que en la app era código muerto: en
+    // teléfono la hoja sólo se cerraba con `Escape`. Ahora lo posee la cabecera
+    // de hoja, que se pinta siempre que la presentación es `sheet`.
+    expect(screen.getAllByRole('button', { name: 'Cerrar inspector' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Cerrar inspector' }));
+    expect(onClose).toHaveBeenCalledOnce();
+    onClose.mockClear();
+
+    // Y sigue sin atrapar el foco: una hoja no modal deja salir con Tab.
+    const focusables = [...panel.querySelectorAll<HTMLElement>('button, input, select, [tabindex]')];
+    focusables.at(-1)!.focus();
     await user.tab();
-    expect(document.activeElement).toBe(document.body);
+    expect(panel.contains(document.activeElement)).toBe(false);
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledOnce();
   });

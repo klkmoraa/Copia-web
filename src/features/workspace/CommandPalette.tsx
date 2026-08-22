@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useModalFocus } from '../../design-system/components/modalFocus';
 import { Search } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -50,6 +51,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const titleId = useId();
@@ -105,21 +107,23 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
 
   useEffect(() => setActiveIndex(0), [query, open]);
 
-  useEffect(() => {
-    if (!open) return;
-    window.requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      close();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [close, open]);
+  /**
+   * Foco, `Escape` y bloqueo de scroll, del sistema de diseño.
+   *
+   * La paleta era el ÚNICO diálogo del producto que se los hacía a mano, y se
+   * dejaba tres: sin trampa de foco —`Tab` salía a la mesa de detrás y seguía
+   * tabulando por el lienzo—, sin bloqueo de scroll —la página de debajo se
+   * desplazaba— y sin `aria-modal`, que además hacía que `isOwnHistoryScope`
+   * (`commandRegistry.ts`) no la reconociera y dejara vivo el deshacer global
+   * mientras estaba abierta. `useModalFocus` hace las tres cosas y ya las hace
+   * bien para los demás diálogos.
+   */
+  useModalFocus({
+    open,
+    containerRef: dialogRef,
+    onEscape: close,
+    initialFocus: () => inputRef.current,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -150,7 +154,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     onPointerDown={(event) => {
     if (event.target === event.currentTarget) close();
   }}>
-    <div className="command-palette" data-workspace-surface="palette" role="dialog" aria-labelledby={titleId}>
+    <div ref={dialogRef} className="command-palette" data-workspace-surface="palette" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
       <div className="command-palette-search">
         <Search size={16} aria-hidden="true" />
