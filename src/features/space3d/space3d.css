@@ -1,7 +1,7 @@
 /*
  * Space 3D · superficie
  * ---------------------------------------------------------------------------
- * Traducción del brandbook Clay a la superficie espacial, sobre los mismos
+ * Traducción del brandbook a la superficie espacial, sobre los mismos
  * tokens del producto (`design-system/tokens.css`). No hay un segundo sistema
  * de diseño aquí: todo color, radio, sombra y motion sale de `--sc-*`.
  *
@@ -12,7 +12,7 @@
  *   2. El dibujo estructural es plano. `.space3d-canvas-surface` no lleva
  *      sombra, degradado ni brillo — la lectura del modelo es analítica.
  *   3. Un toggle activo se hunde. Elevar el estado activo es lo que hace que
- *      una interfaz clay se sienta inflada.
+ *      la interfaz se sienta inflada.
  *
  * Móvil: lienzo primero, paneles apilados debajo, barra de herramientas
  * pegajosa, objetivos táctiles de 44px.
@@ -46,8 +46,8 @@
     var(--sc-space-3)
     max(var(--sc-space-5), env(safe-area-inset-left));
   background: var(--sc-color-surface-toolbar);
-  border-block-end: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-xs);
+  border-block-end: var(--sc-hairline);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-identity {
@@ -80,18 +80,17 @@
 .space3d-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 2px 7px;
   border-radius: var(--sc-radius-pill);
-  background: var(--sc-color-state-warning);
-  color: var(--sc-color-text-inverse);
-  font-family: var(--sc-font-mono);
+  /* Un estado no es una alarma. El relleno pleno de aviso a todo color
+     gritaba desde el rincón de la cabecera; un tinte del 14 % con la tinta de
+     estado encima dice lo mismo y deja que el título siga siendo el título. */
+  background: color-mix(in srgb, var(--sc-color-state-warning) 14%, transparent);
+  color: var(--sc-color-state-warning-foreground);
   font-size: var(--sc-font-size-caption);
-  font-weight: var(--sc-font-weight-bold);
-  letter-spacing:0;
-  text-transform:none;
-  /* El canario del brandbook no admite tinta blanca: su pareja medida es
-     #7a5a12 sobre relleno pleno. */
-  color: #7a5a12;
+  font-weight: var(--sc-font-weight-semibold);
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .space3d-destinations {
@@ -113,7 +112,7 @@
   padding: 4px var(--sc-space-3);
   border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   min-inline-size: 0;
 }
 
@@ -150,8 +149,8 @@
   padding: var(--sc-space-2) max(var(--sc-space-5), env(safe-area-inset-left));
   font-size: var(--sc-font-size-technical);
   color: var(--sc-color-state-warning-foreground);
-  background: color-mix(in srgb, var(--sc-color-state-warning) 12%, var(--sc-color-surface-1));
-  border-block-end: 1px solid color-mix(in srgb, var(--sc-color-state-warning) 32%, var(--sc-color-border));
+  background: color-mix(in srgb, var(--sc-color-state-warning) 10%, transparent);
+  border-block-end: 0.5px solid var(--sc-color-border);
 }
 
 /* --- Bandejas y controles ---------------------------------------------- */
@@ -164,16 +163,16 @@
   padding-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
 }
 
-/* Bandeja hundida con herramientas salidas: la combinación que da la sensación
-   de piezas apoyadas sobre una mesa. */
+/* Bandeja: un relleno gris que agrupa, no una cavidad excavada. Las piezas se
+   apoyan DENTRO con 2px de aire, como un control segmentado del sistema. */
 .space3d-tray {
   display: flex;
   align-items: center;
-  gap: var(--sc-space-2);
-  padding: 6px;
-  border-radius: var(--sc-radius-lg);
-  background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-fill-tertiary);
+  box-shadow: none;
 }
 
 .space3d-tray--layers { color: var(--sc-color-text-secondary); padding-inline-start: var(--sc-space-3); }
@@ -185,17 +184,17 @@
   align-items: center;
   justify-content: center;
   gap: var(--sc-space-2);
-  min-block-size: var(--sc-size-target-touch);
-  min-inline-size: var(--sc-size-target-touch);
+  min-block-size: var(--sc-control-height-md);
+  min-inline-size: var(--sc-control-height-md);
   padding-inline: var(--sc-space-3);
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-md);
+  border: 0.5px solid var(--sc-color-border);
+  border-radius: var(--sc-radius-control);
   background: var(--sc-color-surface-1);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-control);
-  font-weight: var(--sc-font-weight-semibold);
+  font-weight: var(--sc-font-weight-medium);
   letter-spacing: var(--sc-tracking-control);
   cursor: pointer;
   transition: var(--sc-transition-control);
@@ -205,16 +204,15 @@
 
 .space3d-tool:hover:not(:disabled),
 .space3d-button:hover:not(:disabled) {
-  border-color: var(--sc-color-border-strong);
-  box-shadow: var(--sc-shadow-clay-sm);
+  background: var(--sc-color-fill-quaternary);
 }
 
-/* Misma gramática que el editor 2D: al pulsar, la tecla baja de verdad. */
+/* Misma gramática que el editor 2D: al pulsar, la pieza se tiñe y encoge. */
 .space3d-tool:active:not(:disabled),
 .space3d-button:active:not(:disabled) {
-  background: var(--sc-color-surface-inset);
-  transform: var(--sc-clay-press-transform);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  background: var(--sc-color-fill-tertiary);
+  transform: var(--sc-press-transform);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-tool:disabled,
@@ -225,25 +223,50 @@
   opacity: 0.72;
 }
 
-/* La regla clay que más se olvida: al seleccionarse, baja. */
+.space3d-tray .space3d-tool,
+.space3d-tray .space3d-button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  min-block-size: calc(var(--sc-control-height-md) - 4px);
+  min-inline-size: calc(var(--sc-control-height-md) - 4px);
+  border-radius: calc(var(--sc-radius-control) - 2px);
+}
+.space3d-tray .space3d-tool:hover:not(:disabled) { background: var(--sc-color-fill-quaternary); }
+
+/* Elegida: relleno de acento con la tinta encima, como la selección de una
+   barra lateral. Antes se hundía, que es el gesto contrario al que describe
+   estar delante. */
 .space3d-tool--toggle[aria-pressed='true'] {
-  background: var(--sc-color-action-subtle);
-  border-color: color-mix(in srgb, var(--sc-color-action-primary) 42%, var(--sc-color-border));
-  color: var(--sc-color-action-primary);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  background: var(--sc-color-action-primary);
+  border-color: transparent;
+  color: var(--sc-color-action-foreground);
+  box-shadow: none;
   transform: none;
+}
+
+/* Dentro de una bandeja, un interruptor encendido NO se rellena de acento. Los
+   cinco de capas están encendidos casi siempre, y cinco rectángulos azules
+   seguidos gritan una decisión que nadie ha tomado: son el estado por defecto.
+   El relleno gris más el glifo en tinta de acento dice "encendido" sin
+   convertir la bandeja en un semáforo. El acento pleno queda para lo que de
+   verdad es una elección entre varias. */
+.space3d-tray .space3d-tool--toggle[aria-pressed='true'] {
+  background: var(--sc-color-fill-secondary);
+  color: var(--sc-color-action-ink);
 }
 
 .space3d-button--primary {
   background: var(--sc-color-action-primary);
-  border-color: var(--sc-color-action-edge);
+  border-color: transparent;
   color: var(--sc-color-action-foreground);
-  box-shadow: var(--sc-shadow-clay-action);
+  font-weight: var(--sc-font-weight-semibold);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-button--primary:hover:not(:disabled) { background: var(--sc-color-action-hover); }
 .space3d-button--ghost { background: transparent; box-shadow: none; font-weight: var(--sc-font-weight-medium); }
-.space3d-button--danger { color: var(--sc-color-state-error-foreground); border-color: color-mix(in srgb, var(--sc-color-state-error) 40%, var(--sc-color-border)); }
+.space3d-button--danger { color: var(--sc-color-state-error-foreground); border-color: var(--sc-color-border); }
 
 .space3d-tool:focus-visible,
 .space3d-button:focus-visible,
@@ -254,7 +277,7 @@
 .space3d-field textarea:focus-visible,
 .space3d-check input:focus-visible,
 .space3d-canvas-surface:focus-visible {
-  outline: var(--sc-focus-ring-width-compact) solid var(--sc-color-focus);
+  outline: var(--sc-focus-ring-width) solid color-mix(in srgb, var(--sc-color-focus) 45%, transparent);
   outline-offset: var(--sc-focus-ring-offset);
 }
 
@@ -276,10 +299,10 @@
 .space3d-rail {
   min-inline-size: 0;
   min-block-size: 0;
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-xl);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-stage {
@@ -304,12 +327,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sc-space-2);
-  padding: var(--sc-space-2);
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-lg);
-  background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  gap: 2px;
+  padding: 4px;
+  border: 0.5px solid var(--sc-color-border);
+  border-radius: var(--sc-radius-card);
+  background: var(--sc-color-surface-1);
+  box-shadow: none;
 }
 
 .space3d-rail-vertical-group {
@@ -327,14 +350,14 @@
   min-block-size: var(--sc-size-target-touch);
   min-inline-size: var(--sc-size-target-touch);
   padding: 6px 4px;
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-md);
-  background: var(--sc-color-surface-1);
+  border: 0.5px solid transparent;
+  border-radius: var(--sc-radius-control);
+  background: transparent;
   color: var(--sc-color-text-secondary);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: none;
   font-family: var(--sc-font-ui);
-  font-size: 10px;
-  font-weight: var(--sc-font-weight-semibold);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-medium);
   line-height: 1;
   cursor: pointer;
   transition: var(--sc-transition-control);
@@ -342,16 +365,16 @@
 
 .space3d-rail-button:hover:not(:disabled) {
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-sm);
+  background: var(--sc-color-fill-quaternary);
 }
 
-.space3d-rail-button:active:not(:disabled) { transform: none; box-shadow: var(--sc-shadow-clay-pressed); }
+.space3d-rail-button:active:not(:disabled) { transform: none; background: var(--sc-color-fill-tertiary); }
 
 .space3d-rail-button[aria-pressed='true'] {
-  background: var(--sc-color-action-subtle);
-  border-color: color-mix(in srgb, var(--sc-color-action-primary) 42%, var(--sc-color-border));
-  color: var(--sc-color-action-primary);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  background: var(--sc-color-action-primary);
+  border-color: transparent;
+  color: var(--sc-color-action-foreground);
+  box-shadow: none;
   transform: none;
 }
 
@@ -370,10 +393,10 @@
   min-inline-size: 0;
   min-block-size: 0;
   overflow-y: auto;
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-xl);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-elevation-1);
   padding: var(--sc-space-3);
 }
 
@@ -381,7 +404,7 @@
 
 .space3d-model-nav-heading {
   margin: 0 0 var(--sc-space-2);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-semibold);
   letter-spacing:0;
@@ -425,7 +448,7 @@
   padding: 1px 6px;
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-caption);
   text-align: center;
@@ -495,7 +518,7 @@
   border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-sm);
   background: var(--sc-color-surface-input);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   color: var(--sc-color-text-primary);
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-control);
@@ -508,7 +531,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sc-space-2);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-technical);
   color: var(--sc-color-technical-deformed);
 }
@@ -527,7 +550,7 @@
   }
 }
 
-/* --- Lienzo (plano, sin clay) ------------------------------------------- */
+/* --- Lienzo (plano, sin materia) ---------------------------------------- */
 
 .space3d-canvas {
   min-block-size: 0;
@@ -583,8 +606,8 @@
   padding: 4px;
   border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-xs);
+  border: var(--sc-hairline);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-view-select {
@@ -594,8 +617,8 @@
   padding: 6px var(--sc-space-3);
   border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-xs);
+  border: var(--sc-hairline);
+  box-shadow: var(--sc-elevation-1);
   color: var(--sc-color-text-primary);
   font-size: var(--sc-font-size-control);
   font-weight: var(--sc-font-weight-semibold);
@@ -630,7 +653,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--sc-space-3);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-technical);
   font-variant-numeric: var(--sc-numeric-variant);
   color: var(--sc-color-text-secondary);
@@ -677,7 +700,7 @@
   background: var(--sc-color-surface-1);
   border-color: var(--sc-color-border);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-results-select {
@@ -687,7 +710,7 @@
   padding: var(--sc-space-2) var(--sc-space-3);
   border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   backdrop-filter: none;
   inline-size: 100%;
 }
@@ -720,7 +743,7 @@
 .space3d-table thead th {
   text-align: end;
   color: var(--sc-color-text-muted);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-semibold);
   letter-spacing:0;
@@ -776,10 +799,10 @@
   flex-direction: column;
   gap: var(--sc-space-3);
   padding: var(--sc-space-3);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-2);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-editor-head h3 {
@@ -792,7 +815,7 @@
 }
 
 .space3d-editor-head code {
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-technical);
   color: var(--sc-color-action-primary);
 }
@@ -821,7 +844,7 @@
 .space3d-field-unit {
   grid-column: 2;
   justify-self: end;
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
   color: var(--sc-color-text-unit);
 }
@@ -840,9 +863,9 @@
   border-radius: var(--sc-radius-sm);
   /* Un campo recibe contenido: baja. */
   background: var(--sc-color-surface-input);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   color: var(--sc-color-text-primary);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-control);
   font-variant-numeric: var(--sc-numeric-variant);
 }
@@ -877,7 +900,7 @@
   border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-sm);
   background: var(--sc-color-surface-1);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-technical);
   cursor: pointer;
 }
@@ -886,7 +909,7 @@
   background: var(--sc-color-action-subtle);
   border-color: color-mix(in srgb, var(--sc-color-action-primary) 42%, var(--sc-color-border));
   color: var(--sc-color-action-primary);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
 }
 
 .space3d-inline-actions { display: flex; flex-wrap: wrap; gap: var(--sc-space-2); margin-block-start: var(--sc-space-2); }
@@ -918,8 +941,8 @@
   padding: 4px 10px;
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
-  font-family: var(--sc-font-mono);
+  box-shadow: none;
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-caption);
   color: var(--sc-color-technical-deformed);
 }
@@ -1006,11 +1029,11 @@
   gap: var(--sc-space-2);
   margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
   padding: var(--sc-space-3);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-inline-start: 3px solid var(--sc-color-brand-secondary);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-bridge header {
@@ -1035,10 +1058,10 @@
   gap: var(--sc-space-2);
   margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
   padding: var(--sc-space-3);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .space3d-status {
@@ -1050,7 +1073,7 @@
   border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-1);
-  font-family: var(--sc-font-mono);
+  font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-technical);
   font-variant-numeric: var(--sc-numeric-variant);
   color: var(--sc-color-text-secondary);
@@ -1152,10 +1175,10 @@
     display: flex;
     flex-direction: column;
     min-block-size: 0;
-    border: var(--sc-clay-edge);
+    border: var(--sc-hairline);
     border-radius: var(--sc-radius-xl);
     background: var(--sc-color-surface-1);
-    box-shadow: var(--sc-shadow-clay-md);
+    box-shadow: var(--sc-elevation-1);
     overflow: hidden;
   }
   .space3d-sheet-handle { display: none; }
@@ -1223,8 +1246,8 @@
     border-start-start-radius: var(--sc-radius-sheet);
     border-start-end-radius: var(--sc-radius-sheet);
     background: var(--sc-color-surface-1);
-    box-shadow: var(--sc-shadow-clay-floating);
-    border: var(--sc-clay-edge);
+    box-shadow: var(--sc-elevation-3);
+    border: var(--sc-hairline);
     border-block-end: 0;
     overflow: hidden;
     transition: max-block-size 0.2s ease;

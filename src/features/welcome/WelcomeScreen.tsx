@@ -280,7 +280,7 @@ export const WelcomeScreen = ({
           ) : null}
 
           <div className="welcome-work">
-            {/* Corona: el carril de progreso y la pieza clay. El pórtico ocupa
+            {/* Corona: el carril de progreso y la figura. El pórtico ocupa
                 la columna derecha a lo alto de las DOS filas de la corona
                 —rail y acciones—, que es lo que le da presencia sin salirse de
                 su esquina. */}

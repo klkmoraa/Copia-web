@@ -6,7 +6,7 @@
  * - La **tabla es plana**. `SurfaceLevel` reserva `flat` para las zonas técnicas
  *   densas justamente por esto: dar relieve a cada fila convierte una rejilla de
  *   auditoría en un montón de fichas y se lee peor.
- * - Todo lo demás es **Clay**: barra de herramientas, chips de filtro, tarjetas
+ * - Todo lo demás lleva la materia del sistema: barra de herramientas, chips de filtro, tarjetas
  *   del panel contextual y acciones.
  *
  * El foco y la selección se dibujan distinto a propósito. El foco es un anillo
@@ -59,7 +59,7 @@
   padding: var(--sc-space-1);
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
 }
 
 .datasheet-entity button {
@@ -82,7 +82,7 @@
 .datasheet-entity button.active {
   background: var(--sc-color-surface-1);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .datasheet-entity__count {
@@ -109,7 +109,7 @@
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-input);
   color: var(--sc-color-text-muted);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
 }
 
 .datasheet-search input {
@@ -174,7 +174,7 @@
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-label);
   font-weight: var(--sc-font-weight-medium);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
   cursor: pointer;
   transition: var(--sc-transition-control);
 }
@@ -183,7 +183,7 @@
   border-color: var(--sc-color-action-primary);
   background: var(--sc-color-action-subtle);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
 }
 
 .datasheet-chip__count {
@@ -303,7 +303,7 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Panel contextual — Clay                                             */
+/* Panel contextual                                                    */
 /* ------------------------------------------------------------------ */
 
 .datasheet-context {
@@ -338,14 +338,14 @@
   font-family: var(--sc-font-ui);
   font-size: var(--sc-font-size-label);
   font-weight: var(--sc-font-weight-semibold);
-  box-shadow: var(--sc-shadow-clay-action);
+  box-shadow: var(--sc-elevation-1);
   cursor: pointer;
   transition: var(--sc-transition-control);
 }
 
 .datasheet-focus-action:hover:not(:disabled) {
   background: var(--sc-color-action-hover);
-  box-shadow: var(--sc-shadow-clay-action-hover);
+  box-shadow: var(--sc-elevation-2);
 }
 
 .datasheet-focus-action:disabled {

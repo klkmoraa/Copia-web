@@ -1,4 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="15" fill="#468C09"/>
-  <path fill="#fff" d="M43.5 13.5H29C20.6 13.5 15.5 18 15.5 24.8c0 6.4 4.7 10.4 12.9 10.4h7.4c4.1 0 6.2 1.6 6.2 4.5 0 3-2.3 4.8-6.5 4.8H18V52h17.8C44.1 52 49 47.3 49 39.8c0-6.7-4.6-10.7-12.8-10.7h-7.4c-4.2 0-6.3-1.5-6.3-4.2 0-2.5 2.3-4.1 6.7-4.1h14.3v-7.3Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="structureCo">
+  <!-- Icono de aplicación: la silueta redondeada del sistema, rellena del azul
+       de acción, con la marca en blanco encima. El glifo es un pórtico —dos
+       montantes, un dintel y el terreno— porque es la primera estructura que
+       resuelve cualquiera que abra esta app, y porque a 16px sigue siendo
+       reconocible: cuatro trazos y dos nudos, nada más. -->
+  <rect width="64" height="64" rx="14.4" fill="#0071EB"/>
+  <g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 22h30"/>
+    <path d="M20 22v22"/>
+    <path d="M44 22v22"/>
+    <path d="M13 47h38" stroke-width="3" opacity=".65"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="20" cy="22" r="4.6"/>
+    <circle cx="44" cy="22" r="4.6"/>
+  </g>
+  <g fill="#0071EB">
+    <circle cx="20" cy="22" r="1.9"/>
+    <circle cx="44" cy="22" r="1.9"/>
+  </g>
 </svg>

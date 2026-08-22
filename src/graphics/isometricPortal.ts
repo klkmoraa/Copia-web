@@ -1,5 +1,5 @@
 /**
- * Geometría del pórtico clay de la bienvenida.
+ * Geometría del pórtico isométrico de la bienvenida.
  *
  * Es aritmética, no dibujo: define el pórtico en coordenadas de mundo y lo
  * proyecta a 2D con una matriz isométrica, devolviendo caras ya ordenadas por
@@ -10,12 +10,12 @@
  * jsdom, sin render y sin WebGL — y lo que permitiría sustituir el motor de
  * pintura sin volver a derivar la geometría.
  *
- * La luz parte de la misma fuente que la materia clay (arriba-izquierda, a
- * 145° en `tokens.css`), pero al proyectarla aquí con `projectIso` no cae en
- * el mismo ángulo: medida en convención `linear-gradient`, la del pórtico
- * queda a ~151,7° — mismo cuadrante, ~6,7° de diferencia por la proyección
- * isométrica. Si la luz de `tokens.css` cambia, revisa también `LIGHT` más
- * abajo.
+ * La figura SÍ tiene fuente de luz, y es la única cosa del producto que la
+ * tiene. La interfaz dejó de modelar volumen —ninguna pieza declara ya su
+ * propia iluminación—, pero esto no es una pieza de interfaz: es un dibujo, y
+ * un sólido isométrico sin sombreado por cara no se lee como un sólido. La luz
+ * entra por arriba-izquierda de PANTALLA y vive entera aquí, en `LIGHT`, sin
+ * ningún token del que depender.
  */
 
 export interface Vec3 { x: number; y: number; z: number }
@@ -95,9 +95,9 @@ export const projectIso = (v: Vec3): Point2 => ({
  * `boxFaces`). Sigue entrando por arriba-izquierda de PANTALLA — su
  * proyección vía `projectIso` cae en (x negativo, y negativo), es decir
  * `projectIso(LIGHT) ≈ (-0,1559, -0,2900)`, que en convención
- * `linear-gradient` es ~151,7°: mismo cuadrante que los 145° de la materia
- * clay en `tokens.css`, pero no el mismo ángulo — la proyección isométrica
- * lo desvía ~6,7°.
+ * `linear-gradient` es ~151,7°. El valor no se hereda de ningún token: la
+ * interfaz ya no declara fuente de luz, así que ésta es de la figura y de
+ * nadie más.
  */
 const LIGHT: Vec3 = (() => {
   const raw = { x: 0.37, y: 0.75, z: 0.55 };

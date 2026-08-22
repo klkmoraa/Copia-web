@@ -9,7 +9,7 @@
  * pórtico es un objeto con volumen y necesita proyección, sombreado por cara y
  * un filtro; esto son diagramas planos de dos trazos, y derivarlos costaría
  * más código que dibujarlos. Se quedan deliberadamente en la gramática técnica
- * —BASE plano, sin clay, sin filtro, sin volumen— porque representan el
+ * —BASE plano, sin materia, sin filtro, sin volumen— porque representan el
  * trabajo de ingeniería, y ésa es exactamente la mitad del producto que no se
  * viste de arcilla.
  *

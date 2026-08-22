@@ -11,10 +11,10 @@ import { formatResultNumber } from './resultFormatting';
 /**
  * Reacciones — vista densa invocada (CRI-101).
  *
- * Los tres extremos van en tarjeta Clay `RAISED` con sus cinco datos; la tabla
+ * Los tres extremos van en tarjeta `RAISED` con sus cinco datos; la tabla
  * completa sigue existiendo y sigue siendo comparable de un vistazo, sólo que
  * ahora **dentro** de una tarjeta que le hace de marco: la tabla es `BASE`, sin
- * sombra, sin celdas clay y sin canto redondeado por fila. Ninguna fila
+ * sombra, sin celdas elevadas y sin canto redondeado por fila. Ninguna fila
  * dictamina: no hay check por fila, porque una fila no es un veredicto.
  */
 export const ReactionsView = () => {

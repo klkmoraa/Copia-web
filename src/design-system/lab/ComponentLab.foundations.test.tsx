@@ -5,7 +5,7 @@ import { ComponentLab } from './ComponentLab';
 
 afterEach(() => cleanup());
 
-describe('ComponentLab Clay foundations', () => {
+describe('ComponentLab · fundamentos del sistema', () => {
   it('shows the approved reading roles and separates applied loads from responses', () => {
     const { container } = render(<ComponentLab />);
 

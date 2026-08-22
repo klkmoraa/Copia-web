@@ -231,7 +231,7 @@ async function verifyWelcomeHeaderResponsive(page) {
 // no existe en `WelcomeScreen.tsx` y el gate entero moría esperándolo 30s. La
 // pieza que heredó el papel —materia propia apoyada sobre la mesa, y la
 // primera que se pinta en la etapa de bienvenida— es el carril de puertas, y
-// declara su clay en `styles.css`, que sí viaja en el chunk de entrada. El
+// declara su materia en `styles.css`, que sí viaja en el chunk de entrada. El
 // riesgo que el check vigila es el mismo; sólo cambia dónde se mide.
 async function verifyWelcomeFirstPaintMaterial() {
   const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
@@ -269,7 +269,7 @@ async function verifyWelcomeFirstPaintMaterial() {
 // eso ocurriera el desplazamiento en hover de esa tarjeta quedaría mudo pese
 // a que la regla exista.
 /**
- * Reads the real clay material for a selector through Chromium's
+ * Reads the real composed material for a selector through Chromium's
  * getComputedStyle. Tasks 4-9 reuse this because jsdom does not render CSS.
  */
 async function readClayMaterial(page, selector) {
@@ -324,7 +324,7 @@ async function verifyTopbarClayMaterial(page) {
 async function verifyToolRailClayMaterial(page, viewport) {
   const material = await readClayMaterial(page, '.toolbar');
   // CRI-119 · Medido en el producto real (K0 retrato, 390×844): el canto de
-  // `.toolbar` es `1px 1px 0px 0px`, no sólo superior. `--toolbar-clay-border-width`
+  // `.toolbar` es `1px 1px 0px 0px`, no sólo superior. `--toolbar-hairline-width`
   // se redeclara en tres bloques `@media` con condiciones solapadas
   // (`max-width:1023px`, `max-width:1023px and orientation:landscape`,
   // `max-width:700px`) y el valor que gana en este ancho ya no es sólo
@@ -740,11 +740,11 @@ async function verifyResultsPhoneLandscapeMaterial() {
   }
 }
 
-async function verifyWelcomeClayMaterial(page) {
+async function verifyWelcomeSurfaceMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
   // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
-  // único que este check vigilaba lo eliminó CRI-112, y su papel de pieza clay
+  // único que este check vigilaba lo eliminó CRI-112, y su papel de figura
   // dominante de la bienvenida lo hereda el carril de puertas.
   const railMaterial = await readClayMaterial(page, '.welcome-gate-rail');
   out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
@@ -833,7 +833,7 @@ async function verifyWelcomeClayMaterial(page) {
         // `:hover` y sigue siendo distinto de `'none'`, así que el check
         // laxo se quedaba en verde con el defecto reintroducido. El único
         // valor que demuestra el hundimiento correcto es la matriz que
-        // produce `--sc-clay-press-transform`.
+        // produce `--sc-press-transform`.
         //
         // CRI-119 · El token pasó de `translateY(1px)` puro a
         // `translateY(1.5px) scale(0.985)` (un "hundimiento" que también
@@ -853,7 +853,7 @@ async function verifyWelcomeClayMaterial(page) {
     }
   }
 
-  // El foco por teclado tiene que verse sobre las tres superficies clay
+  // El foco por teclado tiene que verse sobre las tres superficies
   // nuevas, no sólo la primera: se llega con Tab de verdad (no `element.focus()`,
   // que en Chromium no siempre dispara `:focus-visible`) y se sigue avanzando
   // en el mismo recorrido (el orden del DOM es launcher x3 → filtros →
@@ -915,7 +915,7 @@ async function verifyWelcomeReducedMotionActive() {
     // nunca llega a marcar `:hover`/`:active` en esta página recién creada —
     // el `page.mouse.move` + `page.mouse.down()` en crudo no bastan para que
     // el pseudo-estado se registre en un contexto nuevo sin interacción
-    // previa (mismo motivo por el que `verifyWelcomeClayMaterial` llama a
+    // previa (mismo motivo por el que `verifyWelcomeSurfaceMaterial` llama a
     // `locator.hover()` antes de su propio press). Sin el `hover()`, el
     // elemento se queda en su transform de reposo ('none'), la comparación
     // `pressedTransform === 'none'` pasa siempre en verde, y el check no
@@ -943,7 +943,7 @@ async function desktop() {
   page.on('pageerror', err => out.pageErrors.push(String(err)));
   await loadCleanApp(page);
   await verifyWelcomeHeaderResponsive(page);
-  await verifyWelcomeClayMaterial(page);
+  await verifyWelcomeSurfaceMaterial(page);
   await enterWorkspace(page, { example: true });
   Object.assign(out.checks, await verifyTopbarClayMaterial(page));
   Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));

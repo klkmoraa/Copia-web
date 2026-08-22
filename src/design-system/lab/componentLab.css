@@ -55,7 +55,7 @@ body:has(.component-lab),
   padding: var(--sc-space-3) clamp(var(--sc-space-4), 4vw, var(--sc-space-8));
   border-bottom: var(--sc-border-width) solid var(--sc-color-border);
   background: color-mix(in srgb, var(--sc-color-surface-1) 90%, transparent);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .component-lab__brand {
@@ -229,10 +229,10 @@ body:has(.component-lab),
 .component-lab__authority-card {
   min-width: 0;
   padding: var(--sc-space-5);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-xl);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .component-lab__authority-card > h4 {
@@ -333,7 +333,7 @@ body:has(.component-lab),
   background: var(--sc-color-action-primary);
   color: var(--sc-color-action-foreground);
   font-weight: var(--sc-font-weight-bold);
-  box-shadow: var(--sc-shadow-clay-action);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .component-lab__focus-evidence:focus-visible {
@@ -377,7 +377,7 @@ body:has(.component-lab),
 .component-lab__theme-levels .is-app { background: var(--sc-color-bg-app); }
 .component-lab__theme-levels .is-canvas { background: var(--sc-color-bg-canvas); }
 .component-lab__theme-levels .is-surface { background: var(--sc-color-surface-1); }
-.component-lab__theme-levels .is-raised { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-xs); }
+.component-lab__theme-levels .is-raised { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-elevation-1); }
 .component-lab__type-specimens,
 .component-lab__load-identities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-4); }
 .component-lab__type-specimen,
@@ -419,9 +419,9 @@ body:has(.component-lab),
   width: 100%;
   height: 72px;
   margin-bottom: var(--sc-space-2);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
 }
 .component-lab__radius-role--data .component-lab__radius-sample { border-radius: var(--sc-radius-data); box-shadow: none; border-color: var(--sc-color-border-soft); }
 .component-lab__radius-role--control .component-lab__radius-sample { border-radius: var(--sc-radius-control); }
@@ -439,7 +439,7 @@ body:has(.component-lab),
   align-content: end;
   gap: var(--sc-space-1);
   padding: var(--sc-space-3);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   background: var(--sc-color-surface-1);
   color: var(--sc-color-text-primary);
   font-family: var(--sc-font-mono);
@@ -447,9 +447,9 @@ body:has(.component-lab),
 .component-lab__depth-size strong { font-family: var(--sc-font-ui); font-size: var(--sc-font-size-label); }
 .component-lab__depth-size span { color: var(--sc-color-text-secondary); font-family: var(--sc-font-ui); font-size: var(--sc-font-size-caption); }
 .component-lab__depth-size code { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); }
-.component-lab__depth-size--sm { width: 148px; min-height: 92px; border-radius: var(--sc-radius-control); box-shadow: var(--sc-shadow-clay-xs); }
-.component-lab__depth-size--md { width: 232px; min-height: 136px; border-radius: var(--sc-radius-card); box-shadow: var(--sc-shadow-clay-md); }
-.component-lab__depth-size--lg { width: 320px; min-height: 188px; border-radius: var(--sc-radius-panel); box-shadow: var(--sc-shadow-clay-lg); }
+.component-lab__depth-size--sm { width: 148px; min-height: 92px; border-radius: var(--sc-radius-control); box-shadow: var(--sc-elevation-1); }
+.component-lab__depth-size--md { width: 232px; min-height: 136px; border-radius: var(--sc-radius-card); box-shadow: var(--sc-elevation-1); }
+.component-lab__depth-size--lg { width: 320px; min-height: 188px; border-radius: var(--sc-radius-panel); box-shadow: var(--sc-elevation-2); }
 
 /* CRI-105 · la contraprueba: lo técnico se queda plano y exacto (V-02). */
 .component-lab__flatness { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--sc-space-5); align-items: start; }
@@ -479,7 +479,7 @@ body:has(.component-lab),
   color: var(--sc-color-text-primary);
   font-size: var(--sc-font-size-control);
   font-weight: var(--sc-font-weight-semibold);
-  transform: var(--sc-clay-press-transform);
+  transform: var(--sc-press-transform);
 }
 .component-lab__motion-policy { margin-top: var(--sc-space-4); display: grid; gap: var(--sc-space-2); padding: var(--sc-space-4); }
 .component-lab__motion-policy p { margin: 0; color: var(--sc-color-text-secondary); }
@@ -529,7 +529,7 @@ body:has(.component-lab),
   border: var(--sc-border-width) solid var(--sc-color-border);
   border-radius: var(--sc-radius-lg);
   background: color-mix(in srgb, var(--sc-color-surface-elevated) 94%, transparent);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .component-lab__event span { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }

@@ -2,7 +2,7 @@
  * Viewport Three.js de Space 3D.
  *
  * Reglas visuales heredadas del brandbook: **el dibujo estructural es plano**.
- * Nada de clay, brillos ni materiales físicos sobre la geometría; el volumen
+ * Nada de materia, brillos ni materiales físicos sobre la geometría; el volumen
  * táctil vive en los controles de la interfaz, no en el modelo. Aquí sólo hay
  * líneas nítidas, colores con significado técnico fijo y una rejilla que sitúa
  * el plano de suelo sin competir con la estructura.
@@ -92,29 +92,31 @@ export interface Space3DViewport {
  * Paleta técnica. Los valores por defecto son los tokens del sistema; en el
  * navegador se sobreescriben con el valor calculado.
  *
- * Los roles técnicos y de selección ya no tienen "valor de Día": desde el
- * cierre cromático son el mismo HEX en ambos temas, así que el respaldo es el
- * valor real y no una aproximación clara. Sólo los neutros (miembro, nodo,
- * rejilla, etiqueta) siguen siendo los de Día.
+ * El respaldo de cada rol es su valor en la apariencia CLARA. Desde que el
+ * color se decide por apariencia, un rol puede valer dos hexes distintos, y el
+ * que se escribe aquí es el que la vista usaría si el token no resolviera —lo
+ * cual sólo pasa fuera del navegador (pruebas, render sin documento), donde la
+ * apariencia clara es la asumida.
  *
- * `axisY` usa el TRAZO de marca, no el relleno: el relleno lima mide 1,8:1
- * contra el lienzo claro y un eje pintado con él desaparecería.
+ * `axisY` usa la TINTA de acción, no el relleno: el relleno de un botón mide
+ * 4,3:1 contra el lienzo claro pero está calibrado para llevar texto blanco
+ * encima, no para ser una línea de un píxel sobre papel.
  */
 const TOKEN_COLORS = {
-  member: ['--sc-color-canvas-member', '#23312c'],
-  memberSelected: ['--sc-color-selection-stroke', '#6a5df2'],
-  node: ['--sc-color-text-primary', '#23312c'],
-  nodeSelected: ['--sc-color-selection-stroke', '#6a5df2'],
-  support: ['--sc-color-technical-reaction', '#3a72e3'],
-  load: ['--sc-color-technical-load', '#3a72e3'],
-  moment: ['--sc-color-technical-moment', '#ed4b46'],
-  deformed: ['--sc-color-technical-deformed', '#8b5cf6'],
-  grid: ['--sc-color-canvas-grid', '#e8e1d7'],
-  gridStrong: ['--sc-color-canvas-grid-strong', '#d9d0c4'],
-  axisX: ['--sc-color-technical-axis', '#ad5e18'],
-  axisY: ['--sc-color-action-ink', '#468c09'],
-  axisZ: ['--sc-color-brand-secondary', '#0f95d1'],
-  label: ['--sc-color-text-secondary', '#607068'],
+  member: ['--sc-color-canvas-member', '#1d1d1f'],
+  memberSelected: ['--sc-color-selection-stroke', '#0064d2'],
+  node: ['--sc-color-text-primary', '#1d1d1f'],
+  nodeSelected: ['--sc-color-selection-stroke', '#0064d2'],
+  support: ['--sc-color-technical-reaction', '#0040dd'],
+  load: ['--sc-color-technical-load', '#3634a3'],
+  moment: ['--sc-color-technical-moment', '#c93400'],
+  deformed: ['--sc-color-technical-deformed', '#5e46c8'],
+  grid: ['--sc-color-canvas-grid', '#e4e4e7'],
+  gridStrong: ['--sc-color-canvas-grid-strong', '#d0d0d5'],
+  axisX: ['--sc-color-technical-axis', '#7f6545'],
+  axisY: ['--sc-color-action-ink', '#0064d2'],
+  axisZ: ['--sc-color-brand-secondary', '#0064d2'],
+  label: ['--sc-color-text-secondary', '#6e6e73'],
 } as const;
 
 type ColorRole = keyof typeof TOKEN_COLORS;

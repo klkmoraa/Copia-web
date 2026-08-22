@@ -26,9 +26,9 @@
   padding: 14px;
   color: var(--text, #231f2f);
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-card);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .duplicate-preview-panel > p {
@@ -80,7 +80,7 @@
   right: 18px;
   bottom: 86px;
   min-height: 44px;
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 /* Repeat is a separate contextual action. Keep both 44 px targets reachable. */
@@ -99,9 +99,9 @@
   padding: 14px;
   color: var(--text);
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-panel);
-  box-shadow: var(--sc-shadow-clay-lg);
+  box-shadow: var(--sc-elevation-2);
   overscroll-behavior: contain;
 }
 
@@ -237,7 +237,7 @@
     bottom: calc(126px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* The selected Clay segment is intentionally pressed/scaled. Give its
+  /* The selected segment is intentionally pressed/scaled. Give its
      layout box a small allowance so its measured touch target remains >=44px. */
   .structural-edit-operation.sc-segmented > button,
   .structural-edit-wide-field.sc-segmented > button,
@@ -334,9 +334,9 @@
   overflow-y: auto;
   padding: 8px;
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-lg);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .contextual-actions__overflow-action {

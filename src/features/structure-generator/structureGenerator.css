@@ -21,9 +21,9 @@
   padding: 14px;
   color: var(--text);
   background: var(--sc-color-surface-1);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-panel);
-  box-shadow: var(--sc-shadow-clay-lg);
+  box-shadow: var(--sc-elevation-2);
   overscroll-behavior: contain;
 }
 
@@ -82,7 +82,7 @@
   gap: 8px;
   padding: 10px;
   background: var(--sc-color-surface-2, transparent);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-md);
 }
 
@@ -120,7 +120,7 @@
   gap: 8px;
   padding: 10px;
   background: var(--sc-color-surface-2, transparent);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-md);
 }
 
@@ -206,7 +206,7 @@
     border-radius: var(--sc-radius-lg) var(--sc-radius-lg) var(--sc-radius-sm) var(--sc-radius-sm);
   }
 
-  /* El segmento clay seleccionado se hunde y escala. Se le da holgura para que
+  /* El segmento seleccionado gana superficie propia. Se le da holgura para que
      su caja medida siga siendo un objetivo táctil de 44 px. */
   .structure-generator .sc-segmented > button,
   .structure-generator__check input,

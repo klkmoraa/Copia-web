@@ -83,7 +83,7 @@ describe('gramática de materia', () => {
     const pressed = ruleFor(".sc-surface[data-pressed='true']");
     expect(pressed).toContain('var(--sc-color-fill-secondary)');
     expect(pressed).toContain('box-shadow: none');
-    expect(tokens).toMatch(/--sc-clay-press-transform:\s*scale\(0\.9\d\);/);
+    expect(tokens).toMatch(/--sc-press-transform:\s*scale\(0\.9\d\);/);
   });
 
   it('el velo del modal aparta el contexto en vez de borrarlo', () => {

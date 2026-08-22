@@ -59,11 +59,11 @@ const copy = {
     radiusData: 'Dato', radiusControl: 'Control', radiusCard: 'Tarjeta', radiusPanel: 'Panel / hoja', radiusModal: 'Modal', radiusPill: 'Pastilla',
     depthSizes: 'Profundidad por tamaño · V-04', depthSizesNote: 'Las tres piezas valen lo mismo y dicen lo mismo. Sólo cambia cuánto ocupan: la profundidad describe física, no prestigio.',
     depthSmall: 'Pieza pequeña', depthMedium: 'Tarjeta', depthLarge: 'Panel flotante', depthEqual: 'Misma importancia',
-    flatness: 'Planitud técnica · V-02', flatnessNote: 'Tabla, dato y campo numérico no reciben materia clay: sin sombra, sin canto de volumen, sin celdas redondeadas.',
+    flatness: 'Planitud técnica · V-02', flatnessNote: 'Tabla, dato y campo numérico no reciben materia: sin sombra, sin canto de volumen, sin celdas redondeadas.',
     flatnessTable: 'Extremos por miembro', flatnessMember: 'Miembro', flatnessValue: 'M máx', flatnessUnit: 'kN·m', flatnessField: 'Longitud',
     pressStates: 'Estados del control', pressStatesNote: 'Reposo, hover, foco, pulsado y deshabilitado sobre la misma pieza. Pulsado invierte la luz y no deja sombra exterior; el foco es un anillo aparte del canto.',
     pressRest: 'Reposo', pressHeld: 'Pulsado (mantenido)', pressDisabled: 'Deshabilitado',
-    foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
+    foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook.html. Sin overrides locales.',
     roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleDistributed: 'Carga distribuida', roleAppliedMoment: 'Momento aplicado', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
     controls: 'Controles', controlsNote: 'Acciones, captura de datos y selección compacta.',
@@ -119,11 +119,11 @@ const copy = {
     radiusData: 'Data', radiusControl: 'Control', radiusCard: 'Card', radiusPanel: 'Panel / sheet', radiusModal: 'Modal', radiusPill: 'Pill',
     depthSizes: 'Depth by size · V-04', depthSizesNote: 'All three pieces matter equally and say the same thing. Only their size changes: depth describes physics, not prestige.',
     depthSmall: 'Small piece', depthMedium: 'Card', depthLarge: 'Floating panel', depthEqual: 'Same importance',
-    flatness: 'Technical flatness · V-02', flatnessNote: 'Table, datum, and numeric field take no clay material: no shadow, no volume edge, no rounded cells.',
+    flatness: 'Technical flatness · V-02', flatnessNote: 'Table, datum, and numeric field take no material: no shadow, no volume edge, no rounded cells.',
     flatnessTable: 'Member extrema', flatnessMember: 'Member', flatnessValue: 'M max', flatnessUnit: 'kN·m', flatnessField: 'Length',
     pressStates: 'Control states', pressStatesNote: 'Rest, hover, focus, pressed, and disabled on the same piece. Pressed inverts the light and keeps no outer shadow; focus is a ring separate from the edge.',
     pressRest: 'Rest', pressHeld: 'Pressed (held)', pressDisabled: 'Disabled',
-    foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
+    foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook.html. No local overrides.',
     roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleDistributed: 'Distributed load', roleAppliedMoment: 'Applied moment', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
     controls: 'Controls', controlsNote: 'Actions, data entry, and compact selection.',
@@ -205,14 +205,14 @@ const RADIUS_ROLES = [
 ] as const;
 
 /**
- * CRI-105 · la profundidad escala con el TAMAÑO de la pieza, nunca con su
- * importancia. Las tres muestras dicen lo mismo y valen lo mismo: lo único que
- * cambia entre ellas es cuánto ocupan.
+ * La profundidad escala con la ALTURA REAL de la pieza, nunca con su
+ * importancia. Las tres muestras valen lo mismo: lo que cambia entre ellas es
+ * cuánto se han despegado del plano, y por eso la primera casi no proyecta.
  */
 const DEPTH_SIZES = [
-  { id: 'sm', token: '--sc-shadow-clay-xs', radius: '--sc-radius-control' },
-  { id: 'md', token: '--sc-shadow-clay-md', radius: '--sc-radius-card' },
-  { id: 'lg', token: '--sc-shadow-clay-lg', radius: '--sc-radius-panel' },
+  { id: 'sm', token: '--sc-elevation-1', radius: '--sc-radius-control' },
+  { id: 'md', token: '--sc-elevation-2', radius: '--sc-radius-card' },
+  { id: 'lg', token: '--sc-elevation-3', radius: '--sc-radius-panel' },
 ] as const;
 
 interface LabSectionProps {

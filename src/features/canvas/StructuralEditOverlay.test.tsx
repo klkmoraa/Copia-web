@@ -119,7 +119,7 @@ describe('StructuralEditOverlay', () => {
     expect(callbacks.onCancel).toHaveBeenCalledOnce();
   });
 
-  it('meets the touch-control contract through Clay touch-sized actions', () => {
+  it('meets the touch-control contract through touch-sized actions', () => {
     const project = createDefaultProject();
     const draft = createStructuralEditDraft(project, { kind: 'node', id: project.nodes[0].id }, 'move');
     renderOverlay({ draft });

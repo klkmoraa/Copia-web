@@ -31,7 +31,24 @@ App / navegación
 | Datasheet | `src/features/datasheet/**` | Proyección tabular del modelo, sin store propio; consulta su [contrato canónico](structureco-datasheet.md). |
 | Aula | `src/education/**`, `src/features/classroom/**`, `src/store/ClassroomSessionContext.tsx` | Recorrido, predicciones, niveles y progreso local. |
 | Space 3D | `src/space3d/**`, `src/features/space3d/**` | Dominio separado S3D-1; consulta su [contrato canónico](structureco-space-3d-s3d1.md). |
-| Design system | `src/design-system/**` | Tokens, tipografía, componentes, iconografía y movimiento. |
+| Design system | `src/design-system/**` | Tokens, tipografía, componentes, iconografía y movimiento. `tokens.css` es la fuente única de color, forma, materia y tipografía; `material.css` reparte la materia por `data-level`, y el resto del CSS del repositorio consume roles, nunca literales. |
+
+## Identidad visual
+
+La dirección es la de una aplicación de escritorio del sistema, y se apoya en cuatro
+decisiones que cierran todas las demás: neutro absoluto en los grises, un solo acento,
+profundidad por material translúcido en vez de sombra, y rellenos en vez de cavidades. El
+color se decide **por apariencia** —un mismo hue vale un grado en claro y otro en oscuro—
+y el contrato que lo gobierna es de contraste, no de identidad: 3:1 no textual y 4,5:1
+textual contra los dos fondos de cada apariencia.
+
+`brand/brandbook.html` documenta el sistema sin transcribirlo: importa `tokens.css` y pinta
+cada muestra con `var(--sc-…)`, así que no puede discrepar del producto. Cuatro pruebas lo
+vigilan en cada ejecución de la suite —`tokens.test.ts`, `surfaceGeometry.test.ts`,
+`material.test.ts` y `typography.test.ts`—, y entre las tres primeras cubren el contraste
+por apariencia, la escala de radios, la elevación monótona y la ausencia de materia de
+arcilla. La identidad anterior (arcilla marfil/menta) queda archivada en
+`brand/brandbook-clay.html` como evidencia histórica y no es autoridad de nada.
 
 ## Fronteras protegidas
 

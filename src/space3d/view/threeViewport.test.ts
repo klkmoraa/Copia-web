@@ -89,8 +89,12 @@ describe('Space3D three viewport', () => {
       return (arrow.line.material as THREE.LineBasicMaterial).color.getHexString();
     }));
 
-    expect(colors).toContain('3a72e3');
-    expect(colors).toContain('ed4b46');
+    // Una carga aplicada y un momento aplicado nunca comparten color, ni
+    // siquiera cuando el respaldo entra en juego: son dos identidades del
+    // dominio. Los hexes son los valores de la apariencia clara declarados en
+    // `TOKEN_COLORS`, que es lo que la vista usa sin documento del que leer.
+    expect(colors).toContain('3634a3');
+    expect(colors).toContain('c93400');
     viewport.dispose();
   });
 

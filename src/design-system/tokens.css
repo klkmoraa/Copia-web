@@ -241,12 +241,13 @@
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.28);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.4);
 
-  /* Materiales de la ilustración del pórtico. Son roles de dibujo, no de
-     interfaz: nada de texto se apoya en ellos. */
-  --sc-color-clay-ivory: var(--sc-grey-150);
-  --sc-color-clay-ivory-deep: var(--sc-grey-300);
-  --sc-color-clay-lime: var(--sc-color-action-primary);
-  --sc-color-clay-lime-deep: var(--sc-blue-fill-pressed);
+  /* Materiales de la ilustración del pórtico de la bienvenida. Son roles de
+     DIBUJO, no de interfaz: nada de texto se apoya en ellos, así que se eligen
+     por lectura de volumen y no por contraste. */
+  --sc-color-figure-neutral: var(--sc-grey-150);
+  --sc-color-figure-neutral-deep: var(--sc-grey-300);
+  --sc-color-figure-accent: var(--sc-color-action-primary);
+  --sc-color-figure-accent-deep: var(--sc-blue-fill-pressed);
 
   /* ------------------------------------------------------------------ */
   /* 3 · ROLES TÉCNICOS DEL DOMINIO                                      */
@@ -439,36 +440,22 @@
      horizontal. */
   --sc-shadow-sheet: 0 -0.5px 0 rgba(0, 0, 0, 0.08), 0 -10px 36px rgba(0, 0, 0, 0.16);
 
-  /* ---- Alias de la materia anterior ---------------------------------
-     El sistema de arcilla declaraba seis sombras propias y las repartía por
-     `data-level`. Los nombres siguen vivos porque los consume CSS por todo el
-     repositorio, pero ya no describen arcilla: cada uno resuelve al escalón de
-     elevación o al relleno que le corresponde en el sistema nuevo. Un `inset`
-     ya no es una cavidad excavada con sombra interior, es un relleno gris de la
-     jerarquía de fills; un `pressed` no es un hundimiento, es el relleno un
-     grado más opaco. */
-  --sc-shadow-clay-xs: var(--sc-elevation-1);
-  --sc-shadow-clay-sm: var(--sc-elevation-1);
-  --sc-shadow-clay-md: var(--sc-elevation-1);
-  --sc-shadow-clay-lg: var(--sc-elevation-2);
-  --sc-shadow-clay-floating: var(--sc-elevation-3);
-  --sc-shadow-clay-inset: none;
-  --sc-shadow-clay-pressed: none;
-  --sc-clay-edge: 0.5px solid var(--sc-color-border);
-  --sc-gradient-clay: none;
+  /* El canto. Medio píxel, no uno: en una pantalla Retina un borde de 1px se ve
+     grueso, y este filete es lo que separa una superficie de la que tiene
+     debajo cuando no hay proyección que lo haga.
 
-  /* El pulsado de Apple no hunde: encoge un punto y oscurece el relleno. La
-     escala vive en un token porque `prefers-reduced-motion` la anula de una vez
-     para todos los controles. */
-  --sc-clay-press-transform: scale(0.97);
+     El sistema anterior declaraba aquí seis sombras de arcilla —cuatro capas y
+     una fuente de luz propia por pieza— más una cavidad, un pulsado y dos
+     degradados. No sobrevive ninguna: la elevación es la escala de arriba, la
+     cavidad es un relleno de la jerarquía de fills, y el pulsado no es materia
+     sino un cambio de relleno más un encogido. */
+  --sc-hairline: 0.5px solid var(--sc-color-border);
 
-  /* El control primario relleno de acento. No lleva gradiente: un botón por
-     defecto de macOS es un plano de color con una etiqueta encima, y cualquier
-     degradado lo devuelve a 2007. */
-  --sc-gradient-clay-action: none;
-  --sc-shadow-clay-action: var(--sc-elevation-1);
-  --sc-shadow-clay-action-hover: var(--sc-elevation-2);
-  --sc-shadow-clay-action-pressed: none;
+  /* El pulsado no hunde: encoge un punto y sube el relleno. La escala vive en
+     un token porque `prefers-reduced-motion` la anula de una vez para todos los
+     controles, en vez de repetir un `transform:none` por selector al final de
+     la hoja. */
+  --sc-press-transform: scale(0.97);
 
   /* Sin fuente de luz decorativa: ni halo, ni brillo, ni tinta de pantalla. */
   --sc-glow-accent: 0 0 transparent;
@@ -795,8 +782,8 @@
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.5);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.64);
 
-  --sc-color-clay-ivory: #2c2c31;
-  --sc-color-clay-ivory-deep: #1f1f23;
+  --sc-color-figure-neutral: #2c2c31;
+  --sc-color-figure-neutral-deep: #1f1f23;
 
   /* Materiales oscuros: mismo desenfoque, base carbón. La saturación sube
      porque en oscuro el desenfoque se come más color. */
@@ -818,7 +805,7 @@
   /* El anillo especular se apaga: el blanco puro sobre carbón se lee como un
      arañazo, no como un canto de cristal. */
   --sc-ring-inset: inset 0 0.5px 0 rgba(255, 255, 255, 0.12);
-  --sc-clay-edge: 0.5px solid var(--sc-color-border);
+  --sc-hairline: 0.5px solid var(--sc-color-border);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -837,7 +824,7 @@
     /* Anular la duración no basta: un `transform` sin transición sigue saltando.
        Neutralizar el token apaga el encogido de todos los controles a la vez, y
        el estado sigue leyéndose por el relleno. */
-    --sc-clay-press-transform: none;
+    --sc-press-transform: none;
   }
 }
 

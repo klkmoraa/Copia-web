@@ -2,7 +2,7 @@
  * Edición múltiple — capa visual.
  *
  * Todo el color, el espaciado y la materia salen de los tokens `--sc-*` del
- * design system Clay: no hay literales de paleta ni un segundo sistema visual.
+ * design system: no hay literales de paleta ni un segundo sistema visual.
  * El panel es de ancho fluido y se adapta por consulta de contenedor, así que
  * sirve igual en el costado del Inspector que en una hoja móvil.
  */
@@ -26,7 +26,7 @@
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
 }
 
 .bulk-summary__icon {
@@ -140,7 +140,7 @@
   background: var(--sc-color-surface-1);
 }
 
-.bulk-field.is-staged { border-color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.bulk-field.is-staged { border-color: var(--sc-color-action-primary); box-shadow: var(--sc-elevation-1); }
 .bulk-field.is-partial { border-left: 3px solid var(--sc-color-state-warning); }
 
 .bulk-field__header {
@@ -250,7 +250,7 @@
   transition: var(--sc-transition-control);
 }
 
-.bulk-field__action:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.bulk-field__action:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-elevation-1); }
 .bulk-field__action[aria-pressed='true'] { border-color: var(--sc-color-action-primary); background: var(--sc-color-surface-inset); }
 
 .bulk-field__compatibility { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }

@@ -253,18 +253,18 @@ describe('contrato de los design tokens', () => {
       expect(reducedMotionTokens.declarations.get(token), token).toBe('0.001ms');
     }
     // Anular la duración no basta: un `transform` sin transición sigue saltando.
-    expect(reducedMotionTokens.declarations.get('--sc-clay-press-transform')).toBe('none');
+    expect(reducedMotionTokens.declarations.get('--sc-press-transform')).toBe('none');
   });
 
   it('no queda materia de arcilla en ningún consumidor', () => {
     // La arcilla eran cuatro capas de sombra y una fuente de luz propia por
     // pieza. Un `inset` con desplazamiento en las dos direcciones es su firma:
     // si reaparece, alguien está volviendo a esculpir volumen a mano.
-    const clayShadows = [...componentCss.matchAll(/box-shadow\s*:\s*([^;]+);/g)]
+    const sculptedShadows = [...componentCss.matchAll(/box-shadow\s*:\s*([^;]+);/g)]
       .map((match) => match[1])
       .filter((value) => /inset\s+-?\d+px\s+-?\d+px\s+\d+px/.test(value.replace(/rgba?\([^)]*\)/g, '')))
       .filter((value) => !value.includes('var(--'));
-    expect(clayShadows).toEqual([]);
+    expect(sculptedShadows).toEqual([]);
   });
 
   it('ningún componente reescribe la elevación con literales de color', () => {
@@ -284,7 +284,7 @@ describe('contrato de los design tokens', () => {
     // encendido. En el sistema, lo que rodea a un control es aire.
     expect(rootTokens.declarations.get('--sc-glow-accent')).toBe('0 0 transparent');
     expect(rootTokens.declarations.get('--sc-glow-aula')).toBe('0 0 transparent');
-    expect(rootTokens.declarations.get('--sc-gradient-clay-action')).toBe('none');
+    expect(rootTokens.declarations.has('--sc-gradient-clay-action')).toBe(false);
     expect(rootTokens.declarations.get('--sc-gradient-sheen')).toBe('none');
   });
 });

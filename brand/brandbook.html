@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>structureCo · Brandbook</title>
+<!--
+  Este documento NO transcribe la paleta: la importa.
+
+  `tokens.css` es la fuente única, y cada muestra de abajo se pinta con
+  `var(--sc-…)`, así que un brandbook y un producto que discrepen es
+  imposible por construcción. Si un valor cambia en el sistema, cambia aquí
+  al recargar. Lo único escrito a mano son las decisiones y su porqué.
+
+  Para verlo: `npx vite preview` no lo sirve (vive fuera de `public/`). Un
+  servidor estático desde la raíz del repositorio sí:
+      npx serve .      →  http://localhost:3000/brand/brandbook.html
+-->
+<link rel="stylesheet" href="../src/design-system/fonts.css" />
+<link rel="stylesheet" href="../src/design-system/tokens.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 0 96px;
+    background: var(--sc-color-bg-app);
+    color: var(--sc-color-text-primary);
+    font-family: var(--sc-font-ui);
+    font-size: var(--sc-font-size-body);
+    line-height: var(--sc-line-height-body);
+    -webkit-font-smoothing: antialiased;
+    font-optical-sizing: auto;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: var(--sc-space-3);
+    padding: var(--sc-space-3) var(--sc-space-6);
+    background: var(--sc-material-regular);
+    -webkit-backdrop-filter: var(--sc-material-blur-regular);
+    backdrop-filter: var(--sc-material-blur-regular);
+    border-bottom: 0.5px solid var(--sc-color-border);
+  }
+  header h1 { margin: 0; font-size: var(--sc-font-size-body); font-weight: var(--sc-font-weight-semibold); letter-spacing: var(--sc-tracking-control); }
+  header p { margin: 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }
+  header button {
+    margin-left: auto; min-height: var(--sc-control-height-sm); padding: 0 var(--sc-space-3);
+    border: 0.5px solid var(--sc-color-border); border-radius: var(--sc-radius-control);
+    background: var(--sc-color-surface-1); color: inherit; font: inherit;
+    font-size: var(--sc-font-size-label); box-shadow: var(--sc-elevation-1); cursor: pointer;
+  }
+  header button:hover { background: var(--sc-color-fill-quaternary); }
+  main { max-width: 1040px; margin: 0 auto; padding: var(--sc-space-7) var(--sc-space-6) 0; }
+  section { margin-bottom: var(--sc-space-8); }
+  h2 {
+    margin: 0 0 var(--sc-space-2);
+    font-size: var(--sc-font-size-title); font-weight: var(--sc-font-weight-bold);
+    letter-spacing: var(--sc-tracking-tight);
+  }
+  h3 { margin: var(--sc-space-6) 0 var(--sc-space-2); font-size: var(--sc-font-size-subtitle); font-weight: var(--sc-font-weight-semibold); }
+  .lede { max-width: 68ch; margin: 0 0 var(--sc-space-5); color: var(--sc-color-text-secondary); }
+  .card {
+    padding: var(--sc-space-5);
+    border: 0.5px solid var(--sc-color-border);
+    border-radius: var(--sc-radius-card);
+    background: var(--sc-color-surface-1);
+  }
+  .grid { display: grid; gap: var(--sc-space-3); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .swatch { border: 0.5px solid var(--sc-color-border); border-radius: var(--sc-radius-control); overflow: hidden; background: var(--sc-color-surface-1); }
+  .swatch .chip { height: 56px; }
+  .swatch .meta { padding: var(--sc-space-2); display: grid; gap: 1px; }
+  .swatch b { font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-medium); }
+  .swatch code, .mono { font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); color: var(--sc-color-text-muted); }
+  .stroke-row { display: flex; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) 0; border-bottom: 0.5px solid var(--sc-color-divider); }
+  .stroke-row:last-child { border-bottom: 0; }
+  .stroke-row .rule { flex: 1; height: 3px; border-radius: 2px; }
+  .stroke-row b { min-width: 190px; font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-medium); }
+  .levels { display: grid; gap: var(--sc-space-4); grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .level { display: grid; place-items: center; height: 92px; border-radius: var(--sc-radius-card); font-size: var(--sc-font-size-label); color: var(--sc-color-text-secondary); }
+  .radii { display: flex; flex-wrap: wrap; gap: var(--sc-space-4); align-items: flex-end; }
+  .radii figure { margin: 0; display: grid; gap: var(--sc-space-1); justify-items: center; }
+  .radii .box { width: 76px; height: 76px; background: var(--sc-color-fill-tertiary); border: 0.5px solid var(--sc-color-border); }
+  .type-row { display: flex; align-items: baseline; gap: var(--sc-space-4); padding: var(--sc-space-2) 0; border-bottom: 0.5px solid var(--sc-color-divider); }
+  .type-row span:first-child { min-width: 132px; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: var(--sc-space-2); align-items: center; }
+  .btn { min-height: var(--sc-control-height-md); padding: 0 var(--sc-space-3); border: 0.5px solid transparent; border-radius: var(--sc-radius-control); font: inherit; font-size: var(--sc-font-size-control); font-weight: var(--sc-font-weight-medium); cursor: pointer; }
+  .btn-primary { background: var(--sc-color-action-primary); color: var(--sc-color-action-foreground); font-weight: var(--sc-font-weight-semibold); box-shadow: var(--sc-elevation-1); }
+  .btn-secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); box-shadow: var(--sc-elevation-1); }
+  .btn-ghost { background: transparent; color: var(--sc-color-text-secondary); }
+  .rule-list { margin: 0; padding-left: 1.15em; max-width: 72ch; color: var(--sc-color-text-secondary); }
+  .rule-list li { margin-bottom: var(--sc-space-2); }
+  .rule-list b { color: var(--sc-color-text-primary); font-weight: var(--sc-font-weight-semibold); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--sc-font-size-label); }
+  th, td { padding: var(--sc-space-2); text-align: left; border-bottom: 0.5px solid var(--sc-color-divider); }
+  th { color: var(--sc-color-text-muted); font-weight: var(--sc-font-weight-medium); }
+  td.num { font-family: var(--sc-font-mono); font-variant-numeric: var(--sc-numeric-variant); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>structureCo · Brandbook</h1>
+    <p>Los valores de esta página los sirve <code class="mono">src/design-system/tokens.css</code> en vivo.</p>
+  </div>
+  <button type="button" id="appearance">Cambiar apariencia</button>
+</header>
+
+<main>
+  <section>
+    <h2>La dirección</h2>
+    <p class="lede">
+      structureCo se comporta como una aplicación de escritorio del sistema: neutra, densa,
+      precisa y sin decoración. La identidad anterior —arcilla marfil, menta, sombras de doble
+      luz y una serif editorial— se retiró entera. Lo que la sustituye no es un estilo aplicado
+      encima del producto, son cuatro decisiones que cierran todas las demás.
+    </p>
+    <ol class="rule-list">
+      <li><b>Neutro absoluto.</b> Los grises no tienen temperatura. En cuanto un gris coge un matiz, el acento deja de ser el único color de la pantalla y el color deja de significar algo.</li>
+      <li><b>Un solo acento.</b> El azul de sistema identifica y acciona. Nada más lo hace. Un botón azul sobre una pantalla gris dice «esto es lo siguiente» sin necesitar tamaño ni sombra.</li>
+      <li><b>Material, no sombra.</b> La profundidad la comunica un material translúcido que desenfoca y satura lo que tapa, más un filete de medio píxel. Ninguna pieza tiene volumen propio.</li>
+      <li><b>Rellenos, no cavidades.</b> Un campo, un segmento o un fondo pulsado son un relleno gris translúcido, nunca un hueco excavado con sombra interior.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Color</h2>
+    <p class="lede">
+      El color se decide <b>por apariencia</b>. Un mismo hue vale dos grados: en claro, el grado
+      de alto contraste que la plataforma sirve para trazos finos sobre papel; en oscuro, el
+      grado vivo. El contrato es que cada rol llegue a 3:1 contra los dos fondos de su
+      apariencia —lienzo y superficie— y a 4,5:1 si escribe texto. Lo mide
+      <code class="mono">tokens.test.ts</code> en cada ejecución de la suite.
+    </p>
+
+    <h3>Fondos y superficies</h3>
+    <div class="grid" id="surfaces"></div>
+
+    <h3>Acción y estado</h3>
+    <div class="grid" id="states"></div>
+
+    <h3>Familia técnica del dominio</h3>
+    <p class="lede">
+      Una acción aplicada y su respuesta nunca comparten color: un momento aplicado no puede
+      leerse como el diagrama de momentos que produce, y los dos comparten pantalla.
+    </p>
+    <div class="card" id="technical"></div>
+  </section>
+
+  <section>
+    <h2>Materia</h2>
+    <p class="lede">
+      Seis niveles. Lo que los distingue no es cuánto volumen tiene cada pieza sino en qué plano
+      está: el valor del fondo, el material translúcido y el filete. La proyección aparece sólo
+      donde algo está de verdad despegado —un menú, un modal—, y por eso ahí sí se nota.
+    </p>
+    <div class="levels">
+      <div class="level" style="background:var(--sc-color-fill-quaternary)">flat</div>
+      <div class="level" style="background:var(--sc-color-fill-tertiary)">inset</div>
+      <div class="level" style="background:var(--sc-color-surface-1);border:0.5px solid var(--sc-color-border)">raised</div>
+      <div class="level" style="background:var(--sc-color-surface-1);box-shadow:var(--sc-elevation-3),var(--sc-ring-inset)">floating</div>
+      <div class="level" style="background:var(--sc-color-surface-1);box-shadow:var(--sc-shadow-sheet)">sheet</div>
+      <div class="level" style="background:var(--sc-color-surface-1);box-shadow:var(--sc-elevation-4),var(--sc-ring-inset)">modal</div>
+    </div>
+
+    <h3>Jerarquía de rellenos</h3>
+    <div class="card">
+      <div class="stroke-row"><b>quaternary · hover</b><span class="rule" style="background:var(--sc-color-fill-quaternary);height:28px;border-radius:var(--sc-radius-control)"></span></div>
+      <div class="stroke-row"><b>tertiary · campo, bandeja</b><span class="rule" style="background:var(--sc-color-fill-tertiary);height:28px;border-radius:var(--sc-radius-control)"></span></div>
+      <div class="stroke-row"><b>secondary · pulsado</b><span class="rule" style="background:var(--sc-color-fill-secondary);height:28px;border-radius:var(--sc-radius-control)"></span></div>
+      <div class="stroke-row"><b>primary</b><span class="rule" style="background:var(--sc-color-fill-primary);height:28px;border-radius:var(--sc-radius-control)"></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Geometría</h2>
+    <p class="lede">
+      El reparto es por <b>rol</b>, no por tamaño de la caja: un botón de 44 px y otro de 28 px
+      son los dos controles y comparten radio. Un panel no hereda el radio de sus controles por
+      estar hecho de ellos. La cápsula sobrevive sólo donde el sistema la usa: segmentos,
+      etiquetas y contadores; nunca un panel, nunca una tarjeta.
+    </p>
+    <div class="radii" id="radii"></div>
+  </section>
+
+  <section>
+    <h2>Tipografía</h2>
+    <p class="lede">
+      Una sola familia hace la interfaz entera y la jerarquía la llevan el peso, el tamaño y el
+      tracking óptico. La primera de la pila no es un archivo: es la cara del sistema, que no se
+      puede empaquetar ni hace falta empaquetar. Inter es el sustituto donde no la hay, elegida
+      por métricas. La monoespaciada existe para los <b>números</b> —valores, unidades, fórmulas
+      y matrices— y para nada más: rotular una pestaña o el nombre del proyecto con ella era la
+      voz del sistema anterior.
+    </p>
+    <div class="card">
+      <div class="type-row"><span>display-xl · 700</span><span style="font-size:var(--sc-font-size-display-xl);font-weight:var(--sc-font-weight-display);letter-spacing:var(--sc-tracking-display);line-height:1.06">Pórtico</span></div>
+      <div class="type-row"><span>panel · 590</span><span style="font-size:var(--sc-font-size-panel);font-weight:var(--sc-font-weight-semibold);letter-spacing:var(--sc-tracking-tight)">Propiedades frecuentes</span></div>
+      <div class="type-row"><span>body · 400 · 13px</span><span style="font-size:var(--sc-font-size-body)">El dominio valida E &gt; 0 al analizar.</span></div>
+      <div class="type-row"><span>label · 500 · 11px</span><span style="font-size:var(--sc-font-size-label);font-weight:var(--sc-font-weight-medium)">Material estándar</span></div>
+      <div class="type-row"><span>mono · números</span><span class="mono" style="font-size:var(--sc-font-size-body)">36.3484 kN·m · x 3.00 m</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Controles</h2>
+    <p class="lede">
+      Tres estados y ninguna excepción: en reposo, el relleno que le toque por rol; en hover, un
+      grado más; pulsado, un grado más y la pieza encoge un 3 %. <b>Ni un solo control se eleva
+      bajo el puntero.</b> Los botones del sistema no se despegan de la ventana, se tiñen; la
+      profundidad se reserva para lo que de verdad flota.
+    </p>
+    <div class="card btn-row">
+      <button class="btn btn-primary">Analizar</button>
+      <button class="btn btn-secondary">Cancelar</button>
+      <button class="btn btn-ghost">Ver detalle</button>
+      <span style="flex:1"></span>
+      <span class="mono">radius 7 · height 32 · weight 500/590</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lo que este sistema no hace</h2>
+    <ul class="rule-list">
+      <li><b>No dibuja volumen.</b> Ninguna pieza declara su propia fuente de luz. Una sombra interior con desplazamiento en las dos direcciones es la firma de la arcilla y <code class="mono">surfaceGeometry.test.ts</code> falla si reaparece.</li>
+      <li><b>No usa el acento como luz.</b> Sin halos, sin brillos, sin degradados construidos sobre el color de acción. El acento rellena; no modela.</li>
+      <li><b>No rotula en versalitas.</b> Una etiqueta pequeña se distingue por ser gris y semibold, no por gritar en mayúsculas trackeadas.</li>
+      <li><b>No baja de 10 px.</b> Por debajo no hay tipografía, hay textura.</li>
+      <li><b>No redondea una rejilla de datos.</b> Convertir cada celda en una ficha destruye el barrido lineal de la columna, que es justo para lo que existe una tabla.</li>
+    </ul>
+  </section>
+</main>
+
+<script type="module">
+  const surfaces = [
+    ['--sc-color-bg-app', 'Ventana'],
+    ['--sc-color-bg-canvas', 'Lienzo'],
+    ['--sc-color-surface-1', 'Superficie'],
+    ['--sc-color-surface-2', 'Superficie 2'],
+    ['--sc-color-surface-elevated', 'Elevada'],
+    ['--sc-color-border', 'Separador'],
+  ];
+  const states = [
+    ['--sc-color-action-primary', 'Acción'],
+    ['--sc-color-action-ink', 'Tinta de acción'],
+    ['--sc-color-state-success', 'Correcto'],
+    ['--sc-color-state-warning', 'Aviso'],
+    ['--sc-color-state-error', 'Error'],
+    ['--sc-color-aula', 'Aula'],
+  ];
+  const technical = [
+    ['--sc-color-load-point', 'Carga puntual · reacción'],
+    ['--sc-color-load-distributed', 'Carga distribuida'],
+    ['--sc-color-load-moment-applied', 'Momento aplicado'],
+    ['--sc-color-technical-axial', 'N · axial'],
+    ['--sc-color-technical-shear', 'V · cortante'],
+    ['--sc-color-technical-moment', 'M · momento'],
+    ['--sc-color-technical-deformed', 'Deformada'],
+    ['--sc-color-technical-dimension', 'Cota'],
+    ['--sc-color-technical-axis', 'Eje'],
+    ['--sc-color-influence-line', 'Influencia'],
+  ];
+
+  const read = (token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+
+  const paintSwatches = (id, rows) => {
+    document.getElementById(id).innerHTML = rows.map(([token, name]) => `
+      <div class="swatch">
+        <div class="chip" style="background:var(${token})"></div>
+        <div class="meta"><b>${name}</b><code>${token}</code><code data-value="${token}">${read(token)}</code></div>
+      </div>`).join('');
+  };
+
+  const paintTechnical = () => {
+    document.getElementById('technical').innerHTML = technical.map(([token, name]) => `
+      <div class="stroke-row">
+        <b>${name}</b>
+        <span class="rule" style="background:var(${token})"></span>
+        <code data-value="${token}">${read(token)}</code>
+      </div>`).join('');
+  };
+
+  const paintRadii = () => {
+    document.getElementById('radii').innerHTML = ['data', 'control', 'card', 'panel', 'modal'].map((role) => `
+      <figure>
+        <div class="box" style="border-radius:var(--sc-radius-${role})"></div>
+        <figcaption class="mono">${role} · <span data-value="--sc-radius-${role}">${read(`--sc-radius-${role}`)}</span></figcaption>
+      </figure>`).join('');
+  };
+
+  const refresh = () => {
+    for (const node of document.querySelectorAll('[data-value]')) node.textContent = read(node.dataset.value);
+  };
+
+  paintSwatches('surfaces', surfaces);
+  paintSwatches('states', states);
+  paintTechnical();
+  paintRadii();
+
+  document.getElementById('appearance').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    refresh();
+  });
+</script>
+</body>
+</html>

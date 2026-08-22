@@ -1,7 +1,7 @@
 import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactElement, type Ref } from 'react';
 
 /**
- * Niveles de elevación clay.
+ * Niveles de elevación del sistema.
  *
  * `flat` no aplica volumen y es el nivel de las zonas técnicas densas —tablas
  * de resultados, filas del inspector, el lienzo—: darles relieve a cada una
@@ -31,7 +31,7 @@ export type SurfaceProps<Tag extends SurfaceTag = 'div'> = SurfaceOwnProps<Tag>
   & Omit<ComponentPropsWithoutRef<Tag>, keyof SurfaceOwnProps<Tag>>;
 
 /**
- * Envoltorio de elevación clay. Es CSS tras una API tipada: no gestiona estado
+ * Envoltorio de elevación. Es CSS tras una API tipada: no gestiona estado
  * ni conoce el dominio, y por eso puede vivir en la librería sin cruzar la
  * frontera que `dependencyBoundary.test.ts` protege.
  */

@@ -116,10 +116,10 @@
   box-shadow: none;
 }
 
-.toolbar { border-right-width: var(--toolbar-clay-border-width, 0.5px); }
+.toolbar { border-right-width: var(--toolbar-hairline-width, 0.5px); }
 
-.inspector-panel { border-width: var(--inspector-clay-border-width, 0.5px); }
-.results-panel { border-width: var(--results-clay-border-width, 0.5px 0 0); }
+.inspector-panel { border-width: var(--inspector-hairline-width, 0.5px); }
+.results-panel { border-width: var(--results-hairline-width, 0.5px 0 0); }
 
 /* floating: lo que se despega del plano — popovers, menús, avisos. Aquí sí
    entra el material grueso: un menú tiene que poder leerse sin que el fondo
@@ -145,9 +145,11 @@
 .sc-toast-card--warning { border-left-color: var(--sc-color-state-warning); }
 .sc-toast-card--error { border-left-color: var(--sc-color-state-error); }
 
-/* sheet: un plano que nace de un borde. La proyección sube porque lo que la
-   separa del plano de trabajo es oclusión de contacto contra ese borde, no la
-   luz. El radio sólo queda del lado de entrada. */
+/* sheet: un plano que nace de un borde. La proyección apunta hacia DENTRO del
+   viewport —lo que la separa del plano de trabajo es oclusión de contacto
+   contra ese borde, no la luz— así que su dirección la fija el lado por el que
+   entra, y por eso cada lado la redeclara más abajo. El radio sólo queda del
+   lado de entrada. */
 .sc-surface[data-level='sheet'],
 [data-level='sheet'],
 .sc-modal-surface.sc-modal-surface--drawer {
@@ -163,6 +165,12 @@
 .sc-modal-surface--bottom { border-bottom-width: 0; }
 .sc-modal-surface--right { border-right-width: 0; }
 .sc-modal-surface--left { border-left-width: 0; }
+
+/* La sombra de contacto de un cajón entra por su lado, no por arriba: uno que
+   nace del borde derecho y proyecta hacia arriba deja el canto que de verdad
+   toca el contenido sin nada que lo separe. */
+.sc-modal-surface--drawer.sc-modal-surface--right { box-shadow: -0.5px 0 0 var(--sc-color-border), -12px 0 40px var(--sc-color-overlay-soft); }
+.sc-modal-surface--drawer.sc-modal-surface--left { box-shadow: 0.5px 0 0 var(--sc-color-border), 12px 0 40px var(--sc-color-overlay-soft); }
 
 /* modal: sólo este nivel usa el velo que separa el contexto interrumpido del
    espacio de trabajo. El token cambia por apariencia; no hay rgba local. */

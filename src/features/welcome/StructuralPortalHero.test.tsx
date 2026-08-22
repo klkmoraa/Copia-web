@@ -32,13 +32,13 @@ describe('StructuralPortalHero', () => {
     expect(container.querySelector('svg')?.getAttribute('preserveAspectRatio')).toBeTruthy();
   });
 
-  it('confines the clay finish to one filter inside its own svg', () => {
+  it('confines the finish to one filter inside its own svg', () => {
     const { container } = render(<StructuralPortalHero />);
     const filters = container.querySelectorAll('filter');
     // Uno, y sólo uno: el coste de un filtro SVG es exactamente lo que el
     // alcance recortado de CRI-104 mantiene acotado.
     expect(filters).toHaveLength(1);
-    expect(filters[0].getAttribute('id')).toBe('sc-portal-clay');
+    expect(filters[0].getAttribute('id')).toBe('sc-portal-finish');
     // Grano, luz de borde y recorte a la silueta — nada más.
     expect(container.querySelector('feTurbulence')).not.toBeNull();
     expect(container.querySelector('feMorphology')).not.toBeNull();

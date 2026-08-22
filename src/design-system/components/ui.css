@@ -90,7 +90,7 @@
    `prefers-reduced-motion` puede apagarlo de una vez para todos los controles
    en lugar de tener que perseguir un `transform` escrito a mano por selector. */
 :where(.sc-button, .sc-icon-button, .sc-segmented button, .sc-popover__trigger, .sc-tool-button, .sc-layer-toggle):not(:disabled):active {
-  transform: var(--sc-clay-press-transform);
+  transform: var(--sc-press-transform);
   transition-duration: var(--sc-motion-press);
 }
 
@@ -413,7 +413,7 @@
   border: var(--sc-border-width) solid var(--sc-color-border);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-clay-floating);
+  box-shadow: var(--sc-elevation-3);
 }
 .sc-modal-surface--dialog {
   width: min(560px, calc(100vw - (var(--sc-space-5) * 2)));
@@ -444,7 +444,7 @@
 }
 .sc-modal-surface__close { background: var(--sc-color-fill-tertiary); border: 0; box-shadow: none; }
 .sc-modal-surface__close:hover { background: var(--sc-color-fill-secondary); color: var(--sc-color-text-primary); }
-.sc-modal-surface__close:active { background: var(--sc-color-fill-primary); transform: var(--sc-clay-press-transform); }
+.sc-modal-surface__close:active { background: var(--sc-color-fill-primary); transform: var(--sc-press-transform); }
 .sc-modal-surface__body { min-height: 0; padding: var(--sc-space-5); overflow: auto; overscroll-behavior: contain; }
 .sc-modal-surface__footer { justify-content: flex-end; border-top: var(--sc-border-width) solid var(--sc-color-border-soft); background: var(--sc-color-fill-quaternary); }
 
@@ -769,6 +769,30 @@
 .sc-numeric-value--positive { color: var(--sc-color-state-success); }
 .sc-numeric-value--negative { color: var(--sc-color-state-error); }
 
+/* Suelo táctil.
+ *
+ * La escala de esta librería es la de un escritorio: 28 y 32 px de alto, que es
+ * lo correcto con un ratón y demasiado poco con un dedo. Donde el puntero es
+ * grueso, cada control sube al objetivo de 44px sin cambiar su tipografía ni su
+ * relleno — lo que crece es el área que se puede tocar, no la pieza.
+ *
+ * `pointer: coarse` y no un ancho de ventana: lo que decide el tamaño de un
+ * objetivo es con qué se apunta, no cuánto mide la pantalla. Una tableta ancha
+ * con dedo lo necesita; una ventana estrecha con ratón, no. */
+@media (pointer: coarse) {
+  .sc-button--sm,
+  .sc-button--md { min-height: var(--sc-control-height-touch); }
+  .sc-icon-button,
+  .sc-icon-button--sm { width: var(--sc-control-height-touch); height: var(--sc-control-height-touch); }
+  .sc-segmented button { min-height: calc(var(--sc-control-height-touch) - 6px); }
+  .sc-segmented--sm button { min-height: calc(var(--sc-control-height-touch) - 6px); }
+  .sc-field__control--sm,
+  .sc-field__control--md { min-height: var(--sc-control-height-touch); }
+  .sc-popover__trigger,
+  .sc-modal-surface__close { min-height: var(--sc-control-height-touch); }
+  .sc-tool-button { min-height: var(--sc-control-height-touch); }
+}
+
 @keyframes sc-spin { to { transform: rotate(360deg); } }
 @keyframes sc-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
@@ -796,7 +820,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sc-spinner__ring { animation: none; opacity: 0.72; }
-  /* El hundimiento ya lo apaga `--sc-clay-press-transform` desde el token. Aquí
+  /* El hundimiento ya lo apaga `--sc-press-transform` desde el token. Aquí
      queda el otro medio gesto: la elevación de hover. El relieve permanece —
      lo que se retira es el desplazamiento, no la lectura del estado. */
   .sc-button--primary:not(:disabled):hover,

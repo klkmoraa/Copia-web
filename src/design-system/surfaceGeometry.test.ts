@@ -184,21 +184,18 @@ describe('escala de elevación', () => {
 
 describe('el canto y la ausencia de volumen propio', () => {
   it.each(['light', 'dark'] as const)('mide el canto en medio píxel en %s', (theme) => {
-    const edge = themed(theme).get('--sc-clay-edge') ?? '';
+    const edge = themed(theme).get('--sc-hairline') ?? '';
     expect(edge, theme).toMatch(/^0\.5px solid /);
   });
 
-  it('retira toda la materia de arcilla de los tokens', () => {
-    // Los nombres sobreviven como alias porque los consume CSS por todo el
-    // repositorio, pero ninguno puede volver a declarar sombras propias: cada
-    // uno resuelve a un escalón de elevación o a `none`.
-    for (const token of ['--sc-shadow-clay-xs', '--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg', '--sc-shadow-clay-floating']) {
-      expect(rootTokens.get(token), token).toMatch(/^var\(--sc-elevation-\d\)$/);
-    }
-    // Cavidad y pulsado dejan de ser materia: son relleno.
-    expect(rootTokens.get('--sc-shadow-clay-inset')).toBe('none');
-    expect(rootTokens.get('--sc-shadow-clay-pressed')).toBe('none');
-    expect(rootTokens.get('--sc-gradient-clay')).toBe('none');
+  it('no deja vivo ningún token de la materia anterior', () => {
+    // No sobreviven ni como alias. Mientras un nombre existe, alguien lo copia
+    // desde una regla vieja y la materia vuelve por la puerta de atrás.
+    const survivors = [...rootTokens.keys(), ...darkTokens.keys()].filter((name) => name.includes('clay'));
+    expect(survivors).toEqual([]);
+    // Y lo que ocupa su sitio: un filete de medio píxel y un encogido.
+    expect(rootTokens.get('--sc-hairline')).toMatch(/^0\.5px solid /);
+    expect(rootTokens.get('--sc-press-transform')).toMatch(/^scale\(0\.9\d\)$/);
   });
 
   it('no deja ninguna pieza declarando su propia fuente de luz', () => {

@@ -1,5 +1,5 @@
 /*
- * Project Hub · misma materia clay que el editor.
+ * Project Hub · misma materia que el editor.
  *
  * Antes se apoyaba en `--line`, `--surface-raised` y `--shadow-sm`, tokens que
  * el sistema no define: el navegador los descartaba y el hub quedaba plano,
@@ -10,10 +10,10 @@
 .project-hub {
   margin-top: var(--sc-space-6);
   padding: var(--sc-space-5);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-sm);
+  box-shadow: var(--sc-elevation-1);
 }
 
 .project-hub__header {
@@ -49,14 +49,14 @@
   justify-content: space-between;
   gap: var(--sc-space-3);
   padding: 11px var(--sc-space-3);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-sm);
   background: var(--sc-color-surface-elevated);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
   transition: var(--sc-transition-control);
 }
 
-.project-hub__row:hover { box-shadow: var(--sc-shadow-clay-sm); }
+.project-hub__row:hover { box-shadow: var(--sc-elevation-1); }
 
 .project-hub__identity { min-width: 0; display: grid; gap: 2px; }
 .project-hub__identity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -71,7 +71,7 @@
   border: 0;
   border-radius: var(--sc-radius-xs);
   background: var(--sc-color-surface-2);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: none;
   color: var(--sc-color-text-primary);
   font: inherit;
 }
@@ -84,10 +84,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--sc-space-1);
-  border: var(--sc-clay-edge);
+  border: var(--sc-hairline);
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-xs);
+  box-shadow: var(--sc-elevation-1);
   color: var(--sc-color-text-primary);
   font: inherit;
   cursor: pointer;
@@ -96,14 +96,14 @@
 
 .project-hub__identity button:hover,
 .project-hub__actions button:hover,
-.project-hub__recoveries button:hover { box-shadow: var(--sc-shadow-clay-sm); }
+.project-hub__recoveries button:hover { box-shadow: var(--sc-elevation-1); }
 
 .project-hub__identity button:active,
 .project-hub__actions button:active,
 .project-hub__recoveries button:active {
   background: var(--sc-color-surface-inset);
-  box-shadow: var(--sc-shadow-clay-pressed);
-  transform: var(--sc-clay-press-transform);
+  box-shadow: none;
+  transform: var(--sc-press-transform);
 }
 
 .project-hub__error { color: var(--sc-color-state-error-foreground); }

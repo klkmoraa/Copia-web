@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
  * usa el sistema existente en vez de introducir un segundo lenguaje visual, y
  * que las dos decisiones de diseño que importan siguen ahí:
  *
- * - la tabla es **plana**, sin sombra clay por fila;
+ * - la tabla es **plana**, sin elevación por fila;
  * - el foco y la selección se dibujan con señales **distintas**.
  */
 
@@ -75,9 +75,9 @@ describe('datasheet styles', () => {
     expect(withoutComments).not.toMatch(/\b(?:rgba?|hsla?)\(/);
   });
 
-  it('keeps the grid flat: no clay elevation on rows or cells', () => {
+  it('keeps the grid flat: no elevation on rows or cells', () => {
     for (const selector of ['.datasheet-grid tbody th', '.datasheet-grid-scroll', '.datasheet-grid thead th']) {
-      expect(ruleFor(selector), selector).not.toMatch(/--sc-shadow-clay-(?:xs|sm|md|lg|floating)/);
+      expect(ruleFor(selector), selector).not.toMatch(/--sc-elevation-[1-4]/);
     }
   });
 
@@ -103,7 +103,7 @@ describe('datasheet styles', () => {
   });
 
   it('keeps the cell editor flat, like the grid it sits in', () => {
-    expect(ruleFor('.datasheet-cell-editor')).not.toMatch(/--sc-shadow-clay-(?:xs|sm|md|lg|floating)/);
+    expect(ruleFor('.datasheet-cell-editor')).not.toMatch(/--sc-elevation-[1-4]/);
   });
 
   it('styles every editing surface it renders', () => {

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Contrato visual del panel: Clay, y sólo Clay.
+ * Contrato visual del panel: el design system, y sólo el design system.
  *
  * Un `var(--sc-…)` mal escrito no rompe la compilación, sólo deja la propiedad
  * inválida y el componente sin estilo. Estas pruebas comprueban que el panel usa
