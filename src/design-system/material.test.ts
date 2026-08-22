@@ -14,14 +14,20 @@ import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(new URL('./material.css', import.meta.url), 'utf8');
 const tokens = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
+// `.sc-popover__surface` es el componente genérico (`ui.css`) que hoy pinta
+// el panel de capas del lienzo y cualquier otro popover del sistema: su
+// material vive ahí, no en `material.css`.
+const componentsCss = readFileSync(new URL('./components/ui.css', import.meta.url), 'utf8');
 
-const ruleFor = (selector: string): string => {
-  const index = css.indexOf(selector);
+const ruleForIn = (source: string, selector: string): string => {
+  const index = source.indexOf(selector);
   if (index < 0) return '';
-  const open = css.indexOf('{', index);
-  const close = css.indexOf('}', open);
-  return css.slice(open + 1, close);
+  const open = source.indexOf('{', index);
+  const close = source.indexOf('}', open);
+  return source.slice(open + 1, close);
 };
+
+const ruleFor = (selector: string): string => ruleForIn(css, selector);
 
 describe('gramática de materia', () => {
   it('declara los seis niveles aprobados', () => {
@@ -41,11 +47,17 @@ describe('gramática de materia', () => {
   it('da material translúcido a lo que se apoya sobre contenido', () => {
     // Barra superior, barra lateral, menús y chrome del lienzo. Lo que
     // comunica "hay algo debajo" es que se ve, no una sombra que lo insinúe.
-    for (const selector of ['.topbar', '.toolbar', ".sc-surface[data-level='floating']", '.canvas-layer-panel']) {
+    for (const selector of ['.topbar', '.toolbar', ".sc-surface[data-level='floating']"]) {
       const rule = ruleFor(selector);
       expect(rule, selector).toMatch(/backdrop-filter: var\(--sc-material-blur/);
       expect(rule, selector).toMatch(/background: var\(--sc-material-/);
     }
+    // El panel de capas del lienzo es hoy `.sc-popover__surface` (`ui.css`):
+    // el mismo componente genérico que cualquier otro popover del sistema,
+    // sin material propio duplicado en `material.css`.
+    const popoverSurface = ruleForIn(componentsCss, '.sc-popover__surface');
+    expect(popoverSurface).toMatch(/backdrop-filter: var\(--sc-material-blur/);
+    expect(popoverSurface).toMatch(/background: var\(--sc-material-/);
     // Y el desenfoque siempre lleva saturación: sin ella el material se
     // ensucia y deja de leerse como cristal.
     for (const grade of ['thin', 'regular', 'thick']) {

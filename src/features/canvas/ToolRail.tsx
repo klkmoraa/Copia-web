@@ -8,7 +8,6 @@ import {
   GitCommitHorizontal,
   Grid3x3,
   Hand,
-  Move,
   MousePointer2,
   MoreHorizontal,
   MoveDiagonal2,
@@ -220,9 +219,18 @@ const setAppShellMobileInert = (inert: boolean) => {
  * paleta táctil — sin booleano de compatibilidad que un llamador pueda pasar
  * por su cuenta.
  */
-export const ToolRail = () => {
-  const { activeTool, setActiveTool, project, selection } = useProject();
-  const [showAdvanced, setShowAdvanced] = useState(false);
+export interface ToolRailProps {
+  /**
+   * Lanzadores de superficie (Cargas · Vista · Resultados) en X2/M1. En K0
+   * siguen flotando sobre el lienzo (`.workspace-surface-launcher`), que ahí
+   * no colisiona con nada — sólo en X2/M1 competían por la misma esquina que
+   * el navegador de cámara.
+   */
+  footerActions?: ReactNode;
+}
+
+export const ToolRail = ({ footerActions }: ToolRailProps = {}) => {
+  const { activeTool, setActiveTool } = useProject();
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -232,21 +240,12 @@ export const ToolRail = () => {
   /** Expanded (`X2`) lleva etiqueta; Medium (`M1`) y Compact (`K0`) son icon-only. */
   const compact = shellClass !== 'X2';
   const { t } = useI18n();
-  const classroom = project.settings.calculationMode === 'classroom';
-  const activeDefinition = TOOL_REGISTRY.find((tool) => tool.id === activeTool);
-  const revealAdvanced = showAdvanced || Boolean(activeDefinition?.classroomAdvanced);
-  const visibleTools = classroom && !revealAdvanced
-    ? TOOL_REGISTRY.filter((tool) => !tool.classroomAdvanced)
-    : TOOL_REGISTRY;
   const mobilePrimaryTools = TOOL_REGISTRY.filter((tool) => tool.mobile === 'primary');
   const mobilePaletteTools = TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu);
   const loadToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'loads' && tool.id === activeTool);
   const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
   const loadGroupHighlighted = mobileMenu ? mobileMenu === 'loads' : loadToolActive;
   const moreGroupHighlighted = mobileMenu ? mobileMenu === 'more' : moreToolActive;
-  const canEditSelection = selection?.kind === 'node'
-    || selection?.kind === 'member'
-    || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
 
   const selectTool = (tool: Tool) => {
     setActiveTool(tool);
@@ -258,11 +257,6 @@ export const ToolRail = () => {
     moreMenuButtonRef.current?.focus({ preventScroll: true });
     setMobileMenu(null);
     emitWorkspaceCommand('open-command-palette');
-  };
-
-  const openStructuralEditFromMobile = () => {
-    closeMobileMenu(false);
-    window.requestAnimationFrame(() => emitWorkspaceCommand('open-structural-edit'));
   };
 
   const openStructureGeneratorFromMobile = () => {
@@ -334,11 +328,14 @@ export const ToolRail = () => {
   const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
   const paletteGroups = TOOL_GROUPS.filter((group) =>
     mobilePaletteTools.some((tool) => tool.group === group.id)
-      || (group.id === 'edit' && canEditSelection)
       // Generar no es una herramienta del registro y no depende de la
       // selección, pero pertenece a «Crear»: sin esto su grupo no existiría en
       // la hoja y la única vía en compacto sería la paleta de comandos.
-      || (group.id === 'create' && mobileMenu === 'more'),
+      || (group.id === 'create' && mobileMenu === 'more')
+      // Buscar comandos vive en «Navegar» y, con `pan` sin botón, es lo único
+      // que ese grupo aporta a la hoja «Más»: sin esta excepción el grupo no
+      // existiría y el táctil se quedaría sin forma de abrir la paleta.
+      || (group.id === 'navigate' && mobileMenu === 'more'),
   );
   const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
     <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
@@ -380,18 +377,6 @@ export const ToolRail = () => {
             <span className="mobile-palette-copy"><strong>{t('generator.launcher')}</strong></span>
             <ChevronRight size={18} aria-hidden="true" />
           </button> : null}
-          {group.id === 'edit' && canEditSelection ? <button
-            className="mobile-palette-tool tool-structural-edit"
-            type="button"
-            role="menuitem"
-            aria-label={t('canvas.structuralEditLauncher')}
-            onClick={openStructuralEditFromMobile}
-            data-structural-edit-command
-          >
-            <span className="mobile-palette-icon" aria-hidden="true"><Move size={22} strokeWidth={1.8} /></span>
-            <span className="mobile-palette-copy"><strong>{t('canvas.structuralEditLauncher')}</strong></span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </button> : null}
         </div>)}
       </div>
     </section>
@@ -402,8 +387,8 @@ export const ToolRail = () => {
       <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
         <div className="desktop-tool-list">
           {TOOL_GROUPS.map((group) => {
-            const groupTools = toolsInGroup(group.id, visibleTools);
-            if (!groupTools.length && !(group.id === 'edit' && canEditSelection)) return null;
+            const groupTools = toolsInGroup(group.id);
+            if (!groupTools.length) return null;
             const headingId = `tool-group-${group.id}`;
             return <section key={group.id} className={`tool-group tool-group-${group.id}`} role="group" aria-labelledby={headingId}>
               <h2 id={headingId} className="tool-group-heading">{t(group.labelKey)}</h2>
@@ -436,31 +421,14 @@ export const ToolRail = () => {
                     data-structure-generator-command
                   />
                 </RailTooltip> : null}
-                {group.id === 'edit' && canEditSelection ? <RailTooltip id="tool-rail-tip-structural-edit" content={t('canvas.structuralEditLauncher')}>
-                  <EditorToolButton
-                    className={`tool-button tool-structural-edit${compact ? ' is-compact' : ''}`}
-                    label={t('canvas.structuralEditLauncher')}
-                    icon={<Move size={22} strokeWidth={1.8} />}
-                    tone="structure"
-                    compact={compact}
-                    onClick={() => emitWorkspaceCommand('open-structural-edit')}
-                    aria-describedby="tool-rail-tip-structural-edit"
-                    data-structural-edit-command
-                  />
-                </RailTooltip> : null}
               </div>
             </section>;
           })}
-          {classroom ? <button
-            className="tool-button tool-more desktop-advanced-toggle"
-            aria-label={showAdvanced ? t('toolbar.hideAdvanced') : t('toolbar.showAdvanced')}
-            aria-expanded={showAdvanced}
-            onClick={() => setShowAdvanced((current) => !current)}
-          ><MoreHorizontal size={22} /><span>{showAdvanced ? t('toolbar.lessShort') : t('toolbar.moreShort')}</span></button> : null}
         </div>
 
         <div className="toolbar-spacer" />
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>
+        {footerActions ? <div className="tool-rail-footer-actions">{footerActions}</div> : null}
 
         <nav className="mobile-tool-dock" aria-label={t('toolbar.primary')}>
           {mobilePrimaryTools.map((definition) => <RegisteredToolButton

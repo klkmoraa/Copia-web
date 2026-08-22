@@ -13,11 +13,6 @@ const ActiveToolStatus = () => {
   return <output aria-label="herramienta activa">{activeTool}</output>;
 };
 
-const SelectionSetter = () => {
-  const { setSelection } = useProject();
-  return <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N1' })}>seleccionar nodo</button>;
-};
-
 /** La forma del riel la decide `shellClass` (CRI-98): se fija explícito por
  * prueba en vez de depender del viewport por defecto de jsdom. */
 const renderToolRail = (shellClass: ShellClass = 'X2') => render(
@@ -43,23 +38,24 @@ describe('ToolRail mobile action sheets', () => {
   it('offers an explicit compact desktop rail without changing tool identity', () => {
     const { container } = renderToolRail('M1');
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
-    // Trece herramientas del registro más «Generar estructura», que no es una
-    // herramienta de lienzo pero sí una acción de creación con su mismo botón.
-    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(14);
+    // Diez herramientas del registro, más «Buscar comandos» y «Generar
+    // estructura», que no son herramientas de lienzo pero comparten el
+    // mismo botón. `pan` y `delete` ya no tienen botón propio.
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(12);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
-    expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
+    expect(container.querySelector('[data-tool-id="split"]')?.getAttribute('aria-keyshortcuts')).toBe('B');
   });
 
   it('groups every desktop tool by intention without losing actions', () => {
     renderToolRail();
 
-    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
-    // Nudo, barra y apoyo, más el generador de estructuras.
-    expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(2);
+    // Nudo, barra, apoyo y dividir miembro, más el generador de estructuras.
+    expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(5);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
-    expect(within(screen.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('button')).toHaveLength(2);
-    expect(within(screen.getByRole('group', { name: /^editar$/i })).getAllByRole('button')).toHaveLength(2);
-    expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(16);
+    expect(within(screen.getByRole('group', { name: /^medir$/i })).getAllByRole('button')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: /^editar$/i })).toBeNull();
+    expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(14);
   });
 
   it('opens Buscar comandos from the Navegar group in the ToolRail', async () => {
@@ -74,27 +70,6 @@ describe('ToolRail mobile action sheets', () => {
     await user.click(commandSearch);
 
     expect(openPalette).toHaveBeenCalledOnce();
-    unsubscribe();
-  });
-
-  it('offers the contextual structural editor from Edit only with a selection', async () => {
-    const user = userEvent.setup();
-    const openEditor = vi.fn();
-    const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
-    render(
-      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
-        <ProjectProvider>
-          <ToolRail />
-          <SelectionSetter />
-        </ProjectProvider>
-      </ShellCompositionContext.Provider>,
-    );
-
-    expect(screen.queryByRole('button', { name: /editar selección/i })).toBeNull();
-    await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
-    await user.click(screen.getByRole('button', { name: /editar selección/i }));
-
-    expect(openEditor).toHaveBeenCalledOnce();
     unsubscribe();
   });
 
@@ -186,22 +161,25 @@ describe('ToolRail mobile action sheets', () => {
 
     const moreMenu = screen.getByRole('menu', { name: /más herramientas/i });
     const menu = within(moreMenu);
-    expect(within(menu.getByRole('group', { name: /navegar/i })).getAllByRole('menuitemradio')).toHaveLength(1);
-    expect(within(menu.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('menuitemradio')).toHaveLength(2);
-    expect(within(menu.getByRole('group', { name: /^editar$/i })).getAllByRole('menuitemradio')).toHaveLength(2);
-    const pan = menu.getByRole('menuitemradio', { name: /^desplazar\./i });
-    expect(menu.getByRole('menuitemradio', { name: /^cota\./i })).toBeTruthy();
+    // «Navegar» sólo aporta «Buscar comandos» a esta hoja: `pan` ya no tiene
+    // botón (el gesto y el atajo de teclado lo cubren).
+    expect(within(menu.getByRole('group', { name: /navegar/i })).getAllByRole('menuitem')).toHaveLength(1);
+    expect(within(menu.getByRole('group', { name: /^crear$/i })).getAllByRole('menuitemradio')).toHaveLength(1);
+    expect(within(menu.getByRole('group', { name: /^medir$/i })).getAllByRole('menuitemradio')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: /^editar$/i })).toBeNull();
+    const openPalette = menu.getByRole('menuitem', { name: /abrir la paleta de comandos/i });
     expect(menu.getByRole('menuitemradio', { name: /^dividir miembro\./i })).toBeTruthy();
-    expect(menu.getByRole('menuitemradio', { name: /^corte\./i })).toBeTruthy();
-    expect(menu.getByRole('menuitemradio', { name: /^eliminar\./i })).toBeTruthy();
-    await waitFor(() => expect(document.activeElement).toBe(pan));
+    expect(menu.getByRole('menuitem', { name: /^generar estructura$/i })).toBeTruthy();
+    expect(menu.getByRole('menuitemradio', { name: /^cota\./i })).toBeTruthy();
+    const cut = menu.getByRole('menuitemradio', { name: /^corte\./i });
+    await waitFor(() => expect(document.activeElement).toBe(openPalette));
 
     const dialog = screen.getByRole('dialog', { name: /herramientas/i });
     const close = within(dialog).getByRole('button', { name: 'Cerrar' });
     await user.keyboard('{Shift>}{Tab}{/Shift}');
     expect(document.activeElement).toBe(close);
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(menu.getByRole('menuitemradio', { name: /^eliminar\./i }));
+    expect(document.activeElement).toBe(cut);
     await user.tab();
     expect(document.activeElement).toBe(close);
 
@@ -229,18 +207,17 @@ describe('ToolRail mobile action sheets', () => {
     unsubscribe();
   });
 
-  it('closes Más before opening Edit and restores the canvas app from inert state', async () => {
+  it('closes Más before opening Generar and restores the canvas app from inert state', async () => {
     const user = userEvent.setup();
-    const openEditor = vi.fn();
-    const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
+    const openGenerator = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
     render(
       <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
         <ProjectProvider>
-          <div className="app-shell"><ToolRail /><SelectionSetter /></div>
+          <div className="app-shell"><ToolRail /></div>
         </ProjectProvider>
       </ShellCompositionContext.Provider>,
     );
-    await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
     const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
     expect(moreButton).toBeTruthy();
     await user.click(moreButton!);
@@ -248,12 +225,12 @@ describe('ToolRail mobile action sheets', () => {
 
     const moreSheet = document.querySelector<HTMLElement>('.mobile-tool-palette-more');
     expect(moreSheet).toBeTruthy();
-    const editSelection = moreSheet?.querySelector<HTMLButtonElement>('[data-structural-edit-command]');
-    expect(editSelection).toBeTruthy();
-    await user.click(editSelection!);
+    const generate = moreSheet?.querySelector<HTMLButtonElement>('[data-structure-generator-command]');
+    expect(generate).toBeTruthy();
+    await user.click(generate!);
     await waitFor(() => expect(document.querySelector('.mobile-tool-palette-more')).toBeNull());
     await waitFor(() => expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(false));
-    await waitFor(() => expect(openEditor).toHaveBeenCalledOnce());
+    await waitFor(() => expect(openGenerator).toHaveBeenCalledOnce());
     unsubscribe();
   });
 });

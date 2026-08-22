@@ -22,9 +22,10 @@ const members = [
 const renderMiniMap = (
   viewport: { minX: number; minY: number; maxX: number; maxY: number } | null,
   onFit = vi.fn(),
+  onNavigate = vi.fn(),
 ) => {
-  const view = render(<CanvasMiniMap nodes={nodes} members={members} viewport={viewport} label="Radar" onFit={onFit} />);
-  return { ...view, onFit };
+  const view = render(<CanvasMiniMap nodes={nodes} members={members} viewport={viewport} label="Radar" onFit={onFit} onNavigate={onNavigate} />);
+  return { ...view, onFit, onNavigate };
 };
 
 describe('CanvasMiniMap', () => {
@@ -54,14 +55,27 @@ describe('CanvasMiniMap', () => {
     expect(document.querySelector('.canvas-minimap-viewport')).toBeNull();
   });
 
-  it('re-frames the canvas when the radar is pressed', async () => {
-    const { onFit } = renderMiniMap(null);
+  it('falls back to framing the canvas when a click carries no usable pointer geometry', async () => {
+    // jsdom no implementa SVGSVGElement.getScreenCTM(): un clic real cae al
+    // mismo camino que el teclado. El comportamiento en un navegador real se
+    // cubre con la verificación visual de Playwright, no aquí.
+    const { onFit, onNavigate } = renderMiniMap(null);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Radar' }));
     expect(onFit).toHaveBeenCalledOnce();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('frames the canvas on a keyboard activation instead of navigating to (0,0)', async () => {
+    const { onFit, onNavigate } = renderMiniMap(null);
+    const trigger = screen.getByRole('button', { name: 'Radar' });
+    trigger.focus();
+    await userEvent.setup().keyboard('{Enter}');
+    expect(onFit).toHaveBeenCalledOnce();
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   it('renders nothing at all when there is no model to stamp', () => {
-    const { container } = render(<CanvasMiniMap nodes={[]} members={[]} viewport={null} label="Radar" onFit={vi.fn()} />);
+    const { container } = render(<CanvasMiniMap nodes={[]} members={[]} viewport={null} label="Radar" onFit={vi.fn()} onNavigate={vi.fn()} />);
     expect(container.innerHTML).toBe('');
   });
 });

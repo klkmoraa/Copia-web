@@ -69,4 +69,28 @@ describe('smart label layout', () => {
     expect(placed).toHaveLength(1);
     expect(placed[0].id).toBe('critical-maximum');
   });
+
+  it('sizes a multi-line label taller and wider than its single-line equivalent', () => {
+    const [singleLine] = layoutSmartLabels([
+      { id: 'single', text: 'Mmax 36.35 kN·m', anchor: { x: 260, y: 160 }, priority: 1 },
+    ], bounds, 100);
+    const [multiLine] = layoutSmartLabels([
+      { id: 'multi', text: 'Mmax 36.35 kN·m', lines: ['Mmax 36.35 kN·m', 'x 3.00 m'], anchor: { x: 260, y: 160 }, priority: 1 },
+    ], bounds, 100);
+    expect(multiLine.rect.height).toBeGreaterThan(singleLine.rect.height);
+    expect(multiLine.rect.width).toBeGreaterThanOrEqual(singleLine.rect.width);
+  });
+
+  it('caps total visible labels in a saturated scene while keeping every forced one', () => {
+    const forced: SmartLabelCandidate = { id: 'forced', text: 'Seleccionado', anchor: { x: 100, y: 100 }, priority: 0, forceVisible: true };
+    const flood: SmartLabelCandidate[] = Array.from({ length: 400 }, (_, index) => ({
+      id: `flood-${String(index).padStart(3, '0')}`,
+      text: `M${index} = 1.00 kN·m`,
+      anchor: { x: 50 + (index % 20) * 20, y: 50 + Math.floor(index / 20) * 12 },
+      priority: 1,
+    }));
+    const placed = layoutSmartLabels([forced, ...flood], { x: 0, y: 0, width: 900, height: 700 }, 100);
+    expect(placed.some((label) => label.id === 'forced')).toBe(true);
+    expect(placed.length).toBeLessThan(flood.length + 1);
+  });
 });

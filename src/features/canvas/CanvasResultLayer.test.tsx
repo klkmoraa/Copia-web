@@ -74,18 +74,20 @@ const renderLayer = (resultTab: ResultTab, overrides: Record<string, unknown> = 
 
 const stamps = () => [...document.querySelectorAll('[data-critical-point]')];
 
+// El texto del sello (valor + estación) lo sella `canvasLabelSources.ts`
+// como candidato del repartidor de etiquetas — ver
+// `canvasLabelSources.test.ts` para su contenido. Este componente sólo
+// dibuja la geometría del sello: el tallo desde la barra hasta la ordenada
+// del diagrama, y el punto en la punta.
 describe('CanvasResultLayer critical M/V stamps', () => {
-  it('marks Mmax and Mmin with the value and the station the analysis reported', () => {
+  it('marks Mmax and Mmin on the diagram, one stem+dot per extreme', () => {
     renderLayer('moment');
     expect(stamps().map((stamp) => stamp.getAttribute('data-critical-point')))
       .toEqual(['B1:moment:max', 'B1:moment:min']);
-
-    const texts = [...document.querySelectorAll('.critical-point-value, .critical-point-station')]
-      .map((element) => element.textContent);
-    expect(texts).toEqual([
-      'Mmax 45.00 kN·m', 'x 3.00 m',
-      'Mmin -12.00 kN·m', 'x 6.00 m',
-    ]);
+    for (const stamp of stamps()) {
+      expect(stamp.querySelector('.critical-point-stem')).not.toBeNull();
+      expect(stamp.querySelector('.critical-point-dot')).not.toBeNull();
+    }
   });
 
   it('anchors the stamp on the diagram ordinate, not on the bare member axis', () => {
@@ -97,10 +99,10 @@ describe('CanvasResultLayer critical M/V stamps', () => {
     expect(Number(stem.getAttribute('y2'))).not.toBeCloseTo(300, 3);
   });
 
-  it('follows the tab: shear is stamped as V, and axial gets no stamps', () => {
+  it('follows the tab: shear is stamped, and axial gets no stamps', () => {
     renderLayer('shear');
     expect(document.querySelector('.critical-point-layer')?.getAttribute('class')).toContain('is-shear');
-    expect(document.querySelector('.critical-point-value')?.textContent).toBe('Vmax 30.00 kN');
+    expect(stamps()).toHaveLength(1);
     cleanup();
 
     renderLayer('axial');

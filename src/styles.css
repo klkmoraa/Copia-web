@@ -487,6 +487,16 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 :root[data-theme='dark'] .tool-button.active { color: var(--accent); }
 .toolbar-spacer { flex: 1; }
 .selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
+/* Lanzadores de superficie (Cargas · Vista · Resultados) en X2/M1: pie del
+   riel, no chrome flotante del lienzo — ver `.workspace-surface-launcher`
+   en `phase1.css`, que es la misma capacidad para K0. */
+.tool-rail-footer-actions { display:flex; flex-direction:column; gap:2px; padding:6px 8px 2px; border-top:0.5px solid var(--sc-color-divider); }
+.tool-rail-footer-actions button { min-height:var(--sc-control-height-sm); padding:0 8px; border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--sc-color-text-secondary); font:inherit; font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); text-align:left; cursor:pointer; }
+.tool-rail-footer-actions button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
+.tool-rail-footer-actions button:active { background:var(--sc-color-fill-tertiary); }
+@media (pointer:coarse) {
+  .tool-rail-footer-actions button { min-height:var(--sc-control-height-touch); }
+}
 
 .center-stage { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--canvas-bg); position: relative; }
 .classroom-journey { --classroom-color:var(--sc-color-aula); --classroom-solid:var(--sc-color-aula-solid); flex:0 0 auto; display:grid; gap:7px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--classroom-color) 30%,var(--border)); border-radius:var(--sc-radius-card); background:color-mix(in srgb,var(--classroom-color) 5%,var(--surface)); color:var(--text); }
@@ -561,6 +571,10 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 }
 .smart-label text { fill:currentColor; font-size:10px; font-weight:var(--sc-font-weight-medium); letter-spacing:0; font-feature-settings:"tnum"; }
 .smart-label.priority-0 text,.smart-label.priority-1 text { font-weight:var(--sc-font-weight-semibold); }
+/* El segundo renglón (p. ej. la estación de un extremo de diagrama) es
+   contexto del primero, no otro dato al mismo nivel: se lee en el gris de
+   apoyo del sistema, nunca en el color de la magnitud. */
+.smart-label-line-detail { fill:var(--muted); font-weight:var(--sc-font-weight-medium); }
 .smart-label.priority-3 { opacity:.92; }
 .smart-label-leader { stroke:currentColor; stroke-width:1.2; stroke-dasharray:3 3; opacity:.65; vector-effect:non-scaling-stroke; }
 .smart-label.tone-selection { color:var(--selection); }
@@ -638,10 +652,6 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .global-axes line:nth-of-type(2) { stroke: var(--shear); }
 .global-axes text { font-size: 13px; font-weight: 700; }
 .axis-x-label { fill: var(--moment); }.axis-y-label { fill: var(--shear); }
-.canvas-controls { position: absolute; left: 14px; bottom: 18px; display: flex; flex-direction: column; border-radius: var(--sc-radius-control); overflow: hidden; }
-.canvas-controls button { width: var(--sc-control-height-sm); height: var(--sc-control-height-sm); border: 0; background: transparent; display: grid; place-items: center; }
-.canvas-controls button + button { border-top: 0.5px solid var(--sc-color-divider); }
-.canvas-controls button:hover { background: var(--sc-color-fill-quaternary); }
 .canvas-mode-badge { position:absolute; z-index:4; left:12px; top:10px; max-width:min(430px,calc(100% - 28px)); display:flex; align-items:center; gap:6px; padding:3px 8px; border-radius:var(--sc-radius-control); font-size:var(--sc-font-size-label); color:var(--muted); pointer-events:none; }
 .canvas-mode-badge strong { color:var(--text); font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-semibold); }
 .canvas-mode-badge strong::after { content:'·'; margin-left:8px; color:var(--subtle); }
@@ -651,9 +661,6 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .canvas-mode-badge.placing-load button { width:28px; height:28px; margin:-3px -5px -3px 0; flex:0 0 auto; display:grid; place-items:center; border:0; border-radius:var(--sc-radius-control); background:var(--surface-2); color:var(--muted); }
 .canvas-mode-badge.placing-load button:hover { color:var(--text); background:var(--border-soft); }
 .touch-gesture-hint { display:none; }
-/* Coordinate readout is informational. It must never steal a structural
-   selection gesture from geometry beneath the floating canvas chrome. */
-.canvas-status { position: absolute; right: 12px; bottom: 10px; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: var(--sc-radius-control); pointer-events:none; }
 .canvas-feedback { position:absolute; z-index:6; left:50%; top:58px; transform:translateX(-50%); width:max-content; max-width:calc(100% - 28px); padding:9px 12px; border-radius:var(--sc-radius-control); color:var(--text); font-size:var(--sc-font-size-label); line-height:1.4; text-align:center; }
 .canvas-host .canvas-feedback { border-color:color-mix(in srgb,var(--warning) 35%,var(--border)); }
 .canvas-result-legend { position:absolute; left:16px; top:54px; z-index:8; width:min(260px,calc(100% - 32px)); padding:9px 11px; border-radius:var(--sc-radius-control); display:grid; grid-template-columns:auto 1fr; align-items:center; gap:4px 9px; pointer-events:none; }
@@ -1035,7 +1042,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border-radius:var(--sc-radius-card); flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; }
   .tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }
   .toolbar .tool-button svg { width:19px; height:19px; }
-  .toolbar-spacer,.selection-tip { display:none; }
+  .toolbar-spacer,.selection-tip,.tool-rail-footer-actions { display:none; }
   .center-stage { grid-column:1; grid-row:1 / span 2; }
   .inspector-panel { position:absolute; z-index:31; left:0; right:0; top:auto; bottom:0; width:100%; height:min(72vh,660px); --inspector-hairline-width:1px 1px 0; border-radius:var(--sc-radius-panel) 18px 0 0; display:none; padding-bottom:env(safe-area-inset-bottom); }
   .inspector-panel::before { content:''; width:42px; height:5px; border-radius:var(--sc-radius-xs); background:var(--border); position:absolute; left:50%; top:7px; transform:translateX(-50%); }
@@ -1052,9 +1059,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .result-tabs button { min-width:76px;padding:0 12px;scroll-snap-align:start; }
   .diagram-chart-heading small{display:none}.diagram-chart svg{height:188px}.diagram-cursor-readout{grid-template-columns:repeat(2,minmax(0,1fr))}.diagram-cursor-readout small{grid-column:1/-1}
   .learning-toolbar{align-items:stretch;flex-direction:column;gap:8px}.learning-level{display:grid;grid-template-columns:repeat(3,1fr)}.learning-level button{min-height:34px}.learning-content{padding:0 16px 13px 45px}
-  .canvas-controls { bottom:calc(82px + env(safe-area-inset-bottom)); }
-  .canvas-controls button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
-  .canvas-status { bottom:calc(80px + env(safe-area-inset-bottom)); }
+  .canvas-navigator { bottom:calc(82px + env(safe-area-inset-bottom)); }
   .welcome-header { min-height:64px; padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
   .welcome-brand { font-size:18px; }
   /* Con una sola columna la figura pasa de compañera del titular a remate de
@@ -1065,7 +1070,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 
 @media print {
-  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.professional-note,.canvas-controls,.canvas-status,.resize-handle{display:none!important}.workspace{display:block}.center-stage{display:block}.canvas-host{height:58vh}.results-panel{height:auto!important;max-height:none;border:0}.results-body{overflow:visible;padding-bottom:0}.result-tabs{display:none}.structural-canvas{height:58vh}.diagram-result-layout{grid-template-columns:1fr}.diagram-guidance{display:none}
+  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.professional-note,.canvas-navigator,.resize-handle{display:none!important}.workspace{display:block}.center-stage{display:block}.canvas-host{height:58vh}.results-panel{height:auto!important;max-height:none;border:0}.results-body{overflow:visible;padding-bottom:0}.result-tabs{display:none}.structural-canvas{height:58vh}.diagram-result-layout{grid-template-columns:1fr}.diagram-guidance{display:none}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1114,7 +1119,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .autosave-state { display:none; }
   .brand-mark { width:26px; font-size:25px; }.topbar { padding-left:8px; padding-right:8px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
-  .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:var(--sc-radius-card); }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-controls { bottom:calc(80px + env(safe-area-inset-bottom)); }.canvas-status { right:8px; bottom:calc(78px + env(safe-area-inset-bottom)); font-size:var(--sc-font-size-technical); padding:5px 7px; }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
+  .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:var(--sc-radius-card); }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
   .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }
   .results-panel { min-height:164px; max-height:58dvh; }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
   .professional-note { flex-basis:18px; font-size:10px; line-height:1.15; }
@@ -1147,7 +1152,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .load-hit { stroke-width:44!important; }
   .node-object .node-hit { r:22px; }
   .candidate-picker [role='option'],.candidate-picker footer button { min-height:44px; }
-  .canvas-controls button { width:44px; height:44px; }
 }
 
 @media (max-width:1023px) and (max-height:600px) {
@@ -1155,8 +1159,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .results-panel { min-height:128px; max-height:42dvh; height:42dvh!important; }
   .professional-note { display:none; }
   .toolbar { bottom:8px; }
-  .canvas-controls { bottom:70px; }
-  .canvas-status { bottom:68px; }
+  .canvas-navigator { bottom:70px; }
   .mobile-inspector-toggle { bottom:78px; }
 }
 
@@ -1358,8 +1361,7 @@ button,
 .tool-node,.tool-pointLoad,.tool-dimension { margin-top:4px; }
 .canvas-mode-badge { padding:8px 11px; border-radius:var(--sc-radius-control); font-size:var(--sc-font-size-technical); }
 .canvas-mode-badge strong { font-size:13px; }
-.canvas-controls { border-radius:var(--sc-radius-control); }
-.canvas-status { font-size:var(--sc-font-size-technical); }
+.canvas-navigator__coordinates,.canvas-navigator__scale { font-size:var(--sc-font-size-technical); }
 
 .inspector-tabs { border-color:var(--border-soft); }
 .inspector-tabs button.active { color:var(--accent); }
@@ -1516,7 +1518,7 @@ button,
     border-radius:0;
     overflow:visible;
   }
-  .desktop-tool-list,.toolbar-spacer,.selection-tip { display:none; }
+  .desktop-tool-list,.toolbar-spacer,.selection-tip,.tool-rail-footer-actions { display:none; }
   .mobile-tool-dock {
     display:grid;
     grid-template-columns:repeat(6,minmax(0,1fr));
@@ -1640,8 +1642,6 @@ button,
   .influence-line-view { margin:8px; }
   .influence-line-view .diagram-chart { margin:0 8px; }
 
-  .canvas-controls { bottom:14px; }
-  .canvas-status { bottom:12px; }
   .canvas-mode-badge { max-width:calc(100% - 82px); overflow:hidden; white-space:nowrap; }
   .mobile-inspector-toggle {
     top:12px;
@@ -1925,7 +1925,6 @@ button:not(:disabled):active,.selection-card:active {
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled svg,
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled .mobile-palette-icon { color:var(--tool-color); }
 .tool-node,.tool-pointLoad,.tool-dimension { margin-top:0; }
-.desktop-advanced-toggle { margin-top:2px; }
 .selection-tip { padding:8px 9px; }
 
 @media (min-width:1440px) {
@@ -1989,13 +1988,13 @@ button:not(:disabled):active,.selection-card:active {
   }
 }
 
-/* Phase 3: canvas chrome and reserved safe zones ------------------------- */
-.canvas-host {
-  --canvas-safe-top:116px;
-  --canvas-safe-right:68px;
-  --canvas-safe-bottom:62px;
-  --canvas-safe-left:68px;
-}
+/* Phase 3: canvas chrome and reserved safe zones -------------------------
+   Los márgenes seguros (`--canvas-safe-*`) los fija en línea
+   `StructuralCanvas.tsx` a partir de `canvasSafeInsetsFor(size)` — la misma
+   función que reparte las etiquetas del lienzo — no una media query de aquí.
+   Antes vivían en dos sitios (TS y CSS) y el ancho de ventana de la media
+   query podía divergir del ancho medido del propio `canvas-host` (que se
+   angosta con el inspector acoplado sin cruzar ningún punto de quiebre). */
 .canvas-mode-badge {
   top:12px;
   left:12px;
@@ -2003,75 +2002,72 @@ button:not(:disabled):active,.selection-card:active {
   max-width:min(470px,calc(100% - 270px));
   border-radius:var(--sc-radius-control);
 }
-/* Indicador segmentado de la vista. Era dos etiquetas sueltas que se ponían
-   AZULES al activarse; el acento identifica y acciona, y un indicador no hace
-   ni lo uno ni lo otro. Ahora el estado lo lleva el relleno, como en cualquier
-   segmento del sistema, y el grupo comparte materia con los controles de cámara
-   de la esquina opuesta: son las dos piezas de chrome del mismo lienzo. */
-.canvas-view-chips {
+/* --- Navegador: dónde estoy ---------------------------------------------
+   Minimapa + cámara + escala + coordenadas, una sola pastilla en la esquina
+   inferior-derecha — antes cuatro superficies flotantes independientes
+   (`.canvas-controls`, `.canvas-status`, `.canvas-minimap` y el chip de
+   repetir) que competían por el mismo borde y llegaron a solaparse (el chip
+   de repetir caía a 4px del radar). En reposo se ve la miniatura y la
+   escala; apuntar o enfocar revela la cámara y las coordenadas (opacity,
+   regla 5 del sistema — nunca `display`). Sin hover disponible (K0/M1) el
+   navegador no lleva minimapa y el resto queda siempre visible, que es como
+   ya se comportaba el chrome de cámara en esas anchuras. */
+.canvas-navigator {
   position:absolute;
-  z-index:7;
-  top:12px;
-  right:12px;
-  display:flex;
-  align-items:center;
-  gap:1px;
-  padding:2px;
-  border-radius:var(--sc-radius-control);
-  background:var(--sc-color-surface-1);
-  box-shadow:var(--sc-elevation-1);
-  pointer-events:none;
-}
-.canvas-view-chips > span {
-  min-height:22px;
-  display:flex;
-  align-items:center;
-  padding:0 8px;
-  border-radius:calc(var(--sc-radius-control) - 2px);
-  color:var(--sc-color-text-muted);
-  font-size:var(--sc-font-size-caption);
-  font-weight:var(--sc-font-weight-medium);
-  letter-spacing:0;
-}
-.canvas-view-chips > span[data-active] {
-  background:var(--sc-color-fill-tertiary);
-  color:var(--sc-color-text-primary);
-}
-.canvas-controls {
   z-index:9;
-  left:auto;
   right:12px;
   bottom:12px;
-  flex-direction:row;
-  border-radius:var(--sc-radius-control);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
 }
-.canvas-controls button + button { border-top:0; border-left:1px solid var(--border-soft); }
-.canvas-status {
-  z-index:7;
-  right:auto;
-  left:50%;
-  bottom:12px;
-  min-height:38px;
-  max-width:calc(100% - 390px);
-  transform:translateX(-50%);
-  padding:0 11px;
+.canvas-navigator__scale {
+  padding:2px 8px;
   border-radius:var(--sc-radius-control);
   color:var(--muted);
+  font-variant-numeric:tabular-nums;
   white-space:nowrap;
 }
-/* COLISIÓN · El lector de coordenadas y escala vive centrado abajo, y la barra
-   de acciones contextuales (`phase2.css`) se coloca EXACTAMENTE ahí: mismo
-   `left:50%`, misma `translateX(-50%)`, 12 px y 16 px de fondo. Con una
-   selección viva, la barra tapaba la escala — visible en la evidencia de
-   resultados del rediseño anterior.
-   Cede el lector, no la barra: la barra es acción y el lector es lectura, y una
-   acción no se aparta para que se lea un número. Mismo patrón `:has()` que ya
-   usa este archivo para que el panel de resultados aparte los controles de
-   cámara. */
-.center-stage:has(.contextual-actions) .canvas-status { bottom:66px; }
-
-.canvas-coordinate-output { color:var(--text); font-variant-numeric:tabular-nums; }
-.canvas-scale-output { color:var(--muted); font-variant-numeric:tabular-nums; }
+.canvas-navigator__reveal {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.canvas-navigator:hover .canvas-navigator__reveal,
+.canvas-navigator:focus-within .canvas-navigator__reveal { opacity:1; pointer-events:auto; }
+.canvas-navigator__controls {
+  display:flex;
+  border-radius:var(--sc-radius-control);
+  overflow:hidden;
+}
+.canvas-navigator__controls .sc-icon-button { border-radius:0; }
+.canvas-navigator__controls .sc-icon-button + .sc-icon-button { border-left:1px solid var(--border-soft); }
+.canvas-navigator__controls .sc-icon-button:hover { background:var(--sc-color-fill-quaternary); color:var(--text); }
+.canvas-navigator__controls .sc-icon-button:active { background:var(--sc-color-fill-tertiary); transform:var(--sc-press-transform); }
+.canvas-navigator__coordinates {
+  min-height:38px;
+  padding:0 11px;
+  display:flex;
+  align-items:center;
+  border-radius:var(--sc-radius-control);
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+/* El panel de capas baja por el mismo borde derecho y cubriría el
+   navegador: dos objetos en el mismo sitio no se resuelven apilándolos, se
+   resuelve mostrando uno. */
+.canvas-host:has(.canvas-layer-popover .sc-popover__surface) .canvas-navigator { display:none; }
+@media (max-width:1023px) {
+  /* El minimapa es un recurso de escritorio: en táctil el lienzo es el
+     recurso escaso y el radar se retira entero (ver más abajo). Sin hover
+     que lo revele, el resto del navegador queda siempre visible. */
+  .canvas-navigator__reveal { opacity:1; pointer-events:auto; }
+}
 .canvas-feedback { top:calc(var(--canvas-safe-top) + 8px); }
 .canvas-result-legend { top:calc(var(--canvas-safe-top) + 8px); left:12px; }
 .canvas-hint { top:calc(var(--canvas-safe-top) + 8px); }
@@ -2117,33 +2113,14 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (max-width:1023px) {
-  .canvas-host {
-    --canvas-safe-top:116px;
-    --canvas-safe-right:64px;
-    --canvas-safe-bottom:62px;
-    --canvas-safe-left:64px;
-  }
   .canvas-mode-badge {
     top:10px;
     left:max(10px,env(safe-area-inset-left));
     max-width:calc(100% - 260px);
   }
-  .canvas-view-chips {
-    top:12px;
-    right:max(64px,calc(env(safe-area-inset-right) + 64px));
-  }
-  .canvas-view-chips > span { min-height:28px; padding-inline:7px; }
-  .canvas-controls {
+  .canvas-navigator {
     right:max(10px,env(safe-area-inset-right));
-    bottom:10px;
-  }
-  .canvas-status {
-    left:50%;
-    right:auto;
-    bottom:10px;
-    min-height:36px;
-    max-width:calc(100% - 310px);
-    transform:translateX(-50%);
+    bottom:calc(82px + env(safe-area-inset-bottom));
   }
   .canvas-result-legend { top:104px; left:10px; }
   .canvas-feedback { top:104px; }
@@ -2152,22 +2129,13 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (pointer:coarse) {
-  .canvas-coordinate-output,.canvas-status-divider { display:none; }
-  .canvas-status { min-width:86px; justify-content:center; }
+  /* Sin cursor persistente, el lector de coordenadas no informa de nada. */
+  .canvas-navigator__coordinates { display:none; }
 }
 
 @media (max-width:460px) {
-  .canvas-host {
-    --canvas-safe-top:104px;
-    --canvas-safe-right:58px;
-    --canvas-safe-bottom:58px;
-    --canvas-safe-left:58px;
-  }
   .canvas-mode-badge { top:8px; left:8px; max-width:calc(100% - 66px); }
-  .canvas-view-chips { display:none; }
-  .canvas-controls { right:8px; bottom:8px; }
-  .canvas-status { bottom:8px; min-height:34px; max-width:96px; padding-inline:8px; overflow:hidden; }
-  .canvas-coordinate-output,.canvas-status-divider { display:none; }
+  .canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }
   .desktop-gesture-hint { display:none; }
   .touch-gesture-hint { display:inline; }
   .canvas-result-legend { top:96px; width:calc(100% - 20px); }
@@ -2175,61 +2143,34 @@ button:not(:disabled):active,.selection-card:active {
   .canvas-hint { top:96px; }
 }
 
-/* Phase 3: session-only information layers ------------------------------- */
-.canvas-view-chips { right:62px; }
-.canvas-layer-trigger {
+/* Phase 3: session-only information layers -------------------------------
+   El disparador y la superficie del popover de capas son el `Popover`
+   genérico del sistema (`.sc-popover*`, `ui.css`) — el mismo que funde las
+   cuatro decisiones de análisis en la barra superior desde la fase 2. Sólo
+   se fija aquí su posición flotante sobre el lienzo; material, elevación,
+   estado abierto y comportamiento táctil ya vienen del componente. Snap y
+   rejilla entraron como los dos primeros conmutadores del popover: antes
+   eran chips inertes (`pointer-events:none`, invisibles a ≤460px) que no
+   conmutaban nada y cuyo único control real vivía duplicado en Inspector ›
+   Vista. */
+.canvas-host .canvas-layer-popover {
   position:absolute;
   z-index:26;
   top:10px;
   right:12px;
+}
+.canvas-layer-popover .sc-popover__trigger {
   width:40px;
+  min-height:40px;
   height:40px;
-  display:grid;
-  place-items:center;
-  border-radius:var(--sc-radius-control);
-  color:var(--muted);
+  padding:0;
 }
-.canvas-layer-trigger:hover { color:var(--text); background:var(--surface); }
-.canvas-layer-trigger.active {
-  border-color:color-mix(in srgb,var(--accent) 36%,var(--border));
-  background:var(--accent-soft);
-  color:var(--accent-on-soft);
+.canvas-layer-popover .sc-popover__surface {
+  width:min(292px,calc(100vw - 24px));
+  max-height:calc(100dvh - var(--topbar-h) - env(safe-area-inset-top) - 60px);
+  overflow-y:auto;
 }
-.canvas-layer-panel {
-  position:absolute;
-  z-index:25;
-  top:58px;
-  right:12px;
-  width:min(292px,calc(100% - 24px));
-  max-height:calc(100% - 126px);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  border-radius:var(--sc-radius-card);
-}
-.canvas-layer-panel>header {
-  min-height:58px;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 36px;
-  align-items:center;
-  gap:8px;
-  padding:8px 9px 8px 13px;
-  border-bottom:1px solid var(--border-soft);
-}
-.canvas-layer-panel>header>div { display:grid; gap:2px; min-width:0; }
-.canvas-layer-panel>header strong { font-size:14px; }
-.canvas-layer-panel>header span { color:var(--muted); font-size:11px; line-height:1.3; }
-.canvas-layer-panel>header button {
-  width:36px;
-  height:36px;
-  display:grid;
-  place-items:center;
-  border:0;
-  border-radius:var(--sc-radius-control);
-  background:transparent;
-  color:var(--muted);
-}
-.canvas-layer-panel>header button:hover { background:var(--surface-2); color:var(--text); }
+.canvas-layer-view-toggles { display:grid; gap:2px; padding-bottom:8px; margin-bottom:8px; border-bottom:0.5px solid var(--sc-color-divider); }
 .canvas-layer-list {
   min-height:0;
   display:grid;
@@ -2288,24 +2229,16 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-layer-reset:hover { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 32%,var(--border)); }
 
 @media (max-width:1023px) {
-  .canvas-layer-trigger {
+  .canvas-host .canvas-layer-popover {
     top:64px;
     right:max(10px,env(safe-area-inset-right));
-    width:44px;
-    height:44px;
   }
-  .canvas-layer-panel {
-    top:116px;
-    right:max(10px,env(safe-area-inset-right));
-    width:min(310px,calc(100% - 20px));
-    max-height:calc(100% - 184px);
-  }
+  .canvas-layer-popover .sc-popover__trigger { width:44px; min-height:44px; height:44px; }
   .canvas-layer-row { min-height:56px; }
 }
 
 @media (max-width:460px) {
-  .canvas-layer-trigger { top:60px; right:8px; }
-  .canvas-layer-panel { top:112px; right:8px; width:calc(100% - 16px); max-height:calc(100% - 180px); }
+  .canvas-host .canvas-layer-popover { top:60px; right:8px; }
 }
 
 /* Phase 6: application shell composition -------------------------------- */
@@ -2391,7 +2324,6 @@ button:not(:disabled):active,.selection-card:active {
    color de familia sobre el azul lo hundía por debajo del suelo de contraste. */
 .tool-rail .sc-tool-button.is-active .sc-tool-button__copy strong { color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-medium); }
 .tool-rail .sc-tool-button.is-active .sc-tool-button__icon svg { color:var(--sc-color-action-foreground); }
-.canvas-controls .sc-icon-button { border-radius:0; }
 .canvas-layer-row.sc-layer-toggle { grid-template-columns:36px minmax(0,1fr) 34px; }
 .canvas-layer-row .sc-layer-toggle__icon { width:34px; height:34px; }
 .canvas-layer-row .sc-layer-toggle__copy strong { font-size:12px; line-height:1.2; }
@@ -2943,10 +2875,6 @@ button:not(:disabled):active,.selection-card:active {
     grid-row:1;
   }
   .center-stage:has(> .results-panel:not(.mobile-collapsed)) > .canvas-host {
-    --canvas-safe-top:104px;
-    --canvas-safe-right:58px;
-    --canvas-safe-bottom:58px;
-    --canvas-safe-left:58px;
     grid-column:1;
     grid-row:2;
     min-width:0;
@@ -2972,11 +2900,11 @@ button:not(:disabled):active,.selection-card:active {
     left:10px;
     max-width:calc(100% - 20px);
   }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-controls {
+  .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-navigator {
     right:8px;
     bottom:8px;
   }
-  .canvas-layer-trigger {
+  .canvas-host .canvas-layer-popover {
     top:60px;
     right:max(8px,env(safe-area-inset-right));
   }
@@ -3544,19 +3472,15 @@ button:not(:disabled):active,.selection-card:active {
   border:0;
   box-shadow:none;
 }
-.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled),
-.canvas-controls button:hover { background:var(--sc-color-fill-quaternary); color:var(--text); }
-.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
-.canvas-controls button:active { background:var(--sc-color-fill-tertiary); transform:var(--sc-press-transform); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled) { background:var(--sc-color-fill-quaternary); color:var(--text); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled) { background:var(--sc-color-fill-tertiary); transform:var(--sc-press-transform); }
 
 /* La geometría de la tecla es de esta pantalla; su relieve lo declara
    `.sc-tool-button` en `ui.css`, que es el componente que la dibuja. */
 .tool-button { border-radius:var(--sc-radius-sm); }
 
-.canvas-mode-badge,
-.canvas-status { border-radius:var(--sc-radius-control); }
-.canvas-controls { border-radius:var(--sc-radius-control); overflow:hidden; }
-.canvas-controls button { transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
+.canvas-mode-badge { border-radius:var(--sc-radius-control); }
+.canvas-navigator__controls .sc-icon-button { transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
 .canvas-host { background-color:var(--canvas-bg); }
 
 /* Inspector, results, fields and physical switches ---------------------- */
@@ -3787,14 +3711,6 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-panel .toggle-row { transition:background var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
 .inspector-panel .toggle-row:hover { background:color-mix(in srgb,var(--accent) 5%,transparent); }
 
-#workspace-canvas .canvas-layer-panel {
-  border:var(--sc-hairline);
-  border-radius:var(--sc-radius-panel);
-  background:var(--surface);
-  box-shadow:var(--sc-elevation-2);
-  animation:sc-popover-in var(--sc-motion-control) var(--sc-ease-enter) both;
-}
-#workspace-canvas .canvas-layer-panel > header { border-bottom-color:var(--sc-color-border-soft); }
 #workspace-canvas .canvas-layer-row {
   min-height:56px;
   border:1px solid var(--sc-color-border-soft);
@@ -3808,7 +3724,6 @@ button:not(:disabled):active,.selection-card:active {
 #workspace-canvas .canvas-layer-row[aria-checked='true'] .canvas-layer-icon { background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); }
 #workspace-canvas .canvas-layer-reset { border:0; background:var(--sc-color-surface-2); box-shadow:none; }
 #workspace-canvas .canvas-layer-reset:hover:not(:disabled) { background:var(--surface); box-shadow:var(--sc-elevation-1); }
-@keyframes sc-popover-in { from { opacity:0; transform:translateY(-4px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
 
 @media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
   .inspector-panel.mobile-open { border-radius:var(--sc-radius-lg) 0 0 var(--sc-radius-lg); }
@@ -3827,7 +3742,6 @@ button:not(:disabled):active,.selection-card:active {
   .compact-toggle-grid input[type='checkbox']::after,
   .popover button,
   .analysis-status { transition:none!important; }
-  #workspace-canvas .canvas-layer-panel { animation:none; }
   .welcome-launcher-card:hover,
   .welcome-import-card:hover,
   .welcome-template-card:hover,
@@ -3946,11 +3860,6 @@ button:not(:disabled):active,.selection-card:active {
 .tool-rail.is-compact .tool-button.destructive {
   --tool-color:var(--sc-color-tool-destructive);
 }
-.tool-rail.is-compact .desktop-advanced-toggle {
-  width:48px;
-  min-width:48px;
-  margin-top:3px;
-}
 .tool-rail.is-compact .toolbar-spacer { min-height:10px; }
 .tool-rail.is-compact .selection-tip {
   width:48px;
@@ -4013,21 +3922,6 @@ button:not(:disabled):active,.selection-card:active {
   transform:var(--sc-press-transform);
 }
 
-/* El disparador de capas comparte la gramática: cavidad al estar abierto. */
-.canvas-layer-trigger {
-  background:var(--surface);
-  border:1px solid color-mix(in srgb,var(--border) 72%,white);
-  box-shadow:var(--sc-elevation-1);
-  transition:var(--sc-transition-control);
-}
-.canvas-layer-trigger:hover { box-shadow:var(--sc-elevation-1); }
-.canvas-layer-trigger.active {
-  color:var(--accent);
-  background:var(--sc-color-surface-inset);
-  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
 
 /* --- Presets de capas ------------------------------------------------- */
 .canvas-layer-presets {
@@ -4139,12 +4033,10 @@ button:not(:disabled):active,.selection-card:active {
   .canvas-demand-legend { inset-block-end:8px; inset-inline-start:8px; max-width:calc(100% - 16px); }
 }
 
-/* --- Minimapa radar ---------------------------------------------------- */
+/* --- Minimapa radar -----------------------------------------------------
+   Glifo dentro de `.canvas-navigator`, no una superficie flotante propia:
+   sin posición absoluta, la fila la reparte el flexbox del navegador. */
 .canvas-minimap {
-  position:absolute;
-  z-index:8;
-  right:12px;
-  bottom:60px;
   width:132px;
   height:88px;
   padding:6px;
@@ -4971,33 +4863,10 @@ button:not(:disabled):active,.selection-card:active {
   .command-palette-footer { display:none; }
 }
 
-/* --- Anti-colisiones: el radar comparte esquina con el zoom ------------- */
-@media (min-width:1024px) {
-  /* El zoom vive en la esquina inferior derecha; el radar se apila encima y
-     el pie de coordenadas recorta su ancho para no cruzarse con ninguno. */
-  .canvas-minimap { bottom:calc(12px + var(--sc-control-height-md) * 3 + 8px); }
-  .canvas-status { max-width:calc(100% - 430px); }
-}
-/* El panel de capas baja por el mismo borde derecho y cubriría el radar. Se
-   retira mientras el panel está abierto: dos objetos en el mismo sitio no se
-   resuelven apilándolos, se resuelve mostrando uno. */
-.canvas-host:has(.canvas-layer-panel) .canvas-minimap { display:none; }
-
-/* En teléfonos estrechos la pastilla de coordenadas se centraba en el ancho
-   completo, sin descontar el grupo de zoom (~134px) que ocupa la esquina
-   inferior derecha: a 375px se solapaban 3px. Deja de centrarse y se ancla a
-   la izquierda, que en esta franja está libre, con holgura garantizada. */
-@media (max-width:640px) {
-  .canvas-status {
-    left:max(8px,env(safe-area-inset-left));
-    right:auto;
-    transform:none;
-    max-width:calc(100% - 168px);
-  }
-}
 @media (max-width:1023px) {
   /* En táctil el lienzo es el recurso escaso: el radar se retira y deja el
-     dibujo limpio bajo el dedo. */
+     dibujo limpio bajo el dedo. El resto del navegador (escala, cámara,
+     coordenadas) se queda: ver la regla general más arriba. */
   .canvas-minimap { display:none; }
 }
 
@@ -5008,12 +4877,11 @@ button:not(:disabled):active,.selection-card:active {
   .tool-button:active:not(:disabled),
   .segmented-control button:hover:not(:disabled),
   .segmented-control button.active,
-  .canvas-layer-trigger,
-  .canvas-layer-trigger:hover,
   .canvas-layer-preset:hover,
   .canvas-layer-preset.active,
   .canvas-minimap:hover,
   .canvas-minimap:active,
+  .canvas-navigator__reveal,
   .section-viewer-modes button:hover:not(:disabled),
   .section-viewer-modes button.active,
   .result-tabs button:hover:not(.active),

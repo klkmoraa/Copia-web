@@ -1,7 +1,7 @@
-import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
-import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
+import type { DiagramPoint, MemberModel, NodeModel, Selection, Tool } from '../../types';
 import { evaluateDiagramAt } from '../../engine/diagram';
 import { buildLeftCutEquilibrium } from '../../engine/cut';
 import { resolveMemberLocalLoads } from '../../engine/solver';
@@ -41,25 +41,23 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
-import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
+import { CANVAS_REFERENCE_SCALE, cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
-import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
+import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
   grossRatioAtPoint,
-  grossRatioFromFlexible,
   memberAxis,
   modelBounds,
-  pointAtGrossRatio,
-  toGlobalVector,
 } from '../../graphics/structureGeometry';
-import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
+import { CanvasResultLayer } from './CanvasResultLayer';
+import { buildCanvasLabelCandidates } from './canvasLabelSources';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
-import { CanvasMiniMap } from './CanvasMiniMap';
+import { CanvasNavigator } from './CanvasNavigator';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
@@ -71,7 +69,7 @@ import {
   type CandidateTarget,
 } from './candidatePicker';
 import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
-import { readCanvasViewSettings } from '../view/canvasViewSettings';
+import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { ELASTIC_SATURATION_RATIO, elasticDemandGate, elasticDemandView, elasticIndexPaint, sectionElasticIndex } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
@@ -263,6 +261,7 @@ export const StructuralCanvas = ({
     executeProjectCommand,
     executePreparedStructuralEdit,
     updateProject,
+    updateProjectView,
     replaceProject,
     beginProjectTransaction,
     moveNodeTransient,
@@ -273,6 +272,9 @@ export const StructuralCanvas = ({
     influenceCanvasState,
   } = useProject();
   const view = readCanvasViewSettings(project);
+  const setView = useCallback((patch: Partial<typeof view>) => {
+    updateProjectView((draft) => withCanvasViewSettings(draft, patch));
+  }, [updateProjectView]);
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
   /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
@@ -286,7 +288,7 @@ export const StructuralCanvas = ({
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
   const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
   const [canvasMeasured, setCanvasMeasured] = useState(false);
-  const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
+  const [camera, setCamera] = useState<Camera>({ scale: CANVAS_REFERENCE_SCALE, x: 260, y: 500 });
   const [memberStart, setMemberStart] = useState<string | null>(null);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
@@ -704,6 +706,14 @@ export const StructuralCanvas = ({
     ));
   }, [project.nodes, size, updateCamera]);
 
+  const navigateMinimapTo = useCallback((point: { x: number; y: number }) => {
+    updateCamera((current) => ({
+      scale: current.scale,
+      x: size.width / 2 - point.x * current.scale,
+      y: size.height / 2 + point.y * current.scale,
+    }));
+  }, [size.width, size.height, updateCamera]);
+
   useEffect(() => {
     if (!hostRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -753,7 +763,7 @@ export const StructuralCanvas = ({
         if (nodeI && nodeJ) point = { x: (nodeI.x + nodeJ.x) / 2, y: (nodeI.y + nodeJ.y) / 2 };
       }
       if (!point) return;
-      const scale = Math.max(85, cameraRef.current.scale);
+      const scale = Math.max(CANVAS_REFERENCE_SCALE, cameraRef.current.scale);
       updateCamera({ scale, x: size.width / 2 - point.x * scale, y: size.height / 2 + point.y * scale });
       showCanvasFeedback(t('canvas.objectCentered', { id: detail.id }));
       // "Localizar" from a peeked Datasheet/Doctor moves DOM focus here: the
@@ -2017,225 +2027,30 @@ export const StructuralCanvas = ({
   const onCutLeave = useCallback(() => setCut((current) => current?.pinned ? current : null), []);
 
   const placedSmartLabels = useMemo(() => {
-    const smartLabelCandidates: SmartLabelCandidate[] = [];
-    const selectedNodeIds = selectionVisualState.nodeIds;
-    const selectedMemberIds = selectionVisualState.memberIds;
-
-  for (const node of project.nodes) {
-    const selected = selectedNodeIds.includes(node.id);
-    if (!selected && !(layers.labels && layers.ids && view.showNodeLabels)) continue;
-    const anchor = toScreen(node.x, node.y);
-    smartLabelCandidates.push({
-      id: `node:${node.id}`,
-      text: node.id,
-      anchor,
-      priority: selected ? 0 : 1,
-      tone: selected ? 'selection' : 'neutral',
-      preferredOffset: { x: -22, y: -22 },
-      forceVisible: selected,
+    const smartLabelCandidates = buildCanvasLabelCandidates({
+      activeTool,
+      analysis,
+      cameraScale: camera.scale,
+      distributedLabel,
+      forceLabel,
+      globalDiagramMax,
+      layers,
+      lengthLabel,
+      loadsLayerVisible,
+      memberMap,
+      momentLabel,
+      nodeMap,
+      nodeResultMap,
+      project,
+      resultMap,
+      resultTab,
+      resultsAllowed,
+      selectionVisualState,
+      size,
+      toScreen,
+      units,
+      view,
     });
-  }
-
-  for (const member of project.members) {
-    const ni = nodeMap.get(member.i);
-    const nj = nodeMap.get(member.j);
-    if (!ni || !nj) continue;
-    const a = toScreen(ni.x, ni.y);
-    const b = toScreen(nj.x, nj.y);
-    const anchor = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    const selected = selectedMemberIds.includes(member.id);
-    if (selected || (layers.labels && layers.ids && view.showMemberLabels)) {
-      smartLabelCandidates.push({
-        id: `member:${member.id}`,
-        text: member.id,
-        anchor,
-        priority: selected ? 0 : 2,
-        tone: selected ? 'selection' : 'neutral',
-        preferredOffset: { x: 0, y: -21 },
-        forceVisible: selected,
-      });
-    }
-    const dimensionToolActive = activeTool === 'dimension';
-    if (dimensionToolActive || (layers.labels && layers.dimensions && (view.showLocalAxes || view.showDimensions))) {
-      smartLabelCandidates.push({
-        id: `dimension:${member.id}`,
-        text: `${formatFixed(toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length'), 3)} ${lengthLabel}`,
-        anchor,
-        priority: dimensionToolActive ? 1 : 2,
-        tone: 'dimension',
-        preferredOffset: { x: 0, y: 24 },
-        forceVisible: dimensionToolActive,
-      });
-    }
-  }
-
-  if (loadsLayerVisible && view.showLoads && resultTab !== 'influence') {
-    for (const load of project.nodalLoads) {
-      const node = nodeMap.get(load.nodeId);
-      if (!node) continue;
-      const selected = selectionVisualState.nodalLoadId === load.id;
-      if (!selected && !layers.labels) continue;
-      const point = toScreen(node.x, node.y);
-      const magnitude = Math.hypot(load.fx, load.fy);
-      if (magnitude > 1e-9) {
-        const ux = load.fx / magnitude;
-        const uy = -load.fy / magnitude;
-        smartLabelCandidates.push({
-          id: `nodal-load:${load.id}`,
-          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
-          anchor: { x: point.x - ux * 62, y: point.y - uy * 62 - 5 },
-          priority: selected ? 0 : 1,
-          tone: selected ? 'selection' : 'force',
-          preferredOffset: { x: 0, y: 0 },
-          forceVisible: selected,
-        });
-      } else if (Math.abs(load.mz) > 1e-9) {
-        smartLabelCandidates.push({
-          id: `nodal-moment:${load.id}`,
-          text: `M = ${formatFixed(toDisplay(load.mz, units, 'moment'), 2)} ${momentLabel}`,
-          anchor: { x: point.x, y: point.y - 38 },
-          priority: selected ? 0 : 1,
-          tone: selected ? 'selection' : 'moment',
-          preferredOffset: { x: 0, y: 0 },
-          forceVisible: selected,
-        });
-      }
-    }
-
-    for (const load of project.memberLoads) {
-      const member = memberMap.get(load.memberId);
-      const ni = member ? nodeMap.get(member.i) : undefined;
-      const nj = member ? nodeMap.get(member.j) : undefined;
-      if (!member || !ni || !nj) continue;
-      const axis = memberAxis(member, ni, nj);
-      if (axis.length <= 1e-12) continue;
-      const stationOf = (flexibleRatio: number) => {
-        const point = pointAtGrossRatio(axis, grossRatioFromFlexible(axis, flexibleRatio));
-        return toScreen(point.x, point.y);
-      };
-      const selected = selectionVisualState.memberLoadId === load.id;
-      if (!selected && !layers.labels) continue;
-      const priority = selected ? 0 as const : 1 as const;
-      const tone = selected ? 'selection' as const : load.type === 'distributed' ? 'shear' as const : load.type === 'moment' ? 'moment' as const : 'force' as const;
-      if (load.type === 'point') {
-        const base = stationOf(load.position ?? 0.5);
-        const px = load.px ?? 0;
-        const py = load.py ?? 0;
-        const magnitude = Math.hypot(px, py) || 1;
-        const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, px, py);
-        const ux = gx / magnitude;
-        const uy = -gy / magnitude;
-        smartLabelCandidates.push({
-          id: `member-point-load:${load.id}`,
-          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
-          anchor: { x: base.x - ux * 60, y: base.y - uy * 60 - 5 },
-          priority,
-          tone,
-          preferredOffset: { x: 0, y: 0 },
-          forceVisible: selected,
-        });
-      } else if (load.type === 'moment') {
-        const base = stationOf(load.position ?? 0.5);
-        smartLabelCandidates.push({
-          id: `member-moment:${load.id}`,
-          text: `M = ${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
-          anchor: { x: base.x, y: base.y - 38 },
-          priority,
-          tone,
-          preferredOffset: { x: 0, y: 0 },
-          forceVisible: selected,
-        });
-      } else {
-        const base = stationOf((load.start + load.end) / 2);
-        // The label states the mean intensity of the span, not the value at its midpoint.
-        const qx = ((load.qxStart ?? 0) + (load.qxEnd ?? load.qxStart ?? 0)) / 2;
-        const qy = ((load.qyStart ?? 0) + (load.qyEnd ?? load.qyStart ?? 0)) / 2;
-        const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, qx, qy);
-        const magnitude = Math.hypot(gx, gy) || 1;
-        const ux = gx / magnitude;
-        const uy = -gy / magnitude;
-        const maximum = Math.max(Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0), Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0), 1);
-        const arrowLength = 33 + 12 * (magnitude / maximum);
-        const startMagnitude = Math.hypot(load.qxStart ?? 0, load.qyStart ?? 0);
-        const endMagnitude = Math.hypot(load.qxEnd ?? load.qxStart ?? 0, load.qyEnd ?? load.qyStart ?? 0);
-        const average = (startMagnitude + endMagnitude) / 2;
-        smartLabelCandidates.push({
-          id: `distributed-load:${load.id}`,
-          text: `w = ${formatFixed(toDisplay(average, units, 'distributedForce'), 2)} ${distributedLabel}`,
-          anchor: { x: base.x - ux * (arrowLength + 9), y: base.y - uy * (arrowLength + 9) - 5 },
-          priority,
-          tone,
-          preferredOffset: { x: 0, y: 0 },
-          forceVisible: selected,
-        });
-      }
-    }
-  }
-
-  if (layers.results && layers.labels && resultsAllowed && view.showResultValues && analysis?.success) {
-    for (const node of project.nodes) {
-      const result = nodeResultMap.get(node.id);
-      if (!result) continue;
-      const point = toScreen(node.x, node.y);
-      const { bottom: bottomClearance, side: sideClearance } = reactionClearanceFor(node.support.type);
-      if (Math.abs(result.rx) > 1e-8) {
-        const direction = Math.sign(result.rx);
-        smartLabelCandidates.push({ id: `reaction:${node.id}:rx`, text: `Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x - direction * (sideClearance + 24), y: point.y - 14 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
-      }
-      if (Math.abs(result.ry) > 1e-8) {
-        smartLabelCandidates.push({ id: `reaction:${node.id}:ry`, text: `Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x + 18, y: point.y + bottomClearance + 24 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
-      }
-      if (Math.abs(result.rm) > 1e-8) {
-        smartLabelCandidates.push({ id: `reaction:${node.id}:rm`, text: `Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`, anchor: { x: point.x, y: point.y - 38 }, priority: 1, tone: 'moment', preferredOffset: { x: 0, y: 0 } });
-      }
-    }
-
-    if (['axial', 'shear', 'moment'].includes(resultTab) && view.showResultOverlay) {
-      const quantity = resultTab as DiagramQuantity;
-      const side = view.diagramSide === 'negative' ? -1 : 1;
-      for (const member of project.members) {
-        const result = resultMap.get(member.id);
-        const ni = nodeMap.get(member.i);
-        const nj = nodeMap.get(member.j);
-        if (!result || !ni || !nj) continue;
-        const axis = memberAxis(member, ni, nj);
-        const length = axis.length;
-        if (length <= 1e-12) continue;
-        const tx = axis.c;
-        const ty = axis.s;
-        const nx = axis.normal.x * side;
-        const ny = axis.normal.y * side;
-        const quantityUnit = quantity === 'moment' ? momentLabel : forceLabel;
-        const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
-        const points = result.criticalPoints
-          .filter((point) => point.quantity === quantity && ['maximum', 'minimum', 'end', 'jump'].includes(point.kind))
-          .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) <= Math.max(1, length) * 1e-7 && Math.abs(candidate.value - point.value) <= Math.max(1, Math.abs(point.value)) * 1e-7) === index)
-          .sort((first, second) => {
-            const rank = (kind: typeof first.kind) => kind === 'maximum' || kind === 'minimum' ? 0 : kind === 'jump' ? 1 : 2;
-            return rank(first.kind) - rank(second.kind) || first.x - second.x;
-          })
-          .slice(0, size.width < 520 ? 2 : 6);
-        for (const [index, point] of points.entries()) {
-          const grossX = (result.startOffset ?? 0) + point.x;
-          const baseX = ni.x + tx * grossX;
-          const baseY = ni.y + ty * grossX;
-          const offsetModel = point.value * diagramPixelScaleFor(project, resultTab, globalDiagramMax, result) / camera.scale;
-          const anchor = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
-          const outward = point.value * side >= 0 ? 1 : -1;
-          smartLabelCandidates.push({
-            id: `result:${member.id}:${quantity}:${point.kind}:${index}`,
-            text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${quantityUnit}`,
-            anchor,
-            priority: point.kind === 'maximum' || point.kind === 'minimum' ? 2 : 3,
-            forceVisible: point.kind === 'maximum' || point.kind === 'minimum',
-            tone: quantity,
-            preferredOffset: { x: nx * outward * 28, y: -ny * outward * 28 - 6 },
-          });
-        }
-      }
-    }
-  }
-
     return layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
   }, [
     activeTool,
@@ -2265,10 +2080,11 @@ export const StructuralCanvas = ({
     {placedSmartLabels.map((label) => {
       const centerX = label.rect.x + label.rect.width / 2;
       const centerY = label.rect.y + label.rect.height / 2;
-      return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
+      const lines = label.lines ?? [label.text];
+      return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}${lines.length > 1 ? ' smart-label-multiline' : ''}`} data-smart-label={label.id} data-label-priority={label.priority}>
         {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
         <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
-        <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
+        {lines.map((line, index) => <text key={index} className={index === 0 ? 'smart-label-line-primary' : 'smart-label-line-detail'} x={label.rect.x + 8} y={label.rect.y + 15 + index * 12}>{line}</text>)}
       </g>;
     })}
   </g>, [camera.scale, placedSmartLabels]);
@@ -2290,8 +2106,26 @@ export const StructuralCanvas = ({
     ...(duplicatePreview?.prepared?.addedNodes ?? []).map((node) => [node.id, node] as const),
   ]);
 
+  // Única fuente de los márgenes seguros del chrome: la misma función que usa
+  // `canvasSafeRect` para repartir etiquetas decide, aquí, dónde cae el chrome
+  // CSS. Antes ambos números vivían por separado —éste en TS, aquél repetido
+  // a mano en tres media queries de `styles.css`— y podían desincronizarse: la
+  // media query lee el ancho de la ventana, `size` es el ancho medido del
+  // propio lienzo, que se angosta con el inspector acoplado sin cruzar ningún
+  // punto de quiebre de la ventana.
+  const canvasSafeInsets = canvasSafeInsetsFor(size);
+
   return (
-    <div className="canvas-host" ref={hostRef}>
+    <div
+      className="canvas-host"
+      ref={hostRef}
+      style={{
+        '--canvas-safe-top': `${canvasSafeInsets.top}px`,
+        '--canvas-safe-right': `${canvasSafeInsets.right}px`,
+        '--canvas-safe-bottom': `${canvasSafeInsets.bottom}px`,
+        '--canvas-safe-left': `${canvasSafeInsets.left}px`,
+      } as CSSProperties}
+    >
       <svg
         ref={svgRef}
         className={`structural-canvas tool-${activeTool} interaction-${interaction.kind} ${spacePressed ? 'space-pan-ready' : ''}`}
@@ -2586,20 +2420,28 @@ export const StructuralCanvas = ({
         setResultTab={setResultTab}
         snapEnabled={view.snap}
         gridEnabled={view.showGrid}
-        coordinateReadoutRef={coordinateReadoutRef}
-        lengthLabel={lengthLabel}
-        scale={camera.scale}
+        onSnapChange={(snap) => setView({ snap })}
+        onGridChange={(showGrid) => setView({ showGrid })}
         onCancelPlacement={() => setActiveTool('select')}
-        onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
-        onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
-        onFit={fitModel}
       />
-      <CanvasMiniMap
+      <CanvasNavigator
         nodes={project.nodes}
         members={project.members}
         viewport={minimapViewport}
-        label={t('canvas.minimap')}
+        minimapLabel={t('canvas.minimap')}
+        coordinateReadoutRef={coordinateReadoutRef}
+        coordinatesLabel={t('canvas.coordinates')}
+        lengthLabel={lengthLabel}
+        scale={camera.scale}
+        scaleLabel={t('canvas.scale')}
+        viewControlsLabel={t('canvas.viewControls')}
+        zoomInLabel={t('canvas.zoomIn')}
+        zoomOutLabel={t('canvas.zoomOut')}
+        fitLabel={t('canvas.fit')}
         onFit={fitModel}
+        onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
+        onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
+        onNavigate={navigateMinimapTo}
       />
       {touchLoupe ? <CanvasTouchLoupe
         {...touchLoupe}
@@ -2628,13 +2470,10 @@ export const StructuralCanvas = ({
         />
       </div> : null}
       <RepeatActionOverlay
-        available={Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}
-        actionLabel={t('canvas.repeatAction')}
         previewLabel={t('canvas.repeatPreview')}
         instruction={repeatRecipe ? t('canvas.repeatWaiting', { tool: t(toolLabelKeys[repeatRecipe.tool]) }) : ''}
         cancelLabel={t('canvas.cancelPlacement')}
-        onActivate={activateRepeat}
         onCancel={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}
       />
       {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(view.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}

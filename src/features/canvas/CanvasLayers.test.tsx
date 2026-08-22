@@ -1,16 +1,27 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, type ResultTab } from '../../store/ProjectContext';
 import { CanvasLayers } from './CanvasLayers';
 import { createEditorLayerState, editorLayerReducer } from './editorLayers';
 import { useReducer, useState } from 'react';
 
-const Harness = () => {
+const Harness = ({ onSnapChange = vi.fn(), onGridChange = vi.fn() }: { onSnapChange?: (snap: boolean) => void; onGridChange?: (grid: boolean) => void }) => {
   const [layers, dispatch] = useReducer(editorLayerReducer, undefined, createEditorLayerState);
   const [resultTab, setResultTab] = useState<ResultTab>('moment');
-  return <CanvasLayers layers={layers} dispatch={dispatch} resultTab={resultTab} setResultTab={setResultTab} />;
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [gridEnabled, setGridEnabled] = useState(false);
+  return <CanvasLayers
+    layers={layers}
+    dispatch={dispatch}
+    resultTab={resultTab}
+    setResultTab={setResultTab}
+    snapEnabled={snapEnabled}
+    gridEnabled={gridEnabled}
+    onSnapChange={(snap) => { setSnapEnabled(snap); onSnapChange(snap); }}
+    onGridChange={(grid) => { setGridEnabled(grid); onGridChange(grid); }}
+  />;
 };
 
 beforeAll(() => {
@@ -41,16 +52,34 @@ describe('CanvasLayers', () => {
     expect(loads.getAttribute('aria-checked')).toBe('true');
   });
 
+  it('makes snap and grid real, interactive switches instead of inert chips', async () => {
+    const user = userEvent.setup();
+    const onSnapChange = vi.fn();
+    const onGridChange = vi.fn();
+    render(<ProjectProvider><Harness onSnapChange={onSnapChange} onGridChange={onGridChange} /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: /capas de información/i }));
+
+    const snap = screen.getByRole('switch', { name: /snap.*activo/i });
+    const grid = screen.getByRole('switch', { name: /grid.*inactivo/i });
+    expect(snap.getAttribute('aria-checked')).toBe('true');
+    expect(grid.getAttribute('aria-checked')).toBe('false');
+
+    await user.click(grid);
+    expect(onGridChange).toHaveBeenCalledWith(true);
+    await user.click(snap);
+    expect(onSnapChange).toHaveBeenCalledWith(false);
+  });
+
   it('closes with Escape and restores focus to its trigger', async () => {
     const user = userEvent.setup();
     render(<ProjectProvider><Harness /></ProjectProvider>);
     const trigger = screen.getByRole('button', { name: /capas de información/i });
     await user.click(trigger);
-    expect(screen.getByRole('region', { name: /capas de información/i })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: /capas de información/i })).toBeTruthy();
 
     await user.keyboard('{Escape}');
 
-    expect(screen.queryByRole('region', { name: /capas de información/i })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: /capas de información/i })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 

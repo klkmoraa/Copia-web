@@ -278,17 +278,15 @@
    El lienzo en sí —miembros, nudos, cargas, diagramas, deformada, cotas— no
    aparece aquí y no recibe materia: sólo la recibe lo que flota ENCIMA. */
 .canvas-mode-badge,
-.canvas-view-chips span,
-.canvas-controls,
-.canvas-status,
+.canvas-navigator__controls,
+.canvas-navigator__coordinates,
+.canvas-navigator__scale,
 .canvas-result-legend,
 .canvas-feedback,
 .canvas-hint,
 .mobile-inspector-toggle,
 .quick-entry-bar,
-.selection-cycle-indicator,
-.canvas-layer-trigger,
-.repeat-action-control {
+.selection-cycle-indicator {
   background: var(--sc-material-thick);
   -webkit-backdrop-filter: var(--sc-material-blur-thin);
   backdrop-filter: var(--sc-material-blur-thin);
@@ -297,7 +295,10 @@
 }
 
 /* Piezas grandes del mismo chrome: una lectura de corte y un aviso de
-   repetición son tarjetas flotantes, no pastillas. */
+   repetición son tarjetas flotantes, no pastillas. El disparador y la
+   superficie del popover de capas ya llevan su material genérico
+   (`.sc-popover__trigger`/`.sc-popover__surface`, `ui.css`) — el mismo que
+   cualquier otro popover del sistema, sin caso especial para el lienzo. */
 .cut-tooltip,
 .repeat-preview {
   background: var(--sc-material-thick);
@@ -305,16 +306,6 @@
   backdrop-filter: var(--sc-material-blur-thick);
   border: 0;
   border-radius: var(--sc-radius-card);
-  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
-}
-
-/* El panel de capas es el único FLOATING de verdad del chrome. */
-.canvas-layer-panel {
-  background: var(--sc-material-thick);
-  -webkit-backdrop-filter: var(--sc-material-blur-thick);
-  backdrop-filter: var(--sc-material-blur-thick);
-  border: 0;
-  border-radius: var(--sc-radius-panel);
   box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
 }
 
@@ -333,20 +324,17 @@
   .import-center-dialog,
   .mobile-tool-palette,
   .canvas-mode-badge,
-  .canvas-view-chips span,
-  .canvas-controls,
-  .canvas-status,
+  .canvas-navigator__controls,
+  .canvas-navigator__coordinates,
+  .canvas-navigator__scale,
   .canvas-result-legend,
   .canvas-feedback,
   .canvas-hint,
   .mobile-inspector-toggle,
   .quick-entry-bar,
   .selection-cycle-indicator,
-  .canvas-layer-trigger,
-  .repeat-action-control,
   .cut-tooltip,
-  .repeat-preview,
-  .canvas-layer-panel {
+  .repeat-preview {
     background: var(--sc-color-surface-1);
   }
 }

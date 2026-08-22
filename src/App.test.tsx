@@ -154,7 +154,10 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
  * Pedirla es parte del contrato, no un rodeo de la prueba.
  */
 const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: 'Resultados' }));
+  // El lanzador vive dos veces en el marcado (pie del riel en X2/M1, chrome
+  // flotante en K0; CSS decide cuál se ve, jsdom no aplica esa CSS) — cualquiera
+  // de las dos copias abre la misma superficie.
+  await user.click(screen.getAllByRole('button', { name: 'Resultados' })[0]);
   await waitFor(() => expect(document.querySelector('.results-panel')).toBeTruthy());
 };
 
@@ -656,9 +659,14 @@ describe('structureCo app shell', () => {
     const member = container.querySelector('.member-object');
     expect(member).toBeTruthy();
 
+    // Para una selección de miembro, "Editar selección" es la acción primaria
+    // de la barra contextual (`preferredPrimary` en `ContextualActions.tsx`) y
+    // "Repetir" vive en su menú "⋯" — ya no en un chip flotante propio.
     await user.click(member!);
-    const repeat = screen.getByRole('button', { name: /repetir/i });
-    expect(repeat.getAttribute('data-repeat-affordance')).toBe('available');
+    const contextualActions = container.querySelector('.contextual-actions') as HTMLElement;
+    expect(contextualActions).toBeTruthy();
+    await user.click(within(contextualActions).getByRole('button', { name: /más acciones/i }));
+    const repeat = screen.getByRole('menuitem', { name: /repetir/i });
     expect(repeat.getAttribute('aria-keyshortcuts')).toBe('R');
 
     await user.click(repeat);
@@ -680,8 +688,10 @@ describe('structureCo app shell', () => {
     // CRI-103 · un atajo de UNA letra sólo dispara con el foco dentro del
     // lienzo; con el foco en el `body` debe quedarse quieto para no secuestrar
     // la navegación rápida de un lector de pantalla. Se afirman las dos mitades.
+    // `pan` (H) ya no tiene botón en el riel —el gesto y el atajo lo cubren—,
+    // así que la herramienta activa se lee de la clase que el lienzo publica.
     fireEvent.keyDown(canvas, { key: 'h', code: 'KeyH' });
-    expect(screen.getByRole('button', { name: /desplazar \(H\)/i }).getAttribute('aria-pressed')).toBe('false');
+    expect(canvas.classList.contains('tool-pan')).toBe(false);
 
     fireEvent.keyDown(member, { key: 'Enter', code: 'Enter' });
     expect(member.getAttribute('aria-pressed')).toBe('true');
@@ -692,7 +702,7 @@ describe('structureCo app shell', () => {
 
     focusCanvas(canvas);
     fireEvent.keyDown(canvas, { key: 'h', code: 'KeyH' });
-    expect(screen.getByRole('button', { name: /desplazar \(H\)/i }).getAttribute('aria-pressed')).toBe('true');
+    expect(canvas.classList.contains('tool-pan')).toBe(true);
   });
 
   it('keeps touch pan intent ahead of the overlap picker on a structural node', async () => {
@@ -787,7 +797,7 @@ describe('structureCo app shell', () => {
     expect(screen.getByRole('alert').textContent).toContain('Enter two valid numeric values.');
 
     await user.click(screen.getByRole('button', { name: /^analyze$/i }));
-    await user.click(screen.getByRole('button', { name: 'Results' }));
+    await user.click(screen.getAllByRole('button', { name: 'Results' })[0]);
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     expect(container.querySelector('.canvas-result-legend')?.getAttribute('aria-label')).toBe('Diagram convention');
     expect(container.querySelector('.canvas-result-legend')?.textContent).toContain('Exact curve');

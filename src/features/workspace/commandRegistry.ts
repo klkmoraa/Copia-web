@@ -278,7 +278,6 @@ const evidenceLayerCommands = (ctx: CommandContext): CommandListItem[] => EVIDEN
 }));
 
 const toolCommands = (ctx: CommandContext): CommandListItem[] => TOOL_REGISTRY
-  .filter((tool) => !(ctx.classroomMode && tool.classroomAdvanced))
   .map((tool): CommandListItem => ({
     id: `tool:${tool.id}`,
     category: 'tools',

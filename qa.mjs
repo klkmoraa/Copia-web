@@ -374,7 +374,7 @@ async function verifyToolRailMaterial(page, viewport) {
    medio píxel que le da grosor de cristal. */
 async function verifyCanvasChromeMaterial(page) {
   const badge = await readComposedMaterial(page, '.canvas-mode-badge');
-  const controls = await readComposedMaterial(page, '.canvas-controls');
+  const controls = await readComposedMaterial(page, '.canvas-navigator__controls');
   const materials = [badge, controls];
   const isTranslucent = (material) =>
     /blur\(/.test(material.backdropFilter) || /blur\(/.test(material.webkitBackdropFilter);
@@ -996,47 +996,62 @@ async function verifyWelcomeReducedMotionActive() {
  * Ninguna superficie flotante del lienzo tapa a otra.
  *
  * Éste es el gate de un contrato que hasta ahora sólo estaba escrito en el
- * README del sistema de diseño, y una regla que nadie puede comprobar no es una
- * regla. Cerraba dos defectos medidos en la evidencia del rediseño anterior:
+ * README del sistema de diseño, y una regla que nadie puede comprobar no es
+ * una regla. La versión anterior medía 2 pares fijos a mano y los dos
+ * defectos que cerró siguen documentados abajo; esta versión mide TODOS los
+ * pares entre las superficies flotantes que puedan coexistir sobre el
+ * lienzo, así que un par nuevo que empiece a solaparse no necesita que
+ * alguien se acuerde de añadirlo a una lista.
  *
+ * Defectos que motivaron el gate (fase 2, ya no reproducibles por
+ * construcción — el chrome que colisionaba dejó de compartir esquina):
  *   · La barra de acciones contextuales y el lector de coordenadas y escala
- *     compartían `left:50%` y `translateX(-50%)` a 12 y 16 px del fondo, así
- *     que con una selección viva la barra tapaba la escala.
- *   · El lanzador de superficies se posiciona contra `.workspace`, que incluye
- *     la columna del Inspector, y flotaba encima de su contenido.
+ *     compartían `left:50%` y `translateX(-50%)`, así que con una selección
+ *     viva la barra tapaba la escala.
+ *   · El lanzador de superficies se posicionaba contra `.workspace`, que
+ *     incluye la columna del Inspector, y flotaba encima de su contenido.
  *
- * Se mide con el modelo seleccionado, que es cuando las cuatro piezas coexisten
- * — sin selección la barra contextual no existe y el solape no puede verse.
+ * `null` en un lado de un par significa "esa pieza no está en pantalla
+ * ahora", y eso no demuestra nada: cada par sólo cuenta si las dos piezas
+ * están presentes Y no se tocan.
  */
+const FLOATING_CANVAS_SURFACE_SELECTORS = {
+  modeBadge: '.canvas-mode-badge',
+  contextualActions: '.contextual-actions',
+  navigator: '.canvas-navigator',
+  layerPanel: '.canvas-layer-popover .sc-popover__surface',
+  repeatPreview: '.repeat-preview',
+  quickEntry: '.quick-entry-bar',
+  inspector: '.inspector-panel',
+};
+
 async function verifyFloatingSurfacesDoNotOverlap(page) {
-  const boxes = await page.evaluate(() => {
+  const boxes = await page.evaluate((selectors) => {
     const read = (selector) => {
       const element = document.querySelector(selector);
       if (!element) return null;
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || Number(style.opacity) === 0) return null;
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return null;
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
     };
-    return {
-      status: read('.canvas-status'),
-      actions: read('.contextual-actions'),
-      launcher: read('.workspace-surface-launcher'),
-      camera: read('.canvas-controls'),
-      inspector: read('.inspector-panel'),
-    };
-  });
-  const overlaps = (a, b) => Boolean(a && b)
-    && !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+    return Object.fromEntries(Object.entries(selectors).map(([name, selector]) => [name, read(selector)]));
+  }, FLOATING_CANVAS_SURFACE_SELECTORS);
 
-  // `null` en un lado significa "esa pieza no está en pantalla", y eso no
-  // demuestra nada: el check exige que las dos existan Y no se toquen.
-  const present = (a, b) => Boolean(boxes[a] && boxes[b]);
-  return {
-    canvasSelectionBarPresentForOverlapCheck: present('actions', 'status'),
-    canvasSelectionBarDoesNotCoverScale: !overlaps(boxes.actions, boxes.status),
-    surfaceLauncherDoesNotCoverInspector: present('launcher', 'inspector') && !overlaps(boxes.launcher, boxes.inspector),
-    surfaceLauncherDoesNotCoverCameraControls: present('launcher', 'camera') && !overlaps(boxes.launcher, boxes.camera),
-  };
+  const overlaps = (a, b) => !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
+  const names = Object.keys(FLOATING_CANVAS_SURFACE_SELECTORS);
+  const results = {};
+  for (let i = 0; i < names.length; i += 1) {
+    for (let j = i + 1; j < names.length; j += 1) {
+      const [nameA, nameB] = [names[i], names[j]];
+      const [boxA, boxB] = [boxes[nameA], boxes[nameB]];
+      const pairKey = `${nameA[0].toUpperCase()}${nameA.slice(1)}Vs${nameB[0].toUpperCase()}${nameB.slice(1)}`;
+      if (!boxA || !boxB) continue; // no coexistían en este escenario: no hay nada que afirmar
+      results[`floatingSurfaces${pairKey}DoNotOverlap`] = !overlaps(boxA, boxB);
+    }
+  }
+  return results;
 }
 
 
@@ -1149,6 +1164,11 @@ async function desktop() {
   // matemáticamente correcto pero visualmente detrás de la barra — clicable
   // para nadie. Se usa el propio botón "Ajustar modelo a la vista" del
   // producto, la misma acción que tomaría una persona en ese aprieto.
+  // El botón vive ahora dentro de `.canvas-navigator__reveal`
+  // (`pointer-events:none` en reposo, opacity revela al apuntar/enfocar —
+  // regla 5 del sistema): una persona real lo alcanza pasando el ratón por el
+  // Navegador primero, así que el QA hace lo mismo antes de pulsarlo.
+  await page.locator('.canvas-navigator').hover();
   await page.getByRole('button', { name: 'Ajustar modelo a la vista', exact: true }).click();
   const bodyScroll = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.desktop = bodyScroll;

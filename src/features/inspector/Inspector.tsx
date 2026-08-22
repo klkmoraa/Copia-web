@@ -331,8 +331,6 @@ const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMod
     </section> : null}
     <section className="inspector-section">
       <h3>{t('inspector.canvas')}</h3>
-      <label className="toggle-row"><span>{t('inspector.grid')}</span><input type="checkbox" checked={view.showGrid} onChange={(event) => setView({ showGrid: event.target.checked })} /></label>
-      <label className="toggle-row"><span>{t('inspector.snap')}</span><input type="checkbox" checked={view.snap} onChange={(event) => setView({ snap: event.target.checked })} /></label>
       <NumberField label={t('inspector.spacing')} value={display(view.gridSize, 'length')} unit={unitLabel(units, 'length')} resetKey={`grid-size:${units}`} onChange={(value) => setView({ gridSize: Math.max(1e-6, base(value, 'length')) })} />
       <label className="toggle-row"><span>{t('inspector.nodeLabels')}</span><input type="checkbox" checked={view.showNodeLabels} onChange={(event) => setView({ showNodeLabels: event.target.checked })} /></label>
       <label className="toggle-row"><span>{t('inspector.memberLabels')}</span><input type="checkbox" checked={view.showMemberLabels} onChange={(event) => setView({ showMemberLabels: event.target.checked })} /></label>

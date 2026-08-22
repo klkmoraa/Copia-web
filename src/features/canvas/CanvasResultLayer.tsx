@@ -69,7 +69,8 @@ export const diagramPixelScaleFor = (project: ProjectModel, resultTab: ResultTab
  * etiquetas —incluidas las de los tramos que apenas trabajan— y el sello deja
  * de señalar nada. Con él quedan los picos que de verdad gobiernan.
  */
-const CRITICAL_MARKER_MIN_SHARE = 0.15;
+// oxlint-disable-next-line react/only-export-components
+export const CRITICAL_MARKER_MIN_SHARE = 0.15;
 
 /** Extremos M/V ya resueltos por el análisis, listos para sellar sobre la barra. */
 // oxlint-disable-next-line react/only-export-components
@@ -214,25 +215,22 @@ const CanvasResultLayerImpl = ({
   };
 
   /**
-   * Sellos de Mmax/Mmin y Vmax/Vmin sobre la propia barra.
-   *
-   * Los valores y sus estaciones ya vienen resueltos en `criticalPoints`: aquí
-   * no se recalcula ni se re-muestrea nada, sólo se llevan a pantalla con la
-   * misma escala y el mismo lado que el diagrama que se está mirando. Antes el
-   * pico había que cazarlo moviendo el cursor sobre la curva o buscándolo en la
-   * tabla; ahora está donde ocurre.
+   * Tallo y punto de Mmax/Mmin y Vmax/Vmin sobre la propia barra: sólo
+   * geometría, marca dónde en el diagrama vive cada extremo. El texto del
+   * valor y su estación los sella `canvasLabelSources.ts` como candidato del
+   * mismo repartidor que coloca nodos, cotas y cargas — antes este componente
+   * dibujaba su propio `<rect>`+`<text>` con una posición fija, ajena a esas
+   * otras etiquetas, y el resultado eran dos etiquetas del mismo valor
+   * pisándose entre sí y con lo que hubiera alrededor.
    */
   const renderCriticalPoints = () => {
     if (!resultsAllowed || !analysis?.success || !view.showResultOverlay) return null;
     if (resultTab !== 'shear' && resultTab !== 'moment') return null;
     const key = resultTab as DiagramQuantity;
-    const symbol = key === 'shear' ? 'V' : 'M';
-    const displayQuantity = key === 'moment' ? 'moment' as const : 'force' as const;
-    const valueUnit = key === 'moment' ? momentLabel : forceLabel;
     const floor = Math.max(globalDiagramMax * CRITICAL_MARKER_MIN_SHARE, 1e-9);
     const side = view.diagramSide === 'negative' ? -1 : 1;
 
-    const stamps = project.members.flatMap((member) => {
+    const stems = project.members.flatMap((member) => {
       const result = resultMap.get(member.id);
       const ni = nodeMap.get(member.i);
       const nj = nodeMap.get(member.j);
@@ -249,32 +247,18 @@ const CanvasResultLayerImpl = ({
         const offsetModel = (point.value * diagramPixelScale) / camera.scale;
         const base = toScreen(baseX, baseY);
         const tip = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
-        const value = `${symbol}${extreme === 'max' ? 'max' : 'min'} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${valueUnit}`;
-        const station = `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}`;
-        // El sello se aparta hacia el lado libre del diagrama, nunca hacia la
-        // barra: ahí es donde ya hay geometría y etiquetas de modelo.
-        const away = Math.sign(offsetModel) || 1;
-        const width = Math.max(value.length, station.length) * 5.1 + 11;
-        const anchorX = Math.min(Math.max(tip.x + nx * away * 9, 4), Math.max(size.width - width - 4, 4));
-        const anchorY = Math.min(Math.max(tip.y + ny * away * 9 - 11, 4), Math.max(size.height - 30, 4));
         return <g
           key={`${member.id}-${key}-${extreme}`}
           className={`critical-point-marker is-${extreme}`}
           data-critical-point={`${member.id}:${key}:${extreme}`}
           pointerEvents="none"
         >
-          <title>{`${member.id} · ${value} · ${station}`}</title>
           <line className="critical-point-stem" x1={base.x} y1={base.y} x2={tip.x} y2={tip.y} />
           <circle className="critical-point-dot" cx={tip.x} cy={tip.y} r="3.2" />
-          <g transform={`translate(${anchorX} ${anchorY})`}>
-            <rect className="critical-point-stamp" width={width} height="25" rx="6" />
-            <text className="critical-point-value" x="6" y="11">{value}</text>
-            <text className="critical-point-station" x="6" y="20">{station}</text>
-          </g>
         </g>;
       });
     });
-    return stamps.length ? <g className={`critical-point-layer is-${key}`} aria-hidden="true">{stamps}</g> : null;
+    return stems.length ? <g className={`critical-point-layer is-${key}`} aria-hidden="true">{stems}</g> : null;
   };
 
   const renderInfluenceOverlay = () => {

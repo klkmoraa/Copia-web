@@ -1,5 +1,13 @@
 import type { CanvasCamera, ViewportSize } from './canvasInteraction';
 
+/**
+ * Píxeles por metro de modelo a "1.00×". Es la escala inicial de cámara, el
+ * piso del zoom al encuadrar, y el divisor del lector de escala del chrome —
+ * un solo número con nombre en vez de un `85` repetido en tres archivos sin
+ * decir qué significa.
+ */
+export const CANVAS_REFERENCE_SCALE = 85;
+
 export interface CanvasSafeInsets {
   top: number;
   right: number;
