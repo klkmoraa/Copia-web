@@ -23,7 +23,10 @@ pieza.
    pieza tiene volumen propio.
 4. **Rellenos, no cavidades.** Un campo, un segmento o un fondo pulsado son un
    relleno gris translúcido de la jerarquía de fills, nunca un hueco excavado con
-   sombra interior.
+   sombra interior. La regla vale para los **consumidores**, no sólo para
+   `material.css`: trece superficies del producto —el campo numérico, el
+   desplegable y el control segmentado entre ellas— siguieron embozadas con un
+   bisel interior de dos lados hasta que el gate aprendió a abrir `styles.css`.
 
 ## Las nueve capas de `tokens.css`
 
@@ -158,6 +161,45 @@ una página web maquillada de app.
   significado: sólo viaja en el chunk de entrada. Lo mismo vale para una clase
   CSS y para una clave de traducción.
 
+## Apilamiento
+
+La escala tenía seis peldaños y ninguno para el plano del lienzo, que es donde
+más piezas se apilan. Sin peldaño que consumir, cada pieza inventó el suyo: 44
+valores crudos entre 0 y 1200 conviviendo con los seis tokens, y el orden dejó
+de ser una decisión para pasar a ser el resultado de quién escribió el número
+más alto. De ahí salían colisiones reales — el lanzador de superficies tapando
+el contenido de la hoja del Inspector, el dock de herramientas cubriendo la
+hoja de resultados.
+
+Los cuatro peldaños del lienzo van por **función**, no por antigüedad:
+
+`anotación 6 · control 10 · efímero 16 · selector 24`
+
+Una anotación se deja tapar por un control, un control por algo efímero, y lo
+efímero por el selector que resuelve una ambigüedad — que es lo único que el
+usuario está mirando cuando aparece. Por encima: `sticky 20 · dock 26 ·
+barra 30 · velo 60 · hoja 70 · popover 80 · modal 1200 · aviso 1300`.
+
+El velo de una hoja es su propio peldaño y no el de la hoja: cuando heredó el
+peldaño de la hoja acabó por encima de su propio panel y le tapó las pestañas.
+
+**Por debajo de 6 no hay token.** Ahí viven los apilamientos locales dentro del
+contexto de una pieza —una cabecera pegajosa en su tabla, un asa sobre su
+panel—, que no participan de esta pila y no deben leerla.
+
+## Atajos
+
+Un atajo se declara con la tecla lógica `mod` y lo escribe `formatShortcut`:
+**⌘ pegado a la tecla** en Apple, como lo escribe el sistema en sus propios
+menús, y `Ctrl` separado fuera. Nunca las dos a la vez: `Ctrl/Cmd+C` obliga a
+cada lector a descartar la mitad de lo que lee.
+
+`aria-keyshortcuts` recibe aparte **nombres de tecla del DOM**, que es lo que
+pide la especificación. Un lector de pantalla no puede anunciar `⌘K`.
+
+Sin plataforma reconocible se responde la convención portátil: un usuario de
+Mac traduce «Ctrl», pero uno de Windows no tiene con qué traducir «⌘».
+
 ## Iconografía
 
 Seis escalones y ninguno más: **14** (leyenda) · **16** (fila y control) ·
@@ -175,10 +217,11 @@ retirar la identidad anterior.
 | Archivo | Qué vigila |
 |---|---|
 | `tokens.test.ts` | Contraste por apariencia, apariencia oscura escrita a mano, ausencia de materia esculpida. |
-| `surfaceGeometry.test.ts` | Radios por rol, elevación monótona, filete de medio píxel, ningún control que se eleve. |
-| `material.test.ts` | Los seis niveles, el material translúcido con su respaldo opaco, el pulsado como relleno. |
-| `typography.test.ts` | Cara del sistema primero, escala de escritorio, ninguna cara editorial. |
-| `npm run qa` | Los mismos contratos, compuestos por el navegador de verdad (149 checks), más los solapes de superficie flotante y la ayuda revelada del inspector. |
+| `surfaceGeometry.test.ts` | Radios por rol, elevación monótona, filete de medio píxel, ningún control que se eleve, **la escala de seis iconos, el suelo de 28 px de los controles y el apilamiento por rol** — los tres medidos en el CSS que los consume. |
+| `material.test.ts` | Los seis niveles, el material translúcido con su respaldo opaco, el pulsado como relleno, **y ninguna materia esculpida en los consumidores**. |
+| `typography.test.ts` | Cara del sistema primero, escala de escritorio, ninguna cara editorial, **y el suelo de 10 px en los consumidores**. |
+| `platformKeys.test.ts` | La traducción de atajos en las dos plataformas, y que nadie vuelva a escribir «Ctrl» a mano. |
+| `npm run qa` | Los mismos contratos, compuestos por el navegador de verdad (156 checks), más los solapes de superficie flotante, la ayuda revelada del inspector, **la barra superior a tres anchos y las pestañas de resultados en teléfono**. |
 
 ## Cómo añadir algo
 
