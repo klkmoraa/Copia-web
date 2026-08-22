@@ -41,6 +41,7 @@ import {
   editabilityMessageKey,
   formatDatasheetNumber,
 } from './datasheetPresentation';
+import { modifierLabel } from '../../design-system/platformKeys';
 import './datasheet.css';
 
 /**
@@ -508,7 +509,9 @@ export const DatasheetPanel = ({
           editorFor={editorFor}
         />
 
-        <p className="datasheet-keyboard-hint">{t('datasheet.keyboardHint')}</p>
+        {/* La pista nombraba «Ctrl» en las dos lenguas y en las dos plataformas.
+            El modificador se interpola: ⌘ donde ⌘ es lo que hay. */}
+        <p className="datasheet-keyboard-hint">{t('datasheet.keyboardHint', { mod: modifierLabel('mod') })}</p>
         <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
       </div>
 

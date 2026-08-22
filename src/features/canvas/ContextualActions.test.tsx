@@ -99,9 +99,14 @@ describe('ContextualActions Compact floor', () => {
     renderSurface({ kind: 'member', id: 'M1' }, available, onInvoke);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
-    expect(screen.getByRole('menuitem', { name: /Copiar/i }).textContent).toContain('Ctrl/Cmd+C');
-    expect(screen.getByRole('menuitem', { name: /Pegar/i }).textContent).toContain('Ctrl/Cmd+V');
-    expect(screen.getByRole('menuitem', { name: /Duplicar/i }).textContent).toContain('Ctrl/Cmd+D');
+    // Una plataforma a la vez. `Ctrl/Cmd+C` enseñaba las dos y obligaba a cada
+    // lector a descartar la mitad; jsdom no es Apple, así que aquí se escribe
+    // la convención portátil. La traducción a ⌘ la cubre `platformKeys.test.ts`
+    // en los dos sentidos.
+    expect(screen.getByRole('menuitem', { name: /Copiar/i }).textContent).toContain('Ctrl C');
+    expect(screen.getByRole('menuitem', { name: /Copiar/i }).textContent).not.toContain('Cmd');
+    expect(screen.getByRole('menuitem', { name: /Pegar/i }).textContent).toContain('Ctrl V');
+    expect(screen.getByRole('menuitem', { name: /Duplicar/i }).textContent).toContain('Ctrl D');
     expect(screen.getByRole('menuitem', { name: /Repetir/i }).textContent).toContain('R');
     expect(screen.getByRole('menuitem', { name: /Abrir hoja de datos/i })).toBeTruthy();
 

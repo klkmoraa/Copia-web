@@ -79,7 +79,12 @@ export interface CommandDefinition {
   iconFor?: (ctx: CommandContext) => CommandIcon;
   label: (ctx: CommandContext) => string;
   hint?: (ctx: CommandContext) => string | undefined;
-  /** Displayed shortcut hint (e.g. `"Ctrl Z"`). Purely presentational unless a live key binding also names this id. */
+  /**
+   * Atajo DECLARADO con la tecla lógica `mod` (`'mod+Z'`), no con la de una
+   * plataforma concreta. Quien lo pinta lo pasa por `formatShortcut`, que
+   * resuelve `⌘` en Apple y `Ctrl` fuera. Guardar aquí `'Ctrl Z'` era decidir
+   * por el lector en qué teclado está.
+   */
   shortcut?: string;
   isEnabled?: (ctx: CommandContext) => boolean;
   /**
@@ -115,7 +120,7 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'analysis',
     icon: Undo2,
     label: (ctx) => ctx.t('history.undo'),
-    shortcut: 'Ctrl Z',
+    shortcut: 'mod+Z',
     isEnabled: (ctx) => ctx.canUndo,
     run: (ctx) => ctx.undo(),
   },
@@ -124,7 +129,7 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'analysis',
     icon: Redo2,
     label: (ctx) => ctx.t('history.redo'),
-    shortcut: 'Ctrl Y',
+    shortcut: 'mod+Y',
     isEnabled: (ctx) => ctx.canRedo,
     run: (ctx) => ctx.redo(),
   },
@@ -334,6 +339,35 @@ const projectStatic = (ctx: CommandContext): CommandListItem[] => STATIC_COMMAND
 export const isOwnHistoryScope = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(target.closest('input, textarea, [contenteditable="true"], [role="grid"], [aria-modal="true"]'));
+};
+
+/** La pulsación, reducida a lo que decide el atajo de historial. */
+export interface HistoryChord {
+  key: string;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+}
+
+/**
+ * Qué hace una pulsación con el historial: deshacer, rehacer o nada.
+ *
+ * Vive aquí, junto a `isOwnHistoryScope`, porque las dos responden a la misma
+ * pregunta —quién manda sobre el historial— y porque la decisión estaba
+ * enterrada dentro de un efecto del shell, donde ninguna prueba podía verla.
+ * Ahí dentro `⌘⇧Z`, el rehacer de macOS, salía descartado por la guarda
+ * `|| event.shiftKey` antes de que nadie lo mirara: la plataforma que este
+ * producto imita pulsaba su atajo y no pasaba nada.
+ *
+ * `Ctrl+Y` se conserva: es la convención de Windows y no estorba a la otra.
+ */
+export const resolveHistoryAction = (chord: HistoryChord): 'undo' | 'redo' | null => {
+  if (!(chord.ctrlKey || chord.metaKey) || chord.altKey) return null;
+  const key = chord.key.toLowerCase();
+  if (key === 'y' && !chord.shiftKey) return 'redo';
+  if (key === 'z') return chord.shiftKey ? 'redo' : 'undo';
+  return null;
 };
 
 /**

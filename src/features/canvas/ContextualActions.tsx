@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { Selection } from '../../types';
 import type { ShellClass } from '../workspace/shellComposition';
 import type { SurfacePresentation } from '../workspace/surfacePresentation';
+import { ariaKeyShortcut, formatShortcut } from '../../design-system/platformKeys';
 
 export const CONTEXTUAL_ACTION_IDS = [
   'copy',
@@ -36,9 +37,12 @@ export interface ContextualActionModel {
 }
 
 const ACTIONS: Record<ContextualActionId, ContextualAction> = {
-  copy: { id: 'copy', shortcut: 'Ctrl/Cmd+C' },
-  paste: { id: 'paste', shortcut: 'Ctrl/Cmd+V' },
-  duplicate: { id: 'duplicate', shortcut: 'Ctrl/Cmd+D' },
+  // `'Ctrl/Cmd+C'` enseñaba las DOS plataformas a la vez y obligaba a cada
+  // lector a descartar la mitad. Se declara la tecla lógica y la resuelve
+  // `formatShortcut` al pintarla.
+  copy: { id: 'copy', shortcut: 'mod+C' },
+  paste: { id: 'paste', shortcut: 'mod+V' },
+  duplicate: { id: 'duplicate', shortcut: 'mod+D' },
   repeat: { id: 'repeat', shortcut: 'R' },
   delete: { id: 'delete', shortcut: 'Delete' },
   datasheet: { id: 'datasheet' },
@@ -141,7 +145,7 @@ export const ContextualActions = ({
       type="button"
       className={action.id === 'delete' ? 'contextual-actions__action contextual-actions__action--danger' : 'contextual-actions__action'}
       aria-label={accessibleLabelForAction(action.id)}
-      aria-keyshortcuts={action.shortcut}
+      aria-keyshortcuts={action.shortcut ? ariaKeyShortcut(action.shortcut) : undefined}
       onClick={() => invoke(action.id)}
     >{labelForAction(action.id)}</button>)}
     <button
@@ -159,11 +163,11 @@ export const ContextualActions = ({
         type="button"
         role="menuitem"
         className="contextual-actions__overflow-action"
-        aria-keyshortcuts={action.shortcut}
+        aria-keyshortcuts={action.shortcut ? ariaKeyShortcut(action.shortcut) : undefined}
         onClick={() => invoke(action.id)}
       >
         <span>{labelForAction(action.id)}</span>
-        {action.shortcut ? <kbd>{action.shortcut}</kbd> : null}
+        {action.shortcut ? <kbd>{formatShortcut(action.shortcut)}</kbd> : null}
       </button>)}
     </div> : null}
   </section>;

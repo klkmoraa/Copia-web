@@ -35,6 +35,7 @@ import {
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
 import { claimShellInert } from '../workspace/shellInert';
+import { formatShortcut } from '../../design-system/platformKeys';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -169,7 +170,7 @@ const PaletteToolButton = ({
     <span className="mobile-palette-icon" aria-hidden="true"><ToolGlyph definition={definition} size={22} /></span>
     <span className="mobile-palette-copy"><strong>{label}</strong><small>{detail}</small></span>
     <ChevronRight size={18} aria-hidden="true" />
-    <kbd>{definition.shortcut}</kbd>
+    <kbd>{formatShortcut(definition.shortcut)}</kbd>
   </button>
 );
 
@@ -188,7 +189,7 @@ const CommandPaletteButton = ({
 >
   <span className="sc-tool-button__icon" aria-hidden="true"><Search size={22} strokeWidth={1.8} /></span>
   <span className="sc-tool-button__copy"><strong>{label}</strong></span>
-  {!compact ? <kbd>Ctrl K</kbd> : null}
+  {!compact ? <kbd>{formatShortcut('mod+K')}</kbd> : null}
 </button>;
 
 const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label: string; accessibleLabel: string; onOpen: () => void }) => <button
@@ -202,7 +203,7 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <span className="mobile-palette-icon" aria-hidden="true"><Search size={22} strokeWidth={1.8} /></span>
   <span className="mobile-palette-copy"><strong>{label}</strong></span>
   <ChevronRight size={18} aria-hidden="true" />
-  <kbd>Ctrl K</kbd>
+  <kbd>{formatShortcut('mod+K')}</kbd>
 </button>;
 
 /**
@@ -436,7 +437,7 @@ export const ToolRail = () => {
                     />
                   </RailTooltip>;
                 })}
-                {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`}>
+                {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (${formatShortcut('mod+K')})`}>
                   <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} aria-describedby="tool-rail-tip-command-palette" />
                 </RailTooltip> : null}
                 {group.id === 'create' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')}>

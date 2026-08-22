@@ -1905,7 +1905,7 @@ export const es = {
   'datasheet.rowCount': '{visible} de {total}',
   'datasheet.emptyFiltered': 'Ninguna fila coincide con la búsqueda y los filtros actuales.',
   'datasheet.focusObject': 'Enfocar',
-  'datasheet.keyboardHint': 'Flechas para moverte · Inicio y Fin para los extremos de la fila, con Ctrl para los de la tabla · Intro selecciona · F2 consulta la edición · Ctrl+Espacio añade a la selección · Esc limpia la selección.',
+  'datasheet.keyboardHint': 'Flechas para moverte · Inicio y Fin para los extremos de la fila, con {mod} para los de la tabla · Intro selecciona · F2 consulta la edición · {mod}+Espacio añade a la selección · Esc limpia la selección.',
   'datasheet.readOnlyPhase': 'Esta fase es de sólo lectura: la edición llega en la siguiente entrega.',
 
   'datasheet.column.id': 'ID',
@@ -3933,7 +3933,7 @@ export const en: Catalog = {
   'datasheet.rowCount': '{visible} of {total}',
   'datasheet.emptyFiltered': 'No row matches the current search and filters.',
   'datasheet.focusObject': 'Focus',
-  'datasheet.keyboardHint': 'Arrows to move · Home and End for the row edges, with Ctrl for the table edges · Enter selects · F2 checks editing · Ctrl+Space adds to the selection · Esc clears the selection.',
+  'datasheet.keyboardHint': 'Arrows to move · Home and End for the row edges, with {mod} for the table edges · Enter selects · F2 checks editing · {mod}+Space adds to the selection · Esc clears the selection.',
   'datasheet.readOnlyPhase': 'This phase is read-only: editing arrives in the next delivery.',
 
   'datasheet.column.id': 'ID',

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useModalFocus } from '../../design-system/components/modalFocus';
+import { formatShortcut } from '../../design-system/platformKeys';
 import { Search } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -194,7 +195,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
                 role="option"
                 /* Sin etiqueta explícita, el nombre accesible concatena
                    `strong`+`small`+`kbd` sin separación ("NodoN"). */
-                aria-label={[command.label, command.hint, command.shortcut].filter(Boolean).join(' · ')}
+                aria-label={[command.label, command.hint, command.shortcut && formatShortcut(command.shortcut)].filter(Boolean).join(' · ')}
                 aria-selected={isActive}
                 aria-disabled={command.disabled}
                 data-palette-active={isActive}
@@ -211,7 +212,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
                   <strong>{command.label}</strong>
                   {command.hint ? <small>{command.hint}</small> : null}
                 </span>
-                {command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
+                {command.shortcut ? <kbd>{formatShortcut(command.shortcut)}</kbd> : null}
               </button>;
             })}
           </section>;

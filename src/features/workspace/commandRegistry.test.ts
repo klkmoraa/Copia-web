@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { isOwnHistoryScope } from './commandRegistry';
+import { isOwnHistoryScope, resolveHistoryAction } from './commandRegistry';
 
 /**
  * CRI-103 / G-01: the global Ctrl+Z / Ctrl+Y binding must stay silent inside
@@ -48,5 +48,33 @@ describe('isOwnHistoryScope', () => {
     expect(isOwnHistoryScope(svg)).toBe(false);
     expect(isOwnHistoryScope(document.body)).toBe(false);
     expect(isOwnHistoryScope(null)).toBe(false);
+  });
+});
+
+describe('resolveHistoryAction', () => {
+  const chord = (key: string, extra: Record<string, boolean> = {}) => ({ key, ...extra });
+
+  it('deshace con ⌘Z y con Ctrl+Z', () => {
+    expect(resolveHistoryAction(chord('z', { metaKey: true }))).toBe('undo');
+    expect(resolveHistoryAction(chord('Z', { ctrlKey: true }))).toBe('undo');
+  });
+
+  it('rehace con ⌘⇧Z, que es el rehacer de macOS', () => {
+    // Estaba explícitamente rechazado: la guarda salía ante cualquier
+    // `shiftKey`, así que en la plataforma que este producto imita el atajo que
+    // el sistema enseña no hacía nada.
+    expect(resolveHistoryAction(chord('z', { metaKey: true, shiftKey: true }))).toBe('redo');
+    expect(resolveHistoryAction(chord('Z', { ctrlKey: true, shiftKey: true }))).toBe('redo');
+  });
+
+  it('conserva Ctrl+Y, que es la convención de Windows', () => {
+    expect(resolveHistoryAction(chord('y', { ctrlKey: true }))).toBe('redo');
+  });
+
+  it('no reacciona sin modificador, con Alt, ni a otra tecla', () => {
+    expect(resolveHistoryAction(chord('z'))).toBeNull();
+    expect(resolveHistoryAction(chord('z', { metaKey: true, altKey: true }))).toBeNull();
+    expect(resolveHistoryAction(chord('k', { metaKey: true }))).toBeNull();
+    expect(resolveHistoryAction(chord('y', { ctrlKey: true, shiftKey: true }))).toBeNull();
   });
 });

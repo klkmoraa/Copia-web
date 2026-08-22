@@ -23,7 +23,7 @@ import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
-import { isOwnHistoryScope } from './commandRegistry';
+import { isOwnHistoryScope, resolveHistoryAction } from './commandRegistry';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
@@ -199,15 +199,17 @@ const WorkspaceBrokerContent = ({
   // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
   // grid, or any modal surface with its own editing history: the worst case is
   // silently undoing a model operation while the user meant to undo a cell.
+  //
+  // ⌘⇧Z REHACE. Es el rehacer de macOS —la plataforma que este producto imita—
+  // y estaba explícitamente rechazado: la guarda salía ante cualquier `shiftKey`
+  // y sólo `Ctrl+Y`, que es la convención de Windows, llegaba a `redo()`. Un
+  // usuario de Mac pulsaba el atajo que su sistema le enseñó y no pasaba nada.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
-      const key = event.key.toLowerCase();
-      const isUndo = key === 'z';
-      const isRedo = key === 'y';
-      if (!isUndo && !isRedo) return;
+      const action = resolveHistoryAction(event);
+      if (!action) return;
       if (isOwnHistoryScope(event.target)) return;
-      if (isUndo) {
+      if (action === 'undo') {
         if (!canUndo) return;
         event.preventDefault();
         undo();
