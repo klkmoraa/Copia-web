@@ -237,4 +237,77 @@ describe('el canto y la ausencia de volumen propio', () => {
     }
     expect(offenders).toEqual([]);
   });
+  /* ---------------------------------------------------------------------
+     LAS ESCALAS SE CUMPLEN EN EL CSS, NO SÓLO EN LOS TOKENS.
+     ---------------------------------------------------------------------
+     Los tres gates que siguen nacen del mismo agujero que la fase 2
+     encontró con el acento: el contrato valía para el token y no para
+     quien lo consume. El sistema declaraba una escala de seis tamaños de
+     icono, una escalera de tres alturas de control y una pila de
+     apilamiento por rol; los `.tsx` la cumplían y `styles.css` la
+     reescribía por encima con literales, así que la escala existía en la
+     documentación y no en la pantalla. -------------------------------- */
+
+  it('mantiene los iconos en los seis escalones de la escala', () => {
+    // 14 (leyenda) · 16 (fila y control) · 18 (barra) · 20 (acción y
+    // cabecera) · 22 y 28 (figura). Los `size=` de los componentes ya los
+    // respetaban; el CSS los sobreescribía a 17, 19, 21, 23, 24 y 30 px —
+    // nueve reglas, incluida la del riel de herramientas—. 13 y 14 no
+    // significan cosas distintas: sólo dicen que nadie llevaba la cuenta.
+    const scale = new Set([14, 16, 18, 20, 22, 28]);
+    // Figuras, no iconos: un retrato de sección, una marca de agua o un
+    // dibujo isométrico no participan de la escala óptica de la interfaz.
+    const figures = new Set([30, 32, 42, 46, 170, 188, 202, 240]);
+    const offenders: string[] = [];
+    for (const { file, css } of consumerCss) {
+      for (const match of css.matchAll(/(^|[\s,>+~])svg\b[^{}]*\{([^}]*)\}/gm)) {
+        for (const size of match[2].matchAll(/(?:^|[;{\s])(?:width|height)\s*:\s*([0-9.]+)px/g)) {
+          const value = Number(size[1]);
+          if (scale.has(value) || figures.has(value)) continue;
+          offenders.push(`${file}: svg { …${size[0].trim()} } — fuera de la escala`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('no deja ningún control por debajo del suelo de 28 px', () => {
+    // `--sc-control-height-sm` es 28 px y es un SUELO, no un objetivo: un
+    // mosaico o una fila de lista pueden ser más altos porque su contenido lo
+    // pide, pero nada pulsable puede ser más bajo. Había tres por debajo —los
+    // botones del lanzador de superficies a 24 px, y dos filas de pestañas
+    // densas a 26—, que en un puntero grueso ya no son un blanco.
+    const floor = 28;
+    const offenders: string[] = [];
+    for (const { file, css } of consumerCss) {
+      for (const match of css.matchAll(/([^{}]*)\{([^}]*)\}/g)) {
+        const selector = match[1].split('\n').filter((line) => !line.trim().startsWith('*')).join(' ');
+        if (!/button|\[role='?tab'?\]/.test(selector)) continue;
+        for (const height of match[2].matchAll(/(?:^|[;{\s])min-height\s*:\s*([0-9.]+)px/g)) {
+          const value = Number(height[1]);
+          if (value >= floor) continue;
+          offenders.push(`${file}: ${selector.trim().slice(0, 60)} { min-height:${value}px } — bajo el suelo de ${floor}px`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('saca el apilamiento del shell de los números mágicos', () => {
+    // 44 valores crudos entre 0 y 1200 convivían con seis tokens, y de ahí
+    // salían colisiones reales: el lanzador de superficies (32) tapaba la
+    // hoja del Inspector (31), y el dock de herramientas (25) cubría la hoja
+    // de resultados (8). Por debajo de 6 sí puede haber literal: ahí viven
+    // los apilamientos LOCALES dentro del contexto de una pieza —una
+    // cabecera pegajosa en su tabla, un asa sobre su panel—, que no
+    // participan de esta pila.
+    const offenders: string[] = [];
+    for (const { file, css } of consumerCss) {
+      for (const match of css.matchAll(/z-index\s*:\s*([0-9]+)/g)) {
+        if (Number(match[1]) <= 5) continue;
+        offenders.push(`${file}: ${match[0]} — usa un rol de --sc-z-*`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });

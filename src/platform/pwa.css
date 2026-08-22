@@ -1,6 +1,6 @@
 .pwa-update-notice {
   position: fixed;
-  z-index: 1200;
+  z-index:var(--sc-z-toast);
   right: max(18px, env(safe-area-inset-right));
   bottom: max(18px, env(safe-area-inset-bottom));
   width: min(430px, calc(100vw - 28px));

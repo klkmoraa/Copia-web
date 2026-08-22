@@ -18,6 +18,18 @@ import { describe, expect, it } from 'vitest';
 const fontsCss = readFileSync(new URL('./fonts.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const tokensCss = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
+/**
+ * Los CONSUMIDORES de la escala tipográfica.
+ *
+ * El sistema declara un suelo —«no baja de 10 px: por debajo no hay
+ * tipografía, hay textura»— y una escala de nueve cuerpos. `styles.css` la
+ * contradecía con un `font-size:7px!important`, dos de 8,5 px y uno de 9,5 px,
+ * y ningún gate abría ese archivo. Un suelo que sólo vive en un README no es
+ * un suelo.
+ */
+const consumerCss = ['../styles.css', '../features/workspace/phase1.css', '../features/canvas/phase2.css', './components/ui.css', './material.css']
+  .map((file) => ({ file, css: readFileSync(new URL(file, import.meta.url), 'utf8').replace(/\r\n/g, '\n') }));
+
 describe('tipografía del sistema', () => {
   it('empaqueta sólo los sustitutos, nunca las caras del sistema', () => {
     expect(fontsCss).toContain("font-family: 'Inter'");
@@ -87,5 +99,22 @@ describe('tipografía del sistema', () => {
     // token: el sistema no abre las etiquetas, les sube el peso. Que
     // `--sc-tracking-eyebrow` no exista es parte del contrato, no un descuido.
     expect(tokensCss).not.toContain('--sc-tracking-eyebrow');
+  });
+  it('no baja del suelo de 10 px en ningún consumidor', () => {
+    // Por debajo del cuerpo `caption` no hay tipografía, hay textura. Lo
+    // decía el sistema y lo incumplían cuatro reglas, una de ellas con
+    // `!important` para ganarle la cascada a quien intentara subirlo.
+    const floor = Number.parseFloat(tokensCss.match(/--sc-font-size-caption:\s*([0-9.]+)px/)?.[1] ?? 'NaN');
+    expect(floor).toBe(10);
+    const offenders: string[] = [];
+    for (const { file, css } of consumerCss) {
+      for (const [index, line] of css.split('\n').entries()) {
+        for (const match of line.matchAll(/font-size\s*:\s*([0-9.]+)px/g)) {
+          if (Number(match[1]) >= floor) continue;
+          offenders.push(`${file}:${index + 1} ${match[0]}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

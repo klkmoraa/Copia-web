@@ -63,12 +63,6 @@ const WorkspaceBrokerContent = ({
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
 
-  /* Cuál de las tres superficies del inspector está presentada como hoja y
-     activa. Sólo puede haber una a la vez en las clases que usan `sheet`, así
-     que la primera que cumple las dos condiciones ES la velada. */
-  const sheetSurface = (['detail', 'analysisSetup', 'view'] as const)
-    .find((id) => broker.stateFor(id).presentation === 'sheet' && broker.stateFor(id).status === 'active');
-
   /**
    * Abrir y cerrar el Inspector de detalle, definido UNA vez.
    *
@@ -352,17 +346,6 @@ const WorkspaceBrokerContent = ({
         onRestore={restoreDoctor}
       /></Suspense> : null}
     </>}
-    /* El velo de la hoja. `.mobile-inspector-backdrop` llevaba estilo, animación
-       y regla de lienzo completo desde hace ciclos, pero NADIE lo renderizaba:
-       el slot `backdrop` de `AppShellLayout` nunca recibía valor. Sin él, una
-       hoja abierta en teléfono no se cerraba tocando fuera —que es como se
-       cierra una hoja en el sistema— y tapaba el lienzo sin decir que lo tapaba. */
-    backdrop={sheetSurface ? <button
-      type="button"
-      className="mobile-inspector-backdrop"
-      aria-label={t('inspector.close')}
-      onClick={() => closeSurface(sheetSurface)}
-    /> : null}
     inspector={<div className="workspace-surfaces">
       {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={() => closeSurface('detail')} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}

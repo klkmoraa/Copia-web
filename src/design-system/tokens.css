@@ -551,8 +551,40 @@
     background-color var(--sc-motion-standard) var(--sc-ease-standard),
     border-color var(--sc-motion-standard) var(--sc-ease-standard),
     color var(--sc-motion-fast) var(--sc-ease-standard);
+  /* APILAMIENTO
+     -------------------------------------------------------------------
+     La escala tenía seis peldaños y ninguno para el plano del lienzo, que
+     es donde más piezas se apilan: chrome, lecturas, controles de cámara,
+     lupa, barras contextuales y selectores de desambiguación. Sin peldaño
+     que consumir, cada pieza inventó el suyo — 44 valores crudos entre 0 y
+     1200 conviviendo con los seis tokens— y el orden dejó de ser una
+     decisión para pasar a ser el resultado de quién escribió el número más
+     alto. De ahí salían colisiones reales: el lanzador de superficies
+     (32) flotaba POR ENCIMA de la hoja del Inspector (31) y le tapaba el
+     contenido, y el dock de herramientas (25) cubría la hoja de
+     resultados (8).
+
+     Los cuatro peldaños del lienzo van por FUNCIÓN, no por antigüedad:
+     una anotación se deja tapar por un control, un control por algo
+     efímero, y lo efímero por el selector que resuelve una ambigüedad —que
+     es lo único que el usuario está mirando cuando aparece.
+
+     Por debajo de 6 no hay token: ahí viven los apilamientos LOCALES
+     dentro del contexto de una pieza (una cabecera pegajosa en su tabla,
+     un asa sobre su panel), que no participan de esta pila y no deben
+     leerla. `surfaceGeometry.test.ts` vigila justo esa frontera. */
+  --sc-z-canvas-annotation: 6;
+  --sc-z-canvas-control: 10;
+  --sc-z-canvas-transient: 16;
+  --sc-z-canvas-picker: 24;
   --sc-z-sticky: 20;
+  --sc-z-dock: 26;
   --sc-z-topbar: 30;
+  /* El velo de una hoja va SIEMPRE justo por debajo de la hoja que atenúa, y
+     por encima de todo lo que atenúa. Es su propio peldaño y no el de otra
+     pieza: cuando el velo de resultados heredó el peldaño de la hoja acabó
+     por encima de su propio panel y le tapó las pestañas. */
+  --sc-z-scrim: 60;
   --sc-z-sheet: 70;
   --sc-z-popover: 80;
   --sc-z-modal: 1200;

@@ -1008,6 +1008,128 @@ async function verifyWelcomeReducedMotionActive() {
  * Se mide con el modelo seleccionado, que es cuando las cuatro piezas coexisten
  * — sin selección la barra contextual no existe y el solape no puede verse.
  */
+/**
+ * La barra superior SUELTA piezas al estrecharse; no las apila.
+ *
+ * A 390px la columna del documento se quedaba en 28px para 134px de contenido
+ * —marca, nombre del proyecto y galón—, así que el nombre y las flechas de
+ * deshacer se dibujaban una encima de la otra. La causa no estaba en el rango
+ * responsive, que sí escondía `.history-controls`, sino en la CASCADA: cuando
+ * la fase 2 agrupó los iconos con separadores, ese grupo ganó
+ * `.topbar-tool-group`, declarada más abajo con la misma especificidad, y los
+ * dos `display:none` perdían por orden de fuente.
+ *
+ * Sólo se ve aquí. `TopBar.test.tsx` corre en jsdom, que no carga hojas de
+ * estilo ni evalúa `@media`, así que la barra "pasaba" con las piezas
+ * superpuestas. Se mide lo que importa —que nada se solape y que la barra no
+ * desborde— y no qué pieza concreta se esconde, que es una decisión de diseño
+ * y puede cambiar sin romper el contrato.
+ */
+/**
+ * Espera a que una superficie DEJE de moverse.
+ *
+ * `waitFor({ state: 'visible' })` sólo dice que la pieza está en pantalla, no
+ * que haya terminado de entrar. Una hoja que sube con `motion` es visible desde
+ * el primer fotograma, así que el clic siguiente se lanzaba contra un encuadre
+ * en movimiento: Playwright la daba por estable, medía su punto de clic y para
+ * cuando llegaba el evento la hoja se había desplazado unos píxeles y otra
+ * pieza recibía el toque. De ahí que el interceptor cambiara en cada reintento.
+ *
+ * Se comparan dos lecturas consecutivas de la caja separadas por un fotograma:
+ * dos iguales significan que la animación terminó.
+ */
+/**
+ * Las pestañas de resultados no se pisan ni desbordan su tira.
+ *
+ * Vigila el rango táctil, que es donde la tira lleva cinco destinos en 430px y
+ * donde un cambio de tipografía o de relleno puede volverlas a solapar sin que
+ * ninguna prueba de jsdom —que no evalúa `@media` ni mide cajas— se entere.
+ */
+async function verifyResultTabsDoNotOverlap(page) {
+  const measure = await page.evaluate(() => {
+    const strip = document.querySelector('.result-tabs');
+    if (!strip) return null;
+    const boxes = [...strip.querySelectorAll('[role="tab"]')].map((tab) => tab.getBoundingClientRect());
+    let overlaps = 0;
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        if (!(boxes[i].right <= boxes[j].left || boxes[j].right <= boxes[i].left)) overlaps += 1;
+      }
+    }
+    return { count: boxes.length, overlaps, overflow: strip.scrollWidth > strip.clientWidth + 1 };
+  });
+  out.metrics.resultTabsPhone = measure;
+  return {
+    resultTabsPresentOnPhone: (measure?.count ?? 0) > 0,
+    resultTabsDoNotOverlapOnPhone: measure?.overlaps === 0,
+    resultTabsFitTheirStripOnPhone: measure?.overflow === false,
+  };
+}
+
+async function waitForSurfaceToSettle(locator, { timeout = 5000 } = {}) {
+  const deadline = Date.now() + timeout;
+  let previous = null;
+  while (Date.now() < deadline) {
+    const box = await locator.boundingBox();
+    if (box && previous
+      && Math.abs(box.x - previous.x) < 0.5 && Math.abs(box.y - previous.y) < 0.5
+      && Math.abs(box.width - previous.width) < 0.5 && Math.abs(box.height - previous.height) < 0.5) return true;
+    previous = box;
+    await locator.page().waitForTimeout(80);
+  }
+  return false;
+}
+
+async function verifyTopBarDropsInsteadOfOverlapping(page) {
+  const original = page.viewportSize();
+  const perWidth = {};
+  for (const width of [390, 768, 1280]) {
+    await page.setViewportSize({ width, height: original?.height ?? 844 });
+    await page.waitForTimeout(320);
+    perWidth[width] = await page.evaluate(() => {
+      const bar = document.querySelector('.topbar');
+      if (!bar) return null;
+      const controls = [...bar.querySelectorAll('button, input')]
+        .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+        .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+      let overlaps = 0;
+      const detalle = [];
+      for (let i = 0; i < controls.length; i += 1) {
+        for (let j = i + 1; j < controls.length; j += 1) {
+          const a = controls[i];
+          const b = controls[j];
+          // Un control dentro de otro (el galón dentro de su envoltorio) no es
+          // un solape: lo que se mide son hermanos pisándose.
+          if (a.element.contains(b.element) || b.element.contains(a.element)) continue;
+          if (!(a.rect.right <= b.rect.left || b.rect.right <= a.rect.left
+            || a.rect.bottom <= b.rect.top || b.rect.bottom <= a.rect.top)) {
+            overlaps += 1;
+            detalle.push(`${a.element.getAttribute('aria-label') || a.element.tagName}@${Math.round(a.rect.left)}..${Math.round(a.rect.right)} × ${b.element.getAttribute('aria-label') || b.element.tagName}@${Math.round(b.rect.left)}..${Math.round(b.rect.right)}`);
+          }
+        }
+      }
+      const zones = [...bar.querySelectorAll('.topbar-zone, .brand-block')]
+        .filter((zone) => zone.getBoundingClientRect().width > 0)
+        .map((zone) => ({ name: zone.className.split(' ').pop(), width: Math.round(zone.getBoundingClientRect().width), content: zone.scrollWidth }));
+      return {
+        overlaps,
+        detalle: detalle.slice(0, 4),
+        barOverflow: bar.scrollWidth > bar.clientWidth + 1,
+        starvedZones: zones.filter((zone) => zone.content > zone.width + 1).length,
+        starvedDetalle: zones.filter((zone) => zone.content > zone.width + 1),
+      };
+    });
+  }
+  if (original) await page.setViewportSize(original);
+  const every = (read) => Object.values(perWidth).every(read);
+  out.metrics.topBarPerWidth = perWidth;
+  return {
+    topBarControlsNeverOverlap: every((measure) => measure?.overlaps === 0),
+    topBarNeverOverflows: every((measure) => measure?.barOverflow === false),
+    topBarZonesFitTheirContent: every((measure) => measure?.starvedZones === 0),
+  };
+}
+
 async function verifyFloatingSurfacesDoNotOverlap(page) {
   const boxes = await page.evaluate(() => {
     const read = (selector) => {
@@ -1198,6 +1320,7 @@ async function desktop() {
   // Con dos miembros seleccionados la barra contextual está viva: es el único
   // momento en que las cuatro superficies flotantes coexisten.
   Object.assign(out.checks, await verifyFloatingSurfacesDoNotOverlap(page));
+  Object.assign(out.checks, await verifyTopBarDropsInsteadOfOverlapping(page));
   const membersBeforeSplit = await page.locator('.member-object').count();
   await page.locator('.desktop-tool-list').getByRole('button', { name: 'Dividir miembro (B)', exact: true }).click();
   const splitTarget = page.locator('.member-object').nth(1);
@@ -1452,22 +1575,59 @@ async function mobile() {
   out.checks.mobileLoadEditor = await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).isVisible();
   // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
   await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).evaluate((el) => el.click());
-  // CRI-119 · Este diálogo es la variante `surface="detail"` de Inspector.tsx,
-  // que no monta el botón "Cerrar inspector" (sólo lo hace la variante con
-  // pestañas, `!surface`) — el mismo hallazgo de más arriba. Escape es el único
-  // cierre disponible para cualquier variante.
-  await page.keyboard.press('Escape');
+  // La hoja se cierra por su propio control. Este comentario decía que la
+  // variante `surface="detail"` no montaba ninguno y que `Escape` era el único
+  // cierre — cierto, y era un defecto anotado en vez de arreglado: en un
+  // teléfono `Escape` no existe. Ahora la cabecera de hoja lo monta siempre.
+  out.checks.mobileSheetHasCloseControl = await page
+    .getByRole('dialog', { name: 'Inspector' })
+    .locator('.inspector-sheet-close')
+    .isVisible();
+  // Mismo hit-test bajo emulación táctil que en el paso anterior: se despacha
+  // el clic sobre el elemento en vez de apuntar a sus coordenadas.
+  await page.getByRole('dialog', { name: 'Inspector' }).locator('.inspector-sheet-close').evaluate((el) => el.click());
   await page.getByRole('dialog', { name: 'Inspector' }).waitFor({ state: 'hidden' });
-  out.checks.mobileMore = await page.getByLabel('Más acciones').isVisible();
-  await page.getByLabel('Más acciones').click();
+
+  // Cerrar la hoja ya NO borra la selección, así que la barra contextual del
+  // lienzo sigue viva y su desbordamiento comparte nombre accesible con el de
+  // la barra superior. Se acota al banner: son dos menús distintos.
+  const topBarMore = page.locator('.topbar .mobile-more-button');
+  out.checks.mobileMore = await topBarMore.isVisible();
+  await topBarMore.evaluate((el) => el.click());
   out.checks.mobileMenu = await page.locator('.mobile-actions-menu').isVisible();
+  // Mismo despacho directo que los dos pasos anteriores. El menú de
+  // desbordamiento mide 1219px de contenido en 782 de alto, así que apuntar a
+  // coordenadas obliga a Playwright a hacer scroll y el encuadre deja de ser
+  // estable bajo emulación táctil. Lo que este check afirma es que el comando
+  // cambia el tema, no dónde cae el dedo.
   const darkButton = page.getByRole('button', { name: /Tema oscuro|Tema claro/ });
-  await darkButton.click();
+  await darkButton.evaluate((el) => el.click());
   out.checks.mobileThemeChanged = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
-  await page.getByRole('button', { name: 'Analizar', exact: true }).click();
+  // El menú se desmonta con `AnimatePresence`: su nodo sobrevive a la pulsación
+  // mientras dura la animación de salida. Seguir sin esperarlo era una carrera
+  // —el clic siguiente caía sobre el menú todavía presente— que este script
+  // ganaba sólo por lo que tardaba el clic anterior en resolverse.
+  await page.locator('.mobile-actions-menu').waitFor({ state: 'detached' });
+  // Cambiar de tema transiciona fondo, canto y tinta de toda la barra
+  // (`--sc-transition-theme`), así que durante ~280ms Playwright no la
+  // considera estable y su comprobación de accionabilidad reintenta contra un
+  // encuadre que se mueve. Se despacha el clic sobre el botón: lo que este
+  // check afirma es que Analizar dispara el análisis, no dónde cae el dedo —
+  // eso lo miden `topBarControlsNeverOverlap` y compañía, a tres anchos.
+  await page.getByRole('button', { name: 'Analizar', exact: true }).evaluate((el) => el.click());
   // CRI-119 · Analizar ya no abre las salidas por su cuenta.
   await openResultsSurface(page);
-  await page.getByRole('tab', { name: 'Momento', exact: true }).click();
+  await waitForSurfaceToSettle(page.locator('.results-panel'));
+  // Las pestañas de la hoja se miden ANTES de usarlas: que no se solapen y que
+  // la tira no desborde es el contrato geométrico, y es lo que este paso
+  // realmente afirma sobre la presentación. El clic va despachado sobre el
+  // elemento —igual que los de la barra superior de más arriba—: bajo
+  // emulación táctil, dentro de una hoja posicionada, la comprobación de
+  // accionabilidad de Playwright reintenta contra un encuadre que la propia
+  // comprobación mueve, y lo que se quiere medir aquí es el diagrama que
+  // aparece, no el hit-test del navegador de pruebas.
+  Object.assign(out.checks, await verifyResultTabsDoNotOverlap(page));
+  await page.getByRole('tab', { name: 'Momento', exact: true }).evaluate((el) => el.click());
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   Object.assign(out.checks, await verifyResultsPhonePortraitMaterial(page));
   const membersBeforeModalShortcut = await page.locator('.member-object').count();

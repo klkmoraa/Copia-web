@@ -17,7 +17,7 @@
 
 .duplicate-preview-panel {
   position: absolute;
-  z-index: 16;
+  z-index:var(--sc-z-canvas-transient);
   right: 18px;
   bottom: 86px;
   width: min(340px, calc(100% - 36px));
@@ -76,7 +76,7 @@
 
 .structural-edit-launcher {
   position: absolute;
-  z-index: 15;
+  z-index:var(--sc-z-canvas-control);
   right: 18px;
   bottom: 86px;
   min-height: 44px;
@@ -90,7 +90,7 @@
 
 .structural-edit-surface {
   position: absolute;
-  z-index: 24;
+  z-index:var(--sc-z-canvas-transient);
   right: 18px;
   bottom: 86px;
   width: min(430px, calc(100% - 36px));
@@ -264,7 +264,7 @@
    one primary verb, Borrar and the disclosure — never a second presentation. */
 .contextual-actions {
   position: absolute;
-  z-index: 26;
+  z-index:var(--sc-z-canvas-transient);
   left: 50%;
   bottom: 16px;
   display: grid;
