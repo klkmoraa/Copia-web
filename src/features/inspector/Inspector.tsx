@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useEffect, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
@@ -9,6 +9,10 @@ import type { Selection, Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
+import { LayerToggle } from '../../design-system/components/editor';
+import { EDITOR_LAYER_DEFINITIONS, EDITOR_LAYER_PRESET_DEFINITIONS } from '../canvas/editorLayerCatalog';
+import { activeEditorLayerPreset, type EditorLayerAction, type EditorLayerState } from '../canvas/editorLayers';
+import { applyEvidenceLayerChoice, isEvidenceLayerActive, EVIDENCE_LAYERS } from '../canvas/evidenceLayers';
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 
@@ -64,6 +68,17 @@ type InspectorProps = {
   /** Injected by Workspace for a selection-independent analysis surface. */
   activeTool?: Tool;
   onActiveToolChange?: (tool: Tool) => void;
+  /**
+   * Capas de sesión del editor, para la superficie `view`.
+   *
+   * Vivían en un panel flotante propio colgado del lienzo, y la pestaña «Vista»
+   * llevaba a la vez SUS interruptores de cargas, cotas, ejes y etiquetas: dos
+   * destinos para una decisión, cada uno con su almacén. Ahora la decisión se
+   * toma en un sitio. El estado sigue siendo el mismo reducer de
+   * `WorkspaceShell`: cambia quién lo pinta, no qué guarda.
+   */
+  layers?: EditorLayerState;
+  dispatchLayers?: Dispatch<EditorLayerAction>;
 };
 
 type InspectorContentProps = InspectorProps & {
@@ -85,6 +100,8 @@ const InspectorContent = ({
   selection,
   activeTool,
   setActiveTool,
+  layers,
+  dispatchLayers,
 }: InspectorContentProps) => {
   const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { t } = useI18n();
@@ -201,7 +218,7 @@ const InspectorContent = ({
       <div id={surface ? `${surface}-tabpanel` : 'inspector-tabpanel'} className="inspector-scroll" role={surface ? undefined : 'tabpanel'} aria-labelledby={surface ? undefined : `inspector-tab-${activeTab}`}>
         {activeTab === 'inspector' ? <InspectorProperties /> : null}
         {activeTab === 'loads' ? <AnalysisSetupPanel activeTool={activeTool} onChooseTool={chooseLoadTool} selectedCombinationId={selectedCombinationId} setSelectedCombinationId={setSelectedCombinationId} /> : null}
-        {activeTab === 'display' ? <DisplayPanel includeCalculationMode={false} /> : null}
+        {activeTab === 'display' ? <DisplayPanel includeCalculationMode={false} layers={layers} dispatchLayers={dispatchLayers} /> : null}
       </div>
     </aside>
   );
@@ -313,7 +330,73 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
   </>;
 };
 
-const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
+/**
+ * Las capas de sesión del editor: presets, evidencia (N/V/M/deformada/mapa) e
+ * interruptores. Es lo que pintaba `CanvasLayers`, el panel flotante que colgaba
+ * del lienzo; aquí no necesita ni disparador propio ni posicionamiento absoluto,
+ * porque la superficie que lo contiene ya es un destino con su sitio.
+ */
+const LayersSection = ({ layers, dispatch }: { layers: EditorLayerState; dispatch: Dispatch<EditorLayerAction> }) => {
+  const { t } = useI18n();
+  const { resultTab, setResultTab } = useWorkspaceUI();
+  const currentPreset = activeEditorLayerPreset(layers);
+
+  return <section className="inspector-section inspector-layers">
+    <h3>{t('canvas.layers')}</h3>
+    <p className="section-description">{t('canvas.layersDescription')}</p>
+
+    <div className="segmented-control inspector-layer-presets" role="group" aria-label={t('canvas.layerPresets')}>
+      {EDITOR_LAYER_PRESET_DEFINITIONS.map(({ id, labelKey }) => <button
+        key={id}
+        type="button"
+        aria-pressed={currentPreset === id}
+        className={currentPreset === id ? 'active' : ''}
+        data-layer-preset={id}
+        onClick={() => dispatch({ type: 'preset', preset: id })}
+      >{t(labelKey)}</button>)}
+    </div>
+
+    {/* N / V / M / deformada / mapa se eligen aquí como capa (CRI-100): elegir
+        una enciende el escalón sobre el dibujo, nunca abre una pestaña ni un
+        panel de resultados. */}
+    <div className="filter-chip-row" role="group" aria-label={t('canvas.evidenceLayers')}>
+      {EVIDENCE_LAYERS.map(({ id, labelKey }) => <button
+        key={id}
+        type="button"
+        aria-pressed={isEvidenceLayerActive(id, resultTab, layers)}
+        data-evidence-layer={id}
+        onClick={() => applyEvidenceLayerChoice(id, { resultTab, layers }, { setResultTab, dispatchLayers: dispatch })}
+      >{t(labelKey)}</button>)}
+    </div>
+
+    <div className="inspector-layer-list">
+      {EDITOR_LAYER_DEFINITIONS.map(({ id, labelKey, detailKey, icon: Icon }) => <LayerToggle
+        key={id}
+        label={t(labelKey)}
+        description={t(detailKey)}
+        icon={<Icon size={18} />}
+        checked={layers[id]}
+        /* `model` es el dibujo: apagarlo dejaría la superficie vacía sin decir
+           por qué. Se enseña encendido y desactivado, no se esconde. */
+        disabled={id === 'model'}
+        onCheckedChange={() => dispatch({ type: 'toggle', layer: id })}
+        data-layer-id={id}
+      />)}
+    </div>
+
+    <button type="button" className="inspector-layers__reset" onClick={() => dispatch({ type: 'reset' })}>{t('canvas.layersReset')}</button>
+  </section>;
+};
+
+const DisplayPanel = ({
+  includeCalculationMode = true,
+  layers,
+  dispatchLayers,
+}: {
+  includeCalculationMode?: boolean;
+  layers?: EditorLayerState;
+  dispatchLayers?: Dispatch<EditorLayerAction>;
+}) => {
   const { project, updateProjectView } = useProjectModel();
   const { t } = useI18n();
   const units = project.settings.units;
@@ -322,6 +405,7 @@ const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMod
   const base = (value: number, quantity: UnitQuantity) => fromDisplay(value, units, quantity);
   const setView = (patch: Partial<typeof view>) => updateProjectView((draft) => withCanvasViewSettings(draft, patch));
   return <>
+    {layers && dispatchLayers ? <LayersSection layers={layers} dispatch={dispatchLayers} /> : null}
     {includeCalculationMode ? <section className="inspector-section calculation-mode-section">
       <h3>{t('inspector.calculationExperience')}</h3>
       <Segmented value={project.settings.calculationMode ?? 'complete'} options={[{ value: 'classroom', label: t('analysis.modeClassroom') }, { value: 'complete', label: t('analysis.modeComplete') }]} onChange={(value) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: value as 'classroom' | 'complete' } }))} />

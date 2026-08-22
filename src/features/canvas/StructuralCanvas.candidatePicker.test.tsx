@@ -38,7 +38,7 @@ const Harness = () => {
   return <>
     <output aria-label="selection-model">{JSON.stringify(selection)}</output>
     <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N3' })}>previous-N3</button>
-    <StructuralCanvas layers={createEditorLayerState()} dispatchLayers={() => undefined} />
+    <StructuralCanvas layers={createEditorLayerState()} />
   </>;
 };
 
@@ -53,7 +53,7 @@ const BrokeredHarness = () => {
       <button type="button" onClick={() => setShellClass('K0')}>compact composition</button>
       <output aria-label="selection-model">{JSON.stringify(selection)}</output>
       <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N3' })}>previous-N3</button>
-      <StructuralCanvas layers={createEditorLayerState()} dispatchLayers={() => undefined} />
+      <StructuralCanvas layers={createEditorLayerState()} />
     </div>
   </SurfacePresentationProvider>;
 };

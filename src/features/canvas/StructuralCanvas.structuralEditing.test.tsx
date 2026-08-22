@@ -46,7 +46,7 @@ const Harness = () => {
     <button onClick={() => select({ kind: 'multi', nodeIds: ['N1', 'N2', 'N3'], memberIds: [] })}>select-three-nodes</button>
     <button onClick={undo}>test-undo</button>
     <button onClick={redo}>test-redo</button>
-    <StructuralCanvas layers={createEditorLayerState()} dispatchLayers={() => undefined} />
+    <StructuralCanvas layers={createEditorLayerState()} />
   </>;
 };
 

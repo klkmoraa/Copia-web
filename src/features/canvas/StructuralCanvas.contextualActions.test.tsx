@@ -48,7 +48,7 @@ const Harness = () => {
     <output aria-label="project-model">{JSON.stringify(project)}</output>
     <button onClick={() => select({ kind: 'member', id: 'M1' })}>select-M1</button>
     <button onClick={() => select(null)}>clear-selection</button>
-    <StructuralCanvas layers={createEditorLayerState()} dispatchLayers={() => undefined} />
+    <StructuralCanvas layers={createEditorLayerState()} />
   </>;
 };
 

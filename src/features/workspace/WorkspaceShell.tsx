@@ -265,7 +265,7 @@ const WorkspaceBrokerContent = ({
     toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
-      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
+      <StructuralCanvas layers={editorLayers} onRequestInspector={() => openSurface('detail')} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
         status={results.status}
@@ -312,7 +312,10 @@ const WorkspaceBrokerContent = ({
     inspector={<div className="workspace-surfaces">
       {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={() => closeSurface('detail')} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
-      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
+      {/* «Vista» es la ÚNICA superficie de visualización: absorbe las capas de
+          sesión que pintaba el panel flotante del lienzo. El reducer no se
+          mueve —sigue aquí, con su persistencia—, sólo cambia quién lo pinta. */}
+      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} layers={editorLayers} dispatchLayers={dispatchEditorLayers} /> : null}
     </div>}
     /* En Compact los lanzadores viven en la barra inferior, que es una fila del
        shell y no un flotante: el pill que había aquí se posaba literalmente

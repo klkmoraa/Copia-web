@@ -1,10 +1,7 @@
 import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
-import { useEffect, type Dispatch, type RefObject } from 'react';
+import { useEffect, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
-import type { ResultTab } from '../../store/ProjectContext';
-import { CanvasLayers } from './CanvasLayers';
-import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 
@@ -12,10 +9,6 @@ export interface CanvasChromeProps {
   modeLabel: string;
   placementInstruction: string | null;
   showHelp: boolean;
-  layers: EditorLayerState;
-  dispatchLayers: Dispatch<EditorLayerAction>;
-  resultTab: ResultTab;
-  setResultTab: (tab: ResultTab) => void;
   snapEnabled: boolean;
   gridEnabled: boolean;
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
@@ -32,10 +25,6 @@ export const CanvasChrome = ({
   modeLabel,
   placementInstruction,
   showHelp,
-  layers,
-  dispatchLayers,
-  resultTab,
-  setResultTab,
   snapEnabled,
   gridEnabled,
   coordinateReadoutRef,
@@ -61,7 +50,6 @@ export const CanvasChrome = ({
       </> : null}
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
-    <CanvasLayers layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} />
     {/* Estado de la vista. El acento está reservado a la acción (decisión 2 del
         sistema) y snap/rejilla no accionan nada: son dos indicadores. Pintarlos
         de azul los ponía al mismo nivel que «Analizar». Ahora son un grupo

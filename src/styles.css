@@ -817,6 +817,28 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .filter-chip-row button { min-height:32px; padding:0 10px; border:1px solid var(--border); border-radius:999px; background:var(--surface); color:var(--muted); font-size:10px; }
 .filter-chip-row button[aria-pressed='true'] { border-color:color-mix(in srgb,var(--accent) 42%,var(--border)); background:var(--accent-soft); color:var(--accent-on-soft); font-weight:700; }
 .segmented-control { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 3px; background: var(--surface-3); border-radius:var(--sc-radius-control); margin: 8px 0; }
+
+/* Capas de sesión, dentro de «Vista» (`Inspector.tsx` · `LayersSection`).
+   Vivían en un panel flotante con su propio disparador sobre el lienzo; aquí no
+   necesitan ni posicionamiento ni materia propia, porque la superficie que las
+   contiene ya es un destino con su sitio y su material. Lo único que hace falta
+   es el reparto: cinco presets en vez de dos, y una lista con aire. */
+.inspector-layer-presets { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.inspector-layer-presets button { padding: 7px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inspector-layer-list { display: grid; gap: 2px; margin-top: var(--sc-space-3); }
+.inspector-layers__reset {
+  width: 100%;
+  min-height: var(--sc-control-height-touch);
+  margin-top: var(--sc-space-3);
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-fill-tertiary);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+  cursor: pointer;
+}
+.inspector-layers__reset:hover { background: var(--sc-color-fill-secondary); color: var(--sc-color-text-primary); }
 .segmented-control button { border: 0; background: transparent; border-radius:var(--sc-radius-control); padding: 7px; font-size: 11px; }
 .segmented-control button.active { background: var(--sc-color-surface-inset); box-shadow: none; }
 .danger-button { border: 1px solid color-mix(in srgb, var(--error) 35%, var(--border)); background: transparent; color: var(--error); border-radius:var(--sc-radius-control); padding: 8px 10px; display: flex; gap: 7px; align-items: center; justify-content: center; width: 100%; margin-top: 10px; }
@@ -2108,135 +2130,8 @@ button:not(:disabled):active,.selection-card:active {
 
 /* Phase 3: session-only information layers ------------------------------- */
 .canvas-view-chips { right:62px; }
-.canvas-layer-trigger {
-  position:absolute;
-  z-index:26;
-  top:10px;
-  right:12px;
-  width:40px;
-  height:40px;
-  display:grid;
-  place-items:center;
-  border-radius:var(--sc-radius-control);
-  color:var(--muted);
-}
-.canvas-layer-trigger:hover { color:var(--text); background:var(--surface); }
-.canvas-layer-trigger.active {
-  border-color:color-mix(in srgb,var(--accent) 36%,var(--border));
-  background:var(--accent-soft);
-  color:var(--accent-on-soft);
-}
-.canvas-layer-panel {
-  position:absolute;
-  z-index:25;
-  top:58px;
-  right:12px;
-  width:min(292px,calc(100% - 24px));
-  max-height:calc(100% - 126px);
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  border-radius:var(--sc-radius-card);
-}
-.canvas-layer-panel>header {
-  min-height:58px;
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 36px;
-  align-items:center;
-  gap:8px;
-  padding:8px 9px 8px 13px;
-  border-bottom:1px solid var(--border-soft);
-}
-.canvas-layer-panel>header>div { display:grid; gap:2px; min-width:0; }
-.canvas-layer-panel>header strong { font-size:14px; }
-.canvas-layer-panel>header span { color:var(--muted); font-size:11px; line-height:1.3; }
-.canvas-layer-panel>header button {
-  width:36px;
-  height:36px;
-  display:grid;
-  place-items:center;
-  border:0;
-  border-radius:var(--sc-radius-control);
-  background:transparent;
-  color:var(--muted);
-}
-.canvas-layer-panel>header button:hover { background:var(--surface-2); color:var(--text); }
-.canvas-layer-list {
-  min-height:0;
-  display:grid;
-  gap:2px;
-  padding:7px;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-}
-.canvas-layer-row {
-  width:100%;
-  min-height:52px;
-  display:grid;
-  grid-template-columns:36px minmax(0,1fr) 34px;
-  align-items:center;
-  gap:8px;
-  padding:5px 7px;
-  border:0;
-  border-radius:var(--sc-radius-control);
-  background:transparent;
-  color:var(--text);
-  text-align:left;
-}
-.canvas-layer-row:hover:not(:disabled) { background:var(--surface-2); }
-.canvas-layer-row:disabled { cursor:default; opacity:.86; }
-.canvas-layer-icon {
-  width:34px;
-  height:34px;
-  display:grid;
-  place-items:center;
-  border-radius:var(--sc-radius-control);
-  background:var(--surface-2);
-  color:var(--muted);
-}
-.canvas-layer-row[aria-checked='true'] .canvas-layer-icon { color:var(--accent-on-soft); background:var(--accent-soft); }
-.canvas-layer-copy { display:grid; min-width:0; gap:2px; }
-.canvas-layer-copy strong { font-size:12px; line-height:1.2; }
-.canvas-layer-copy small { color:var(--muted); font-size:10px; line-height:1.28; }
-/* CRI-105 · el interruptor de capas vive UNA sola vez, en
-   `design-system/components/ui.css` como `.sc-layer-toggle__switch`.
-   Aquí había dos definiciones base incompatibles de `.canvas-layer-switch`
-   —32×18 con pulgar de 14px arriba y 38×22 con pulgar de 16px más abajo, cada
-   una con su propia iluminación— peleando por la cascada, y ninguna de las dos
-   tenía marcado: `LayerToggle` (`design-system/components/editor.tsx`) emite
-   `.sc-layer-toggle__switch`, nunca `.canvas-layer-switch`. Las dos estaban
-   muertas desde que el componente se movió al Design System. */
-.canvas-layer-reset {
-  min-height:42px;
-  margin:0 7px 7px;
-  border:1px solid var(--border-soft);
-  border-radius:var(--sc-radius-control);
-  background:var(--surface);
-  color:var(--muted);
-  font-size:12px;
-  font-weight:590;
-}
-.canvas-layer-reset:hover { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 32%,var(--border)); }
-
-@media (max-width:1023px) {
-  .canvas-layer-trigger {
-    top:64px;
-    right:max(10px,env(safe-area-inset-right));
-    width:44px;
-    height:44px;
-  }
-  .canvas-layer-panel {
-    top:116px;
-    right:max(10px,env(safe-area-inset-right));
-    width:min(310px,calc(100% - 20px));
-    max-height:calc(100% - 184px);
-  }
-  .canvas-layer-row { min-height:56px; }
-}
 
 @media (max-width:460px) {
-  .canvas-layer-trigger { top:60px; right:8px; }
-  .canvas-layer-panel { top:112px; right:8px; width:calc(100% - 16px); max-height:calc(100% - 180px); }
 }
 
 /* Phase 6: application shell composition -------------------------------- */
@@ -2323,11 +2218,6 @@ button:not(:disabled):active,.selection-card:active {
 .tool-rail .sc-tool-button.is-active .sc-tool-button__copy strong { color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-medium); }
 .tool-rail .sc-tool-button.is-active .sc-tool-button__icon svg { color:var(--sc-color-action-foreground); }
 .canvas-controls .sc-icon-button { border-radius:0; }
-.canvas-layer-row.sc-layer-toggle { grid-template-columns:36px minmax(0,1fr) 34px; }
-.canvas-layer-row .sc-layer-toggle__icon { width:34px; height:34px; }
-.canvas-layer-row .sc-layer-toggle__copy strong { font-size:12px; line-height:1.2; }
-.canvas-layer-row .sc-layer-toggle__copy small { font-size:10px; line-height:1.28; }
-.canvas-layer-row.sc-layer-toggle.is-checked .sc-layer-toggle__icon { color:var(--accent-on-soft); background:var(--accent-soft); }
 
 @media (min-width:1440px) {
   .app-shell[data-tool-rail-compact='true']:not([data-full-canvas='true']) .workspace {
@@ -2892,10 +2782,6 @@ button:not(:disabled):active,.selection-card:active {
   .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-controls {
     right:8px;
     bottom:8px;
-  }
-  .canvas-layer-trigger {
-    top:60px;
-    right:max(8px,env(safe-area-inset-right));
   }
   .mobile-tool-palette {
     left:max(8px,env(safe-area-inset-left));
@@ -3644,7 +3530,10 @@ button:not(:disabled):active,.selection-card:active {
 }
 .summary-table-wrap { border:0; border-radius:0; background:transparent; box-shadow:none; }
 .result-extrema-table { font-family:var(--sc-font-mono); }
-.result-extrema-table caption { background:transparent; color:var(--muted); font-family:var(--sc-font-mono); letter-spacing:0; text-transform:none; }
+/* La monoespaciada es para los NÚMEROS. La tabla la lleva porque sus celdas son
+   valores comparables columna a columna; su título es prosa y hereda la cara de
+   la interfaz, como cualquier otro rótulo. */
+.result-extrema-table caption { background:transparent; color:var(--muted); font-family:var(--sc-font-ui); letter-spacing:0; text-transform:none; }
 .result-extrema-table :is(th,td) { border-bottom-color:var(--border-soft); }
 .result-extrema-table thead th { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:0; }
 .result-extrema-table tbody th { color:var(--text); font-weight:590; }
@@ -3685,28 +3574,6 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-panel .toggle-row { transition:background var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
 .inspector-panel .toggle-row:hover { background:color-mix(in srgb,var(--accent) 5%,transparent); }
 
-#workspace-canvas .canvas-layer-panel {
-  border:var(--sc-hairline);
-  border-radius:var(--sc-radius-panel);
-  background:var(--surface);
-  box-shadow:var(--sc-elevation-2);
-  animation:sc-popover-in var(--sc-motion-control) var(--sc-ease-enter) both;
-}
-#workspace-canvas .canvas-layer-panel > header { border-bottom-color:var(--sc-color-border-soft); }
-#workspace-canvas .canvas-layer-row {
-  min-height:56px;
-  border:1px solid var(--sc-color-border-soft);
-  background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transition:background var(--sc-motion-control) var(--sc-ease-standard), border-color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
-}
-#workspace-canvas .canvas-layer-row:hover:not(:disabled) { background:var(--surface); border-color:var(--sc-color-border); box-shadow:var(--sc-elevation-1); }
-#workspace-canvas .canvas-layer-row:active:not(:disabled) { box-shadow:none; transform:var(--sc-press-transform); }
-#workspace-canvas .canvas-layer-icon { background:var(--surface); box-shadow:var(--sc-elevation-1); }
-#workspace-canvas .canvas-layer-row[aria-checked='true'] .canvas-layer-icon { background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); }
-#workspace-canvas .canvas-layer-reset { border:0; background:var(--sc-color-surface-2); box-shadow:none; }
-#workspace-canvas .canvas-layer-reset:hover:not(:disabled) { background:var(--surface); box-shadow:var(--sc-elevation-1); }
-@keyframes sc-popover-in { from { opacity:0; transform:translateY(-4px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
 
 @media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
   .inspector-panel.mobile-open { border-radius:var(--sc-radius-lg) 0 0 var(--sc-radius-lg); }
@@ -3724,7 +3591,6 @@ button:not(:disabled):active,.selection-card:active {
   .compact-toggle-grid input[type='checkbox']::after,
   .popover button,
   .analysis-status { transition:none!important; }
-  #workspace-canvas .canvas-layer-panel { animation:none; }
   .welcome-launcher-card:hover,
   .welcome-import-card:hover,
   .welcome-template-card:hover,
@@ -3911,53 +3777,8 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* El disparador de capas comparte la gramática: cavidad al estar abierto. */
-.canvas-layer-trigger {
-  background:var(--surface);
-  border:1px solid color-mix(in srgb,var(--border) 72%,white);
-  box-shadow:var(--sc-elevation-1);
-  transition:var(--sc-transition-control);
-}
-.canvas-layer-trigger:hover { box-shadow:var(--sc-elevation-1); }
-.canvas-layer-trigger.active {
-  color:var(--accent);
-  background:var(--sc-color-surface-inset);
-  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
 
 /* --- Presets de capas ------------------------------------------------- */
-.canvas-layer-presets {
-  display:flex;
-  flex-wrap:wrap;
-  gap:5px;
-  padding:9px 11px;
-  border-bottom:1px solid var(--border-soft);
-}
-.canvas-layer-preset {
-  min-height:28px;
-  padding:0 10px;
-  border:var(--sc-hairline);
-  border-radius:var(--sc-radius-pill);
-  background:var(--sc-color-surface-1);
-  box-shadow:var(--sc-elevation-1);
-  color:var(--muted);
-  font-family:var(--sc-font-mono);
-  font-size:var(--sc-font-size-caption);
-  font-weight:700;
-  letter-spacing:0;
-  text-transform:none;
-  cursor:pointer;
-  transition:var(--sc-transition-control);
-}
-.canvas-layer-preset:hover { color:var(--text); box-shadow:var(--sc-elevation-1); }
-.canvas-layer-preset.active {
-  color:var(--accent);
-  background:var(--sc-color-surface-inset);
-  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
 
 /* --- Mapa de demanda estructural -------------------------------------- */
 /* Rampa secuencial de magnitud, no semáforo de seguridad: el color dice cuánta
@@ -4878,7 +4699,6 @@ button:not(:disabled):active,.selection-card:active {
 /* El panel de capas baja por el mismo borde derecho y cubriría el radar. Se
    retira mientras el panel está abierto: dos objetos en el mismo sitio no se
    resuelven apilándolos, se resuelve mostrando uno. */
-.canvas-host:has(.canvas-layer-panel) .canvas-minimap { display:none; }
 
 /* En teléfonos estrechos la pastilla de coordenadas se centraba en el ancho
    completo, sin descontar el grupo de zoom (~134px) que ocupa la esquina
@@ -4905,10 +4725,6 @@ button:not(:disabled):active,.selection-card:active {
   .tool-button:active:not(:disabled),
   .segmented-control button:hover:not(:disabled),
   .segmented-control button.active,
-  .canvas-layer-trigger,
-  .canvas-layer-trigger:hover,
-  .canvas-layer-preset:hover,
-  .canvas-layer-preset.active,
   .canvas-minimap:hover,
   .canvas-minimap:active,
   .section-viewer-modes button:hover:not(:disabled),

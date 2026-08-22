@@ -42,7 +42,7 @@ import {
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
 import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
-import type { EditorLayerAction, EditorLayerState } from './editorLayers';
+import type { EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
@@ -244,11 +244,12 @@ const supportCycle = ['none', 'pin', 'roller', 'fixed'] as const;
 export const StructuralCanvas = ({
   onRequestInspector,
   layers,
-  dispatchLayers,
 }: {
   onRequestInspector?: () => void;
+  /* Sólo LEE las capas para pintar. Quien las cambia es «Vista», la única
+     superficie de visualización; el lienzo perdió el panel flotante que las
+     despachaba y con él la mitad de escritura de esta prop. */
   layers: EditorLayerState;
-  dispatchLayers: (action: EditorLayerAction) => void;
 }) => {
   const {
     project,
@@ -256,7 +257,6 @@ export const StructuralCanvas = ({
     activeTool,
     selection,
     resultTab,
-    setResultTab,
     selectedCombinationId,
     setSelection,
     setActiveTool,
@@ -2580,10 +2580,6 @@ export const StructuralCanvas = ({
         modeLabel={t(toolLabelKeys[activeTool])}
         placementInstruction={loadPlacementInstruction}
         showHelp={layers.help}
-        layers={layers}
-        dispatchLayers={dispatchLayers}
-        resultTab={resultTab}
-        setResultTab={setResultTab}
         snapEnabled={view.snap}
         gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}

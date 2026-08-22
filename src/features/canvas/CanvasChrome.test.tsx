@@ -5,28 +5,22 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { CanvasChrome } from './CanvasChrome';
-import { createEditorLayerState } from './editorLayers';
 
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
 describe('CanvasChrome', () => {
-  it('renders camera, layers, mode and coordinate surfaces while delegating every command', async () => {
+  it('renders camera, mode and coordinate surfaces while delegating every command', async () => {
     const user = userEvent.setup();
     const onCancelPlacement = vi.fn();
     const onZoomIn = vi.fn();
     const onZoomOut = vi.fn();
     const onFit = vi.fn();
-    const dispatchLayers = vi.fn();
     const coordinateReadoutRef = createRef<HTMLOutputElement>();
     const { container } = render(<ProjectProvider><CanvasChrome
       modeLabel="Carga puntual"
       placementInstruction="Elige un nodo"
       showHelp
-      layers={createEditorLayerState()}
-      dispatchLayers={dispatchLayers}
-      resultTab="moment"
-      setResultTab={vi.fn()}
       snapEnabled
       gridEnabled={false}
       coordinateReadoutRef={coordinateReadoutRef}
@@ -38,7 +32,11 @@ describe('CanvasChrome', () => {
       onFit={onFit}
     /></ProjectProvider>);
 
-    expect(container.querySelectorAll('[data-canvas-chrome]')).toHaveLength(5);
+    /* Cuatro, no cinco: el disparador de capas se fue con el panel flotante que
+       abría. Las capas se deciden en «Vista», que es la única superficie de
+       visualización — antes eran dos destinos para la misma decisión, cada uno
+       con su propio almacén. */
+    expect(container.querySelectorAll('[data-canvas-chrome]')).toHaveLength(4);
     expect(screen.getByText('Elige un nodo')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cancelar colocación' })).toBeTruthy();
     expect(container.querySelector('.canvas-mode-badge')?.classList.contains('placing-load')).toBe(true);
