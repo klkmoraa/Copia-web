@@ -45,6 +45,11 @@
   box-shadow: none;
 }
 
+.model-doctor-health { --doctor-health: var(--sc-color-state-success); }
+.model-doctor-health[data-severity='critical'] { --doctor-health: var(--sc-color-state-error); }
+.model-doctor-health[data-severity='warning'] { --doctor-health: var(--sc-color-state-warning-foreground); }
+.model-doctor-health[data-severity='suggestion'] { --doctor-health: var(--sc-color-state-info); }
+
 .model-doctor-health__icon {
   width: var(--sc-control-height-touch);
   height: var(--sc-control-height-touch);
@@ -52,8 +57,8 @@
   display: grid;
   place-items: center;
   border-radius: var(--sc-radius-md);
-  color: var(--sc-color-action-primary);
-  background: color-mix(in srgb, var(--sc-color-action-primary) 12%, var(--sc-color-surface-1));
+  color: var(--doctor-health);
+  background: color-mix(in srgb, var(--doctor-health) 12%, var(--sc-color-surface-1));
 }
 
 .model-doctor-health strong,

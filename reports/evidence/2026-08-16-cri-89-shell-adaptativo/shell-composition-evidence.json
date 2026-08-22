@@ -8,16 +8,13 @@
       "density": "30px",
       "shellClass": "X2",
       "toolRailCompact": null,
-      "densityRow": "30px",
+      "densityRow": "26px",
       "railDataAttr": "expanded",
       "cellHeight": null,
-      "canvasArea": 774360,
+      "canvasArea": 759920,
       "docScrollWidth": 1440,
       "innerWidth": 1440,
-      "denseRowHeight": {
-        "inheritedDensity": "30px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "X2 · 1280x800",
@@ -27,16 +24,13 @@
       "density": "30px",
       "shellClass": "X2",
       "toolRailCompact": null,
-      "densityRow": "30px",
+      "densityRow": "26px",
       "railDataAttr": "expanded",
       "cellHeight": null,
-      "canvasArea": 565160,
+      "canvasArea": 551760,
       "docScrollWidth": 1280,
       "innerWidth": 1280,
-      "denseRowHeight": {
-        "inheritedDensity": "30px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "M1 · 1100x768",
@@ -46,16 +40,13 @@
       "density": "36px",
       "shellClass": "M1",
       "toolRailCompact": "true",
-      "densityRow": "36px",
+      "densityRow": "32px",
       "railDataAttr": "compact",
       "cellHeight": null,
-      "canvasArea": 417648,
+      "canvasArea": 624600,
       "docScrollWidth": 1100,
       "innerWidth": 1100,
-      "denseRowHeight": {
-        "inheritedDensity": "36px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "M1 · 1024x768",
@@ -65,16 +56,13 @@
       "density": "36px",
       "shellClass": "M1",
       "toolRailCompact": "true",
-      "densityRow": "36px",
+      "densityRow": "32px",
       "railDataAttr": "compact",
       "cellHeight": null,
-      "canvasArea": 366120,
+      "canvasArea": 571856,
       "docScrollWidth": 1024,
       "innerWidth": 1024,
-      "denseRowHeight": {
-        "inheritedDensity": "36px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "K0 portrait · 390x844",
@@ -87,13 +75,10 @@
       "densityRow": "44px",
       "railDataAttr": "compact",
       "cellHeight": null,
-      "canvasArea": 287820,
+      "canvasArea": 288600,
       "docScrollWidth": 390,
       "innerWidth": 390,
-      "denseRowHeight": {
-        "inheritedDensity": "44px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "K0 landscape · 844x390",
@@ -106,13 +91,10 @@
       "densityRow": "44px",
       "railDataAttr": "compact",
       "cellHeight": null,
-      "canvasArea": 268128,
+      "canvasArea": 224224,
       "docScrollWidth": 844,
       "innerWidth": 844,
-      "denseRowHeight": {
-        "inheritedDensity": "44px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     },
     {
       "label": "K0 tablet · 768x1024",
@@ -125,13 +107,10 @@
       "densityRow": "44px",
       "railDataAttr": "compact",
       "cellHeight": null,
-      "canvasArea": 692736,
+      "canvasArea": 698880,
       "docScrollWidth": 768,
       "innerWidth": 768,
-      "denseRowHeight": {
-        "inheritedDensity": "44px",
-        "rowHeight": 47
-      }
+      "denseRowHeight": null
     }
   ],
   "sweep": {
@@ -153,8 +132,8 @@
   "rotation": {
     "portrait": "K0",
     "landscape": "K0",
-    "selectionPortrait": "InspectorCargasVistaNada seleccionado—Selecciona un nodo, miembro, apoyo o carga en el lie",
-    "selectionLandscape": "InspectorCargasVistaNada seleccionado—Selecciona un nodo, miembro, apoyo o carga en el lie"
+    "selectionPortrait": "CompactaMediaCasi completaNada seleccionado—Selecciona un nodo, miembro, apoyo o carga en ",
+    "selectionLandscape": "CompactaMediaCasi completaNada seleccionado—Selecciona un nodo, miembro, apoyo o carga en "
   },
   "overflow": [
     {
@@ -186,7 +165,32 @@
       "overflowPx": 0
     }
   ],
-  "failures": [],
+  "failures": [
+    {
+      "name": "densidad X2 · 1440x900",
+      "detail": {
+        "got": "26px"
+      }
+    },
+    {
+      "name": "densidad X2 · 1280x800",
+      "detail": {
+        "got": "26px"
+      }
+    },
+    {
+      "name": "densidad M1 · 1100x768",
+      "detail": {
+        "got": "32px"
+      }
+    },
+    {
+      "name": "densidad M1 · 1024x768",
+      "detail": {
+        "got": "32px"
+      }
+    }
+  ],
   "compactBridge": {
     "from1024": "M1",
     "down1023": "K0",

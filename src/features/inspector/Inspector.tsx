@@ -359,6 +359,7 @@ const LayersSection = ({ layers, dispatch }: { layers: EditorLayerState; dispatc
     {/* N / V / M / deformada / mapa se eligen aquí como capa (CRI-100): elegir
         una enciende el escalón sobre el dibujo, nunca abre una pestaña ni un
         panel de resultados. */}
+    <h4 className="inspector-layers__group">{t('canvas.evidenceLayers')}</h4>
     <div className="filter-chip-row" role="group" aria-label={t('canvas.evidenceLayers')}>
       {EVIDENCE_LAYERS.map(({ id, labelKey }) => <button
         key={id}

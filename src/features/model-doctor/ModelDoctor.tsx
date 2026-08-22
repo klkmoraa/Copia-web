@@ -370,7 +370,15 @@ export const ModelDoctor = ({
       onRegenerate={() => openRepairPreview()}
       onApply={() => { void applyRepair(); }}
       onCancel={() => { setPreview(null); setRepairError(''); }}
-    /> : <><section className="model-doctor-health" aria-label={copy.healthLabel}>
+    /> : <><section
+      className="model-doctor-health"
+      /* El color significa algo: el escudo del resumen lleva la severidad PEOR
+         del informe, no el acento de acción. Un escudo azul sobre «2 críticos»
+         decía «esto es lo siguiente que hacer», que es justo lo que el acento
+         está reservado a decir y justo lo que este resumen no es. */
+      data-severity={report.counts.critical > 0 ? 'critical' : report.counts.warning > 0 ? 'warning' : report.total > 0 ? 'suggestion' : 'clear'}
+      aria-label={copy.healthLabel}
+    >
       <div className="model-doctor-health__icon" aria-hidden="true"><ShieldAlert size={22} /></div>
       <div>
         <strong>{copy.summary(report.counts.critical, report.counts.warning, report.counts.suggestion)}</strong>
@@ -449,7 +457,10 @@ export const ModelDoctor = ({
 
             {finding.repair && !finding.repair.available ? <p className="model-doctor-repair-note">{copy.ambiguousRepair}</p> : null}
 
-            <footer className="model-doctor-finding__actions">
+            {/* Un pie sin acciones sigue siendo una fila de la rejilla —y su
+                `gap`—: la tarjeta quedaba con un dedo de aire muerto abajo. Si no
+                hay nada que ofrecer, no hay pie. */}
+            {finding.canLocate || finding.suggestedTool || finding.repair?.available || finding.canAcknowledge ? <footer className="model-doctor-finding__actions">
               {/* Un hallazgo que no se puede localizar simplemente no ofrece
                   «Localizar». Antes ponía «Sin ubicación física disponible» en
                   el sitio donde debería haber una acción: una frase que no se
@@ -467,7 +478,7 @@ export const ModelDoctor = ({
               {finding.canAcknowledge ? <Button aria-label={`${isAcknowledged ? copy.unacknowledge : copy.acknowledge}: ${presented.title}`} size="touch" variant="secondary" onClick={() => toggleAcknowledged(finding.id)}>
                 {isAcknowledged ? copy.unacknowledge : copy.acknowledge}
               </Button> : null}
-            </footer>
+            </footer> : null}
             {isAcknowledged ? <span className="model-doctor-acknowledged"><CheckCircle2 size={16} aria-hidden="true" /> {copy.acknowledged}</span> : null}
           </article>;
         })}

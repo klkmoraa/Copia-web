@@ -466,10 +466,19 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .export-menu { width:min(280px,calc(100vw - 24px)); }
 .portable-export-error { padding:8px 10px; border-radius:var(--sc-radius-control); background:color-mix(in srgb,var(--error) 9%,var(--surface)); color:var(--error); font-size:11px; line-height:1.35; }
 .portable-export-error.desktop { position:absolute; z-index:45; right:18px; top:calc(100% + 6px); width:min(300px,calc(100vw - 24px)); border:1px solid color-mix(in srgb,var(--error) 30%,var(--border)); box-shadow:var(--shadow); }
-.popover button { width: 100%; min-height:var(--sc-control-height-touch); border: 0; background: transparent; text-align: left; padding: 10px; border-radius:var(--sc-radius-control); display: flex; gap: 10px; align-items: center; font-size:var(--sc-font-size-control); color:var(--text); font-weight:550; transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
-.popover button:hover, .popover button:focus-visible { background: var(--surface-2); color:var(--accent); outline:none; }
+/* Una sola gramática de fila para las dos presentaciones del desbordamiento:
+   popover fuera de Compact, hoja inferior dentro. Sin esto, las filas de la
+   hoja caían al botón genérico —centrado, en una caja gris— y la misma lista
+   se leía como un formulario en un sitio y como un menú en el otro. */
+.popover button,
+.topbar-overflow-sheet .sc-modal-surface__body > .menu-section > button,
+.topbar-overflow-sheet .mobile-history-actions button { width: 100%; min-height:var(--sc-control-height-touch); border: 0; background: transparent; text-align: left; padding: 10px; border-radius:var(--sc-radius-control); display: flex; gap: 10px; align-items: center; font-size:var(--sc-font-size-control); color:var(--text); font-weight:550; transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
+.popover button:hover, .popover button:focus-visible,
+.topbar-overflow-sheet .sc-modal-surface__body button:hover,
+.topbar-overflow-sheet .sc-modal-surface__body button:focus-visible { background: var(--surface-2); color:var(--accent); outline:none; }
 .popover button:active { transform:var(--sc-press-transform); background:var(--surface-3); }
-.popover button svg { color:var(--muted); transition:color var(--sc-motion-fast) var(--sc-ease-standard); }
+.popover button svg,
+.topbar-overflow-sheet .sc-modal-surface__body button svg { color:var(--muted); transition:color var(--sc-motion-fast) var(--sc-ease-standard); }
 .popover button:hover svg, .popover button:focus-visible svg { color:var(--accent); }
 .menu-copy { display: flex; flex-direction: column; gap: 2px; }
 .menu-copy small { color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.4; }
@@ -643,7 +652,10 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .canvas-controls button:hover { background: var(--sc-color-fill-quaternary); }
 .canvas-mode-badge { position:absolute; z-index:4; left:12px; top:10px; max-width:min(430px,calc(100% - 28px)); display:flex; align-items:center; gap:6px; padding:3px 8px; border-radius:var(--sc-radius-control); font-size:var(--sc-font-size-label); color:var(--muted); pointer-events:none; }
 .canvas-mode-badge strong { color:var(--text); font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-semibold); }
-.canvas-mode-badge strong::after { content:'·'; margin-left:8px; color:var(--subtle); }
+/* El separador lo pone lo que VIENE DESPUÉS, no lo que va antes: colgado del
+   rótulo quedaba un «·» suelto a la derecha en cuanto la pista de gesto se
+   ocultaba por ancho, que es lo que pasa por debajo de 460px. */
+.canvas-mode-badge > :not(strong)::before { content:'·'; margin-right:8px; color:var(--subtle); }
 .canvas-mode-badge.placing-load { pointer-events:auto; box-shadow:var(--sc-elevation-3), var(--sc-ring-inset); }
 .canvas-mode-badge.placing-load strong { color:var(--force); white-space:nowrap; }
 .canvas-mode-badge.placing-load .canvas-action-instruction { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -823,8 +835,26 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
    necesitan ni posicionamiento ni materia propia, porque la superficie que las
    contiene ya es un destino con su sitio y su material. Lo único que hace falta
    es el reparto: cinco presets en vez de dos, y una lista con aire. */
-.inspector-layer-presets { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.inspector-layer-presets button { padding: 7px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Cinco presets no caben en cinco columnas sobre un teléfono —«Resultados» se
+   truncaba a «Result…»— y en dos filas de tres dejan un hueco. Una sola fila que
+   se desliza: ninguno se recorta, ninguno queda cojo, y es lo que hace el
+   sistema cuando un segmentado no cabe. */
+.inspector-layer-presets {
+  display: flex;
+  grid-template-columns: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.inspector-layer-presets::-webkit-scrollbar { display: none; }
+.inspector-layer-presets button { flex: 0 0 auto; padding: 7px 12px; scroll-snap-align: start; white-space: nowrap; }
+/* La evidencia es una fila de chips, no una bandeja: `.filter-chip-row` lleva
+   relleno propio para cuando vive dentro de una tarjeta, y aquí ya está dentro
+   de una sección del inspector. */
+.inspector-layers .filter-chip-row { margin-top: var(--sc-space-2); background: transparent; }
+/* Un rótulo pequeño se distingue por ser gris y semibold, no por gritar en
+   versalitas (§«Lo que este sistema no hace»). */
+.inspector-layers__group { margin: var(--sc-space-4) 0 0; color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-semibold); }
 .inspector-layer-list { display: grid; gap: 2px; margin-top: var(--sc-space-3); }
 .inspector-layers__reset {
   width: 100%;
@@ -1047,7 +1077,14 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   /* Nav bar del teléfono: marca · título · `⋯`. El título es el centro de la
      barra, no un campo comprimido contra la marca — antes competía con ocho
      controles más y se truncaba a «P…». */
-  .brand-block { min-width:0; }
+  /* `justify-self:start` encoge la zona a su contenido, y con ella el título:
+     en la nav bar la zona del documento es la columna elástica y tiene que
+     ocuparla entera para que el nombre disponga del hueco que deja `⋯`. */
+  .brand-block { min-width:0; justify-self:stretch; }
+  /* El título crece hasta ese hueco: sin esto el campo medía su contenido y
+     quedaba pegado a la marca con 150px libres al lado. */
+  .document-identity { flex:1 1 auto; min-width:0; }
+  .project-name { flex:1 1 auto; }
   .project-name { min-width:0; padding:0 var(--sc-space-1); justify-content:center; }
   /* `min-width` bajo desde aquí: la Cinta debe encoger el nombre antes de
      que su celda de grid desborde sobre `actions`/`status` (CRI-95). El
@@ -1141,7 +1178,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 @media (max-width: 460px) {
   :root { --topbar-h:52px; }
-  .project-name input { width:min(100px,26vw); font-size:var(--sc-font-size-label); }
+  /* El título usa el hueco que hay, no un ancho fijo: a 360px un `min(100px)`
+     lo truncaba a «Proy…» teniendo 150px libres al lado. */
+  .project-name input { font-size:var(--sc-font-size-label); }
   .autosave-state { display:none; }
   .brand-mark { width:26px; font-size:25px; }.topbar { padding-left:8px; padding-right:8px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
@@ -1518,7 +1557,11 @@ button,
   }
   .topbar [data-topbar-cluster] { min-height:0; padding:0; border:0; background:transparent; box-shadow:none; }
   .brand-home-button,.project-menu-toggle { min-width:44px; min-height:44px; }
-  .analysis-status { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); min-width:var(--sc-control-height-touch); padding:0; }
+  /* Sin sombra: en la nav bar el estado es un ítem plano como los otros tres, y
+     una elevación sobre fondo transparente dibujaba el contorno de una caja que
+     no existe — un recuadro vacío en la esquina. La profundidad se reserva para
+     lo que de verdad flota. */
+  .analysis-status { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); min-width:var(--sc-control-height-touch); padding:0; box-shadow:none; }
   .project-menu-toggle { width:44px; height:44px; }
   .project-menu,.mobile-actions-menu {
     max-height:calc(100dvh - var(--topbar-h) - env(safe-area-inset-top) - 14px);

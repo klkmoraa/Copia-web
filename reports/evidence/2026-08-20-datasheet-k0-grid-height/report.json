@@ -125,7 +125,7 @@
       "name": "k0-landscape · la fila de la rejilla no colapsa",
       "ok": true,
       "detail": {
-        "gridTemplateRows": "207.5px 74.4844px"
+        "gridTemplateRows": "203.75px 73.25px"
       }
     },
     {
@@ -133,14 +133,14 @@
       "ok": true,
       "detail": {
         "gridScroll": {
-          "clientHeight": 79,
+          "clientHeight": 75,
           "scrollHeight": 2018,
-          "height": 81
+          "height": 77
         },
         "main": {
-          "clientHeight": 208,
-          "scrollHeight": 208,
-          "height": 208
+          "clientHeight": 204,
+          "scrollHeight": 204,
+          "height": 204
         }
       }
     },
@@ -149,7 +149,7 @@
       "ok": true,
       "detail": {
         "scrollHeight": 2018,
-        "clientHeight": 79,
+        "clientHeight": 75,
         "bodyRows": 60
       }
     },
@@ -158,8 +158,8 @@
       "ok": true,
       "detail": {
         "before": 0,
-        "after": 1939,
-        "max": 1939
+        "after": 1943,
+        "max": 1943
       }
     },
     {
@@ -213,9 +213,9 @@
       "name": "k0-landscape · la rejilla conserva la mayoría del presupuesto vertical",
       "ok": true,
       "detail": {
-        "main": 208,
-        "context": 74,
-        "layout": 298
+        "main": 204,
+        "context": 73,
+        "layout": 293
       }
     },
     {
@@ -267,7 +267,7 @@
           "pending": 1,
           "text": "7.5",
           "scrollTop": 240,
-          "gridClientHeight": 576
+          "gridClientHeight": 571
         }
       }
     },
@@ -287,7 +287,7 @@
         "pending": 1,
         "text": "7.5",
         "scrollTop": 240,
-        "gridClientHeight": 576
+        "gridClientHeight": 571
       }
     },
     {
@@ -797,16 +797,16 @@
       "ok": true,
       "detail": {
         "presentation": "drawer",
-        "gridTemplateRows": "574.812px"
+        "gridTemplateRows": "569.828px"
       }
     },
     {
       "name": "m1 · la rejilla mantiene su carril",
       "ok": true,
       "detail": {
-        "clientHeight": 446,
+        "clientHeight": 441,
         "scrollHeight": 2018,
-        "height": 448
+        "height": 443
       }
     },
     {
@@ -831,16 +831,16 @@
       "ok": true,
       "detail": {
         "presentation": "drawer",
-        "gridTemplateRows": "690.984px"
+        "gridTemplateRows": "686px"
       }
     },
     {
       "name": "x2 · la rejilla mantiene su carril",
       "ok": true,
       "detail": {
-        "clientHeight": 576,
+        "clientHeight": 571,
         "scrollHeight": 2018,
-        "height": 578
+        "height": 573
       }
     },
     {
@@ -903,31 +903,31 @@
     "k0-landscape": {
       "shellClass": "K0",
       "presentation": "fullscreen",
-      "gridTemplateRows": "207.5px 74.4844px",
+      "gridTemplateRows": "203.75px 73.25px",
       "layout": {
-        "clientHeight": 298,
-        "scrollHeight": 298,
-        "height": 298
+        "clientHeight": 293,
+        "scrollHeight": 293,
+        "height": 293
       },
       "main": {
-        "clientHeight": 208,
-        "scrollHeight": 208,
-        "height": 208
+        "clientHeight": 204,
+        "scrollHeight": 204,
+        "height": 204
       },
       "gridScroll": {
-        "clientHeight": 79,
+        "clientHeight": 75,
         "scrollHeight": 2018,
-        "height": 81
+        "height": 77
       },
       "context": {
-        "clientHeight": 74,
-        "scrollHeight": 74,
-        "height": 74
+        "clientHeight": 73,
+        "scrollHeight": 73,
+        "height": 73
       },
       "bodyRows": 60,
       "centre": {
         "x": 422,
-        "y": 200
+        "y": 204
       },
       "hit": {
         "tag": "TD",
@@ -940,31 +940,31 @@
     "m1": {
       "shellClass": "M1",
       "presentation": "drawer",
-      "gridTemplateRows": "574.812px",
+      "gridTemplateRows": "569.828px",
       "layout": {
-        "clientHeight": 575,
-        "scrollHeight": 575,
-        "height": 575
+        "clientHeight": 570,
+        "scrollHeight": 570,
+        "height": 570
       },
       "main": {
-        "clientHeight": 575,
-        "scrollHeight": 575,
-        "height": 575
+        "clientHeight": 570,
+        "scrollHeight": 570,
+        "height": 570
       },
       "gridScroll": {
-        "clientHeight": 446,
+        "clientHeight": 441,
         "scrollHeight": 2018,
-        "height": 448
+        "height": 443
       },
       "context": {
-        "clientHeight": 575,
-        "scrollHeight": 575,
-        "height": 575
+        "clientHeight": 570,
+        "scrollHeight": 570,
+        "height": 570
       },
       "bodyRows": 60,
       "centre": {
         "x": 402,
-        "y": 485
+        "y": 488
       },
       "hit": {
         "tag": "TD",
@@ -977,31 +977,31 @@
     "x2": {
       "shellClass": "X2",
       "presentation": "drawer",
-      "gridTemplateRows": "690.984px",
+      "gridTemplateRows": "686px",
       "layout": {
-        "clientHeight": 691,
-        "scrollHeight": 691,
-        "height": 691
+        "clientHeight": 686,
+        "scrollHeight": 686,
+        "height": 686
       },
       "main": {
-        "clientHeight": 691,
-        "scrollHeight": 691,
-        "height": 691
+        "clientHeight": 686,
+        "scrollHeight": 686,
+        "height": 686
       },
       "gridScroll": {
-        "clientHeight": 576,
+        "clientHeight": 571,
         "scrollHeight": 2018,
-        "height": 578
+        "height": 573
       },
       "context": {
-        "clientHeight": 691,
-        "scrollHeight": 691,
-        "height": 691
+        "clientHeight": 686,
+        "scrollHeight": 686,
+        "height": 686
       },
       "bodyRows": 60,
       "centre": {
         "x": 572,
-        "y": 566
+        "y": 568
       },
       "hit": {
         "tag": "TD",

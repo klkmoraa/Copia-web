@@ -103,6 +103,18 @@ La frontera matemática (`src/engine/**`, `src/workers/**`, `src/data/**`,
 `store/ProjectContext.tsx`, `types.ts`) queda byte a byte idéntica: `verify:protected`
 pasa sin `--update`, 38 archivos verificados.
 
+## Estado de los gates
+
+| Gate | Resultado |
+|---|---|
+| `npm run verify` | verde (lint · docs · frontera protegida 38 archivos · 2236 pruebas · build · presupuesto) |
+| `npm run qa` | verde · 158 checks, consola y errores de página limpios |
+| `qa:topbar` | verde — **venía rojo** («TopBar controls overlap at 360px»), comprobado contra el commit base |
+| `qa:model-doctor-peek` · `qa:datasheet-k0` · `qa-welcome` · `qa:bulk-edit` · `qa:structure-generator` | verdes |
+| `qa-shell-composition` | 4 fallos de densidad de fila en X2/M1 — **idénticos en el commit base**, ajenos a esta tanda |
+| `qa:model-doctor` | rojo en la última fase (foco tras Ctrl+K) — **reproducido igual en el commit base** |
+| `qa-structural-edits` · `qa-results-cards` | rojos al arrancar: esperan la pantalla de bienvenida y la app restaura el proyecto desde IndexedDB, que esos scripts no limpian (`qa.mjs` sí lo hace). Ajeno a la composición |
+
 ## Pendiente / siguiente paso
 
 - `scripts/qa-model-doctor.mjs` falla en la última fase (Ctrl+K → paleta → Doctor → Escape:
@@ -112,6 +124,18 @@ pasa sin `--update`, 38 archivos verificados.
   aún lo tiene y está a punto de desmontarse; el arreglo es pasar el lanzador por
   `returnFocusTo`, lo que toca el contrato de foco del broker y queda fuera del alcance de
   este rediseño.
-- `scripts/qa-structural-edits.mjs` también venía rojo (en base lo bloqueaba justamente el
-  pill flotante de lanzadores que aquí se retira). Su recorrido táctil quedó avanzando
-  mucho más lejos y se le corrigieron tres rutas, pero no se declara verde.
+- `scripts/qa-structural-edits.mjs` también venía rojo — en base lo bloqueaba justamente el
+  pill flotante de lanzadores que aquí se retira. Su recorrido táctil avanza ahora hasta el
+  final y se le corrigieron cuatro rutas, pero arranca fallando por lo del párrafo
+  siguiente, así que no se declara verde.
+- `qa-structural-edits` y `qa-results-cards` esperan la pantalla de bienvenida tras un
+  `reload`, y la app restaura el último proyecto desde IndexedDB — que esos dos scripts no
+  limpian, a diferencia de `qa.mjs` (`startWithEmptyLibrary`). Es una laguna del arranque de
+  esos scripts, no del producto.
+- La barra inferior deja `.autosave-state` en 0×0 sobre teléfono: su estado sigue en la hoja
+  de `⋯` (`mobile-storage-state`), que es la ruta compacta declarada, pero un elemento con
+  `aria-live` colapsado a cero debería ser `sr-only` explícito y no un hijo flex sin tamaño.
+- Seleccionar en el lienzo PIDE el Inspector, y su hoja ocupa la única ranura contextual de
+  Compact, con lo que el zócalo derivado queda suspendido en cada toque. Es el contrato
+  vigente (`resolveSurfaceActivity`), pero merece revisarse: obliga a devolver una hoja que
+  el usuario no pidió para llegar a «Editar selección».
