@@ -68,23 +68,18 @@
   /* 1 · PRIMITIVAS                                                      */
   /* ------------------------------------------------------------------ */
   --sc-white: #ffffff;
-  --sc-black: #000000;
 
   /* Escala acromática de sistema. Es literalmente neutra —R=G=B salvo el
      redondeo de los grados que Apple publica—, y ésa es la decisión: en cuanto
      un gris coge temperatura, el acento deja de ser el único color de la
      pantalla. */
-  --sc-grey-50: #fbfbfd;
   --sc-grey-100: #f5f5f7;
   --sc-grey-150: #efeff1;
   --sc-grey-200: #e8e8ea;
   --sc-grey-300: #d2d2d7;
-  --sc-grey-400: #aeaeb2;
   --sc-grey-500: #8e8e93;
   --sc-grey-600: #6e6e73;
   --sc-grey-700: #48484a;
-  --sc-grey-800: #3a3a3c;
-  --sc-grey-850: #2c2c2e;
   --sc-grey-900: #1d1d1f;
   --sc-grey-950: #141416;
 
@@ -159,7 +154,6 @@
      unidad dentro de un campo inactivo— no se acoge a la exención de WCAG 1.4.3
      para componentes inactivos: eso hay que leerlo. 4,61:1 sobre la superficie. */
   --sc-color-text-disabled-content: #75757a;
-  --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-ink-light);
   --sc-color-text-technical: var(--sc-grey-600);
   --sc-color-text-unit: #75757a;
@@ -205,9 +199,7 @@
   --sc-color-state-error: var(--sc-sys-red-light);       /* 5,03:1 */
   --sc-color-state-critical: #a20010;                    /* 7,72:1 */
   --sc-color-state-info: var(--sc-blue-ink-light);
-  --sc-color-state-stale: var(--sc-sys-yellow-light);
   --sc-color-state-loading: var(--sc-blue-ink-light);
-  --sc-color-state-pending: var(--sc-grey-500);
   --sc-color-state-warning-foreground: #8f4000;
   --sc-color-state-error-foreground: #b00011;
 
@@ -271,7 +263,6 @@
   --sc-color-technical-dimension: var(--sc-sys-yellow-light); /* 4,86:1 */
   --sc-color-technical-axis: var(--sc-sys-brown-light);       /* 5,10:1 */
   --sc-color-technical-distributed: var(--sc-color-load-distributed);
-  --sc-color-technical-distributed-area: var(--sc-color-technical-shear-area);
 
   /* Rampa del índice elástico estimado. Es una escala secuencial de una sola
      familia: comunica *cuánta* demanda hay, no si eso es aceptable. El
@@ -284,35 +275,20 @@
   --sc-color-demand-reference-peak: #4a1d63;
   --sc-color-demand-unevaluated: var(--sc-grey-500);
 
-  /* Roles estructurales formalizados. Mapean sobre los técnicos verificados. */
+  /* Los tres roles estructurales que el lienzo consume de verdad. La capa
+     anterior declaraba veintiuno —muelle, rótula, liberación, tracción,
+     compresión, cortante y momento con signo…— de los que dieciocho no tenían
+     un solo consumidor: eran intención documentada disfrazada de código. Un
+     token que nadie lee no reserva un significado, sólo viaja en el chunk de
+     entrada. */
   --sc-color-structure-member: var(--sc-color-canvas-member);
-  --sc-color-structure-member-selected: var(--sc-color-selection-stroke);
   --sc-color-structure-node: var(--sc-color-canvas-member);
-  --sc-color-structure-node-selected: var(--sc-color-selection-stroke);
   --sc-color-structure-support: var(--sc-color-canvas-member);
-  --sc-color-structure-spring: var(--sc-color-technical-axis);
-  --sc-color-structure-hinge: var(--sc-color-technical-axis);
-  --sc-color-structure-release: var(--sc-color-technical-axis);
-  --sc-color-load-moment: var(--sc-color-load-moment-applied);
-  --sc-color-reaction: var(--sc-color-technical-reaction);
-  --sc-color-axial-tension: var(--sc-color-technical-axial);
-  --sc-color-axial-compression: var(--sc-sys-purple-light);
-  --sc-color-shear-positive: var(--sc-color-technical-shear);
-  --sc-color-shear-negative: var(--sc-color-technical-shear);
-  --sc-color-moment-positive: var(--sc-color-technical-moment);
-  --sc-color-moment-negative: var(--sc-color-technical-moment);
-  --sc-color-deformation: var(--sc-color-technical-deformed);
   /* Influencia: área rosa + canto systemPink (5,00:1). El consumidor mantiene
      `stroke-dasharray`; el patrón no sustituye al contraste. */
   --sc-color-influence-area: #ffd9e2;
   --sc-color-influence-line: var(--sc-sys-pink-light);
   --sc-color-envelope: #5e46c8;
-  --sc-color-critical-point: var(--sc-sys-yellow-light);
-  --sc-color-geometry-error: var(--sc-color-state-error);
-  --sc-color-stale-result: var(--sc-color-state-warning);
-  --sc-color-selection-outline: var(--sc-color-selection-stroke);
-  --sc-color-snap-target: var(--sc-color-action-ink);
-  --sc-color-hover-target: var(--sc-color-action-ink);
 
   /* Identificación de herramientas: refleja el lienzo. */
   --sc-color-tool-navigation: var(--sc-color-text-secondary);
@@ -383,7 +359,6 @@
   --sc-radius-lg: var(--sc-radius-card);
   --sc-radius-xl: var(--sc-radius-panel);
   --sc-radius-2xl: var(--sc-radius-panel);
-  --sc-radius-hero: var(--sc-radius-modal);
   --sc-radius-sheet: var(--sc-radius-panel);
 
   /* ------------------------------------------------------------------ */
@@ -413,7 +388,6 @@
      ESCALA POR ALTURA REAL, NUNCA POR IMPORTANCIA. Un panel acoplado no
      proyecta nada porque no está despegado de nada; un menú sí, porque flota
      por encima de todo. */
-  --sc-elevation-0: none;
   --sc-elevation-1: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --sc-elevation-2: 0 0 0 0.5px rgba(0, 0, 0, 0.07), 0 4px 12px rgba(0, 0, 0, 0.08);
   --sc-elevation-3: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 10px 32px rgba(0, 0, 0, 0.14);
@@ -428,13 +402,11 @@
   /* Roles de sombra consumidos por el CSS existente. Cada uno resuelve a un
      escalón de la escala de arriba: la altura la decide el rol, no el nombre. */
   --sc-shadow-raised: var(--sc-elevation-1);
-  --sc-shadow-lifted: var(--sc-elevation-2);
   --sc-shadow-floating: var(--sc-elevation-3);
   --sc-shadow-modal: var(--sc-elevation-4);
   --sc-shadow-popover: var(--sc-elevation-3);
   /* `drop-shadow()` sólo admite una capa y no dibuja contornos, así que la
      variante recortada lleva únicamente la proyección. */
-  --sc-shadow-drop: 0 8px 24px rgba(0, 0, 0, 0.16);
   /* Una hoja nace pegada al borde del viewport: lo que la separa del plano de
      trabajo es oclusión de contacto, no la luz. Por eso no lleva componente
      horizontal. */
@@ -460,8 +432,6 @@
   /* Sin fuente de luz decorativa: ni halo, ni brillo, ni tinta de pantalla. */
   --sc-glow-accent: 0 0 transparent;
   --sc-glow-aula: 0 0 transparent;
-  --sc-gradient-brand-soft: none;
-  --sc-gradient-display: none;
   --sc-gradient-sheen: none;
 
   /* ------------------------------------------------------------------ */
@@ -476,7 +446,6 @@
      el cuerpo, y fuera de macOS lo hace el eje óptico de Inter. */
   --sc-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --sc-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --sc-font-heading: var(--sc-font-display);
   --sc-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, "Cascadia Mono", monospace;
 
   /* Pesos de SF. El 590 no es un capricho: es el valor real del "semibold" de
@@ -486,7 +455,6 @@
   --sc-font-weight-medium: 500;
   --sc-font-weight-semibold: 590;
   --sc-font-weight-bold: 700;
-  --sc-font-weight-heavy: 800;
   --sc-font-weight-display: 700;
 
   /* Escala de macOS, no de web. El cuerpo de una app de escritorio de Apple es
@@ -505,8 +473,6 @@
      estados vacíos grandes). La interfaz de trabajo no crece con la ventana. */
   --sc-font-size-display-xl: clamp(2.125rem, 1.4rem + 2.9vw, 3.5rem);
   --sc-font-size-display-md: 1.3125rem;
-  --sc-font-size-lead: clamp(0.9375rem, 0.89rem + 0.22vw, 1.0625rem);
-  --sc-line-height-display: 1.06;
   --sc-line-height-tight: 1.2;
   --sc-line-height-compact: 1.33;
   --sc-line-height-body: 1.47;
@@ -521,7 +487,6 @@
   /* Apple no trackea las versalitas a 0,16em: las deja apenas abiertas y sube
      el peso. Ésa es la diferencia entre una etiqueta de sistema y un eyebrow
      de landing page. */
-  --sc-tracking-eyebrow: 0.06em;
   --sc-tracking-wide: 0.04em;
   --sc-numeric-variant: tabular-nums lining-nums;
   --sc-numeric-features: "tnum" 1, "lnum" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
@@ -541,7 +506,6 @@
   --sc-layout-rail-compact: 68px;
   --sc-layout-inspector: 300px;
   --sc-layout-inspector-compact: 280px;
-  --sc-layout-results: 285px;
   --sc-layout-gutter: 16px;
   --sc-layout-reading: 1120px;
 
@@ -569,8 +533,6 @@
   --sc-ease-exit: cubic-bezier(0.4, 0, 0.9, 0.4);
   --sc-ease-press: cubic-bezier(0.2, 0, 0, 1);
   --sc-ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
-  --sc-spring-soft: cubic-bezier(0.34, 1.12, 0.42, 1);
-  --sc-spring-panel: cubic-bezier(0.32, 0.94, 0.28, 1);
   --sc-transition-control:
     background-color var(--sc-motion-control) var(--sc-ease-standard),
     border-color var(--sc-motion-control) var(--sc-ease-standard),
@@ -589,11 +551,8 @@
     background-color var(--sc-motion-standard) var(--sc-ease-standard),
     border-color var(--sc-motion-standard) var(--sc-ease-standard),
     color var(--sc-motion-fast) var(--sc-ease-standard);
-  --sc-z-base: 0;
-  --sc-z-panel: 10;
   --sc-z-sticky: 20;
   --sc-z-topbar: 30;
-  --sc-z-drawer: 60;
   --sc-z-sheet: 70;
   --sc-z-popover: 80;
   --sc-z-modal: 1200;
@@ -706,7 +665,6 @@
   --sc-color-text-muted: var(--sc-grey-500);
   --sc-color-text-disabled: #5c5c60;
   --sc-color-text-disabled-content: #98989d;
-  --sc-color-text-inverse: var(--sc-grey-950);
   --sc-color-text-link: var(--sc-blue-ink-dark);
   --sc-color-text-technical: #a1a1a6;
   --sc-color-text-unit: #98989d;
@@ -737,8 +695,6 @@
   --sc-color-state-warning: var(--sc-sys-yellow-dark);  /* 11,63:1 */
   --sc-color-state-error: var(--sc-sys-red-dark);       /* 4,82:1 */
   --sc-color-state-critical: #ff6961;                   /* 5,82:1 */
-  --sc-color-state-stale: var(--sc-sys-yellow-dark);
-  --sc-color-state-pending: var(--sc-grey-500);
   --sc-color-state-warning-foreground: var(--sc-sys-yellow-dark);
   --sc-color-state-error-foreground: #ff8b82;
   --sc-color-success-solid: #1a7f37;
@@ -759,11 +715,9 @@
   --sc-color-technical-reaction: var(--sc-blue-ink-dark);    /* 4,50:1 */
   --sc-color-technical-dimension: var(--sc-sys-yellow-dark); /* 11,63:1 */
   --sc-color-technical-axis: var(--sc-sys-brown-dark);       /* 5,34:1 */
-  --sc-color-axial-compression: var(--sc-sys-purple-dark);
   --sc-color-influence-area: #4a1626;
   --sc-color-influence-line: var(--sc-sys-pink-dark);        /* 4,66:1 */
   --sc-color-envelope: #a78bfa;
-  --sc-color-critical-point: var(--sc-sys-yellow-dark);
   --sc-color-demand-unevaluated: #7c7c82;
 
   /* Rampa del índice elástico: escala secuencial, no significado. Tiene que
@@ -799,7 +753,6 @@
   --sc-elevation-2: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.5);
   --sc-elevation-3: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 12px 36px rgba(0, 0, 0, 0.62);
   --sc-elevation-4: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 28px 68px rgba(0, 0, 0, 0.74);
-  --sc-shadow-drop: 0 8px 24px rgba(0, 0, 0, 0.6);
   --sc-shadow-sheet: 0 -0.5px 0 rgba(255, 255, 255, 0.1), 0 -12px 40px rgba(0, 0, 0, 0.6);
 
   /* El anillo especular se apaga: el blanco puro sobre carbón se lee como un
@@ -819,8 +772,6 @@
     --sc-motion-reveal: 0.001ms;
     --sc-motion-loading: 0.001ms;
     --sc-ease-emphasized: linear;
-    --sc-spring-soft: linear;
-    --sc-spring-panel: linear;
     /* Anular la duración no basta: un `transform` sin transición sigue saltando.
        Neutralizar el token apaga el encogido de todos los controles a la vez, y
        el estado sigue leyéndose por el relleno. */

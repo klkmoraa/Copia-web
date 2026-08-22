@@ -1,0 +1,77 @@
+# Publicación en GitHub Pages — structureCo
+#
+# Construye el sitio y lo publica en Pages. No llama modelos de IA, no commitea,
+# no etiqueta y no publica paquetes: sólo sube el `dist/` que produce `npm run build`.
+#
+# El build ya es seguro bajo subruta (`base: './'` en `vite.config.ts`): assets,
+# fuentes, manifiesto y service worker salen con rutas relativas, así que el sitio
+# funciona igual en la raíz de un dominio que en `/Copia-web/`.
+#
+# Se añade `.nojekyll` porque Pages sirve con Jekyll por defecto y Jekyll ignora
+# todo directorio que empiece por guion bajo; sin ese archivo, cualquier asset que
+# Vite emita con ese prefijo desaparecería en silencio.
+
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Permite publicar a mano desde cualquier rama mientras el rediseño no esté en
+  # `main`, sin tener que fusionar para poder ver el resultado.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación a la vez. `cancel-in-progress: false` a propósito: cancelar un
+# despliegue a medias puede dejar el sitio servido en un estado intermedio.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Construir el sitio
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node canónico
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Instalar dependencias exactas
+        run: npm ci
+
+      - name: Construir
+        run: npm run build
+
+      - name: Desactivar Jekyll
+        run: touch dist/.nojekyll
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Publicar
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Desplegar en Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -34,6 +34,7 @@ código + pruebas + gates ejecutables
 | Documento | Uso correcto |
 |---|---|
 | [Pre-RFC de IA y `CommandProposal`](architecture/structureco-fase-4-ai-command-proposal-pre-rfc.md) | Propuesta de seguridad futura; la IA no está implementada. |
+| [Sistema de diseño](../src/design-system/README.md) | Las cuatro decisiones del sistema visual, las nueve capas de tokens, la materia y los gates que lo sostienen. |
 | [Identidad visual oficial](../brand/README.md) | Assets protegidos, manifiesto y reglas de marca. |
 | [Validación de Space 3D](../validation/space3d/README.md) | Procedimiento y artefactos de oráculos; sus resultados deben revalidarse con los gates actuales. |
 

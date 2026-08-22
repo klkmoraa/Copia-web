@@ -6,8 +6,9 @@
  * actually be checked offline: basic YAML sanity (no tabs, top-level keys present,
  * balanced document), every `npm run <script>` the workflow invokes exists in
  * `package.json`, every local file path the workflow reads exists in the repository, and
- * none of the operations prohibited by the local CI policy appear (AI calls, deploy,
- * publish, push, tag).
+ * none of the operations prohibited by the local CI policy appear (AI calls, third-party
+ * deploys, publish, push, tag). GitHub Pages is the one sanctioned publication, and only
+ * through GitHub's own first-party actions.
  *
  * No YAML parser dependency is added for this: the check is deliberately a conservative,
  * dependency-free text scan rather than a full parse. A workflow that references a script
@@ -96,10 +97,26 @@ for (const file of workflowFiles) {
     [/npm publish/, 'publica un paquete'],
     [/\bgit push\b/, 'hace push'],
     [/\bgit tag\b/, 'crea un tag'],
-    [/actions\/deploy|deploy-pages|netlify|vercel/i, 'despliega'],
+    [/netlify|vercel/i, 'despliega a un proveedor externo'],
+    [/actions\/deploy(?!-pages)/i, 'despliega'],
   ];
   for (const [pattern, reason] of forbidden) {
     if (pattern.test(executableText)) note(relative, `${reason}; la política del CI local no lo permite.`);
+  }
+
+  // GitHub Pages es la ÚNICA publicación sancionada, y sólo con las acciones de
+  // primera parte de GitHub. La regla anterior vetaba todo despliegue en bloque;
+  // eso protegía de un workflow que empujara el producto a cualquier sitio, pero
+  // también impedía lo que el repositorio sí quiere hacer. Se estrecha en vez de
+  // levantarse: un `deploy-pages` que venga acompañado de un proveedor externo,
+  // de un push o de un publish sigue cayendo por las reglas de arriba, y una
+  // acción de despliegue de terceros que se disfrace de Pages cae aquí.
+  const pagesActions = executableText.match(/uses:\s*([\w-]+\/[\w-]+)@/g) ?? [];
+  const foreignPagesAction = pagesActions
+    .map((line) => line.replace(/uses:\s*/, '').replace(/@$/, ''))
+    .find((action) => /pages/i.test(action) && !action.startsWith('actions/'));
+  if (foreignPagesAction) {
+    note(relative, `usa "${foreignPagesAction}" para publicar; sólo se permiten las acciones de Pages de "actions/".`);
   }
 }
 

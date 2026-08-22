@@ -51,6 +51,7 @@ npm.cmd run validate:ci
 
 - [Índice canónico y clasificación completa](docs/README.md)
 - [Mapa de arquitectura vigente](docs/architecture/README.md)
+- [Sistema de diseño](src/design-system/README.md)
 - [Identidad visual oficial protegida](brand/README.md)
 - [Política de reportes y evidencia](reports/README.md)
 

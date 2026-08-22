@@ -83,8 +83,9 @@ describe('tipografía del sistema', () => {
     expect(tracking('display')).toBeLessThan(tracking('tight'));
     expect(tracking('tight')).toBeLessThan(tracking('control'));
     expect(tracking('control')).toBeLessThanOrEqual(0);
-    // La versalita trackeada a 0,16em era la voz anterior. El sistema deja las
-    // etiquetas apenas abiertas y sube el peso en su lugar.
-    expect(tracking('eyebrow')).toBeLessThanOrEqual(0.06);
+    // La versalita trackeada a 0,16em era la voz anterior, y con ella se fue su
+    // token: el sistema no abre las etiquetas, les sube el peso. Que
+    // `--sc-tracking-eyebrow` no exista es parte del contrato, no un descuido.
+    expect(tokensCss).not.toContain('--sc-tracking-eyebrow');
   });
 });
