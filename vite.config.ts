@@ -57,6 +57,36 @@ export default defineConfig({
   plugins: [react(), pwaShellPlugin()],
   base: './',
   define: { __APP_VERSION__: JSON.stringify(version) },
+  build: {
+    rollupOptions: {
+      /**
+       * Dos puntos de entrada: la app y el brandbook.
+       *
+       * `brand/brandbook.html` importa `tokens.css` en vivo —no transcribe la
+       * paleta, la lee— y es la única superficie que enseña el sistema pintado
+       * con sus valores reales. Hasta aquí el build sólo emitía la app, así que
+       * el brandbook no era alcanzable desde el sitio publicado.
+       *
+       * Se resuelve dándoselo a Vite y no copiándolo con un paso aparte, porque
+       * copiarlo NO basta: `fonts.css` declara sus caras con URL absoluta
+       * (`url('/fonts/inter-latin-variable.woff2')`), que bajo Pages resuelve a
+       * la raíz del dominio y da 404 — un brandbook sobre tipografía pintado en
+       * la cara de reserva. Vite ya reescribe esas URL al construir (en
+       * `dist/assets/index-*.css` salen como `url(../fonts/…)`), así que aquí se
+       * usa esa máquina en vez de reproducirla a mano con un `sed` en el
+       * workflow.
+       *
+       * La clave DEBE llamarse `index`: Rollup nombra el chunk de entrada por su
+       * clave, y `qa.mjs` localiza los archivos de producción con
+       * `/^index-.*\.js$/` y `/^index-.*\.css$/`. Con cualquier otra clave el
+       * gate de navegador muere buscando un archivo que ya no existe.
+       */
+      input: {
+        index: 'index.html',
+        brandbook: 'brand/brandbook.html',
+      },
+    },
+  },
   test: {
     // The quality gate must only observe the real product. Backups, worktrees and
     // vendored copies of the app live beside `src/` and would otherwise be collected,

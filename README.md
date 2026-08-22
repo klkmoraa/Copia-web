@@ -27,6 +27,16 @@ La autoridad del repositorio sigue este orden: código, pruebas y gates ejecutab
 
 El alcance técnico y las convenciones de Space 3D están en el [mapa de arquitectura](docs/architecture/README.md).
 
+## Sitio publicado
+
+**https://klkmoraa.github.io/Copia-web/**
+
+Lo publica `.github/workflows/pages.yml` en cada push a `main`, subiendo el `dist/`
+que produce `npm run build` — nunca el repositorio servido tal cual. El
+[brandbook](https://klkmoraa.github.io/Copia-web/brand/brandbook.html) vive en la
+misma publicación y pinta el sistema de diseño leyendo `tokens.css` en vivo, así
+que un brandbook y un producto que discrepen es imposible por construcción.
+
 ## Inicio local
 
 Requiere la versión de Node indicada en `.nvmrc`.

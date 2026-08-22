@@ -12,9 +12,17 @@
   imposible por construcción. Si un valor cambia en el sistema, cambia aquí
   al recargar. Lo único escrito a mano son las decisiones y su porqué.
 
-  Para verlo: `npx vite preview` no lo sirve (vive fuera de `public/`). Un
-  servidor estático desde la raíz del repositorio sí:
-      npx serve .      →  http://localhost:3000/brand/brandbook.html
+  Para verlo, tres caminos, y los tres sirven el mismo archivo:
+      npm run dev      →  http://localhost:5173/brand/brandbook.html
+      npm run build && npx vite preview
+                       →  http://localhost:4173/brand/brandbook.html
+      publicado        →  https://klkmoraa.github.io/Copia-web/brand/brandbook.html
+
+  Este documento es un punto de entrada del build (`rollupOptions.input` en
+  `vite.config.ts`), no un archivo suelto que haya que copiar. Ésa es la razón:
+  `fonts.css` declara sus caras con URL absoluta y copiarlo tal cual las rompe
+  bajo una subruta; procesado por Vite, salen relativas y funcionan igual en
+  local que publicado.
 -->
 <link rel="stylesheet" href="../src/design-system/fonts.css" />
 <link rel="stylesheet" href="../src/design-system/tokens.css" />

@@ -4,6 +4,11 @@
   `src/design-system/tokens.css` y pinta cada muestra con `var(--sc-…)`, así que
   un brandbook y un producto que discrepen es imposible por construcción. Lo
   único escrito a mano son las decisiones y su porqué.
+  Publicado en
+  <https://klkmoraa.github.io/Copia-web/brand/brandbook.html>: es un punto de
+  entrada del build (`rollupOptions.input` en `vite.config.ts`), no un archivo
+  que se copie, para que las rutas de sus fuentes y sus tokens las resuelva la
+  misma máquina que las de la app.
 - `logo.svg` — la marca: un pórtico de dos montantes, dintel y terreno, con los
   nudos dibujados como los dibuja el lienzo del producto.
 - `manifest.json` — tamaños y hashes SHA-256 para detectar cambios byte a byte.
@@ -18,7 +23,7 @@ puede discrepar, porque no guarda valores propios.
 
 Los contratos los verifican `tokens.test.ts`, `surfaceGeometry.test.ts`,
 `material.test.ts` y `typography.test.ts` en cada ejecución de la suite, más los
-145 checks de `npm run qa` en un navegador real.
+149 checks de `npm run qa` en un navegador real.
 
 ## Regla de protección
 
