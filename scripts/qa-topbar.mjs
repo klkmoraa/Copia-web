@@ -61,7 +61,16 @@ async function readTopBarGeometry() {
       })
       .map((control) => ({ zone: control.closest('[data-topbar-zone]')?.getAttribute('data-topbar-zone'), rect: rect(control) }));
     const accessibleName = (element) => (element?.getAttribute('aria-label') || element?.textContent || '').trim();
-    const doctor = bar.querySelector('.model-doctor-launcher');
+    /*
+     * D-14 exige que Doctor NUNCA desaparezca ni pierda su nombre accesible,
+     * sea cual sea la clase de composición. Lo que no exige —ni podría— es que
+     * viva siempre en la barra superior: en Compact la barra superior es una
+     * nav bar de tres ranuras (marca, título, `⋯`) y Doctor tiene su ranura en
+     * la barra inferior, sobre el pulgar, que es donde alcanza la mano. Buscar
+     * sólo dentro de `.topbar` confundía "el lanzador está donde yo miro" con
+     * "el lanzador existe", y las dos afirmaciones no son la misma.
+     */
+    const doctor = document.querySelector('.model-doctor-launcher, [data-compact-bar-slot="doctor"]');
     const doctorStyle = doctor ? getComputedStyle(doctor) : null;
     const statusShell = bar.querySelector('.analysis-status-shell');
     const statusStyle = statusShell ? getComputedStyle(statusShell) : null;
@@ -91,6 +100,19 @@ function assertNoOverflow(result, width, label) {
 
 async function assertTopBarGeometry(width, height = 960) {
   await page.setViewportSize({ width, height });
+  /*
+   * Esperar a que la COMPOSICIÓN se commitee, no un número de milisegundos.
+   *
+   * El shell resuelve su clase sobre tamaño estable, con 120ms de espera
+   * (`SHELL_STABLE_COMMIT_MS`), y el gate medía a los 32: medía la composición
+   * ANTERIOR sobre el viewport NUEVO. A 360px eso pillaba la barra ancha —con
+   * su clúster de comandos entero, 243px de ancho— renderizada sobre una
+   * pantalla de 360, y denunciaba un solape que ninguna persona llega a ver.
+   * `COMPACT_CEILING_PX` es el mismo 1023 que declara `shellComposition.ts`.
+   */
+  await page.waitForFunction((expected) => (
+    (document.querySelector('.app-shell')?.getAttribute('data-shell-class') === 'K0') === expected
+  ), width <= 1023, { timeout: 2000 });
   await page.waitForTimeout(32);
   const result = await readTopBarGeometry();
   const pairs = [['document', 'actions'], ['document', 'status'], ['actions', 'status']];

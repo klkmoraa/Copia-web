@@ -132,6 +132,17 @@ const availableCanvasTouchPoint = (page) => page.evaluate(() => {
 const closeCompactSurfaceStack = async (page) => {
   const closeInspector = page.getByRole('button', { name: /cerrar inspector/i });
   if (await closeInspector.isVisible().catch(() => false)) await closeInspector.click();
+  /*
+   * La variante `surface="detail"` que monta WorkspaceShell NO lleva botón de
+   * cierre propio —sólo lo monta la variante con pestañas—, así que el clic de
+   * arriba no la alcanza nunca. Se cierra por su contrato de hoja: Escape, que
+   * `Inspector.tsx` escucha para cualquier presentación.
+   */
+  const compactInspector = page.locator('.inspector-panel.mobile-open');
+  if (await compactInspector.isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape');
+    await compactInspector.waitFor({ state: 'hidden' });
+  }
   const results = page.getByRole('dialog', { name: /resultados/i });
   if (await results.isVisible().catch(() => false)) {
     await results.focus();
@@ -410,8 +421,15 @@ const runContextualToolbarAndResponsive = async (page) => {
   // stack through its own controls before reaching the canvas tool tray.
   await closeCompactSurfaceStack(page);
   await selectSingle(page, 'node', 'N1');
-  await page.getByRole('button', { name: /más herramientas/i }).click();
-  const more = page.getByRole('dialog', { name: /más herramientas/i });
+  /*
+   * Una sola hoja de herramientas en Compact. Antes eran dos —«Cargas» y «Más»—
+   * colgando de un dock de seis ranuras; ese dock se retiró (dejaba fuera de toda
+   * hoja a las cuatro herramientas `primary`, que sólo existían como botones
+   * suyos) y ahora la barra inferior enseña la herramienta ACTIVA en una ranura y
+   * la hoja lleva el catálogo entero.
+   */
+  await page.locator('.compact-bar__tool').click();
+  const more = page.getByRole('dialog', { name: /herramientas de modelado/i });
   await more.waitFor({ state: 'visible' });
   await more.locator('[data-structural-edit-command]').click();
   const mobileSurface = page.locator('[data-structural-edit-surface]');
@@ -443,6 +461,15 @@ const runChromiumTouch = async (page) => {
   await resetToExample(page);
   await closeCompactSurfaceStack(page);
   await selectSingle(page, 'node', 'N1');
+  /*
+   * Seleccionar en el lienzo PIDE el Inspector (`onRequestInspector`), y en
+   * Compact su hoja ocupa la única ranura contextual: mientras esté abierta el
+   * zócalo derivado queda suspendido (`resolveSurfaceActivity`), que es
+   * justamente el contrato. Para alcanzar el zócalo hay que devolver la hoja,
+   * igual que haría una persona — y por eso se despeja DESPUÉS de seleccionar,
+   * no antes.
+   */
+  await closeCompactSurfaceStack(page);
   const surface = await openEdit(page);
   const start = await availableCanvasTouchPoint(page);
   const end = { x: start.x + 32, y: start.y };
@@ -542,6 +569,10 @@ const runCri97ContextualActions = async (page) => {
   });
   await closeCompactSurfaceStack(page);
   await selectSingle(page, 'member', 'M1');
+  // Seleccionar PIDE el Inspector, y su hoja ocupa la única ranura contextual
+  // de Compact: mientras esté abierta el zócalo derivado queda suspendido
+  // (`resolveSurfaceActivity`). Se devuelve la hoja DESPUÉS de seleccionar.
+  await closeCompactSurfaceStack(page);
   const toolbar = contextualActions(page);
   await toolbar.waitFor({ state: 'visible' });
   const visibleButtons = await toolbar.getByRole('button').allTextContents();

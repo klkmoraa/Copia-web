@@ -1763,6 +1763,17 @@ export const StructuralCanvas = ({
     setMemberStart(null);
     setCut(null);
     closeCandidatePicker();
+    /*
+     * R-1 · Compact admite UNA capa contextual. La edición estructural es una
+     * herramienta INVOCADA —la abre el usuario desde la hoja— y la hoja del
+     * Inspector está RETENIDA desde el arranque: nadie la pidió ahora. Gana la
+     * que el usuario acaba de pedir, que es el mismo criterio de última
+     * activación con el que el broker resuelve `tool` contra `layer`
+     * (`surfacePresentation.ts`). Sin esto la hoja del Inspector se quedaba
+     * encima y los propios botones de la superficie de edición no se podían
+     * pulsar.
+     */
+    surfaceBroker?.closeSurface('detail');
     setActiveTool('select');
     setStructuralEditPointerArmed(false);
     structuralEditLiveDraftRef.current = null;
@@ -1773,7 +1784,7 @@ export const StructuralCanvas = ({
     } catch (error) {
       showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
     }
-  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, surfaceBroker, t]);
 
   const invokeContextualAction = useCallback((action: ContextualActionId) => {
     switch (action) {

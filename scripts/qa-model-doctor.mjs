@@ -120,13 +120,38 @@ const waitForSurfaceSettled = async (doctor) => {
   throw new Error(`Model Doctor surface did not settle: ${JSON.stringify(current)}`);
 };
 
+/*
+ * El lanzador de Doctor, esté donde esté su composición. Fuera de Compact vive
+ * en la barra superior; en Compact la barra superior es una nav bar de tres
+ * ranuras y Doctor tiene la suya en la barra inferior, sobre el pulgar. Lo que
+ * D-14 exige es que exista y conserve su nombre, no que esté en un sitio
+ * concreto de la pantalla.
+ */
+const doctorLauncherLocator = () => page.locator('.model-doctor-launcher, [data-compact-bar-slot="doctor"]').first();
+
+/*
+ * Cambiar el viewport y medir en el mismo aliento mide la composición ANTERIOR
+ * sobre la pantalla NUEVA: el shell resuelve su clase sobre tamaño estable, con
+ * 120ms de espera (`SHELL_STABLE_COMMIT_MS`). Importa más que antes porque hay
+ * controles que sólo existen en una composición —«Analizar» vive en la barra
+ * superior fuera de Compact y en la barra inferior dentro—, así que un locator
+ * resuelto a destiempo apunta a un elemento que está a punto de desmontarse.
+ * `COMPACT_CEILING_PX` es el mismo 1023 que declara `shellComposition.ts`.
+ */
+const resizeTo = async (width, height) => {
+  await page.setViewportSize({ width, height });
+  await page.waitForFunction((expected) => (
+    (document.querySelector('.app-shell')?.getAttribute('data-shell-class') === 'K0') === expected
+  ), width <= 1023, { timeout: 2000 });
+};
+
 const openDoctor = async () => {
-  const desktopLauncher = page.locator('.model-doctor-launcher');
-  if (await desktopLauncher.isVisible()) {
-    await desktopLauncher.click();
+  const launcher = doctorLauncherLocator();
+  if (await launcher.isVisible()) {
+    await launcher.click();
   } else {
     await page.getByRole('button', { name: /más acciones/i }).click();
-    const menu = page.getByRole('dialog', { name: /más acciones/i });
+    const menu = page.getByRole('dialog', { name: /más acciones|menú del documento/i });
     await menu.getByRole('button', { name: 'Model Doctor' }).click();
   }
   const doctor = page.getByRole('dialog', { name: 'Model Doctor' });
@@ -199,16 +224,16 @@ try {
   baselineProject = await page.evaluate(() => JSON.parse(localStorage.getItem('structureCo.project')));
 
   // First lazy load on Compact suspends (but retains) Results and returns to its launcher.
-  await page.setViewportSize({ width: 390, height: 844 });
+  await resizeTo(390, 844);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:open-results')));
   const retainedResults = page.locator('.results-panel');
   await retainedResults.waitFor({ state: 'visible' });
   // CRI-119 · Doctor y Estado "nunca desaparecen ni pierden su etiqueta
-  // accesible, sea cual sea la clase de composición" (CRI-95, comentario en
-  // `TopBar.tsx`): `.model-doctor-launcher` sigue visible en Compacto, así
-  // que `openDoctor()` siempre toma esa rama, nunca la de "Más acciones" —
-  // el foco vuelve ahí, no al overflow.
-  const firstLauncher = page.locator('.model-doctor-launcher');
+  // accesible, sea cual sea la clase de composición" (D-14): en Compacto el
+  // lanzador es la ranura de la barra inferior, así que `openDoctor()` siempre
+  // toma esa rama, nunca la de "Más acciones" — el foco vuelve ahí, no al
+  // desbordamiento.
+  const firstLauncher = doctorLauncherLocator();
   const firstPhoneDoctor = await openDoctor();
   const suspendedResults = await retainedResults.evaluate((panel) => ({
     status: panel.getAttribute('data-surface-status'),
@@ -221,10 +246,10 @@ try {
   await page.keyboard.press('Escape');
   await firstPhoneDoctor.waitFor({ state: 'hidden' });
   await page.waitForFunction((element) => document.activeElement === element, await firstLauncher.elementHandle());
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await resizeTo(1440, 900);
 
   // HEALTHY: all clear, modal isolation and return to the persistent launcher.
-  const doctorLauncher = page.locator('.model-doctor-launcher');
+  const doctorLauncher = doctorLauncherLocator();
   const healthy = await openDoctor();
   await healthy.getByRole('heading', { name: /modelo listo para revisar/i }).waitFor();
   const isolated = await page.locator('.app-shell').evaluate((shell) => ({ inert: shell.inert, hidden: shell.getAttribute('aria-hidden') }));
@@ -256,7 +281,7 @@ try {
   await page.keyboard.press('Escape');
 
   // DISCONNECTED TOPOLOGY: locate, inspect a non-mutating preview, apply, undo and redo.
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await resizeTo(1440, 900);
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-SPLIT', x: 3, y: 4, support: { type: 'fixed' } });
     project.memberLoads.push({
@@ -334,7 +359,7 @@ try {
   await assertGeometry({ width: 400, height: 300 }, 'fullscreen');
 
   // Long content scrolls inside the phone sheet and every interactive target is touch-sized.
-  await page.setViewportSize({ width: 390, height: 844 });
+  await resizeTo(390, 844);
   await loadProject((project) => {
     for (let index = 0; index < 18; index += 1) project.nodes.push({ id: `ISO-${index}`, x: 20 + index, y: 20 + index, support: { type: 'none' } });
   });
@@ -385,7 +410,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Day/Night use different resolved surfaces and severity/acknowledged text remains AA.
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await resizeTo(1440, 900);
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-CONTRAST', x: 20, y: 20, support: { type: 'none' } });
   });
@@ -410,7 +435,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Full keyboard path: Ctrl+K -> Doctor -> Tab -> Escape -> original launcher.
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await resizeTo(1440, 900);
   await loadProject((project) => {
     project.members[0].E = 0;
     project.nodes.push({ id: 'QA-KEYBOARD', x: 3, y: 4, support: { type: 'fixed' } });

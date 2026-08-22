@@ -374,8 +374,26 @@ const runResponsive = async (page) => {
   // Compacto: bandeja inferior, sin desbordes y con objetivos táctiles reales.
   await page.setViewportSize({ width: 390, height: 844 });
   await resetToExample(page);
-  await page.getByRole('button', { name: /más herramientas/i }).click();
-  const more = page.getByRole('dialog', { name: /más herramientas/i });
+  /*
+   * Compact admite UNA capa contextual (R-1) y la hoja del Inspector está
+   * retenida desde el arranque: hay que devolverla antes de pedir el generador,
+   * o su hoja queda debajo. Es el mismo despeje que hace `qa-structural-edits`
+   * con su `closeCompactSurfaceStack`.
+   */
+  const compactInspector = page.locator('.inspector-panel.mobile-open');
+  if (await compactInspector.isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape');
+    await compactInspector.waitFor({ state: 'hidden' });
+  }
+  /*
+   * Una sola hoja de herramientas en Compact. Antes eran dos —«Cargas» y «Más»—
+   * colgando de un dock de seis ranuras; ese dock se retiró (dejaba fuera de toda
+   * hoja a las cuatro herramientas `primary`, que sólo existían como botones
+   * suyos) y ahora la barra inferior enseña la herramienta ACTIVA en una ranura y
+   * la hoja lleva el catálogo entero.
+   */
+  await page.locator('.compact-bar__tool').click();
+  const more = page.getByRole('dialog', { name: /herramientas de modelado/i });
   await more.waitFor({ state: 'visible' });
   await more.locator('[data-structure-generator-command]').click();
   await surface(page).waitFor({ state: 'visible' });

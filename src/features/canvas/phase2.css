@@ -224,9 +224,19 @@
     bottom: calc(126px + env(safe-area-inset-bottom, 0px));
   }
 
+  /*
+   * La superficie de edición estructural es una herramienta INVOCADA: la abre
+   * el usuario desde la hoja de herramientas. La hoja del Inspector, en cambio,
+   * está retenida desde el arranque en Compact — nadie la pidió ahora. Cuando
+   * las dos coinciden gana la que el usuario acaba de pedir, que es el mismo
+   * criterio de última activación con el que el broker resuelve `tool` contra
+   * `layer` (`surfacePresentation.ts`). Con `z-index: 24` quedaba debajo del
+   * Inspector (31) y sus propios botones no se podían pulsar.
+   */
   .structural-edit-surface {
+    z-index: 32;
     right: 8px;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    bottom: var(--sc-chrome-tier-1);
     width: calc(100% - 16px);
     max-height: min(68vh, calc(100% - 80px));
     padding: 12px;
@@ -234,7 +244,7 @@
   }
 
   .structural-edit-surface.structural-edit-offset-for-repeat {
-    bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+    bottom: var(--sc-chrome-tier-2);
   }
 
   /* The selected segment is intentionally pressed/scaled. Give its

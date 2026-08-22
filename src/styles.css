@@ -663,7 +663,7 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .canvas-result-legend.axial i { color:var(--axial); }
 .canvas-result-legend.shear i { color:var(--shear); border-top-style:dashed; }
 .canvas-result-legend.moment i { color:var(--moment); border-top-style:double; }
-.quick-entry-bar { position:absolute; z-index:22; left:50%; bottom:var(--sc-chrome-tier-2); transform:translateX(-50%); width:max-content; max-width:calc(100% - 190px); padding:6px 7px; border-radius:var(--sc-radius-control); display:flex; flex-wrap:nowrap; align-items:center; gap:6px; }
+.quick-entry-bar { position:absolute; z-index:22; left:50%; bottom:var(--sc-chrome-tier-1); transform:translateX(-50%); width:max-content; max-width:calc(100% - 190px); padding:6px 7px; border-radius:var(--sc-radius-control); display:flex; flex-wrap:nowrap; align-items:center; gap:6px; }
 .quick-entry-heading { flex:0 0 auto; display:flex; align-items:center; gap:6px; }.quick-entry-heading>strong { font-size:11px; font-weight:700; color:var(--muted); white-space:nowrap; }.quick-entry-mode { display:flex; gap:2px; padding:2px; border-radius:var(--sc-radius-control); background:var(--surface-2); box-shadow:none; }.quick-entry-mode button { min-height:24px; padding:0 7px; border:0; border-radius:var(--sc-radius-control); background:var(--surface); color:var(--muted); font-size:10px; box-shadow:var(--sc-elevation-1); }.quick-entry-mode button:not([aria-pressed='true']):hover { box-shadow:var(--sc-elevation-1); }.quick-entry-mode button[aria-pressed='true'] { background:var(--surface-3); color:var(--accent); font-weight:700; box-shadow:none; }
 .quick-entry-bar>label { flex:0 0 auto; width:92px; min-width:0; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; border:1px solid var(--border-soft); border-radius:var(--sc-radius-control); background:var(--surface-2); box-shadow:none; overflow:hidden; }.quick-entry-bar>label>span,.quick-entry-bar>label>small { padding:0 6px; color:var(--muted); font-size:10px; }.quick-entry-bar input { width:100%; min-width:0; height:32px; border:0; outline:0; background:transparent; color:var(--text); font-variant-numeric:tabular-nums; }.quick-entry-bar>button[type='submit'] { flex:0 0 auto; min-height:32px; padding:0 11px; border:0; border-radius:var(--sc-radius-control); background: var(--accent-fill); color:var(--accent-foreground); font-size:11px; font-weight:590; white-space:nowrap; box-shadow:var(--sc-elevation-1); }.quick-entry-bar>button[type='submit']:hover { box-shadow:var(--sc-elevation-2); }.quick-entry-bar>button[type='submit']:active { box-shadow:none; }.quick-entry-error { position:absolute; left:0; top:100%; margin-top:4px; color:var(--danger); font-size:11px; white-space:nowrap; }
 .candidate-picker { position:absolute; z-index:34; width:min(244px,calc(100% - 16px)); display:grid; gap:7px; padding:10px; border:1px solid var(--border); border-radius:var(--sc-radius-control); background:var(--surface); color:var(--text); box-shadow:var(--sc-elevation-1); }
@@ -1086,6 +1086,15 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .canvas-controls { bottom:var(--sc-chrome-tier-1); }
   .canvas-controls button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
   .canvas-status { bottom:var(--sc-chrome-tier-1); }
+  /* La esquina DERECHA cede sólo aquí. En pantalla ancha el zócalo mide 380px
+     sobre un lienzo de mil y pico: no llega a las esquinas, y apartar la cámara
+     allí la estrellaría contra el control de repetición, que ya vive en ese
+     escalón. En teléfono la barra centrada mide `min(560px, 100% - 20px)` —410
+     de los 430 del viewport—, así que tapa las dos esquinas, no una. */
+  .center-stage:has(.contextual-actions) .canvas-controls,
+  .center-stage:has(.quick-entry-bar) .canvas-controls,
+  .center-stage:has(.contextual-actions) .repeat-action-control,
+  .center-stage:has(.quick-entry-bar) .repeat-action-control { bottom:var(--sc-chrome-tier-2); }
   .welcome-header { min-height:64px; padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
   .welcome-brand { font-size:18px; }
   /* Con una sola columna la figura pasa de compañera del titular a remate de
@@ -1284,7 +1293,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .result-extreme-grid { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
   .scenario-comparison-heading { align-items:flex-start; flex-direction:column; }
   .envelope-summary { grid-template-columns:1fr; }
-  .quick-entry-bar { left:8px; right:8px; bottom:var(--sc-chrome-tier-2); transform:none; width:auto; max-width:none; flex-wrap:wrap; padding:6px; gap:5px; }
+  .quick-entry-bar { left:8px; right:8px; bottom:var(--sc-chrome-tier-1); transform:none; width:auto; max-width:none; flex-wrap:wrap; padding:6px; gap:5px; }
   .quick-entry-heading { width:100%; justify-content:space-between; }
   .quick-entry-bar>label { flex:1 1 0; width:auto; }
   .quick-entry-bar>button[type='submit'] { flex:1 1 auto; padding:0 9px; }
@@ -2028,8 +2037,14 @@ button:not(:disabled):active,.selection-card:active {
    Cede el lector, no la barra: la barra es acción y el lector es lectura, y una
    acción no se aparta para que se lea un número. Mismo patrón `:has()` que ya
    usa este archivo para que el panel de resultados aparte los controles de
-   cámara. */
-.center-stage:has(.contextual-actions) .canvas-status { bottom:66px; }
+   cámara.
+
+   El escalón era un 66 a mano, tomado de la geometría de entonces; ahora lo da
+   la pila del borde inferior (tokens §7), así que sigue al alto real del
+   control. La entrada por coordenadas entra en la misma regla: comparte
+   escalón con el zócalo porque son alternativas, y tapa el lector igual. */
+.center-stage:has(.contextual-actions) .canvas-status,
+.center-stage:has(.quick-entry-bar) .canvas-status { bottom:var(--sc-chrome-tier-2); }
 
 .canvas-coordinate-output { color:var(--text); font-variant-numeric:tabular-nums; }
 .canvas-scale-output { color:var(--muted); font-variant-numeric:tabular-nums; }

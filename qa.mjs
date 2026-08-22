@@ -1008,34 +1008,130 @@ async function verifyWelcomeReducedMotionActive() {
  * Se mide con el modelo seleccionado, que es cuando las cuatro piezas coexisten
  * — sin selección la barra contextual no existe y el solape no puede verse.
  */
-async function verifyFloatingSurfacesDoNotOverlap(page) {
-  const boxes = await page.evaluate(() => {
+/**
+ * Ninguna superficie flotante se solapa con otra (regla 4 de disposición).
+ *
+ * Vigilaba cuatro parejas y SÓLO en escritorio, que es exactamente por qué el
+ * incumplimiento vivía en el teléfono sin que nadie lo viera: seis piezas
+ * ancladas al borde inferior, cada una con su `bottom` a mano, y el lanzador de
+ * superficies posado encima del dock de herramientas. Ahora compara TODAS las
+ * parejas presentes y corre en las dos composiciones.
+ *
+ * `null` en un lado significa "esa pieza no está en pantalla", y eso no
+ * demuestra nada: una pareja sólo se juzga si las dos existen.
+ */
+const FLOATING_SURFACES = {
+  status: '.canvas-status',
+  actions: '.contextual-actions',
+  launcher: '.workspace-surface-launcher',
+  camera: '.canvas-controls',
+  inspector: '.inspector-panel',
+  quickEntry: '.quick-entry-bar',
+  toast: '.sc-toast-container',
+  bottomBar: '.compact-bar',
+  modeBadge: '.canvas-mode-badge',
+};
+
+async function verifyFloatingSurfacesDoNotOverlap(page, label = '') {
+  const boxes = await page.evaluate((selectors) => {
     const read = (selector) => {
       const element = document.querySelector(selector);
       if (!element) return null;
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return null;
+      const style = getComputedStyle(element);
+      if (style.visibility === 'hidden' || style.display === 'none') return null;
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
     };
-    return {
-      status: read('.canvas-status'),
-      actions: read('.contextual-actions'),
-      launcher: read('.workspace-surface-launcher'),
-      camera: read('.canvas-controls'),
-      inspector: read('.inspector-panel'),
-    };
-  });
+    return Object.fromEntries(Object.entries(selectors).map(([name, selector]) => [name, read(selector)]));
+  }, FLOATING_SURFACES);
+
   const overlaps = (a, b) => Boolean(a && b)
     && !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
 
-  // `null` en un lado significa "esa pieza no está en pantalla", y eso no
-  // demuestra nada: el check exige que las dos existan Y no se toquen.
+  const names = Object.keys(FLOATING_SURFACES);
+  const colliding = [];
+  for (let i = 0; i < names.length; i += 1) {
+    for (let j = i + 1; j < names.length; j += 1) {
+      // El zócalo contextual vive DENTRO del panel del Inspector cuando éste es
+      // un dock, y una pieza contenida no "se solapa" con su contenedor.
+      if (names[i] === 'inspector' || names[j] === 'inspector') {
+        if (![names[i], names[j]].includes('launcher')) continue;
+      }
+      if (overlaps(boxes[names[i]], boxes[names[j]])) {
+        const rect = (n) => `${n}[${Math.round(boxes[n].left)},${Math.round(boxes[n].top)}→${Math.round(boxes[n].right)},${Math.round(boxes[n].bottom)}]`;
+        colliding.push(`${rect(names[i])}×${rect(names[j])}`);
+      }
+    }
+  }
+
+  const key = (name) => (label ? `${name}${label}` : name);
   const present = (a, b) => Boolean(boxes[a] && boxes[b]);
   return {
-    canvasSelectionBarPresentForOverlapCheck: present('actions', 'status'),
-    canvasSelectionBarDoesNotCoverScale: !overlaps(boxes.actions, boxes.status),
-    surfaceLauncherDoesNotCoverInspector: present('launcher', 'inspector') && !overlaps(boxes.launcher, boxes.inspector),
-    surfaceLauncherDoesNotCoverCameraControls: present('launcher', 'camera') && !overlaps(boxes.launcher, boxes.camera),
+    [key('canvasSelectionBarPresentForOverlapCheck')]: present('actions', 'status'),
+    [key('floatingSurfacesDoNotOverlap')]: colliding.length === 0,
+    ...(colliding.length ? { [key('floatingSurfaceCollisions')]: colliding.join(', ') } : {}),
+    ...(label ? {} : {
+      surfaceLauncherDoesNotCoverInspector: present('launcher', 'inspector') && !overlaps(boxes.launcher, boxes.inspector),
+      surfaceLauncherDoesNotCoverCameraControls: present('launcher', 'camera') && !overlaps(boxes.launcher, boxes.camera),
+    }),
+  };
+}
+
+/**
+ * Ninguna superficie invocada se sale del viewport.
+ *
+ * Es el fallo que nadie miraba: `.mobile-actions-menu` se anclaba con `right:0`
+ * a un disparador que en teléfono NO está en el borde derecho, así que a 390px
+ * dejaba 155px de hoja fuera de pantalla con las etiquetas cortadas. Un panel
+ * que no se ve entero no es un panel estrecho: es un panel inalcanzable.
+ */
+async function verifySurfacesStayInsideViewport(page, label = '') {
+  const escapes = await page.evaluate(() => {
+    const found = [];
+    for (const element of document.querySelectorAll('.popover, [role="dialog"], .compact-bar, .mobile-tool-palette')) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      if (rect.left < -1 || rect.right > window.innerWidth + 1) {
+        found.push(`${element.className || element.tagName} (${Math.round(rect.left)}…${Math.round(rect.right)} de ${window.innerWidth})`);
+      }
+    }
+    return found;
+  });
+  const key = (name) => (label ? `${name}${label}` : name);
+  return {
+    [key('surfacesStayInsideViewport')]: escapes.length === 0,
+    ...(escapes.length ? { [key('surfacesOutsideViewport')]: escapes.join(' · ') } : {}),
+  };
+}
+
+/**
+ * Ningún hijo del cuerpo de una hoja sale aplastado.
+ *
+ * En una columna flex todo hijo encoge por defecto, así que una lista alta
+ * aplasta a sus hermanos: los chips de filtro del Model Doctor salían cortados
+ * por la mitad porque su `min-height` estaba en los botones y no en el
+ * contenedor, que era quien cedía. Es una clase de fallo, no un caso: se mide
+ * como clase.
+ */
+async function verifyModalBodyChildrenAreNotCrushed(page, label = '') {
+  const crushed = await page.evaluate(() => {
+    const found = [];
+    for (const body of document.querySelectorAll('.sc-modal-surface__body')) {
+      for (const child of body.children) {
+        // El propio contenedor scrolleable puede desbordar: para eso scrollea.
+        if (getComputedStyle(child).overflowY === 'auto') continue;
+        if (child.scrollHeight > child.clientHeight + 1) {
+          found.push(`${child.className || child.tagName} (${child.scrollHeight}px en ${child.clientHeight}px)`);
+        }
+      }
+    }
+    return found;
+  });
+  const key = (name) => (label ? `${name}${label}` : name);
+  return {
+    [key('modalBodyChildrenAreNotCrushed')]: crushed.length === 0,
+    ...(crushed.length ? { [key('crushedModalBodyChildren')]: crushed.join(' · ') } : {}),
   };
 }
 
@@ -1337,7 +1433,26 @@ async function mobile() {
   const metrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.mobile = metrics;
   out.checks.mobileNoHorizontalOverflow = metrics.sw <= metrics.cw + 1;
-  out.checks.mobileToolbar = await page.locator('.toolbar').isVisible();
+  // Los contratos de composición, EN COMPACT — que es donde se estaban
+  // incumpliendo sin que ningún gate lo viera.
+  Object.assign(out.checks, await verifySurfacesStayInsideViewport(page, 'Compact'));
+  // Con el desbordamiento abierto: es la superficie que se salía del viewport.
+  await page.locator('.topbar').getByRole('button', { name: /Más acciones/i }).click();
+  await page.locator('.topbar-overflow-sheet').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifySurfacesStayInsideViewport(page, 'CompactOverflow'));
+  Object.assign(out.checks, await verifyModalBodyChildrenAreNotCrushed(page, 'CompactOverflow'));
+  await page.keyboard.press('Escape');
+  await page.locator('.topbar-overflow-sheet').waitFor({ state: 'hidden' });
+  // Y con el Model Doctor abierto: es donde los chips de filtro salían cortados.
+  await page.locator('[data-compact-bar-slot="doctor"]').click();
+  await page.locator('.model-doctor-surface').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyModalBodyChildrenAreNotCrushed(page, 'CompactDoctor'));
+  Object.assign(out.checks, await verifySurfacesStayInsideViewport(page, 'CompactDoctor'));
+  await page.keyboard.press('Escape');
+  await page.locator('.model-doctor-surface').waitFor({ state: 'hidden' });
+  // Compact ya no tiene bandeja de herramientas propia: la barra inferior es su
+  // única fila de chrome, y la ranura de herramienta abre el catálogo entero.
+  out.checks.mobileBottomBar = await page.locator('.compact-bar').isVisible();
   const mobileCanvasBox = await page.locator('svg.structural-canvas').boundingBox();
   if (!mobileCanvasBox) throw new Error('No se pudo medir el lienzo móvil.');
   const mobileGridBeforePan = await page.locator('.grid-lines line').first().getAttribute('x1');
@@ -1413,10 +1528,10 @@ async function mobile() {
   out.checks.mobileTouchDragPreservesNode = firstNodeLabelBeforeDrag === await firstNode.getAttribute('aria-label');
   // CRI-119 · Seleccionar en el lienzo pide el Inspector (`onRequestInspector`
   // en `StructuralCanvas.tsx`), que reabre la hoja y vuelve a tapar la Cinta —
-  // mismo comando de antes para "Ajustar". El `.mobile-tool-dock` (donde vive
-  // "Herramientas de carga") no tiene comando equivalente en el bus, así que a
-  // ÉSE se le despeja el camino cerrando la hoja con Escape, que `Inspector.tsx`
-  // ya escucha para cualquier variante de superficie, no sólo la de pestañas.
+  // mismo comando de antes para "Ajustar". A la ranura de herramienta de la
+  // barra inferior se le despeja el camino cerrando la hoja con Escape, que
+  // `Inspector.tsx` ya escucha para cualquier variante de superficie, no sólo
+  // la de pestañas.
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:fit-canvas')));
   await page.waitForTimeout(120);
   await page.keyboard.press('Escape');
@@ -1430,8 +1545,26 @@ async function mobile() {
   // fotograma; el fallo es del hit-test de Playwright bajo emulación táctil,
   // no del layout. `el.click()` dispara el evento real sobre el elemento real,
   // sin pasar por ese hit-test.
-  await page.locator('.mobile-tool-dock').getByRole('button', { name: 'Herramientas de carga' }).evaluate((el) => el.click());
-  out.checks.mobileLoadSheet = await page.locator('.mobile-tool-palette-loads').isVisible();
+  // El peor caso del borde inferior: con algo seleccionado, el zócalo
+  // contextual convive con la barra inferior, la Cinta de coordenadas y los
+  // controles de cámara. Es exactamente la pantalla en la que el lanzador
+  // flotante se posaba encima del dock.
+  await page.locator('.member-object').first().evaluate((element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+  });
+  await page.locator('.contextual-actions').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyFloatingSurfacesDoNotOverlap(page, 'Compact'));
+  Object.assign(out.checks, await verifySurfacesStayInsideViewport(page, 'CompactSelection'));
+  if (await page.locator('.inspector-panel.mobile-open').isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape');
+    await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'hidden' });
+  }
+  // Una sola hoja con el catálogo entero: el dock de seis ranuras se retiró y
+  // con él las dos hojas parciales («Cargas» y «Más»), que dejaban fuera a las
+  // cuatro herramientas `primary`.
+  await page.locator('.compact-bar__tool').evaluate((el) => el.click());
+  out.checks.mobileToolSheet = await page.locator('.mobile-tool-palette').isVisible();
+  Object.assign(out.checks, await verifySurfacesStayInsideViewport(page, 'CompactToolSheet'));
   await page.getByRole('menuitemradio', { name: /Carga puntual/ }).evaluate((el) => el.click());
   out.checks.mobileLoadPlacementMode = await page.getByRole('button', { name: 'Cancelar colocación' }).first().isVisible();
   const memberLoadsBeforeTouchPlacement = await page.locator('[data-structure-kind="memberLoad"]').count();
@@ -1460,7 +1593,7 @@ async function mobile() {
   await page.getByRole('dialog', { name: 'Inspector' }).waitFor({ state: 'hidden' });
   out.checks.mobileMore = await page.getByLabel('Más acciones').isVisible();
   await page.getByLabel('Más acciones').click();
-  out.checks.mobileMenu = await page.locator('.mobile-actions-menu').isVisible();
+  out.checks.mobileMenu = await page.locator('.topbar-overflow-sheet').isVisible();
   const darkButton = page.getByRole('button', { name: /Tema oscuro|Tema claro/ });
   await darkButton.click();
   out.checks.mobileThemeChanged = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
@@ -1480,8 +1613,10 @@ async function mobile() {
   // Inspector.
   await page.locator('.results-panel').press('Escape');
   await page.locator('.results-panel').waitFor({ state: 'hidden' });
-  // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
-  await page.getByLabel('Abrir inspector').evaluate((el) => el.click());
+  // CRI-119 · Mismo hit-test bajo emulación táctil que arriba. En Compact el
+  // Inspector se abre desde la ranura de la barra inferior: el pill flotante que
+  // lo lanzaba se posaba encima del dock de herramientas y se retiró con él.
+  await page.locator('[data-compact-bar-slot="detail"]').evaluate((el) => el.click());
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
   // CRI-119 · `surface="detail"` fuerza la pestaña "Inspector"
   // (`forcedTab` en `Inspector.tsx`) y por eso NO monta el `tablist` — no hay

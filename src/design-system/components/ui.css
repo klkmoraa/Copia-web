@@ -408,7 +408,9 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* asa · cabecera · cuerpo · pie. El asa sólo la emiten las hojas inferiores;
+     en el resto la fila mide cero y no se nota. */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   overflow: hidden;
   border: var(--sc-border-width) solid var(--sc-color-border);
   background: var(--sc-color-surface-elevated);
@@ -427,24 +429,63 @@
 .sc-modal-surface--bottom { inset: auto 0 0; width: 100%; max-height: min(76dvh, 720px); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .sc-modal-surface__header,
 .sc-modal-surface__footer { display: flex; align-items: center; gap: var(--sc-space-4); padding: var(--sc-space-4) var(--sc-space-5); }
-.sc-modal-surface__header { justify-content: space-between; border-bottom: var(--sc-border-width) solid var(--sc-color-border-soft); }
+/* La cabecera no se va con el scroll: lleva el nombre de la superficie y su
+   salida, y las dos tienen que seguir alcanzables con la lista corrida. El
+   filete sólo aparece cuando hay algo debajo que separar. */
+.sc-modal-surface__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  justify-content: space-between;
+  border-bottom: var(--sc-border-width) solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-elevated);
+}
+
+.sc-modal-surface__grabber {
+  width: 36px;
+  height: 5px;
+  margin: var(--sc-space-2) auto 0;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-fill-secondary);
+}
+.sc-modal-surface--bottom .sc-modal-surface__header { padding-top: var(--sc-space-3); }
 .sc-modal-surface__header > div { min-width: 0; }
 .sc-modal-surface__header h2 { margin: 0; font-size: var(--sc-font-size-panel); line-height: var(--sc-line-height-tight); letter-spacing: var(--sc-tracking-tight); }
 .sc-modal-surface__header p { margin: var(--sc-space-1) 0 0; color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
+/* El glifo de cierre del sistema es un CÍRCULO relleno con una aspa apagada
+   dentro, no un cuadrado gris del tamaño de un botón de barra: en una hoja con
+   título, la salida acompaña al título, no compite con él.
+
+   El BOTÓN sigue midiendo 44px —el objetivo táctil no se negocia, y un área
+   invisible por `::before` es un objetivo que ningún gate puede medir—; lo que
+   mide 28 es el círculo que se pinta dentro. */
 .sc-modal-surface__close {
+  position: relative;
   width: var(--sc-control-height-touch);
   height: var(--sc-control-height-touch);
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--sc-radius-md);
-  background: var(--sc-color-surface-2);
+  border-radius: var(--sc-radius-pill);
+  background: transparent;
   color: var(--sc-color-text-secondary);
+  box-shadow: none;
 }
-.sc-modal-surface__close { background: var(--sc-color-fill-tertiary); border: 0; box-shadow: none; }
-.sc-modal-surface__close:hover { background: var(--sc-color-fill-secondary); color: var(--sc-color-text-primary); }
-.sc-modal-surface__close:active { background: var(--sc-color-fill-primary); transform: var(--sc-press-transform); }
+.sc-modal-surface__close::before {
+  content: '';
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-fill-tertiary);
+  transition: background-color var(--sc-motion-control) var(--sc-ease-standard);
+}
+.sc-modal-surface__close svg { position: relative; width: 16px; height: 16px; }
+.sc-modal-surface__close:hover { background: transparent; color: var(--sc-color-text-primary); }
+.sc-modal-surface__close:hover::before { background: var(--sc-color-fill-secondary); }
+.sc-modal-surface__close:active { background: transparent; transform: var(--sc-press-transform); }
+.sc-modal-surface__close:active::before { background: var(--sc-color-fill-primary); }
 .sc-modal-surface__body { min-height: 0; padding: var(--sc-space-5); overflow: auto; overscroll-behavior: contain; }
 .sc-modal-surface__footer { justify-content: flex-end; border-top: var(--sc-border-width) solid var(--sc-color-border-soft); background: var(--sc-color-fill-quaternary); }
 
@@ -788,8 +829,9 @@
   .sc-segmented--sm button { min-height: calc(var(--sc-control-height-touch) - 6px); }
   .sc-field__control--sm,
   .sc-field__control--md { min-height: var(--sc-control-height-touch); }
-  .sc-popover__trigger,
-  .sc-modal-surface__close { min-height: var(--sc-control-height-touch); }
+  .sc-popover__trigger { min-height: var(--sc-control-height-touch); }
+  /* El glifo de cierre ya sirve 44px con su área invisible (`::before`); un
+     `min-height` aquí sólo lo volvía a estirar a cuadrado. */
   .sc-tool-button { min-height: var(--sc-control-height-touch); }
 }
 

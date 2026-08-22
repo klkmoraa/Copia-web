@@ -349,7 +349,6 @@ export const ModelDoctor = ({
     open={open}
     onOpenChange={onOpenChange}
     title="Model Doctor"
-    description={copy.description}
     closeLabel={copy.close}
     side="right"
     presentation={presentation}
@@ -451,14 +450,21 @@ export const ModelDoctor = ({
             {finding.repair && !finding.repair.available ? <p className="model-doctor-repair-note">{copy.ambiguousRepair}</p> : null}
 
             <footer className="model-doctor-finding__actions">
-              {finding.canLocate ? <Button aria-label={`${copy.locate}: ${presented.title}`} size="touch" leadingIcon={<LocateFixed />} onClick={() => locate(finding)}>{copy.locate}</Button>
-                : <span className="model-doctor-location-unavailable">{copy.unavailableLocation}</span>}
-              {finding.suggestedTool ? <Button aria-label={`${copy.useTool}: ${presented.title}`} size="touch" variant="ghost" leadingIcon={<Wrench />} onClick={() => {
+              {/* Un hallazgo que no se puede localizar simplemente no ofrece
+                  «Localizar». Antes ponía «Sin ubicación física disponible» en
+                  el sitio donde debería haber una acción: una frase que no se
+                  puede tocar, ocupando la fila de las que sí. */}
+              {finding.canLocate ? <Button aria-label={`${copy.locate}: ${presented.title}`} size="touch" leadingIcon={<LocateFixed />} onClick={() => locate(finding)}>{copy.locate}</Button> : null}
+              {/* Las acciones de un hallazgo pesan lo mismo: todas te llevan al
+                  problema. «Usar herramienta sugerida» era un enlace de texto
+                  junto a un botón con borde a todo el ancho, sin que nada
+                  explicara la diferencia. */}
+              {finding.suggestedTool ? <Button aria-label={`${copy.useTool}: ${presented.title}`} size="touch" leadingIcon={<Wrench />} onClick={() => {
                 setActiveTool(finding.suggestedTool!);
                 onOpenChange(false);
               }}>{copy.useTool}</Button> : null}
               {finding.repair?.available ? <Button id={previewActionId} aria-label={`${copy.previewAction}: ${presented.title}`} size="touch" leadingIcon={<Wrench />} onClick={() => openRepairPreview(previewActionId)}>{copy.previewAction}</Button> : null}
-              {finding.canAcknowledge ? <Button aria-label={`${isAcknowledged ? copy.unacknowledge : copy.acknowledge}: ${presented.title}`} size="touch" variant="ghost" onClick={() => toggleAcknowledged(finding.id)}>
+              {finding.canAcknowledge ? <Button aria-label={`${isAcknowledged ? copy.unacknowledge : copy.acknowledge}: ${presented.title}`} size="touch" variant="secondary" onClick={() => toggleAcknowledged(finding.id)}>
                 {isAcknowledged ? copy.unacknowledge : copy.acknowledge}
               </Button> : null}
             </footer>

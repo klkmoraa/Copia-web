@@ -523,12 +523,22 @@
   --sc-dock-height: 0px;
   --sc-chrome-gap: var(--sc-space-2);
   --sc-chrome-floor: calc(var(--sc-dock-height) + env(safe-area-inset-bottom, 0px));
-  /* 1 · zócalo contextual de la selección. */
+  /* El alto que se reserva a una barra flotante: el control táctil más su
+     acolchado. Los escalones se apilan contra ESTO, no contra un número
+     copiado, y por eso una barra flotante no puede pasarse de su escalón: si
+     necesita más alto, lo que hay que mover es el token, y entonces se mueven
+     todos los que van encima. */
+  --sc-chrome-bar-height: calc(var(--sc-control-height-touch) + var(--sc-space-2));
+  /* 1 · la barra contextual CENTRADA: el zócalo de la selección o la entrada
+     por coordenadas. Son alternativas —una responde a una selección, la otra a
+     una colocación en curso—, así que comparten escalón. */
   --sc-chrome-tier-1: calc(var(--sc-chrome-floor) + var(--sc-chrome-gap));
-  /* 2 · entrada rápida, sobre el zócalo. */
-  --sc-chrome-tier-2: calc(var(--sc-chrome-tier-1) + var(--sc-control-height-touch) + var(--sc-chrome-gap));
+  /* 2 · el chrome de ESQUINA del lienzo (coordenadas, cámara). En pantallas
+     anchas convive con el escalón 1 sin tocarlo; en teléfono la barra centrada
+     ocupa casi todo el ancho, así que sube — ver el `:has()` de styles.css. */
+  --sc-chrome-tier-2: calc(var(--sc-chrome-tier-1) + var(--sc-chrome-bar-height) + var(--sc-chrome-gap));
   /* 3 · avisos, sobre todo lo demás. */
-  --sc-chrome-tier-3: calc(var(--sc-chrome-tier-2) + var(--sc-control-height-touch) + var(--sc-chrome-gap));
+  --sc-chrome-tier-3: calc(var(--sc-chrome-tier-2) + var(--sc-chrome-bar-height) + var(--sc-chrome-gap));
 
   --sc-density-row-compact: 26px;
   --sc-density-row-comfortable: 32px;

@@ -8,10 +8,30 @@
   --model-doctor-safe-area-right: env(safe-area-inset-right, 0px);
 }
 
+/*
+ * El cuerpo es una columna flex, y en una columna flex TODO hijo encoge por
+ * defecto. La lista de hallazgos es alta, así que aplastaba a sus hermanos: los
+ * chips de filtro salían literalmente cortados por la mitad —el `min-height`
+ * estaba en los botones, no en su contenedor, así que el contenedor cedía y los
+ * recortaba—. Lo que scrollea es la lista; el resumen y los filtros no.
+ */
 .model-doctor-surface .sc-modal-surface__body {
   display: flex;
   flex-direction: column;
   gap: var(--sc-space-4);
+}
+
+.model-doctor-surface .sc-modal-surface__body > * { flex: 0 0 auto; }
+.model-doctor-findings { flex: 1 1 auto; }
+
+/* Y el filtro sigue alcanzable con la lista corrida: cambiar de «Críticos» a
+   «Todos» a mitad de lectura no debería obligar a volver arriba. */
+.model-doctor-filters {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: var(--sc-space-2);
+  background: var(--sc-color-surface-elevated);
 }
 
 .model-doctor-health {
@@ -84,13 +104,18 @@
 
 .model-doctor-findings { display: grid; gap: var(--sc-space-3); }
 
+/*
+ * Sin riel de color a la izquierda. La severidad ya la decían el icono, el
+ * «Crítico · configuración» y el color de ese texto: el borde de 4px era la
+ * cuarta señal de lo mismo, y la única que no es del sistema — ninguna lista de
+ * iOS marca la fila con una barra lateral.
+ */
 .model-doctor-finding {
   --doctor-severity: var(--sc-color-action-primary);
   display: grid;
   gap: var(--sc-space-3);
   padding: var(--sc-space-4);
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
-  border-left: 4px solid var(--doctor-severity);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-1);
   box-shadow: var(--sc-elevation-1);
@@ -134,7 +159,6 @@
 .model-doctor-finding__detail h4 { margin: 0 0 var(--sc-space-1); font-size: var(--sc-font-size-label); }
 
 .model-doctor-finding__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-2); }
-.model-doctor-location-unavailable,
 .model-doctor-repair-note,
 .model-doctor-acknowledged { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); }
 .model-doctor-acknowledged { display: inline-flex; align-items: center; gap: var(--sc-space-1); }
@@ -193,13 +217,13 @@
 }
 .model-doctor-preview__groups h4 { margin: 0 0 var(--sc-space-3); font-size: var(--sc-font-size-control); }
 .model-doctor-preview__groups ul { display: grid; gap: var(--sc-space-3); margin: 0; padding: 0; list-style: none; }
-.model-doctor-preview__groups li { display: grid; gap: var(--sc-space-1); padding-left: var(--sc-space-3); border-left: 3px solid var(--sc-color-action-primary); overflow-wrap: anywhere; }
+.model-doctor-preview__groups li { display: grid; gap: var(--sc-space-1); padding-block: var(--sc-space-2); border-top: var(--sc-hairline); overflow-wrap: anywhere; }
+.model-doctor-preview__groups li:first-child { padding-top: 0; border-top: 0; }
 .model-doctor-preview__groups li span,
 .model-doctor-preview__groups li small { color: var(--sc-color-text-secondary); line-height: var(--sc-line-height-compact); }
 .model-doctor-preview__actions { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sc-space-2); padding: var(--sc-space-3) 0 calc(var(--sc-space-3) + var(--model-doctor-safe-area-bottom)); background: linear-gradient(to bottom, transparent, var(--sc-color-surface-1) var(--sc-space-3)); }
 
 @media (max-width: 700px) {
-  .model-doctor-surface.sc-modal-surface--bottom { max-height: min(88dvh, 840px); }
   .model-doctor-surface .sc-modal-surface__header {
     padding-inline: max(var(--sc-space-5), var(--model-doctor-safe-area-left)) max(var(--sc-space-5), var(--model-doctor-safe-area-right));
   }

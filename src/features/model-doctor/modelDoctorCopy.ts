@@ -22,7 +22,6 @@ export interface ModelDoctorCopy {
   action: string;
   affected: string;
   locate: string;
-  unavailableLocation: string;
   useTool: string;
   acknowledge: string;
   acknowledged: string;
@@ -99,7 +98,6 @@ export const getModelDoctorCopy = (requested: Language | undefined): ModelDoctor
     action: key(language, 'modelDoctor.action'),
     affected: key(language, 'modelDoctor.affected'),
     locate: key(language, 'modelDoctor.locate'),
-    unavailableLocation: key(language, 'modelDoctor.unavailableLocation'),
     useTool: key(language, 'modelDoctor.useTool'),
     acknowledge: key(language, 'modelDoctor.acknowledge'),
     acknowledged: key(language, 'modelDoctor.acknowledged'),

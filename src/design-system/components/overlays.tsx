@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, X } from 'lucide-react';
-import { AnimatePresence, m, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion, type PanInfo } from 'motion/react';
 import { useModalFocus } from './modalFocus';
 
 export interface TooltipProps {
@@ -184,6 +184,18 @@ const ModalSurface = ({
   if (typeof document === 'undefined') return null;
 
   const isDrawer = kind === 'drawer';
+  /**
+   * Una hoja que nace del borde inferior se agarra y se arrastra. Es lo que la
+   * distingue de un cuadro de diálogo que resulta estar abajo, y lo que hacía
+   * falta para que el asa signifique algo: sin gesto, un asa es decoración.
+   *
+   * El umbral son 96px de recorrido O 500px/s de velocidad — el criterio de
+   * UIKit: un empujón corto y rápido cierra igual que un arrastre largo y lento.
+   */
+  const bottomSheet = isDrawer && side === 'bottom' && !peeked;
+  const dismissOnDrag = (_: unknown, info: PanInfo) => {
+    if (info.offset.y > 96 || info.velocity.y > 500) onOpenChange(false);
+  };
   const drawerAxis: Record<NonNullable<ModalSurfaceProps['side']>, { hidden: Record<string, string>; visible: Record<string, number> }> = {
     right: { hidden: { x: '100%' }, visible: { x: 0 } },
     left: { hidden: { x: '-100%' }, visible: { x: 0 } },
@@ -228,6 +240,13 @@ const ModalSurface = ({
             data-level={kind === 'drawer' ? 'sheet' : 'modal'}
             data-workspace-surface={surfaceId}
             data-surface-extent={extent}
+            {...(bottomSheet && !reducedMotion ? {
+              drag: 'y' as const,
+              dragDirectionLock: true,
+              dragConstraints: { top: 0, bottom: 0 },
+              dragElastic: { top: 0, bottom: 0.6 },
+              onDragEnd: dismissOnDrag,
+            } : {})}
             role="dialog"
             aria-modal={peeked ? undefined : true}
             aria-label={peeked ? title : undefined}
@@ -235,6 +254,11 @@ const ModalSurface = ({
             aria-describedby={peeked || !description ? undefined : descriptionId}
             tabIndex={-1}
           >
+            {/* El asa: la superficie de agarre de la hoja. `aria-hidden` porque
+                el gesto que representa no existe para quien navega con teclado
+                o lector — ésos cierran con Escape o con el botón, que sí están
+                en el árbol. */}
+            {bottomSheet ? <div className="sc-modal-surface__grabber" aria-hidden="true" /> : null}
             {peeked ? (
               <button
                 type="button"

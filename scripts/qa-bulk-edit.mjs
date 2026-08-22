@@ -162,8 +162,15 @@ const memberPoint = async (project, id) => {
  * panel exista en pantalla. Es el patrón propio de la aplicación, no un ajuste
  * de la prueba.
  */
+/*
+ * El lanzador del Inspector, esté donde esté su composición: en Compact es la
+ * ranura de la barra inferior —sobre el pulgar—, y fuera de Compact la primera
+ * pieza del lanzador flotante del lienzo. El pill flotante que hacía de
+ * lanzador en teléfono se posaba encima del dock de herramientas y se retiró
+ * con él.
+ */
 const openInspectorIfCollapsed = async () => {
-  const toggle = page.locator('.mobile-inspector-toggle');
+  const toggle = page.locator('[data-compact-bar-slot="detail"], .mobile-inspector-toggle').first();
   if (await toggle.count() === 0 || !(await toggle.isVisible())) return;
   await toggle.click();
   await sleep(page, 260);

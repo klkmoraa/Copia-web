@@ -366,7 +366,14 @@ export const ToolRail = () => {
   return (
     <>
       <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${paletteOpen ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
-        <div className="desktop-tool-list">
+        {/* El riel de escritorio no existe en Compact: allí la barra inferior
+            enseña la herramienta activa y la hoja lleva el catálogo. Se retira
+            del DOM en vez de esconderse con CSS — escondido seguía siendo un
+            juego de botones duplicado, y una regla suelta
+            (`.tool-rail.is-compact .desktop-tool-list { display:flex }`) ganaba
+            la cascada y lo devolvía al layout: medido, 734px de riel apilados
+            bajo el lienzo, que quedaba en 94px. */}
+        {shellClass === 'K0' ? null : <div className="desktop-tool-list">
           {TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
             if (!groupTools.length && !(group.id === 'edit' && canEditSelection)) return null;
@@ -423,7 +430,7 @@ export const ToolRail = () => {
             aria-expanded={showAdvanced}
             onClick={() => setShowAdvanced((current) => !current)}
           ><MoreHorizontal size={22} /><span>{showAdvanced ? t('toolbar.lessShort') : t('toolbar.moreShort')}</span></button> : null}
-        </div>
+        </div>}
 
         <div className="toolbar-spacer" />
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>

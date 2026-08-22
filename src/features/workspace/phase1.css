@@ -113,9 +113,14 @@
 .app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
 .inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }
 .inspector-panel[data-surface-presentation='inset'] { position:absolute; z-index:31; inset:8px 8px 8px auto; display:flex; width:min(420px,calc(100% - 16px)); height:auto; max-height:none; clip-path:none; border-radius:var(--sc-radius-lg); }
-.inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 var(--sc-visual-viewport-bottom,0px); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 calc(var(--sc-visual-viewport-bottom,0px) + var(--sc-chrome-floor)); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .results-panel[data-surface-presentation='dock'] { position:relative; inset:auto; width:auto; }
 .results-panel[data-surface-presentation='inset'] { position:absolute; z-index:8; inset:auto 8px 8px; width:auto; height:min(42dvh,320px)!important; border-radius:var(--sc-radius-lg); }
+/* Una hoja se posa SOBRE la barra inferior, no encima de ella: la barra es el
+   suelo del borde (`--sc-chrome-floor`), y taparla dejaba sin alcance la
+   herramienta activa, los destinos y «Analizar» mientras la hoja estuviera
+   abierta. `.results-panel` se posiciona contra `.workspace`, que ya termina
+   donde empieza la barra, así que ahí el suelo es 0. */
 .results-panel[data-surface-presentation='sheet'] { position:absolute; z-index:8; inset:auto 0 0; width:100%; height:min(46dvh,420px)!important; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .command-palette-backdrop--sheet { align-items:end; padding:0; background:transparent; pointer-events:none; }
 .command-palette-backdrop--sheet .command-palette { width:100%; max-height:min(88dvh,720px); border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; pointer-events:auto; }
@@ -135,7 +140,7 @@
   .inspector-panel.mobile-open[data-mobile-detent='compact'] { height:min(34dvh,320px); }
   .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(58dvh,540px); }
   .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
-  .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:var(--sc-chrome-tier-2); min-height:44px; }
+  .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:var(--sc-chrome-tier-1); min-height:44px; }
   .repeat-preview { top:calc(var(--canvas-safe-top) + 8px); }
   .results-panel.results-mode-focused { position:fixed; inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); width:100%; height:var(--sc-visual-viewport-height,100dvh)!important; min-height:0; max-height:none; z-index:calc(var(--sc-z-modal) + 1); border-radius:0; }
 }
