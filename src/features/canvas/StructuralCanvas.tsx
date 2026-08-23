@@ -20,7 +20,6 @@ import {
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
-import type { TranslationKey } from '../../i18n/catalogs';
 import {
   cameraForViewportResize,
   cameraForPinch,
@@ -36,10 +35,26 @@ import {
   shouldArmLongPress,
   shouldTriggerLongPress,
   zoomCameraAt,
-  type CanvasCamera,
   type ModelPoint,
   type ScreenPoint,
 } from './canvasInteraction';
+import {
+  CANVAS_SCENE_ID,
+  EMPTY_DEMAND_RATIOS,
+  EMPTY_SNAP_CANDIDATES,
+  EMPTY_STRUCTURAL_EDIT_NODE_IDS,
+  IDLE_INTERACTION,
+  clamp,
+  contextualActionLabelKeys,
+  nextCanvasId as nextId,
+  supportCycle,
+  toolLabelKeys,
+  type Camera,
+  type CanvasInteractionState as CanvasInteraction,
+  type CutInfo,
+  type SelectionBox,
+  type Size,
+} from './canvasVocabulary';
 import { toolFromShortcut } from './toolRegistry';
 import { countOf, selectionQueryById, toSelection } from './selectByProperty';
 import { CANVAS_REFERENCE_SCALE, cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
@@ -115,14 +130,6 @@ const LazyStructureGeneratorSurface = lazy(() =>
     .then((module) => ({ default: module.StructureGeneratorSurface })));
 import './phase2.css';
 
-type Camera = CanvasCamera;
-
-/** Shared empty list so the memoised snap candidates keep a stable identity. */
-const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
-
-/** Same empty set for an inactive edit, so pointer preview does not churn props. */
-const EMPTY_STRUCTURAL_EDIT_NODE_IDS: ReadonlySet<string> = new Set();
-
 /**
  * Canvas geometry is memoised and must keep its event props stable while the
  * transient edit ghost advances every animation frame. The ref is synchronised
@@ -135,111 +142,6 @@ const useStableCanvasEvent = <Args extends unknown[], Result>(callback: (...args
   return useCallback((...args: Args) => callbackRef.current(...args), []);
 };
 
-/** `id` del grupo que la lupa táctil clona con `<use>` para ampliar la escena. */
-const CANVAS_SCENE_ID = 'canvas-scene-root';
-
-/** Misma razón: sin mapa de calor, la capa de geometría recibe siempre la misma referencia. */
-const EMPTY_DEMAND_RATIOS: ReadonlyMap<string, number> = new Map();
-
-interface Size {
-  width: number;
-  height: number;
-}
-
-interface CutInfo {
-  memberId: string;
-  ratio: number;
-  point: DiagramPoint | null;
-  clientX: number;
-  clientY: number;
-  pinned?: boolean;
-}
-
-interface SelectionBox {
-  pointerId: number;
-  start: { x: number; y: number };
-  current: { x: number; y: number };
-  additive: boolean;
-}
-
-type CanvasInteraction =
-  | { kind: 'idle' }
-  | {
-    kind: 'pending';
-    pointerId: number;
-    pointerType: string;
-    start: ScreenPoint;
-    target: StructuralTarget;
-    candidates: CandidateTarget[];
-    anchor: ScreenPoint;
-    tool: Tool;
-    shiftKey: boolean;
-  }
-  | {
-    kind: 'pan';
-    pointerId: number;
-    pointerType: string;
-    start: ScreenPoint;
-    camera: Camera;
-    moved: boolean;
-    clearSelectionOnTap: boolean;
-  }
-  | {
-    kind: 'pinch';
-    pointerIds: [number, number];
-    camera: Camera;
-    anchor: ModelPoint;
-    startDistance: number;
-  }
-  | { kind: 'node-drag'; pointerId: number; pointerType: string; nodeId: string; grabOffset: ModelPoint }
-  | {
-    kind: 'structural-edit';
-    pointerId: number;
-    pointerType: string;
-    start: ModelPoint;
-    grabOffset: ModelPoint;
-    beforeDraft: StructuralEditDraft;
-  }
-  | ({ kind: 'selection-box' } & SelectionBox)
-  | { kind: 'long-press'; pointerId: number; target: StructuralTarget };
-
-const IDLE_INTERACTION: CanvasInteraction = { kind: 'idle' };
-
-const toolLabelKeys: Record<Tool, TranslationKey> = {
-  select: 'toolbar.select',
-  pan: 'toolbar.pan',
-  node: 'toolbar.node',
-  member: 'toolbar.member',
-  support: 'toolbar.support',
-  pointLoad: 'toolbar.pointLoad',
-  distributedLoad: 'toolbar.distributedLoad',
-  moment: 'toolbar.moment',
-  dimension: 'toolbar.dimension',
-  cut: 'toolbar.cut',
-  split: 'toolbar.split',
-  delete: 'toolbar.delete',
-};
-
-const contextualActionLabelKeys: Record<ContextualActionId, TranslationKey> = {
-  copy: 'contextualActions.copy',
-  paste: 'contextualActions.paste',
-  duplicate: 'contextualActions.duplicate',
-  repeat: 'contextualActions.repeat',
-  delete: 'contextualActions.delete',
-  datasheet: 'contextualActions.datasheet',
-  structuralEdit: 'contextualActions.structuralEdit',
-  selectSimilar: 'select.similarAction',
-};
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-const nextId = (prefix: string, ids: string[]) => {
-  let index = 1;
-  while (ids.includes(`${prefix}${index}`)) index += 1;
-  return `${prefix}${index}`;
-};
-
-const supportCycle = ['none', 'pin', 'roller', 'fixed'] as const;
 
 export const StructuralCanvas = ({
   onRequestInspector,
