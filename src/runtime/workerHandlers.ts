@@ -1,3 +1,6 @@
+import { analyzeBuckling } from '../engine/buckling';
+import { certifyResult } from '../engine/certificate';
+import { analyzeModal } from '../engine/modal';
 import { analyzeProjectScenarios, type AnalysisScenario } from '../engine/envelope';
 import { analyzeAxleTrain, buildInfluenceLine } from '../engine/influence';
 import { handleAnalysisWorkerRequest } from '../engine/analysisWorkerProtocol';
@@ -7,6 +10,8 @@ import {
   type AnalysisWorkerPayload,
   type InfluenceWorkerPayload,
   type InfluenceWorkerResult,
+  type StudiesWorkerPayload,
+  type StudiesWorkerResult,
   type WorkerDomain,
   type WorkerRequestEnvelope,
   type WorkerResponseEnvelope,
@@ -62,5 +67,32 @@ export const handleInfluenceEnvelope = (
     };
   } catch (error) {
     return domainError('influence', request.requestId, error, 'No se pudo calcular la línea de influencia.');
+  }
+};
+
+/**
+ * Resuelve un estudio opcional sobre el modelo.
+ *
+ * La combinación se resuelve **aquí** y no en el llamador: sólo viaja su `id`
+ * por el sobre, porque mandar el objeto entero permitiría pedir un estudio bajo
+ * una combinación que no está en el proyecto. Es la misma regla que ya sigue el
+ * dominio `analysis`.
+ */
+export const handleStudiesEnvelope = (
+  request: WorkerRequestEnvelope<'studies', StudiesWorkerPayload>,
+): WorkerResponseEnvelope<'studies', StudiesWorkerResult> => {
+  if (request.protocolVersion !== WORKER_PROTOCOL_VERSION || request.domain !== 'studies') return mismatch('studies', request.requestId);
+  const { kind, project, combinationId, modes } = request.payload;
+  const combination = combinationId
+    ? project.combinations.find((candidate) => candidate.id === combinationId) ?? null
+    : null;
+  const success = (result: StudiesWorkerResult): WorkerResponseEnvelope<'studies', StudiesWorkerResult> =>
+    ({ protocolVersion: 1, type: 'success', domain: 'studies', requestId: request.requestId, result });
+  try {
+    if (kind === 'buckling') return success({ kind, result: analyzeBuckling(project, combination, { modes }) });
+    if (kind === 'modal') return success({ kind, result: analyzeModal(project, { modes }) });
+    return success({ kind: 'certificate', result: certifyResult(project, combination) });
+  } catch (error) {
+    return domainError('studies', request.requestId, error, 'No se pudo completar el estudio del modelo.');
   }
 };
