@@ -109,6 +109,7 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="M1 origen material">{String((memberM1 as unknown as Record<string, unknown>)?.materialOrigin ?? '')}</output>
       <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
       <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
+      <output aria-label="M1 comportamiento axial">{String(memberM1?.axialBehavior ?? 'ausente')}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
@@ -896,5 +897,65 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(loadsTab.getAttribute('aria-selected')).toBe('true');
     await user.keyboard('{Shift>}{Tab}{/Shift}');
     expect(document.activeElement).not.toBe(loadsTab);
+  });
+});
+
+/**
+ * Las barras de signo restringido existían en el motor desde la tanda anterior
+ * y no había forma de declararlas. Estas pruebas son la que comprueba que el
+ * selector escribe en el modelo lo que dice escribir — y, sobre todo, que
+ * «tracción y compresión» **borra** la propiedad en vez de guardar `'both'`.
+ */
+describe('comportamiento axial del miembro', () => {
+  const axialSelect = () => screen.getByLabelText('Comportamiento axial', { selector: 'select' });
+
+  it('nace ausente: una barra ordinaria no declara nada', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(screen.getByLabelText('M1 comportamiento axial').textContent).toBe('ausente');
+    expect((axialSelect() as HTMLSelectElement).value).toBe('both');
+  });
+
+  it('escribe el cable en el modelo', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(axialSelect(), 'tension-only');
+    await waitFor(() => {
+      expect(screen.getByLabelText('M1 comportamiento axial').textContent).toBe('tension-only');
+    });
+  });
+
+  it('y el puntal también', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(axialSelect(), 'compression-only');
+    await waitFor(() => {
+      expect(screen.getByLabelText('M1 comportamiento axial').textContent).toBe('compression-only');
+    });
+  });
+
+  it('volver a «tracción y compresión» BORRA la propiedad, no guarda «both»', async () => {
+    /* `'both'` es la ausencia de restricción, no un valor. Guardarlo dejaría dos
+       formas de decir lo mismo y haría que un proyecto sin cables dejara de ser
+       idéntico al que era antes de que esta propiedad existiera. */
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(axialSelect(), 'tension-only');
+    await waitFor(() => expect(screen.getByLabelText('M1 comportamiento axial').textContent).toBe('tension-only'));
+    await user.selectOptions(axialSelect(), 'both');
+    await waitFor(() => expect(screen.getByLabelText('M1 comportamiento axial').textContent).toBe('ausente'));
+  });
+
+  it('explica la consecuencia sólo cuando hay restricción declarada', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(screen.queryByText(/se descuelga del modelo/)).toBeNull();
+    await user.selectOptions(axialSelect(), 'tension-only');
+    await waitFor(() => expect(screen.getByText(/se descuelga del modelo/)).toBeTruthy());
   });
 });

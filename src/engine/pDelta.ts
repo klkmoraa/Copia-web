@@ -6,6 +6,7 @@ import type {
   PDeltaStepIteration,
   ProjectModel,
 } from '../types';
+import { analyzeProjectWithActiveSet, conditionalMembers } from './activeSet';
 import { abortedAnalysis } from './analysisFailure';
 import { classifyAnalysisReliability } from './reliability';
 import { analyzeProject, selectedFactors } from './solver';
@@ -556,12 +557,50 @@ const buildFailureResult = (
   ], { pDelta, mechanism: lastAttempt?.mechanism });
 };
 
-/** Dispatches to the mode the project is configured for; every other caller keeps calling `analyzeProject` directly. */
+/**
+ * Punto único de despacho de la aplicación: lo llaman `ProjectContext` y el
+ * worker de análisis. Cualquier otro llamador sigue usando `analyzeProject`
+ * directamente.
+ *
+ * La rama de primer orden pasa por `analyzeProjectWithActiveSet` **sin
+ * condicional**: esa función delega en `analyzeProject` sin tocar nada cuando
+ * ningún miembro declara `axialBehavior`, y hay pruebas que lo afirman
+ * desplazamiento a desplazamiento. Poner aquí un `if` sería repetir una
+ * decisión que ya está tomada un nivel más abajo, y darle dos sitios donde
+ * discrepar.
+ *
+ * ## P-Delta y las barras de signo restringido no componen todavía
+ *
+ * La iteración de segundo orden es un punto fijo sobre la fuerza axial con el
+ * conjunto de barras **fijo**; el conjunto activo es otra iteración, sobre qué
+ * barras trabajan. Anidarlas exige decidir cuál manda en cada paso y demostrar
+ * que la combinación converge, y eso es un trabajo con su propia validación.
+ *
+ * Mientras tanto, un modelo con las dos cosas no se resuelve a medias en
+ * silencio: se resuelve con P-Delta y **se dice** que la restricción de signo
+ * no se aplicó. Callarlo devolvería un resultado con barras trabajando a
+ * compresión que el usuario declaró incapaces de hacerlo, con toda la pinta de
+ * ser correcto.
+ */
 export const analyzeProjectAuto = (
   project: ProjectModel,
   combination?: LoadCombination | null,
   options?: { includeEducationTrace?: boolean },
-): AnalysisResult =>
-  project.settings.analysisMode === 'p-delta'
-    ? analyzeProjectPDelta(project, combination, undefined, options)
-    : analyzeProject(project, combination, options);
+): AnalysisResult => {
+  if (project.settings.analysisMode !== 'p-delta') {
+    return analyzeProjectWithActiveSet(project, combination, options);
+  }
+  const result = analyzeProjectPDelta(project, combination, undefined, options);
+  const conditional = conditionalMembers(project);
+  if (!conditional.length) return result;
+  return {
+    ...result,
+    issues: [...result.issues, {
+      id: 'pdelta-ignores-axial-behavior',
+      severity: 'warning',
+      title: 'P-Delta no aplica la restricción de signo de las barras',
+      message: `${conditional.length} barra(s) declaran sólo tracción o sólo compresión, pero el análisis de segundo orden las ha resuelto como barras ordinarias.`,
+      suggestedFix: 'Vuelve al análisis de primer orden para que la restricción de signo se aplique, o retírala de esas barras si el modelo no la necesita.',
+    }],
+  };
+};

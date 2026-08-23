@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Anchor,
   CircleDot,
+  CircleHelp,
   Layers3,
   Minus,
   MoveDown,
@@ -218,6 +219,20 @@ export const InspectorProperties = () => {
     else if (key === 'E') member.E = Number(value);
     else if (key === 'A' || key === 'I' || key === 'density' || key === 'G' || key === 'shearArea' || key === 'rotationalSpringI' || key === 'rotationalSpringJ') member[key] = Number(value);
     else if (key === 'beamTheory') member.beamTheory = value as 'euler-bernoulli' | 'timoshenko';
+    else if (key === 'axialBehavior') {
+      /* `'both'` es la ausencia de restricción, no un valor a guardar: dejarlo
+         escrito obligaría a `conditionalMembers` a distinguir dos formas de
+         decir lo mismo, y haría que un proyecto sin cables dejara de ser
+         idéntico al que era antes de que esta propiedad existiera.
+
+         Se asigna `undefined` y **no** se hace `delete`: `member.update` aplica
+         los cambios con un spread (`{ ...current, ...changes }`), donde una
+         clave ausente significa «sin tocar». Borrarla aquí dejaría la
+         restricción puesta para siempre — que es exactamente lo que hacía la
+         primera versión de esto, y lo que destapó la prueba de volver a
+         «tracción y compresión». */
+      member.axialBehavior = value === 'both' ? undefined : value as 'tension-only' | 'compression-only';
+    }
     else if (key === 'useRotationalSpringI' || key === 'useRotationalSpringJ') {
       const property = key === 'useRotationalSpringI' ? 'rotationalSpringI' : 'rotationalSpringJ';
       if (value) member[property] ??= 1e6;
@@ -404,6 +419,17 @@ export const InspectorProperties = () => {
     {selectedMember.type === 'rigid' ? <InspectorLockedState title={t('inspector.mechanicalPropertiesLocked')}>{t('inspector.rigidHelp')}</InspectorLockedState> : <>
       {!classroomMode ? <InspectorPropertyGroup title={t('inspector.complementaryMaterial')} description={t('inspector.lessFrequentMemberProperties')}>
         <PhysicalNumberField label="ρ" value={selectedMember.density ?? 0} units={units} quantity="density" resetKey={`${selectionKey}:density`} validate={nonNegative} hint={selectedMember.density === undefined ? t('inspector.explicitValueSaveHint') : undefined} onCommit={(value) => updateMember('density', value)} />
+      </InspectorPropertyGroup> : null}
+
+      {!classroomMode ? <InspectorPropertyGroup title={t('inspector.axialBehavior')} description={t('inspector.axialBehaviorDescription')}>
+        <SelectField label={t('inspector.axialBehavior')} value={selectedMember.axialBehavior ?? 'both'} onChange={(value) => updateMember('axialBehavior', value)}>
+          <option value="both">{t('inspector.axialBoth')}</option>
+          <option value="tension-only">{t('inspector.axialTensionOnly')}</option>
+          <option value="compression-only">{t('inspector.axialCompressionOnly')}</option>
+        </SelectField>
+        {selectedMember.axialBehavior && selectedMember.axialBehavior !== 'both'
+          ? <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.axialBehaviorHint')}</div>
+          : null}
       </InspectorPropertyGroup> : null}
 
       {selectedMember.type === 'frame' && !classroomMode ? <InspectorPropertyGroup title={t('inspector.beamTheory')} description={t('inspector.memberDeformationModel')}>
