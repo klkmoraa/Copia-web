@@ -10,7 +10,7 @@
  * canvas-budget-model.mjs`, cuyo modelo reproduce las once mediciones reales de
  * CRI-7 §2 con un error máximo de 0.24 puntos porcentuales. La frontera
  * Expanded↔Medium NO está escrita en ninguna parte: sale de CB, y este módulo
- * la recalcula (1042–1130 px según altura, ver `expandedBoundaryWidth`).
+ * la recalcula (ver `expandedBoundaryWidth`).
  *
  * CONTRATOS QUE SOSTIENE:
  * - **T-INV-4**: el resolutor lee el viewport de layout (`innerWidth`/
@@ -49,8 +49,21 @@ export interface ShellComposition {
 export const CHROME = {
   /** 8.9% de 1024×768 = 69 985 px² / 1024 = 68.3 px · 7.6% de 1440×900 → 68.4 px */
   topBarWide: 68,
-  /** 2.9% de 1024×768 = 22 806 px² / 1024 = 22.3 px */
-  footerWide: 22,
+  /**
+   * Pie de la Mesa. **Cero desde que el aviso profesional salió del shell.**
+   *
+   * Valía 22 px —2.9% de 1024×768 = 22 806 px² / 1024 = 22.3 px, medido en
+   * CRI-7 §2— porque el aviso ocupaba una banda fija en cada pantalla y en las
+   * tres composiciones, siempre. Ese aviso vive ahora en la entrada del
+   * producto, en la memoria de cálculo y en el menú de utilidades; la Mesa ya no
+   * paga alto por él.
+   *
+   * No es cosmética: `wideStageHeight` lo resta del escenario, así que mover
+   * este número **mueve la frontera calculada X2↔M1**. La tabla de
+   * `expandedBoundaryWidth` en `shellComposition.test.ts` está recalculada
+   * contra este valor, no ajustada a mano.
+   */
+  footerWide: 0,
   /** 14.1% de 1024×768 = 110 887 px² / (768−68−22) = 163.6 px */
   railLabels: 164,
   /** Declarado por styles.css para 1024–1439 (el tier que F-01 dejó muerto). */

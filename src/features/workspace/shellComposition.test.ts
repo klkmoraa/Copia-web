@@ -14,15 +14,27 @@ import {
 } from './shellComposition';
 
 describe('resolutor de composición · fronteras', () => {
-  it('reproduce la frontera Expanded↔Medium publicada por CRI-9 §12', () => {
-    // Estos números NO están escritos en el resolutor: salen de CB-1..CB-4.
-    // Si el modelo cambiara, esta tabla lo delataría.
-    expect(expandedBoundaryWidth(720)).toBe(1130);
-    expect(expandedBoundaryWidth(768)).toBe(1117);
-    expect(expandedBoundaryWidth(800)).toBe(1109);
-    expect(expandedBoundaryWidth(900)).toBe(1089);
-    expect(expandedBoundaryWidth(1080)).toBe(1065);
-    expect(expandedBoundaryWidth(1366)).toBe(1042);
+  /**
+   * La frontera Expanded↔Medium, recalculada tras retirar el pie de la Mesa.
+   *
+   * Estos números NO están escritos en el resolutor: salen de CB-1..CB-4. La
+   * tabla anterior (1130 · 1117 · 1109 · 1089 · 1065 · 1042) era la misma
+   * fórmula con `CHROME.footerWide = 22`; el aviso profesional ocupaba esa
+   * banda en cada pantalla y el escenario la pagaba. Al salir del shell,
+   * `wideStageHeight` gana 22 px, X2 cabe antes, y la frontera **baja** entre
+   * 18 y 49 px según la altura. Ésa es la ganancia medida del cambio: modelos
+   * que antes se quedaban en Medium ahora entran en Expanded.
+   *
+   * El gate no se relaja: se recalcula, y sigue delatando cualquier cambio del
+   * modelo que nadie haya querido.
+   */
+  it('reproduce la frontera Expanded↔Medium que sale de CB, sin pie en la Mesa', () => {
+    expect(expandedBoundaryWidth(720)).toBe(1081);
+    expect(expandedBoundaryWidth(768)).toBe(1073);
+    expect(expandedBoundaryWidth(800)).toBe(1068);
+    expect(expandedBoundaryWidth(900)).toBe(1055);
+    expect(expandedBoundaryWidth(1080)).toBe(1038);
+    expect(expandedBoundaryWidth(1366)).toBe(1024);
   });
 
   it('mueve la frontera de Medium con la altura, en vez de fijarla a un breakpoint', () => {
@@ -31,8 +43,12 @@ describe('resolutor de composición · fronteras', () => {
     expect(tall).toBeLessThan(short);
     // El mismo ancho da clases distintas según la altura: eso es exactamente lo
     // que `@media (min-width: …)` no puede expresar.
-    expect(resolveShellClass({ width: 1100, height: 768 })).toBe('M1');
-    expect(resolveShellClass({ width: 1100, height: 1366 })).toBe('X2');
+    // El mismo ancho da clases distintas según la altura. El par de prueba
+    // baja con la frontera: a 1073 px de frontera para 768 de alto, 1100 ya
+    // entra en X2, así que el ancho testigo pasa a 1060 — que sigue por debajo
+    // de la frontera baja y por encima de la alta.
+    expect(resolveShellClass({ width: 1060, height: 768 })).toBe('M1');
+    expect(resolveShellClass({ width: 1060, height: 1366 })).toBe('X2');
   });
 
   it('resuelve las tres clases sobre viewports reales', () => {
@@ -148,12 +164,14 @@ describe('resolutor de composición · histéresis (T-INV-5)', () => {
     // viniendo varias veces dentro del mismo tramo.
     //
     // El techo de Compact se cruza exacto (1024 subiendo, 1023 bajando) y sólo
-    // la frontera calculada lleva banda: 1129 subiendo contra 1104 bajando, que
-    // son los 24 px de zona muerta alrededor de los 1117 px de X2 a esta altura.
+    // la frontera calculada lleva banda: 1085 subiendo contra 1060 bajando, que
+    // son los 24 px de zona muerta alrededor de los 1073 px de X2 a esta altura.
+    // Los números bajan con la frontera al retirar el pie de la Mesa; la
+    // ANCHURA de la banda no se mueve, que es lo que este gate fija.
     expect(transitions).toEqual([
       'K0→M1@1024',
-      'M1→X2@1129',
-      'X2→M1@1104',
+      'M1→X2@1085',
+      'X2→M1@1060',
       'M1→K0@1023',
     ]);
     expect(composition.shellClass).toBe('K0');

@@ -565,6 +565,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                     visible del desbordamiento y no vuelve a anunciarse solo. */}
                 <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
                 {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
+
+                {/* El aviso profesional. Ocupaba 22 px de alto en CADA pantalla
+                    y en las tres composiciones, siempre; a cambio nadie lo lee
+                    después de la primera vez. Aquí sigue alcanzable en un gesto
+                    y sin cobrarle alto al lienzo, y sigue entero donde de
+                    verdad se lee: la entrada del producto y la memoria de
+                    cálculo que alguien va a firmar. */}
+                <p className="menu-professional-note">{t('app.professionalNote')}</p>
               </m.div>
             ) : null}
           </AnimatePresence>

@@ -76,10 +76,16 @@ describe('recomposición del shell', () => {
     expect(screen.getByRole('dialog', { name: 'hoja' })).toBeTruthy();
 
     // Recomposición real: X2 → M1 → K0 → M1 → X2, cruzando ambas fronteras.
+    //
+    // El ancho testigo de Medium baja de 1100 a 1040: al retirar el pie de la
+    // Mesa el escenario gana 22 px de alto, X2 cabe antes y la frontera a 768
+    // de alto pasa de 1117 a 1073 px, así que 1100 ya es X2. Lo que este gate
+    // fija no es el número, es que la recomposición cruce las dos fronteras sin
+    // perder selección, borrador ni foco.
     for (const [width, height, expected] of [
       [1024, 768, 'M1'],
       [390, 844, 'K0'],
-      [1100, 768, 'M1'],
+      [1040, 768, 'M1'],
       [1440, 900, 'X2'],
     ] as const) {
       resizeTo(width, height);

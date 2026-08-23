@@ -934,7 +934,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .educational-source>.assertion-results{display:grid;gap:5px;margin:10px 0;padding-top:9px;border-top:1px solid var(--border)}.assertion-summary{display:flex;justify-content:space-between;align-items:center}.assertion-summary span{color:var(--muted)}.assertion-row{display:grid;grid-template-columns:20px minmax(150px,1fr) auto;gap:7px;align-items:center;padding:7px 8px;border-radius:var(--sc-radius-control);background:var(--surface)}.assertion-row.passed{border-left:3px solid var(--success)}.assertion-row.failed{border-left:3px solid var(--error)}.assertion-status{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;color:var(--error-foreground);background:var(--error-solid)}.assertion-row.passed .assertion-status{background:var(--success)}.assertion-row>div{display:flex;flex-direction:column;align-items:flex-start}.assertion-row small{color:var(--muted)}.assertion-errors{font-variant-numeric:tabular-nums;text-align:right}.assertion-errors span{color:var(--muted)}
 .issues-list{padding:12px 18px;display:grid;gap:8px}.issue-card{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:10px;border:1px solid var(--border);border-radius:var(--sc-radius-control)}.issue-card.error{border-color:color-mix(in srgb,var(--error) 45%,var(--border))}.issue-card.warning{border-color:color-mix(in srgb,var(--warning) 45%,var(--border))}.issue-icon{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);font-weight:700}.issue-card.error .issue-icon{color:var(--error)}.issue-card.warning .issue-icon{color:var(--warning)}.issue-card strong{font-size:var(--sc-font-size-label)}.issue-card p{margin:3px 0;font-size:var(--sc-font-size-label);color:var(--muted)}.issue-card .issue-fix{margin-top:7px;color:var(--text)}.issue-card small{font-size:var(--sc-font-size-label);color:var(--subtle)}
 .all-clear{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:5px}.all-clear svg{color:var(--success)}.all-clear strong{color:var(--text)}.all-clear p{font-size:var(--sc-font-size-label);margin:0}.empty-small{padding:30px;color:var(--muted);text-align:center}
-.professional-note { flex: 0 0 22px; background: var(--surface-2); color: var(--subtle); border-top: 1px solid var(--border); font-size:11px; display: flex; align-items: center; justify-content: center; padding: 0 10px; text-align: center; }
+/* El aviso profesional dentro del menú de utilidades. Ya no es una banda fija
+   de la Mesa —cobraba 22 px de alto en cada pantalla y en las tres
+   composiciones—: es un renglón del desbordamiento, y sigue entero en la
+   entrada del producto y en la memoria de cálculo. */
+.menu-professional-note { margin:0; padding:var(--sc-space-3) var(--sc-space-4) 0; border-top:var(--sc-hairline); color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-caption); line-height:1.45; }
 
 .mobile-actions-wrap { display:block; position: relative; }
 .mobile-actions-menu { right: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
@@ -1033,7 +1037,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 
 @media print {
-  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.professional-note,.canvas-navigator,.data-surface-tabs{display:none!important}
+  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.canvas-navigator,.data-surface-tabs{display:none!important}
   /* Imprimir con «Datos» abierta no debe pintar el cajón: el papel no tiene
      superficies modales. Se aplana la superficie y se retira su velo. */
   .sc-overlay{position:static!important;background:none!important;inset:auto!important;display:block!important}
@@ -1091,7 +1095,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
   .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:var(--sc-radius-card); }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
   .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
-  .professional-note { flex-basis:18px; font-size:10px; line-height:1.15; }
   .diagram-chart { padding:9px 10px 8px; }
   .diagram-chart-heading{gap:7px}.diagram-chart-heading label span{display:none}.diagram-chart-heading strong{font-size:10px}.diagram-chart svg{height:202px}
   .diagram-chart-heading button { display:none; }
@@ -1125,7 +1128,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 @media (max-width:1023px) and (max-height:600px) {
   .canvas-host { min-height:112px; }
-  .professional-note { display:none; }
   .toolbar { bottom:8px; }
   .canvas-navigator { bottom:70px; }
   .mobile-inspector-toggle { bottom:78px; }
@@ -1387,7 +1389,6 @@ button,
 .influence-line-view>.verification-grid { margin:8px 12px 0; }
 .influence-line-view input[type='range'] { accent-color:var(--deformed); }
 .influence-line-view .response-selector button.active { color:var(--deformed); }
-.professional-note { background:var(--surface); border-color:var(--border-soft); font-size:10px; }
 
 .import-center-backdrop { background:var(--sc-color-overlay-strong); }
 .import-center-dialog { border-radius:var(--sc-radius-panel); }
@@ -1415,7 +1416,6 @@ button,
   .tool-node.active,.tool-pointLoad.active,.tool-dimension.active { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tool-color) 12%,transparent); }
   .canvas-mode-badge { font-size:var(--sc-font-size-technical); }
   .canvas-mode-badge strong { font-size:13px; }
-  .professional-note { font-size:11px; }
 }
 
 @media (prefers-reduced-motion:reduce) {
@@ -1583,7 +1583,6 @@ button,
     scroll-padding-bottom:calc(28px + env(safe-area-inset-bottom));
     -webkit-overflow-scrolling:touch;
   }
-  .professional-note { display:none; }
 }
 
 /* El umbral era 1500px porque los cuatro selectores rotulados del contexto se
@@ -1658,7 +1657,7 @@ html { -webkit-tap-highlight-color:transparent; }
 .canvas-host { contain:layout paint; }
 .toolbar { contain:layout style; }
 .inspector-panel { contain:layout paint style; }
-.welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel,.professional-note {
+.welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel {
   transition:var(--sc-transition-theme);
 }
 
@@ -2818,14 +2817,14 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* Cambio de tema Día/Noche con transición coordinada de superficies. */
-.app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen, .professional-note {
+.app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen {
   transition: var(--sc-transition-theme);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .inspector-tabs button::after, .result-tabs button::after { transition: none; }
   .tool-button, .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab, .segmented-control button { transition: none; }
-  .app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen, .professional-note { transition: none; }
+  .app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen { transition: none; }
 }
 
 .sc-toast-container { position:fixed; z-index:var(--sc-z-toast); bottom:calc(24px + env(safe-area-inset-bottom)); right:calc(24px + env(safe-area-inset-right)); display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:calc(100vw - 32px); width:360px; }

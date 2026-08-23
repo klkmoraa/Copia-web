@@ -289,7 +289,6 @@ const WorkspaceBrokerContent = ({
           desde la barra superior y desde la paleta. */}
       <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
     </div>}
-    footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;
 };
 
