@@ -26,6 +26,7 @@ import {
   ChartNoAxesCombined,
   Download,
   Grid3x3,
+  BoxSelect,
   Layers3,
   LocateFixed,
   Moon,
@@ -42,11 +43,12 @@ import type { ResultTab } from '../../store/ProjectContext';
 import { TOOL_REGISTRY } from '../canvas/toolRegistry';
 import type { EditorLayerAction, EditorLayerPresetId } from '../canvas/editorLayers';
 import { activateEvidenceLayer, EVIDENCE_LAYERS } from '../canvas/evidenceLayers';
+import { SELECTION_QUERIES, countOf, toSelection } from '../canvas/selectByProperty';
 import { emitWorkspaceCommand } from './workspaceCommands';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { exportProjectJson } from '../../utils/export';
 
-export type CommandCategory = 'tools' | 'view' | 'results' | 'analysis' | 'navigate' | 'export';
+export type CommandCategory = 'tools' | 'view' | 'results' | 'analysis' | 'navigate' | 'select' | 'export';
 
 export type CommandIcon = ComponentType<{ size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 
@@ -61,6 +63,8 @@ export interface CommandContext {
   classroomMode: boolean;
   theme: 'light' | 'dark';
   setActiveTool: (tool: Tool) => void;
+  /** La selección viva. Sólo la lee «Seleccionar similares», que se define contra ella. */
+  selection: Selection;
   setSelection: (selection: Selection) => void;
   setResultTab: (tab: ResultTab) => void;
   setTheme: (theme: 'light' | 'dark') => void;
@@ -304,6 +308,30 @@ const toolCommands = (ctx: CommandContext): CommandListItem[] => TOOL_REGISTRY
     run: () => ctx.setActiveTool(tool.id),
   }));
 
+/**
+ * Seleccionar por propiedad.
+ *
+ * Sólo aparecen las consultas que HOY encuentran algo, y con el recuento en la
+ * propia etiqueta: «Apoyos empotrados · 4» dice, antes de pulsarla, qué va a
+ * pasar. Una consulta que devuelve cero no es una opción, es ruido — y en un
+ * modelo sin armaduras «Barras de armadura» no debería ocupar un renglón.
+ *
+ * El único que puede aparecer desactivado es «Similares a la selección», y a
+ * propósito: sin selección no es una consulta vacía, es una consulta que no se
+ * puede formular. Verla apagada explica el mecanismo; no verla lo esconde.
+ */
+const selectionQueryCommands = (ctx: CommandContext): CommandListItem[] => SELECTION_QUERIES
+  .map((query) => ({ query, result: query.run(ctx.project, ctx.selection) }))
+  .filter(({ query, result }) => countOf(result) > 0 || query.needsSelection)
+  .map(({ query, result }): CommandListItem => ({
+    id: `select:${query.id}`,
+    category: 'select',
+    icon: BoxSelect,
+    label: ctx.t('select.paletteEntry', { query: ctx.t(query.labelKey), count: countOf(result) }),
+    disabled: countOf(result) === 0,
+    run: () => ctx.setSelection(toSelection(result)),
+  }));
+
 const nodeCommands = (ctx: CommandContext): CommandListItem[] => ctx.project.nodes.map((node): CommandListItem => ({
   id: `node:${node.id}`,
   category: 'navigate',
@@ -360,6 +388,7 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
   ...layerPresetCommands(ctx),
   ...resultTabCommands(ctx),
   ...evidenceLayerCommands(ctx),
+  ...selectionQueryCommands(ctx),
   ...nodeCommands(ctx),
   ...memberCommands(ctx),
 ];
@@ -389,9 +418,10 @@ const unusedByTopBar = (): never => {
 };
 
 const TOPBAR_CONTEXT_STUBS: Pick<CommandContext,
-  'hasAnalysis' | 'classroomMode' | 'setActiveTool' | 'setSelection' | 'setResultTab' | 'updateProjectView' | 'dispatchLayers'> = {
+  'hasAnalysis' | 'classroomMode' | 'setActiveTool' | 'selection' | 'setSelection' | 'setResultTab' | 'updateProjectView' | 'dispatchLayers'> = {
   hasAnalysis: false,
   classroomMode: false,
+  selection: null,
   setActiveTool: unusedByTopBar,
   setSelection: unusedByTopBar,
   setResultTab: unusedByTopBar,

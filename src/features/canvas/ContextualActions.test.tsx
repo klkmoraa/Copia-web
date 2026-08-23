@@ -20,6 +20,7 @@ const labels: Record<ContextualActionId, string> = {
   delete: 'Borrar',
   datasheet: 'Abrir hoja de datos',
   structuralEdit: 'Editar selección',
+  selectSimilar: 'Seleccionar similares',
 };
 
 const available: ContextualActionAvailability = {
@@ -29,6 +30,7 @@ const available: ContextualActionAvailability = {
   repeat: true,
   datasheet: true,
   structuralEdit: true,
+  selectSimilar: true,
 };
 
 const renderSurface = (

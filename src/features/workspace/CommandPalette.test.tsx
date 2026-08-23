@@ -13,7 +13,12 @@ const dispatchLayers = vi.fn();
 /** Expone el estado del store para comprobar que la paleta ejecuta el comando real. */
 const StateProbe = () => {
   const { activeTool, selection } = useProject();
-  return <output data-testid="probe">{activeTool}|{selection && selection.kind !== 'multi' ? selection.id : 'none'}</output>;
+  return <>
+    <output data-testid="probe">{activeTool}|{selection && selection.kind !== 'multi' ? selection.id : 'none'}</output>
+    <output data-testid="multi">{selection?.kind === 'multi'
+      ? `${selection.nodeIds.join(',')}/${selection.memberIds.join(',')}`
+      : 'none'}</output>
+  </>;
 };
 
 /**
@@ -77,6 +82,35 @@ describe('CommandPalette', () => {
 
     await waitFor(() => expect(openDoctor).toHaveBeenCalledTimes(1));
     window.removeEventListener(workspaceCommandEventName('open-data'), openDoctor);
+  });
+
+  /**
+   * Seleccionar por propiedad.
+   *
+   * La edición masiva del producto es completa, y hasta aquí la única forma de
+   * llegar a ella era señalar los objetos uno a uno. Esto lo comprueba entero:
+   * la consulta se ofrece con su recuento en la etiqueta —para que se sepa qué
+   * va a pasar antes de pulsarla— y lo que deja en el store es una selección
+   * múltiple, que es exactamente la que produce arrastrar un rectángulo.
+   */
+  it('selecciona por propiedad y deja una selección múltiple en el store', async () => {
+    const user = userEvent.setup();
+    renderPalette({ seed: true });
+    await waitFor(() => expect(screen.getByRole('option', { name: /Apoyos articulados/ })).toBeTruthy());
+
+    // El recuento viaja en la etiqueta: dos apoyos articulados en el pórtico.
+    const option = screen.getByRole('option', { name: /Apoyos articulados · 2/ });
+    await user.click(option);
+
+    await waitFor(() => expect(screen.getByTestId('multi').textContent).toBe('N1,N2/'));
+  });
+
+  it('no ofrece consultas que hoy no encuentran nada', async () => {
+    renderPalette({ seed: true });
+    await waitFor(() => expect(screen.getByRole('option', { name: /Apoyos articulados/ })).toBeTruthy());
+    // El pórtico de ejemplo no tiene armaduras ni empotramientos.
+    expect(screen.queryByRole('option', { name: /Barras de armadura/ })).toBeNull();
+    expect(screen.queryByRole('option', { name: /Apoyos empotrados/ })).toBeNull();
   });
 
   it('offers the structure generator and emits the shared open command', async () => {

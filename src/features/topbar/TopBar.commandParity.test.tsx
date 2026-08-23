@@ -33,6 +33,7 @@ const baseFullContext = (overrides: Partial<CommandContext> = {}): CommandContex
   isAnalyzing: false,
   canUndo: false,
   canRedo: false,
+  selection: null,
   classroomMode: false,
   theme: 'light',
   setActiveTool: vi.fn(),

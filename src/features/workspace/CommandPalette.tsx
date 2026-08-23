@@ -20,10 +20,11 @@ const GROUP_LABEL_KEYS: Record<CommandCategory, TranslationKey> = {
   results: 'palette.groupResults',
   analysis: 'palette.groupAnalysis',
   navigate: 'palette.groupNavigate',
+  select: 'select.group',
   export: 'palette.groupExport',
 };
 
-const GROUP_ORDER: readonly CommandCategory[] = ['analysis', 'tools', 'navigate', 'results', 'view', 'export'];
+const GROUP_ORDER: readonly CommandCategory[] = ['analysis', 'tools', 'select', 'navigate', 'results', 'view', 'export'];
 
 /** Coincidencia por subcadena sobre etiqueta y pista, sin acentos ni mayúsculas. */
 const normalize = (value: string) => value
@@ -66,6 +67,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     classroomMode: project.settings.calculationMode === 'classroom',
     theme,
     setActiveTool,
+    selection,
     setSelection,
     setResultTab,
     setTheme,
@@ -76,7 +78,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     redo,
   }), [
     t, project, analysis, isAnalyzing, canUndo, canRedo, theme,
-    setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, dispatchLayers, analyze, undo, redo,
+    selection, setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, dispatchLayers, analyze, undo, redo,
   ]);
 
   const commands = useMemo<CommandListItem[]>(() => buildCommands(context), [context]);

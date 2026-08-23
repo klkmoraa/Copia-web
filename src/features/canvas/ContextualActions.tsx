@@ -11,6 +11,13 @@ export const CONTEXTUAL_ACTION_IDS = [
   'delete',
   'datasheet',
   'structuralEdit',
+  /**
+   * «Seleccionar similares»: todo lo que comparte sección y material con lo
+   * seleccionado. Vive aquí, y no sólo en la paleta, porque es la única de las
+   * consultas por propiedad que se define CONTRA la selección — y este zócalo
+   * es justo el sitio donde el usuario ya tiene una selección delante.
+   */
+  'selectSimilar',
 ] as const;
 
 export type ContextualActionId = (typeof CONTEXTUAL_ACTION_IDS)[number];
@@ -22,6 +29,7 @@ export interface ContextualActionAvailability {
   repeat: boolean;
   datasheet: boolean;
   structuralEdit: boolean;
+  selectSimilar: boolean;
 }
 
 export interface ContextualAction {
@@ -43,6 +51,7 @@ const ACTIONS: Record<ContextualActionId, ContextualAction> = {
   delete: { id: 'delete', shortcut: 'Delete' },
   datasheet: { id: 'datasheet' },
   structuralEdit: { id: 'structuralEdit' },
+  selectSimilar: { id: 'selectSimilar' },
 };
 
 const actionAvailable = (

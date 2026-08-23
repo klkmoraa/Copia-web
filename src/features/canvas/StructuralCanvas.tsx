@@ -41,6 +41,7 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
+import { countOf, selectionQueryById, toSelection } from './selectByProperty';
 import { CANVAS_REFERENCE_SCALE, cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
@@ -227,6 +228,7 @@ const contextualActionLabelKeys: Record<ContextualActionId, TranslationKey> = {
   delete: 'contextualActions.delete',
   datasheet: 'contextualActions.datasheet',
   structuralEdit: 'contextualActions.structuralEdit',
+  selectSimilar: 'select.similarAction',
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -367,6 +369,11 @@ export const StructuralCanvas = ({
       repeat: Boolean(repeatCandidate),
       datasheet: Boolean(selection),
       structuralEdit: editCapabilities.structural,
+      /* Sólo cuando de verdad hay MÁS de lo ya seleccionado. Ofrecer
+         «Seleccionar similares» sobre la única barra de su clase es ofrecer una
+         acción que no cambia nada. */
+      selectSimilar: countOf(selectionQueryById('members.similar').run(project, selection))
+        > (selection?.kind === 'multi' ? selection.memberIds.length : selection?.kind === 'member' ? 1 : 0),
     };
   }, [editCapabilities.structural, hasInAppClipboard, project, repeatCandidate, selection]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
@@ -1808,8 +1815,11 @@ export const StructuralCanvas = ({
       case 'structuralEdit':
         emitWorkspaceCommand('open-structural-edit');
         return;
+      case 'selectSimilar':
+        setSelection(toSelection(selectionQueryById('members.similar').run(project, selection)));
+        return;
     }
-  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate]);
+  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, project, selection, setSelection, startDuplicate]);
 
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
   useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
