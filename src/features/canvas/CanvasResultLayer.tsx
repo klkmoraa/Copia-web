@@ -1,13 +1,14 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { AnalysisResult, DiagramQuantity, MemberModel, NodeModel, ProjectModel } from '../../types';
-import type { InfluenceCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
+import type { InfluenceCanvasState, ModeShapeCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
 import type { CanvasCamera } from './canvasInteraction';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { toDisplay, unitLabel } from '../../engine/units';
-import { memberAxis } from '../../graphics/structureGeometry';
+import { memberAxis, modelBounds } from '../../graphics/structureGeometry';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { readCanvasViewSettings } from '../view/canvasViewSettings';
+import { modeShapePoints, modeShapeScaleFor } from './modeShapePath';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type NodeResult = AnalysisResult['nodeResults'][number];
@@ -25,6 +26,8 @@ export interface CanvasResultLayerProps {
   resultsAllowed: boolean;
   resultCursor: ResultCursor | null;
   influenceCanvasState: InfluenceCanvasState | null;
+  /** Modo propio elegido en Resultados. `null` cuando no hay ninguno pedido. */
+  modeShapeState: ModeShapeCanvasState | null;
   camera: CanvasCamera;
   toScreen: (x: number, y: number) => { x: number; y: number };
   nodeMap: Map<string, NodeModel>;
@@ -94,7 +97,7 @@ export const criticalExtremesFor = (
 };
 
 const CanvasResultLayerImpl = ({
-  slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, camera, toScreen,
+  slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
   units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
 }: CanvasResultLayerProps) => {
@@ -156,6 +159,41 @@ const CanvasResultLayerImpl = ({
       <path d={jumpCommands.join(' ')} className="diagram-jumps" />
     </g>;
   };
+
+  /**
+   * Trazos del modo propio elegido, uno por barra.
+   *
+   * No pasa por `deformedPath`: aquella interpola con los puntos que el solver
+   * produjo para **este** análisis, y un modo no los tiene — sólo trae tres
+   * números por nudo. `modeShapePoints` los interpola con las mismas funciones
+   * de forma del elemento de viga, para que la curvatura del dibujo sea la de
+   * una viga y no la de una goma tensada entre nudos.
+   *
+   * La amplitud sale del tamaño del modelo y no de `deformedScale`: un modo es
+   * adimensional, así que amplificarlo con una escala pensada para metros daría
+   * un dibujo que cambia de forma con el tamaño de la estructura.
+   */
+  const modeShapePaths = useMemo(() => {
+    if (!modeShapeState) return [] as Array<{ memberId: string; d: string }>;
+    const dofByNode = new Map(modeShapeState.shape.map((node) => [node.nodeId, node]));
+    const scale = modeShapeScaleFor(modelBounds(project.nodes));
+    const paths: Array<{ memberId: string; d: string }> = [];
+    for (const member of project.members) {
+      if (member.type === 'rigid') continue;
+      const ni = nodeMap.get(member.i);
+      const nj = nodeMap.get(member.j);
+      const dofI = dofByNode.get(member.i);
+      const dofJ = dofByNode.get(member.j);
+      if (!ni || !nj || !dofI || !dofJ) continue;
+      const points = modeShapePoints(ni, nj, dofI, dofJ, { scale })
+        .map((point) => toScreen(point.x, point.y));
+      paths.push({
+        memberId: member.id,
+        d: points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' '),
+      });
+    }
+    return paths;
+  }, [modeShapeState, project.members, project.nodes, nodeMap, toScreen]);
 
   const deformedPath = (member: MemberModel) => {
     const result = resultMap.get(member.id);
@@ -403,6 +441,9 @@ const CanvasResultLayerImpl = ({
     return <>
       {showResults ? <g className="diagram-layer">{project.members.map(diagramPath)}</g> : null}
       {showResults && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
+      {showResults && modeShapePaths.length ? <g className="mode-shape-layer" aria-label={modeShapeState?.label}>
+        {modeShapePaths.map((entry) => <path key={entry.memberId} d={entry.d} />)}
+      </g> : null}
       {showResults ? renderResultCursor() : null}
       {showDiagnostics ? renderMechanism() : null}
     </>;

@@ -112,17 +112,27 @@ describe('Results analytical center', () => {
    * El corte no estaba en el dominio: estaba en dos componentes que decidieron
    * cuáles de esos valores eran suyos. Esta prueba fija que ya no hay corte.
    */
-  it('reúne las seis lecturas en una tira y las recorre con el teclado', async () => {
+  /**
+   * La tira pasó de ocho lecturas a diez con la familia «Estabilidad».
+   *
+   * Este recorrido se reescribió a propósito, no se relajó: sigue afirmando que
+   * las flechas **no se paran en ninguna frontera de familia**, que era el
+   * defecto que cerró la fusión de superficies. Lo que cambia es dónde caen los
+   * pasos, y eso es justamente lo que hay que fijar: Pandeo y Modos se
+   * atraviesan de camino a Estudio, no se saltan.
+   */
+  it('reúne las diez lecturas en una tira y las recorre con el teclado', async () => {
     const user = userEvent.setup();
     renderResults();
 
     expect(screen.getByText('Centro analítico')).toBeTruthy();
-    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Estudio']) {
+    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Estabilidad', 'Estudio']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
     // Reacciones, Influencia y «Entender» ya no se piden desde otro sitio:
-    // son pestañas de esta misma tira.
-    for (const tab of ['Resumen', 'Reacciones', 'Axial', 'Cortante', 'Momento', 'Deformada', 'Influencia', 'Aprender']) {
+    // son pestañas de esta misma tira. Pandeo y Modos tampoco estrenan
+    // superficie propia pese a pedirse aparte.
+    for (const tab of ['Resumen', 'Reacciones', 'Axial', 'Cortante', 'Momento', 'Deformada', 'Pandeo', 'Modos', 'Influencia', 'Aprender']) {
       expect(screen.getByRole('tab', { name: tab })).toBeTruthy();
     }
     // `issues` no es una lectura que el usuario elija: la pone `analyze()`.
@@ -137,7 +147,13 @@ describe('Results analytical center', () => {
     await user.keyboard('{ArrowRight}');
     const deformed = screen.getByRole('tab', { name: 'Deformada' });
     await waitFor(() => expect(document.activeElement).toBe(deformed));
-    // El recorrido no se para en la frontera vieja: sigue hasta Estudio.
+    // El recorrido no se para en ninguna frontera de familia: cruza Forma →
+    // Estabilidad → Estudio sin pedir permiso.
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Pandeo' })));
+    expect(screen.getByRole('tab', { name: 'Pandeo' }).getAttribute('aria-describedby')).toBe('result-family-stability');
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Modos' })));
     await user.keyboard('{ArrowRight}');
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Influencia' })));
     await user.keyboard('{Home}');

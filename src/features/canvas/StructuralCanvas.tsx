@@ -174,6 +174,7 @@ export const StructuralCanvas = ({
     learningFocus,
     resultCursor,
     influenceCanvasState,
+    modeShapeState,
   } = useProject();
   const view = readCanvasViewSettings(project);
   const setView = useCallback((patch: Partial<typeof view>) => {
@@ -2133,6 +2134,7 @@ export const StructuralCanvas = ({
           resultsAllowed={resultsAllowed}
           resultCursor={resultCursor}
           influenceCanvasState={influenceCanvasState}
+          modeShapeState={modeShapeState}
           camera={camera}
           toScreen={toScreen}
           nodeMap={nodeMap}
@@ -2187,6 +2189,7 @@ export const StructuralCanvas = ({
           resultsAllowed={resultsAllowed}
           resultCursor={resultCursor}
           influenceCanvasState={influenceCanvasState}
+          modeShapeState={modeShapeState}
           camera={camera}
           toScreen={toScreen}
           nodeMap={nodeMap}

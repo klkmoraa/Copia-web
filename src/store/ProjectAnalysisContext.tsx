@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { ModeShapeNode } from '../engine/buckling';
 import type { AnalysisResult, DiagramQuantity } from '../types';
 
 export interface InfluenceCanvasState {
@@ -12,6 +13,23 @@ export interface InfluenceCanvasState {
  * Isolated from {@link ProjectModelContext} and {@link WorkspaceUIContext} so that
  * re-analyzing doesn't re-render consumers that only care about the edited model or the active tool.
  */
+/**
+ * Modo propio elegido para dibujarse sobre el lienzo.
+ *
+ * Mismo reparto que `influenceCanvasState`: Resultados lo calcula y el lienzo lo
+ * lee, sin que ninguno de los dos importe al otro. Un modo no viaja dentro del
+ * `AnalysisResult` porque no lo produce `analyze()` —lo produce un estudio que
+ * se pide aparte—, así que necesita su propio sitio.
+ */
+export interface ModeShapeCanvasState {
+  kind: 'buckling' | 'modal';
+  /** Índice del modo dentro de su estudio, empezando en cero. */
+  index: number;
+  /** Etiqueta ya resuelta para el lienzo; el lienzo no traduce. */
+  label: string;
+  shape: readonly ModeShapeNode[];
+}
+
 export interface ProjectAnalysisContextValue {
   analysis: AnalysisResult | null;
   isAnalyzing: boolean;
@@ -21,6 +39,8 @@ export interface ProjectAnalysisContextValue {
   setLearningFocus: (focus: { nodeIds: string[]; memberIds: string[] } | null) => void;
   influenceCanvasState: InfluenceCanvasState | null;
   setInfluenceCanvasState: (state: InfluenceCanvasState | null) => void;
+  modeShapeState: ModeShapeCanvasState | null;
+  setModeShapeState: (state: ModeShapeCanvasState | null) => void;
   analyze: () => void;
   clearAnalysis: () => void;
   /**

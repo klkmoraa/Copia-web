@@ -50,6 +50,7 @@ const renderLayer = (resultTab: ResultTab, overrides: Record<string, unknown> = 
       resultsAllowed
       resultCursor={null}
       influenceCanvasState={null}
+      modeShapeState={null}
       camera={{ scale: 40, x: 0, y: 0 }}
       toScreen={(x, y) => ({ x: 40 + x * 40, y: 300 - y * 40 })}
       nodeMap={new Map(project.nodes.map((item) => [item.id, item]))}
@@ -119,5 +120,54 @@ describe('CanvasResultLayer critical M/V stamps', () => {
     // Con el máximo global diez veces mayor, 45 kN·m cae por debajo del 15 %.
     renderLayer('moment', { globalDiagramMax: 600 });
     expect(stamps()).toHaveLength(0);
+  });
+});
+
+/**
+ * El modo propio se dibuja en el `slot` de diagramas, junto a la deformada, y
+ * **no** por su ruta: la deformada interpola con los puntos que el solver
+ * produjo para este análisis, y un modo sólo trae tres números por nudo.
+ */
+describe('CanvasResultLayer mode shape', () => {
+  const mode = {
+    kind: 'buckling' as const,
+    index: 0,
+    label: 'Modo 1',
+    shape: [
+      { nodeId: 'N1', ux: 0, uy: 0, rz: 0 },
+      { nodeId: 'N2', ux: 0, uy: 1, rz: 0.02 },
+    ],
+  };
+  const renderDiagrams = (overrides: Record<string, unknown>) => renderLayer('buckling', { slot: 'diagrams', ...overrides });
+
+  it('no dibuja nada mientras no haya modo elegido', () => {
+    renderDiagrams({ modeShapeState: null });
+    expect(document.querySelector('.mode-shape-layer')).toBeNull();
+  });
+
+  it('dibuja una traza por barra deformable, con su etiqueta accesible', () => {
+    renderDiagrams({ modeShapeState: mode });
+    const layer = document.querySelector('.mode-shape-layer');
+    expect(layer).not.toBeNull();
+    expect(layer?.getAttribute('aria-label')).toBe('Modo 1');
+    expect(layer?.querySelectorAll('path')).toHaveLength(1);
+  });
+
+  it('la traza es curva, no una recta entre nudos', () => {
+    /* Es la razón de existir de `modeShapePath`: con giros en los extremos, los
+       puntos intermedios NO pueden caer sobre la recta que une los dos nudos.
+       Una traza recta significaría que la curvatura del modo se perdió. */
+    renderDiagrams({ modeShapeState: mode });
+    const d = document.querySelector('.mode-shape-layer path')?.getAttribute('d') ?? '';
+    const ys = [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((match) => Number(match[2]));
+    expect(ys.length).toBeGreaterThan(2);
+    const straight = ys.map((_, index) => ys[0] + (index / (ys.length - 1)) * (ys[ys.length - 1] - ys[0]));
+    const deviation = Math.max(...ys.map((y, index) => Math.abs(y - straight[index])));
+    expect(deviation).toBeGreaterThan(1);
+  });
+
+  it('un modo cuyos nudos no están en el modelo no pinta una barra a medias', () => {
+    renderDiagrams({ modeShapeState: { ...mode, shape: [{ nodeId: 'N9', ux: 1, uy: 1, rz: 0 }] } });
+    expect(document.querySelector('.mode-shape-layer')).toBeNull();
   });
 });

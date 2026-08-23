@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Selection, ThemeMode, Tool } from '../types';
 
-export type ResultTab = 'summary' | 'reactions' | 'axial' | 'shear' | 'moment' | 'influence' | 'deformed' | 'learn' | 'issues';
+export type ResultTab = 'summary' | 'reactions' | 'axial' | 'shear' | 'moment' | 'influence' | 'deformed' | 'buckling' | 'modal' | 'learn' | 'issues';
 export interface ResultCursor { memberId: string; x: number; pinned: boolean }
 
 /**

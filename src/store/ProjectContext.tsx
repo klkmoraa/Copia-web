@@ -6,7 +6,7 @@ import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectSto
 import { repairProjectTopology } from '../data/modelOperations';
 import type { AnalysisResult, ProjectModel, Selection, ThemeMode, Tool } from '../types';
 import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } from './ProjectModelContext';
-import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
+import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState, type ModeShapeCanvasState } from './ProjectAnalysisContext';
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
 import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 import type { PreparedStructureGeneration } from '../commands/structureGeneration';
@@ -21,7 +21,7 @@ export { useProjectAnalysis } from './ProjectAnalysisContext';
 // oxlint-disable-next-line react/only-export-components
 export { useWorkspaceUI } from './WorkspaceUIContext';
 export type { ResultTab, ResultCursor } from './WorkspaceUIContext';
-export type { InfluenceCanvasState } from './ProjectAnalysisContext';
+export type { InfluenceCanvasState, ModeShapeCanvasState } from './ProjectAnalysisContext';
 
 const runFallbackAnalysis = async (project: ProjectModel, combinationId: string, includeEducationTrace: boolean) => {
   const { analyzeProjectAuto } = await import('../engine/pDelta');
@@ -53,6 +53,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [learningFocus, setLearningFocus] = useState<{ nodeIds: string[]; memberIds: string[] } | null>(null);
   const [resultCursor, setResultCursor] = useState<ResultCursor | null>(null);
   const [influenceCanvasState, setInfluenceCanvasState] = useState<InfluenceCanvasState | null>(null);
+  const [modeShapeState, setModeShapeState] = useState<ModeShapeCanvasState | null>(null);
   const [transactionActive, setTransactionActive] = useState(false);
   const [persistenceRevision, setPersistenceRevision] = useState(0);
   const [storageState, setStorageState] = useState<{
@@ -559,10 +560,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, executePreparedStructureGeneration, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
-    analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,
-    setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, analyze, clearAnalysis: invalidateAnalysis,
+    analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, modeShapeState,
+    setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, setModeShapeState, analyze, clearAnalysis: invalidateAnalysis,
     ensureEducationTrace,
-  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, invalidateAnalysis, ensureEducationTrace]);
+  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, modeShapeState, setSelectedCombinationId, analyze, invalidateAnalysis, ensureEducationTrace]);
 
   const uiValue = useMemo<WorkspaceUIContextValue>(() => ({
     activeTool, selection, theme, resultTab, resultCursor,

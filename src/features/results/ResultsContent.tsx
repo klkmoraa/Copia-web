@@ -6,6 +6,7 @@ import { resolveReliability } from '../../engine/reliability';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
 import { analysisSignature } from '../../engine/projectSignature';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
+import { useModelStudies } from '../../engine/useModelStudies';
 import type { DiagramQuantity, DiagramSegment, MemberResult } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
@@ -18,6 +19,7 @@ import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { ReactionsView } from './ReactionsView';
+import { StabilityView } from './StabilityView';
 import { LearnView } from './LearnView';
 import type { ResultRef } from './provenance';
 import {
@@ -93,6 +95,11 @@ export const ResultsContent = () => {
   const selectedMemberId = resultContext.memberId;
   const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
   const activeTab = resolveResultTab(resultTab);
+  /* Un solo hook para las dos pestañas de estabilidad **y** para el certificado
+     del Resumen. Vive aquí y no dentro de cada vista porque `ResultsContent` no
+     se desmonta al cambiar de pestaña: así un modo calculado sigue estando al
+     volver, en vez de recalcularse cada vez que el usuario mira otra cosa. */
+  const studies = useModelStudies(project, selectedCombinationId);
 
   const provenanceRef = useMemo<ResultRef | null>(() => {
     if (!analysis?.success) return null;
@@ -181,6 +188,8 @@ export const ResultsContent = () => {
       {analysis?.success && activeTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}>
         <LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} />
       </Suspense> : null}
+      {analysis?.success && (activeTab === 'buckling' || activeTab === 'modal')
+        ? <StabilityView kind={activeTab} studies={studies} /> : null}
       {analysis?.success && activeTab === 'learn' ? <LearnView /> : null}
       {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
     </div>

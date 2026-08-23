@@ -1,0 +1,46 @@
+/* Tramo 30 · Estudios del modelo: pandeo, modos de vibración y certificado.
+ *
+ * Va el último porque es el tramo más nuevo y no lo pisa nadie: sus clases no
+ * existían antes, así que su posición en la cascada no puede cambiar el ganador
+ * de ninguna regla anterior. Renumerarlo o moverlo sí podría, y por eso el
+ * manifiesto fija el orden.
+ *
+ * Materia: `raised` para las tarjetas y `flat` para lo que va dentro, igual que
+ * `numeric-quality-card`. Ningún estado se lee en el color de la tarjeta — un
+ * λcr holgado y uno insuficiente tienen exactamente la misma elevación, y la
+ * diferencia se lee en su texto. */
+
+.study-panel { display: flex; flex-direction: column; gap: 12px; }
+
+.study-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.study-header h3 { margin: 0; font-size: var(--sc-font-size-body); }
+.study-header p { margin: 4px 0 0; color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.45; max-width: 62ch; }
+
+.study-modes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.study-mode-button {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 8px 12px; border-radius: var(--sc-radius-control); text-align: left; min-width: 104px;
+}
+.study-mode-button strong { font-size: var(--sc-font-size-body); font-variant-numeric: tabular-nums; }
+.study-mode-button span { font-size: var(--sc-font-size-label); color: var(--muted); }
+
+.study-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; margin: 0; }
+.study-metrics > div { display: flex; flex-direction: column; gap: 2px; }
+.study-metrics dt { font-size: var(--sc-font-size-label); color: var(--muted); }
+.study-metrics dd { margin: 0; font-size: var(--sc-font-size-body); font-variant-numeric: tabular-nums; }
+
+.study-issues { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.study-issues li { font-size: var(--sc-font-size-label); line-height: 1.45; }
+
+.study-limit { margin: 0; color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.5; max-width: 72ch; }
+
+.study-checks { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.study-check { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--sc-radius-control); }
+.study-check-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.study-check-heading strong { font-size: var(--sc-font-size-body); }
+.study-check-state { font-size: var(--sc-font-size-label); color: var(--muted); }
+.study-check p { margin: 0; font-size: var(--sc-font-size-label); color: var(--muted); line-height: 1.45; }
+
+/* La capa del modo sobre el lienzo: la misma discreción que la deformada, con
+   trazo discontinuo para que nunca se confunda con un resultado de carga. */
+.mode-shape-layer path { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }

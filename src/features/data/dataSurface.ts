@@ -54,6 +54,13 @@ export const RESULT_FAMILIES: readonly ResultFamily[] = [
   { id: 'state', labelKey: 'results.familyState', tabs: ['summary', 'reactions'] },
   { id: 'forces', labelKey: 'results.familyForces', tabs: ['axial', 'shear', 'moment'] },
   { id: 'shape', labelKey: 'results.familyShape', tabs: ['deformed'] },
+  /* Pandeo y modos van **despues** de la deformada porque tambien son formas
+     —la que la estructura toma al perder estabilidad y la que toma al vibrar—,
+     y **antes** de las herramientas de estudio porque siguen siendo lecturas del
+     modelo, no instrumentos sobre el. La diferencia con las de arriba es que
+     estas se piden: cuestan un problema de autovalores y nadie las paga sin
+     querer verlas. */
+  { id: 'stability', labelKey: 'results.familyStability', tabs: ['buckling', 'modal'] },
   { id: 'study', labelKey: 'results.familyStudy', tabs: ['influence', 'learn'] },
 ];
 
@@ -67,6 +74,8 @@ export const RESULT_TAB_LABEL_KEY: Readonly<Record<Exclude<ResultTab, 'issues'>,
   shear: 'results.shear',
   moment: 'results.moment',
   deformed: 'results.deformed',
+  buckling: 'results.buckling',
+  modal: 'results.modal',
   influence: 'results.influence',
   learn: 'results.learn',
 };
