@@ -159,7 +159,7 @@ describe('CanvasResultLayer mode shape', () => {
        Una traza recta significaría que la curvatura del modo se perdió. */
     renderDiagrams({ modeShapeState: mode });
     const d = document.querySelector('.mode-shape-layer path')?.getAttribute('d') ?? '';
-    const ys = [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((match) => Number(match[2]));
+    const ys = [...d.matchAll(/[ML] (-?[\d.e+-]+) (-?[\d.e+-]+)/g)].map((match) => Number(match[2]));
     expect(ys.length).toBeGreaterThan(2);
     const straight = ys.map((_, index) => ys[0] + (index / (ys.length - 1)) * (ys[ys.length - 1] - ys[0]));
     const deviation = Math.max(...ys.map((y, index) => Math.abs(y - straight[index])));

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import { useI18n } from '../../i18n/useI18n';
-import { formatFixed } from '../../utils/numberFormat';
+import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { ModeShapeNode } from '../../engine/buckling';
 import type { ModelStudiesState } from '../../engine/useModelStudies';
 
@@ -54,10 +54,15 @@ export const StabilityView = ({ kind, studies }: StabilityViewProps) => {
     if (selected >= modeCount) setSelected(0);
   }, [modeCount, selected]);
 
-  // El modo dibujado pertenece a este estudio: al desmontarse la vista o cambiar
-  // de estudio, se retira. Dejarlo pintado sería enseñar un modo de algo que ya
-  // no se está mirando.
-  useEffect(() => () => setModeShapeState(null), [setModeShapeState]);
+  /* El modo NO se retira al desmontarse esta vista, y eso es deliberado: cerrar
+     «Datos» para mirar el dibujo es exactamente el motivo de dibujarlo. La
+     primera versión lo limpiaba al desmontar y el modo desaparecía justo cuando
+     se iba a ver — lo cazó el QA de navegador, no las pruebas de jsdom, porque
+     sólo allí se cierra la superficie de verdad.
+
+     Quien sí lo retira es `invalidateAnalysis`, junto a la línea de influencia:
+     un modo es una lectura de un modelo concreto y se va cuando ese modelo
+     cambia. */
 
   const rows: ModeRow[] = result?.success
     ? kind === 'buckling'
@@ -138,7 +143,7 @@ export const StabilityView = ({ kind, studies }: StabilityViewProps) => {
         {current.metrics.map((metric) => <div key={metric.label}>
           <dt>{metric.label}</dt><dd>{metric.value}</dd>
         </div>)}
-        <div><dt>{t('results.studyResidual')}</dt><dd>{result.residual.toExponential(2)}</dd></div>
+        <div><dt>{t('results.studyResidual')}</dt><dd>{formatScientific(result.residual, 2)}</dd></div>
         <div><dt>{t('results.studyFreeDof')}</dt><dd>{result.freeDegreesOfFreedom}</dd></div>
         {kind === 'modal' ? <div>
           <dt>{t('results.cumulativeMass')} Y</dt>
