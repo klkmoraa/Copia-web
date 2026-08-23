@@ -632,6 +632,118 @@ async function verifyInspectorResponsiveViewports() {
   return checks;
 }
 
+/**
+ * La Cinta no se pinta encima de sí misma (CRI-95).
+ *
+ * El defecto que obliga a este gate: a 390 px el nombre del proyecto y el galón
+ * del menú se pintaban ENCIMA de deshacer y rehacer. La causa no estaba en
+ * ninguna medida, estaba en la cascada. `.topbar-tool-group { display:flex }`
+ * (22-topbar) tiene la misma especificidad (0,1,0) que las reglas que mandaban
+ * el historial y la exportación al desbordamiento y se empaqueta después, así
+ * que las ganaba por orden: el historial nunca se fue de la Cinta —aparecía a
+ * la vez en la Cinta y en «Más acciones» entre 701 y 1279 px— y sus 99 px
+ * dejaban la celda de `document` en 31 px con 128 px de contenido táctil
+ * dentro. Un contenido que no cabe en su celda no se recorta: se sale y se
+ * superpone.
+ *
+ * Ninguna prueba de jsdom puede ver esto: allí no hay cascada, ni media
+ * queries, ni geometría. Sólo un navegador de verdad barriendo anchos.
+ *
+ * Lo que se afirma es el EFECTO, no la regla: que dos controles de zonas
+ * distintas no compartan un solo píxel. El suelo del barrido son 360 px, el
+ * teléfono más estrecho que el producto atiende; por debajo la Cinta se queda
+ * sin ancho de verdad (a 320 px sus tres zonas piden 93 px de dianas táctiles
+ * en una celda de 70) y arreglarlo pediría quitarle su casa a un control, no
+ * mover un número.
+ */
+const TOPBAR_SWEEP_WIDTHS = [1536, 1440, 1360, 1280, 1200, 1024, 900, 768, 720, 701, 700, 600, 500, 460, 430, 390, 375, 360];
+
+const readTopBarGeometry = (page) => page.evaluate(() => {
+  const topbar = document.querySelector('.topbar');
+  if (!topbar) return null;
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const zones = [...topbar.querySelectorAll(':scope > [data-topbar-zone]')];
+  const controls = [];
+  for (const zone of zones) {
+    for (const element of zone.querySelectorAll('button,input,a,select')) {
+      if (!visible(element)) continue;
+      const rect = element.getBoundingClientRect();
+      controls.push({
+        zone: zone.dataset.topbarZone,
+        label: (element.getAttribute('aria-label') || element.value || element.textContent || '').trim().slice(0, 28),
+        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+      });
+    }
+  }
+  const collisions = [];
+  for (let i = 0; i < controls.length; i += 1) {
+    for (let j = i + 1; j < controls.length; j += 1) {
+      const [a, b] = [controls[i], controls[j]];
+      // Dentro de una zona el solape es imposible por construcción (flex en
+      // fila); lo que este gate persigue es una zona invadiendo a otra.
+      if (a.zone === b.zone) continue;
+      if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5) {
+        collisions.push(`${a.zone}«${a.label}» ∩ ${b.zone}«${b.label}»`);
+      }
+    }
+  }
+  const historyInRibbon = (() => {
+    const element = document.querySelector('.topbar .history-controls');
+    return Boolean(element && visible(element));
+  })();
+  return { collisions, historyInRibbon, controls: controls.length };
+});
+
+async function verifyTopBarNeverOverlapsItself() {
+  const checks = {};
+  const page = await newQaPage({ viewport: { width: 1536, height: 900 }, deviceScaleFactor: 1 });
+  page.on('console', msg => { if (['error', 'warning'].includes(msg.type())) out.console.push(`topbar ${msg.type()}: ${msg.text()}`); });
+  page.on('pageerror', err => out.pageErrors.push(`topbar ${String(err)}`));
+  try {
+    await loadCleanApp(page);
+    await enterWorkspace(page, { example: true });
+    const sweep = [];
+    for (const width of TOPBAR_SWEEP_WIDTHS) {
+      await page.setViewportSize({ width, height: 844 });
+      // La Cinta reacciona a la media query en el mismo fotograma, pero el
+      // botón primario anima su ancho: se mide con el layout ya asentado.
+      await page.waitForTimeout(260);
+      const geometry = await readTopBarGeometry(page);
+      if (!geometry) throw new Error(`No se pudo medir la Cinta a ${width}px.`);
+      sweep.push({ width, ...geometry });
+    }
+    out.metrics.topbarSweep = sweep;
+    checks.topbarControlsNeverOverlap = sweep.every((entry) => entry.collisions.length === 0);
+
+    // Una sola casa para el historial a cada ancho: en la Cinta por encima del
+    // sub-umbral de teléfono, en «Más acciones» por debajo. Nunca en las dos.
+    const homes = {};
+    for (const width of [900, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(260);
+      const inRibbon = (await readTopBarGeometry(page)).historyInRibbon;
+      await page.getByLabel('Más acciones').first().click();
+      await page.locator('.mobile-actions-menu').waitFor({ state: 'visible' });
+      const inOverflow = await page.locator('.mobile-history-actions.overflow-history').isVisible();
+      await page.keyboard.press('Escape');
+      await page.locator('.mobile-actions-menu').waitFor({ state: 'hidden' });
+      homes[width] = { inRibbon, inOverflow };
+    }
+    out.metrics.topbarHistoryHomes = homes;
+    checks.topbarHistoryHasExactlyOneHome = Object.values(homes).every(({ inRibbon, inOverflow }) => inRibbon !== inOverflow);
+    checks.topbarHistoryLivesInRibbonOnWideScreens = homes[900].inRibbon;
+    checks.topbarHistoryLivesInOverflowOnPhones = homes[390].inOverflow;
+  } finally {
+    await page.close();
+  }
+  return checks;
+}
+
 const resultsFlatFamilies = [
   { key: 'MatrixView', selector: '.matrix-view', markup: '<section class="matrix-view"></section>' },
   { key: 'EducationExplorer', selector: '.education-explorer', markup: '<section class="education-explorer"></section>' },
@@ -1619,6 +1731,7 @@ await verifyWelcomeFirstPaintMaterial();
 await verifyWelcomeReducedMotionActive();
 await desktop();
 Object.assign(out.checks, await verifyInspectorResponsiveViewports());
+Object.assign(out.checks, await verifyTopBarNeverOverlapsItself());
 Object.assign(out.checks, await verifyResultsPhoneLandscapeMaterial());
 await influenceWorkflow();
 await mobile();

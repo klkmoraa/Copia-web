@@ -13,7 +13,13 @@
 
 @media (max-width:1439px) {
   .topbar { grid-template-columns:minmax(0,max-content) minmax(0,1fr) max-content; gap:var(--sc-space-3); }
-  .export-wrap { display:none; }
+  /* Aquí había `.export-wrap { display:none }`. Nunca apagó nada: `.topbar-tool-group
+     { display:flex }` (22-topbar) tiene su misma especificidad (0,1,0) y se empaqueta
+     después, así que ganaba por orden de cascada. Medido a 1440/1400/1360/…/701 px:
+     el icono de exportación estaba visible en todo ese tramo. Y ahí sobra sitio —la
+     Cinta no se queda sin ancho hasta 500 px—, así que la regla no se reescribe con
+     otra especificidad: se retira. Exportación degrada donde de verdad hace falta,
+     en el sub-umbral de teléfono de más abajo, con un selector que sí gana. */
 }
 
 @media (max-width: 1279px) {
@@ -22,9 +28,14 @@
   .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd,.selection-tip span { display:none; }
   .selection-tip { justify-content:center; }
   .topbar { grid-template-columns:minmax(0,max-content) minmax(0,1fr) max-content; gap:var(--sc-space-2); }
-  .history-controls { display:none; }
   .analyze-button { width:124px; min-width:124px; }
-  .mobile-history-actions.overflow-history { display:grid; }
+  /* Aquí vivía el par que mandaba el historial al desbordamiento por debajo de
+     1280 px. La mitad que lo apagaba en la Cinta (`.history-controls`, 0,1,0)
+     perdía contra `.topbar-tool-group` (22-topbar, misma especificidad, más
+     tarde); la mitad que lo encendía en el menú (0,2,0) sí ganaba. Resultado
+     medido: deshacer y rehacer aparecían DOS veces entre 701 y 1279 px. Las dos
+     mitades se mudan juntas al sub-umbral de teléfono, que es donde la Cinta se
+     queda de verdad sin ancho (medido más abajo). */
   .overflow-case { display:grid; }
 }
 
@@ -36,14 +47,17 @@
      oculto, `actions` conserva su clúster de comandos. */
   .topbar { grid-template-columns: minmax(0,1fr) max-content max-content; padding: env(safe-area-inset-top) 10px 0; height: calc(var(--topbar-h) + env(safe-area-inset-top)); flex-basis: calc(var(--topbar-h) + env(safe-area-inset-top)); }
   .topbar-context-zone { display:none; }
-  .history-controls { display:none; }
   .brand-name { display:none; }
   .top-divider { display:none; }
   .project-name { padding:0 var(--sc-space-1); }
-  /* `min-width` bajo desde aquí: la Cinta debe encoger el nombre antes de
-     que su celda de grid desborde sobre `actions`/`status` (CRI-95). El
-     nombre completo sigue accesible por `value`; sólo se acorta lo visible. */
-  .project-name input { width:min(190px,32vw); min-width:32px; height:var(--sc-control-height-touch); }
+  /* `min-width:0` desde aquí: la Cinta debe encoger el nombre antes de que su
+     celda de grid desborde sobre `actions`/`status` (CRI-95). El nombre completo
+     sigue accesible por `value`; sólo se acorta lo visible.
+     El suelo de 32 px que había aquí es lo que convertía «encoger» en
+     «desbordar»: un mínimo que el contenedor no puede pagar no se recorta, se
+     sale. Con 0 el nombre cede hasta desaparecer y la marca y el galón —los dos
+     controles táctiles de 44 px de la zona— nunca pierden su sitio. */
+  .project-name input { width:min(190px,32vw); min-width:0; height:var(--sc-control-height-touch); }
   .brand-mark { width:28px;font-size:27px; }
   .mobile-more-button { display:grid; width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
   .overflow-mode { display:grid; }
@@ -128,9 +142,27 @@
    que es lo que pasó al añadir Resultados a la barra.
    Selector compuesto (0,2,0): `.sc-icon-button` vive en ui.css y su
    `display:inline-grid` (0,1,0) gana por orden de bundling si no se supera
-   su especificidad, no sólo por orden de cascada. */
+   su especificidad, no sólo por orden de cascada. El historial entra aquí por
+   esa misma razón: sus dos botones son 99 px que la Cinta no tiene por debajo
+   de 700 px, y con ellos dentro la zona `document` desbordaba su celda y se
+   pintaba ENCIMA de deshacer y rehacer (medido: colisión real a 500, 460, 430,
+   390 y 360 px). Van al desbordamiento enteros y sólo aquí, así que deshacer y
+   rehacer tienen exactamente una casa a cada ancho. */
 @media (max-width: 700px) {
-  .topbar .results-launcher,.topbar .datasheet-launcher,.topbar .space3d-open-button,.topbar .export-wrap { display:none; }
+  .topbar .results-launcher,.topbar .datasheet-launcher,.topbar .space3d-open-button,.topbar .export-wrap,.topbar .history-controls { display:none; }
+  .mobile-history-actions.overflow-history { display:grid; }
+  /* Y el grupo que se queda vacío se va con ellos. `+` empareja hermanos del
+     DOM, no hermanos VISIBLES: el filete de `.topbar-tool-group +
+     .topbar-tool-group` y los 16 px que lo acompañan sobrevivían a los grupos
+     que separaban, así que «Más acciones» arrastraba una raya que no separaba
+     nada y 17 px que le hacen falta al nombre del proyecto. Aquí no queda más
+     que un grupo, y un grupo solo no lleva separador. */
+  .topbar .topbar-tool-group:not(.mobile-actions-wrap) { display:none; }
+  /* (0,3,0), no (0,2,0): `.topbar-tool-group + .topbar-tool-group` vive en
+     22-topbar y se empaqueta después, así que empatar en especificidad es
+     perder. Es la misma trampa que dejó el historial en la Cinta; se paga una
+     vez y se escribe. */
+  .topbar .topbar-tool-group.mobile-actions-wrap { margin-inline-start:0; padding-inline-start:0; border-inline-start:0; }
 }
 
 @media (max-width: 460px) {

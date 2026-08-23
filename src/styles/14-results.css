@@ -363,7 +363,9 @@ button:not(:disabled):active,.selection-card:active {
 @media (max-width:360px) {
   .brand-block { gap:5px; }
   .project-name { min-width:0; padding-inline:2px; }
-  .project-name input { min-width:0; width:min(84px,26vw); }
+  /* El suelo de `min-width` ya es 0 desde el tramo Compact (11-topbar): aquí
+     sólo se acorta lo visible. */
+  .project-name input { width:min(84px,26vw); }
   .top-actions { gap:2px; }
 }
 
