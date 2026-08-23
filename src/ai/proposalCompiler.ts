@@ -1,0 +1,197 @@
+/**
+ * Compilación de una propuesta validada: del contrato al comando, pasando por
+ * un clon y terminando en un diff que el usuario puede leer.
+ *
+ * ```text
+ * propuesta validada
+ *  → huella del proyecto actual comprobada
+ *  → identidades resueltas contra el modelo y el catálogo
+ *  → unidades convertidas a base
+ *  → compilación sobre un CLON
+ *  → diff semántico
+ *  → (el usuario mira)
+ *  → confirmación ligada a proposalId + snapshotHash
+ *  → ProjectCommand
+ * ```
+ *
+ * ## Por qué sobre un clon
+ *
+ * Porque preparar no puede ser aplicar. Entre que se calcula el diff y que el
+ * usuario lo acepta pasa tiempo, y en ese tiempo el proyecto puede cambiar. Un
+ * compilador que tocara el proyecto real dejaría el modelo modificado por una
+ * propuesta que nadie llegó a aceptar.
+ *
+ * ## Por qué la confirmación repite la huella
+ *
+ * `snapshotHash` se comprueba dos veces: al preparar y al confirmar. La segunda
+ * no es redundante — es la única que importa. Si el modelo cambió mientras el
+ * usuario leía el diff, ese diff describe un estado que ya no existe, y
+ * aplicarlo escribiría cambios calculados sobre otra cosa.
+ */
+import type { MemberModel, ProjectModel } from '../types';
+import { standardMaterials } from '../data/standardMaterials';
+import { standardSections } from '../data/standardSections';
+import { diffProjects, type ProjectDiff } from '../data/projectDiff';
+import { applyProjectPatch, compileProjectCommand, type ProjectCommand } from '../commands/projectCommand';
+import { ProposalUnitError, toBaseUnits } from './proposalUnits';
+import type { CommandProposalV1, ProposedOperation } from './commandProposal';
+
+export interface PreparedProposal {
+  proposalId: string;
+  snapshotHash: string;
+  summary: string;
+  command: ProjectCommand;
+  /** Lo que la propuesta haría, calculado sobre un clon. */
+  diff: ProjectDiff;
+}
+
+export interface PreparationRejected {
+  ok: false;
+  /** `stale` distingue «el modelo cambió» de «la propuesta no vale». */
+  code: 'stale-snapshot' | 'unknown-id' | 'bad-units' | 'no-effect' | 'not-ready';
+  reason: string;
+}
+export type PreparationOutcome = { ok: true; prepared: PreparedProposal } | PreparationRejected;
+
+const reject = (code: PreparationRejected['code'], reason: string): PreparationRejected => ({ ok: false, code, reason });
+
+const clone = (project: ProjectModel): ProjectModel => JSON.parse(JSON.stringify(project)) as ProjectModel;
+
+/** Traduce la operación de la allowlist a un `ProjectCommand`, o dice por qué no puede. */
+const toCommand = (project: ProjectModel, operation: ProposedOperation): ProjectCommand | PreparationRejected => {
+  const member = project.members.find((candidate) => candidate.id === operation.memberId);
+  if (!member) return reject('unknown-id', `La barra ${operation.memberId} no existe en este modelo.`);
+
+  if (operation.kind === 'member.section.apply') {
+    const section = standardSections.find((candidate) => candidate.id === operation.sectionId);
+    if (!section) return reject('unknown-id', `La sección ${operation.sectionId} no está en el catálogo.`);
+    return {
+      description: `Aplicar la sección ${section.name} a ${member.id}`,
+      kind: 'member.section.apply',
+      memberId: member.id,
+      sectionId: section.id,
+      // Las propiedades numéricas salen del catálogo local, nunca de la
+      // propuesta: una identidad de catálogo no puede traer sus propios números.
+      properties: { A: section.area, I: section.inertiaX },
+    };
+  }
+
+  if (operation.kind === 'member.material.apply') {
+    const material = standardMaterials.find((candidate) => candidate.id === operation.materialId);
+    if (!material) return reject('unknown-id', `El material ${operation.materialId} no está en el catálogo.`);
+    return {
+      description: `Aplicar el material ${material.name} a ${member.id}`,
+      kind: 'member.material.apply',
+      memberId: member.id,
+      materialId: material.id,
+      properties: { E: material.elasticModulus, G: material.shearModulus, density: material.density },
+    };
+  }
+
+  const changes: Partial<Omit<MemberModel, 'id'>> = {};
+  try {
+    if (operation.changes.E) changes.E = toBaseUnits(operation.changes.E, 'elasticModulus');
+    if (operation.changes.A) changes.A = toBaseUnits(operation.changes.A, 'area');
+    if (operation.changes.I) changes.I = toBaseUnits(operation.changes.I, 'inertia');
+    if (operation.changes.density) changes.density = toBaseUnits(operation.changes.density, 'density');
+  } catch (error) {
+    if (error instanceof ProposalUnitError) return reject('bad-units', error.message);
+    throw error;
+  }
+  if (operation.changes.label !== undefined) changes.label = operation.changes.label;
+
+  // Escribir un número no positivo donde el solver espera una rigidez no es un
+  // cambio: es un modelo roto que además pasaría el esquema.
+  for (const [field, value] of Object.entries(changes)) {
+    if (typeof value === 'number' && !(value > 0)) {
+      return reject('bad-units', `El valor propuesto para ${field} no es positivo.`);
+    }
+  }
+
+  return {
+    description: `Actualizar ${Object.keys(changes).join(', ')} en ${member.id}`,
+    kind: 'member.update',
+    memberId: member.id,
+    changes,
+  };
+};
+
+/**
+ * Prepara una propuesta contra el proyecto actual y su huella.
+ *
+ * `currentSnapshotHash` lo calcula el llamador con `projectChecksum`, que es
+ * asíncrono; pedirlo ya calculado deja esta función pura y comprobable sin
+ * Web Crypto.
+ */
+export const prepareProposal = (
+  project: ProjectModel,
+  currentSnapshotHash: string,
+  proposal: CommandProposalV1,
+): PreparationOutcome => {
+  if (proposal.status !== 'ready') {
+    return reject('not-ready', proposal.status === 'needs-clarification'
+      ? `La propuesta pide una aclaración: ${proposal.question}`
+      : `La propuesta se rechazó a sí misma: ${proposal.reason}`);
+  }
+  if (proposal.snapshotHash !== currentSnapshotHash) {
+    return reject('stale-snapshot', 'La propuesta se razonó sobre un estado del proyecto que ya no es el actual.');
+  }
+
+  const command = toCommand(project, proposal.operation);
+  if ('ok' in command) return command;
+
+  // Sobre un clon: preparar no es aplicar.
+  const draft = clone(project);
+  const compiled = compileProjectCommand(draft, command);
+  const after = applyProjectPatch(draft, compiled.forward);
+  const diff = diffProjects(project, after);
+  if (diff.identical) {
+    return reject('no-effect', 'La propuesta no cambiaría nada del modelo actual.');
+  }
+
+  return {
+    ok: true,
+    prepared: {
+      proposalId: proposal.proposalId,
+      snapshotHash: proposal.snapshotHash,
+      summary: proposal.summary,
+      command,
+      diff,
+    },
+  };
+};
+
+export interface Confirmation {
+  proposalId: string;
+  snapshotHash: string;
+}
+
+export type ConfirmationOutcome =
+  | { ok: true; command: ProjectCommand }
+  | { ok: false; reason: string };
+
+/**
+ * Devuelve el comando **sólo** si la confirmación nombra exactamente la
+ * propuesta que se preparó y el estado sobre el que se preparó.
+ *
+ * `currentSnapshotHash` se vuelve a pasar porque entre la preparación y este
+ * momento el usuario ha estado leyendo, y el modelo ha podido cambiar en otra
+ * pestaña. Confirmar contra un estado distinto aplicaría un diff que describe
+ * otra cosa.
+ */
+export const confirmProposal = (
+  prepared: PreparedProposal,
+  confirmation: Confirmation,
+  currentSnapshotHash: string,
+): ConfirmationOutcome => {
+  if (confirmation.proposalId !== prepared.proposalId) {
+    return { ok: false, reason: 'La confirmación no corresponde a esta propuesta.' };
+  }
+  if (confirmation.snapshotHash !== prepared.snapshotHash) {
+    return { ok: false, reason: 'La confirmación nombra un estado distinto del que se revisó.' };
+  }
+  if (currentSnapshotHash !== prepared.snapshotHash) {
+    return { ok: false, reason: 'El proyecto cambió mientras se revisaba la propuesta; vuelve a pedirla.' };
+  }
+  return { ok: true, command: prepared.command };
+};

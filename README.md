@@ -16,7 +16,7 @@ La autoridad del repositorio sigue este orden: código, pruebas y gates ejecutab
 | PDF y PWA | Vigente | Memoria de cálculo PDF reimportable, manifiesto web, shell offline generado durante el build y aviso controlado de actualización. |
 | `ProjectCommand` | Vigente, contrato interno | Comandos tipados, patches reversibles y una ruta común para historial/undo-redo; no es una interfaz de IA. |
 | Space 3D · S3D-1 | Experimental funcional | Marco espacial elástico lineal con 6 GDL por nudo, edición, análisis, resultados, persistencia, import/export y vista 3D en un dominio separado del 2D. |
-| IA mediante `CommandProposal` | No implementada | Existe únicamente un pre-RFC de referencia; no hay proveedor, SDK, llamadas de red ni mutación automática del proyecto. |
+| IA mediante `CommandProposal` | Contrato implementado, sin proveedor | Esquema cerrado v1, validador local, allowlist de operaciones, conversión de unidades, compilación sobre un clon, diff semántico y confirmación ligada a `proposalId + snapshotHash`. **No hay proveedor, SDK ni llamadas de red**: un gate comprueba que `src/ai/**` no contiene ninguna forma de salir del dispositivo. El adaptador incluido es local y determinista. |
 
 ## Límites relevantes
 

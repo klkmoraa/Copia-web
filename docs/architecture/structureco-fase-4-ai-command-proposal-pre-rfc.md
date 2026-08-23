@@ -3,7 +3,11 @@
 **Clasificación:** `REFERENCE`
 
 **Fecha:** 2026-08-09
-**Estado:** contrato propuesto; producto y proveedor no implementados
+**Estado:** la mitad local del contrato está implementada en `src/ai/**` (esquema
+cerrado v1, validador, allowlist, unidades, compilación sobre clon, diff y
+confirmación). **Proveedor y transporte siguen sin implementarse**, y las
+secciones de este documento que hablan de broker, adaptador y proveedor siguen
+siendo propuesta. Ante cualquier discrepancia manda el código.
 **Responsables del siguiente gate:** seguridad de aplicación + producto estructural
 
 ## 1. Decisión
