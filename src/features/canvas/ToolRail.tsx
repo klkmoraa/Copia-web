@@ -33,6 +33,7 @@ import {
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
+import { useSheetDismissDrag } from '../../design-system/components/sheetDrag';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -264,6 +265,12 @@ export const ToolRail = ({ footerActions }: ToolRailProps = {}) => {
     window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
   };
 
+  const paletteDrag = useSheetDismissDrag({
+    panelRef: paletteRef,
+    onDismiss: () => closeMobileMenu(),
+    disabled: !mobileMenu,
+  });
+
   const closeMobileMenu = (restoreFocus = true) => {
     const closingMenu = mobileMenu;
     setMobileMenu(null);
@@ -348,7 +355,14 @@ export const ToolRail = ({ footerActions }: ToolRailProps = {}) => {
       aria-describedby="mobile-tool-palette-description"
       tabIndex={-1}
     >
-      <div className="mobile-tool-palette-handle" aria-hidden="true" />
+      <div
+        className="mobile-tool-palette-handle"
+        aria-hidden="true"
+        onPointerDown={paletteDrag.onPointerDown}
+        onPointerMove={paletteDrag.onPointerMove}
+        onPointerUp={paletteDrag.onPointerUp}
+        onPointerCancel={paletteDrag.onPointerCancel}
+      />
       <header className="mobile-tool-palette-header">
         <div><strong>{paletteTitle}</strong><span id="mobile-tool-palette-description">{paletteDescription}</span></div>
         <button type="button" className="mobile-tool-palette-close" onClick={() => closeMobileMenu()}>{t('toolbar.close')}</button>

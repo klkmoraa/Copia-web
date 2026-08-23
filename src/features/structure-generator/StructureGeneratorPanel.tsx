@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { m, useReducedMotion } from 'motion/react';
 import { Crosshair, X } from 'lucide-react';
 import { Button, Field, IconButton, SegmentedControl, Select } from '../../design-system/components/controls';
 import { UnitField } from '../../design-system/components/editor';
 import { Accordion } from '../../design-system/components/disclosure';
-import { Surface } from '../../design-system/components/surface';
 import type { PlacementWarning } from '../../data/generators/generatorPlacement';
 import type { GeneratedStructureSummary, GeneratorWarning } from '../../data/generators/generatorTypes';
 import { standardMaterials } from '../../data/standardMaterials';
@@ -109,6 +109,7 @@ export const StructureGeneratorPanel = ({
   const reviewTriggerRef = useRef<HTMLButtonElement>(null);
   /** Sólo se devuelve el foco si la revisión llegó a abrirse. */
   const wasReviewing = useRef(false);
+  const reducedMotion = useReducedMotion();
 
   /**
    * Al abrir, el foco entra en la superficie; al cerrar, vuelve a quien la
@@ -396,11 +397,14 @@ export const StructureGeneratorPanel = ({
     else onCancel();
   };
 
-  return <Surface
-    as="section"
+  return <m.section
     ref={surfaceRef}
-    level="floating"
-    className={`structure-generator${className ? ` ${className}` : ''}`}
+    className={`sc-surface structure-generator${className ? ` ${className}` : ''}`}
+    data-level="floating"
+    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 8 }}
+    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 8 }}
+    transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 400, damping: 30 }}
     aria-label={t('title')}
     data-structure-generator-surface
     data-structure-generator-view={reviewing ? 'review' : 'parameters'}
@@ -475,5 +479,5 @@ export const StructureGeneratorPanel = ({
         >{t('action.review')}</Button>
       </>}
     </footer>
-  </Surface>;
+  </m.section>;
 };

@@ -310,10 +310,13 @@
 .contextual-actions__action:hover,
 .contextual-actions__overflow-trigger:hover { background: var(--sc-color-fill-quaternary); }
 .contextual-actions__action:active,
-.contextual-actions__overflow-trigger:active { background: var(--sc-color-fill-tertiary); }
+.contextual-actions__overflow-trigger:active { background: var(--sc-color-fill-tertiary); transform: var(--sc-press-transform); }
 
 .contextual-actions__action--danger { color: var(--danger); }
 .contextual-actions__overflow-trigger { padding: 0; font-size: 1rem; line-height: 1; }
+
+.contextual-actions__overflow-action:hover { background: var(--sc-color-fill-quaternary); }
+.contextual-actions__overflow-action:active { background: var(--sc-color-fill-tertiary); transform: var(--sc-press-transform); }
 
 .contextual-actions__action:focus-visible,
 .contextual-actions__overflow-trigger:focus-visible,

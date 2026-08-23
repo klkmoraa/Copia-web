@@ -29,6 +29,7 @@
     "qa:structural-edits:webkit": "npm run build && node scripts/qa-structural-edits.mjs --webkit",
     "qa:structure-generator": "npm run build && node scripts/qa-structure-generator.mjs",
     "qa:structure-generator:webkit": "npm run build && node scripts/qa-structure-generator.mjs --webkit",
+    "qa:sheet-drag": "npm run build && node scripts/qa-sheet-drag.mjs",
     "qa:webkit": "npm run build && node qa-webkit.mjs"
   },
   "dependencies": {

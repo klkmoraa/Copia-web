@@ -11,6 +11,17 @@ import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
+import { getViewportHeightPx, useSheetResizeDrag } from '../../design-system/components/sheetDrag';
+
+/** Mismo orden que los botones de detent y la misma fórmula que sus reglas CSS
+ * (`phase1.css`/`styles.css`, `[data-mobile-detent=…]`) — el arrastre tiene que
+ * aterrizar exactamente donde los botones ya aterrizan. */
+const MOBILE_DETENTS: InspectorDetent[] = ['compact', 'medium', 'large'];
+const mobileDetentHeightPx = (detent: InspectorDetent, viewportPx: number): number => {
+  if (detent === 'compact') return Math.min(0.34 * viewportPx, 320);
+  if (detent === 'medium') return Math.min(0.58 * viewportPx, 540);
+  return Math.min(0.88 * viewportPx, 780, viewportPx - 8);
+};
 
 const NumberField = ({
   label,
@@ -115,6 +126,17 @@ const InspectorContent = ({
     onClose?.();
   };
 
+  const sheetDrag = useSheetResizeDrag({
+    panelRef,
+    getDetents: () => {
+      const viewportPx = getViewportHeightPx(panelRef.current);
+      return MOBILE_DETENTS.map((detent) => mobileDetentHeightPx(detent, viewportPx));
+    },
+    onSettle: (index) => onMobileDetentChange?.(MOBILE_DETENTS[index]),
+    onDismiss: () => onClose?.(),
+    disabled: !sheet || !onMobileDetentChange,
+  });
+
   const resizeFromPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!resizeOrigin || !onDesktopWidthChange) return;
     onDesktopWidthChange(clampInspectorWidth(resizeOrigin.width + resizeOrigin.clientX - event.clientX));
@@ -165,6 +187,15 @@ const InspectorContent = ({
       hidden={status !== 'active'}
       data-mobile-detent={sheet ? mobileDetent : undefined}
     >
+      {sheet && onMobileDetentChange ? <div
+        className="inspector-grab-handle"
+        role="presentation"
+        aria-hidden="true"
+        onPointerDown={sheetDrag.onPointerDown}
+        onPointerMove={sheetDrag.onPointerMove}
+        onPointerUp={sheetDrag.onPointerUp}
+        onPointerCancel={sheetDrag.onPointerCancel}
+      /> : null}
       {presentation === 'dock' && onDesktopWidthChange ? <button
         type="button"
         className="inspector-resize-handle"

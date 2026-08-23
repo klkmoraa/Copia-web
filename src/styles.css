@@ -20,7 +20,13 @@
 
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-#root { height:100dvh; }
+#root { height:100dvh; position:relative; }
+/* Fase 4 · el fundido cruzado de pantalla (`App.tsx`) ancla aquí: en modo
+   `popLayout` la pantalla saliente pasa a `position:absolute` respecto al
+   ancestro posicionado más cercano mientras la entrante ya ocupa el flujo, y
+   sin `position:relative` en #root ese ancestro sería el viewport entero, lo
+   que en scroll (nunca ocurre aquí, pero por si acaso) desalinearía el fundido. */
+.app-screen-frame { height:100%; }
 button, input, select, textarea { font: inherit; color: inherit; font-size:var(--sc-font-size-control); line-height:var(--sc-line-height-control); }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .62; }
@@ -483,6 +489,7 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .tool-button span { font-size: 13px; }
 .tool-button kbd { font-size: var(--sc-font-size-label); color: var(--subtle); border: 0; background: transparent; }
 .tool-button:hover { background: var(--surface-2); }
+.tool-button:active { background: var(--sc-color-fill-tertiary); transform: var(--sc-press-transform); }
 .tool-button.active { color: var(--accent-on-soft); background: var(--accent-soft); }
 :root[data-theme='dark'] .tool-button.active { color: var(--accent); }
 .toolbar-spacer { flex: 1; }
@@ -1475,7 +1482,8 @@ button,
 .welcome-launcher-card,
 .welcome-import-card,
 .welcome-template-card,
-.welcome-filter-tab { transition:none; }
+.welcome-filter-tab,
+.mobile-tool-palette { transition:none; }
   /* `:not(:disabled)` en las tres variantes de `:active`, mismo motivo que en
      sus reglas base: sin él, (0,2,0) pierde contra la regla global
      `button:not(:disabled):active { transform:scale(.975) }` (0,2,1) — el
@@ -1572,14 +1580,23 @@ button,
     overflow-y:auto;
     overscroll-behavior:contain;
     border-radius:var(--sc-radius-panel) 18px 0 0;
+    transform:translateY(var(--sheet-drag-offset,0px));
+    transition:transform var(--motion-standard) var(--ease-native);
   }
-  .mobile-tool-palette-handle { width:42px; height:4px; margin:0 auto 1px; flex:0 0 auto; border-radius:var(--sc-radius-xs); background:var(--border); }
+  .mobile-tool-palette[data-sheet-dragging='true'] { transition:none!important; }
+  /* El tirador real mide 4px, pero su objetivo táctil es la fila entera: el
+     mismo reparto que Apple usa en sus hojas (afirmación visual mínima,
+     agarre generoso). El arrastre lo captura este elemento, no el `::after`. */
+  .mobile-tool-palette-handle { width:100%; height:24px; margin:-8px 0 -7px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; touch-action:none; cursor:grab; }
+  .mobile-tool-palette-handle::after { content:''; width:42px; height:4px; border-radius:var(--sc-radius-xs); background:var(--border); }
+  .mobile-tool-palette-handle:active { cursor:grabbing; }
   .mobile-tool-palette-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; }
   .mobile-tool-palette-header>div { display:grid; min-width:0; gap:3px; }
   .mobile-tool-palette-header strong { color:var(--text); font-size:17px; line-height:1.2; letter-spacing:-.02em; }
   .mobile-tool-palette-header span { color:var(--muted); font-size:var(--sc-font-size-label); line-height:1.4; }
   .mobile-tool-palette-close { min-width:54px; min-height:44px; margin:-5px -5px 0 0; padding:0 7px; border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--accent); font-size:12px; font-weight:700; }
   .mobile-tool-palette-close:hover { background:var(--accent-soft); color:var(--accent-on-soft); }
+  .mobile-tool-palette-close:active { background:var(--accent-soft); color:var(--accent-on-soft); transform:var(--sc-press-transform); }
   .mobile-tool-palette-list { display:grid; gap:6px; }
   .mobile-palette-tool {
     --tool-color:var(--accent);
@@ -1597,6 +1614,7 @@ button,
     text-align:left;
   }
   .mobile-palette-tool:hover { border-color:color-mix(in srgb,var(--tool-color) 38%,var(--border)); background:color-mix(in srgb,var(--tool-color) 6%,var(--surface)); }
+  .mobile-palette-tool:active { border-color:color-mix(in srgb,var(--tool-color) 52%,var(--border)); background:color-mix(in srgb,var(--tool-color) 10%,var(--surface)); transform:var(--sc-press-transform); }
   .mobile-palette-tool.active { border-color:color-mix(in srgb,var(--tool-color) 52%,var(--border)); background:color-mix(in srgb,var(--tool-color) 10%,var(--surface)); }
   .mobile-palette-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:var(--sc-radius-control); background:color-mix(in srgb,var(--tool-color) 10%,var(--surface)); color:var(--tool-color); }
   .mobile-palette-icon svg { width:23px; height:23px; }
@@ -1784,7 +1802,7 @@ button:not(:disabled):active,.selection-card:active {
     opacity:0;
     pointer-events:none;
     clip-path:inset(100% 0 0 0 round 18px 18px 0 0);
-    transition:clip-path var(--motion-slow) var(--ease-native),opacity var(--motion-fast) ease,visibility 0s linear var(--motion-slow),background-color var(--motion-standard) ease,border-color var(--motion-standard) ease;
+    transition:clip-path var(--motion-slow) var(--ease-native),opacity var(--motion-fast) ease,visibility 0s linear var(--motion-slow),background-color var(--motion-standard) ease,border-color var(--motion-standard) ease,height var(--motion-standard) var(--ease-native);
   }
   .inspector-panel.mobile-open {
     visibility:visible;

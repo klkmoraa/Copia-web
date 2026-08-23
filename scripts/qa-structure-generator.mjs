@@ -374,6 +374,14 @@ const runResponsive = async (page) => {
   // Compacto: bandeja inferior, sin desbordes y con objetivos táctiles reales.
   await page.setViewportSize({ width: 390, height: 844 });
   await resetToExample(page);
+  // El Inspector («detail») está retenido y activo desde el arranque en K0
+  // (CRI-119) y a detent «Media» cubre el dock inferior entero, incluido «Más
+  // herramientas» — mismo contrato de cierre por Escape que usa `qa.mjs`.
+  const defaultSheet = page.locator('[data-workspace-surface="detail"][data-surface-status="active"]');
+  if (await defaultSheet.isVisible().catch(() => false)) {
+    await page.keyboard.press('Escape');
+    await defaultSheet.waitFor({ state: 'hidden' });
+  }
   await page.getByRole('button', { name: /más herramientas/i }).click();
   const more = page.getByRole('dialog', { name: /más herramientas/i });
   await more.waitFor({ state: 'visible' });

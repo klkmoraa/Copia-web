@@ -66,6 +66,20 @@
 @media (min-width:1024px) {
   .workspace-surface-launcher { display:none; }
 }
+/* Fase 4 · hallazgo: en K0 el lanzador vivía a `bottom:16px` sin saber que ahí
+   mismo `.mobile-tool-dock` reserva su propia fila (`styles.css`, `.toolbar`
+   pasa a `grid-row:2` con `height:calc(64px + safe-area)`). El lanzador tapaba
+   casi entero el botón «Más herramientas» del dock — confirmado con
+   `getBoundingClientRect()` en 390×844 y reproducido por `qa-structure-
+   generator.mjs`/`qa-sheet-drag.mjs` antes de este cambio, sin relación con el
+   arrastre que esta fase añade. Se despeja subiéndolo por encima de esa fila
+   en vez de cambiar la fila misma, que sí gobiernan otras superficies. */
+@media (max-width:1023px) {
+  .workspace-surface-launcher { bottom:calc(64px + env(safe-area-inset-bottom) + 12px); }
+}
+@media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
+  .workspace-surface-launcher { bottom:calc(30px + env(safe-area-inset-bottom) + 52px + 10px); }
+}
 
 /* Con el dedo, el lanzador sube al objetivo táctil: la barra sigue midiendo lo
    mismo por fuera, lo que crece es cada pieza dentro. */
@@ -75,6 +89,7 @@
 }
 
 .workspace-surface-launcher > button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
+.workspace-surface-launcher > button:active { background:var(--sc-color-fill-tertiary); color:var(--sc-color-text-primary); transform:var(--sc-press-transform); }
 .workspace-surface-launcher > button[aria-expanded='true'],
 .workspace-surface-launcher > button.is-open {
   background:var(--sc-color-action-primary);
@@ -105,6 +120,7 @@
   .inspector-panel[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
   .inspector-detent-control { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:2px; flex:0 0 auto; margin:14px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left)); padding:0; border-radius:var(--sc-radius-control); background:var(--sc-color-fill-tertiary); }
   .inspector-detent-control button { min-height:var(--sc-control-height-touch); border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--muted); font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); }
+  .inspector-detent-control button:active { background:var(--sc-color-fill-quaternary); transform:var(--sc-press-transform); }
   .inspector-detent-control button[aria-pressed='true'] { background:var(--sc-color-surface-1); color:var(--sc-color-text-primary); font-weight:var(--sc-font-weight-semibold); box-shadow:var(--sc-elevation-1); }
   .results-mobile-focus { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .results-mobile-commandbar { display:flex; }
@@ -125,3 +141,16 @@
 @media (prefers-reduced-motion:reduce) {
   .repeat-preview button:active { transform:none; transition:none; }
 }
+
+/* CRI-fase-4 · arrastre nativo de la hoja del Inspector en K0. La manija es un
+   elemento real superpuesto al `::before` decorativo (styles.css) — el mismo
+   sitio visual, con objetivo táctil de sobra para capturar el gesto sin tocar
+   el pseudo-elemento existente. Mientras se arrastra, `data-sheet-dragging`
+   (escrito por `useSheetResizeDrag` directamente en el DOM, sin `setState` por
+   frame) hace que el alto siga al dedo 1:1; al soltar, el hook borra el
+   atributo y `--sheet-drag-height`, y el alto vuelve a salir del detent — que
+   ahora SÍ anima, por el `height` añadido a la transición de `.inspector-panel`
+   en `styles.css`. */
+.inspector-grab-handle { position:absolute; z-index:2; left:0; right:0; top:0; height:28px; touch-action:none; cursor:grab; }
+.inspector-grab-handle:active { cursor:grabbing; }
+.inspector-panel[data-sheet-dragging='true'] { height:var(--sheet-drag-height)!important; transition:none!important; }

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -2375,15 +2376,17 @@ export const StructuralCanvas = ({
         </div>
       </form> : null}
 
-      {generatorOpen ? <Suspense fallback={null}><LazyStructureGeneratorSurface
-        pickedOrigin={generatorPickedOrigin}
-        originPicking={generatorOriginPicking}
-        onToggleOriginPick={toggleGeneratorOriginPick}
-        onOriginPickResolved={resolveGeneratorOriginPick}
-        onGhostChange={setGeneratorGhost}
-        onOriginChange={setGeneratorOrigin}
-        onClose={closeGenerator}
-      /></Suspense> : null}
+      <AnimatePresence>
+        {generatorOpen ? <Suspense key="structure-generator" fallback={null}><LazyStructureGeneratorSurface
+          pickedOrigin={generatorPickedOrigin}
+          originPicking={generatorOriginPicking}
+          onToggleOriginPick={toggleGeneratorOriginPick}
+          onOriginPickResolved={resolveGeneratorOriginPick}
+          onGhostChange={setGeneratorGhost}
+          onOriginChange={setGeneratorOrigin}
+          onClose={closeGenerator}
+        /></Suspense> : null}
+      </AnimatePresence>
 
       <StructuralEditOverlay
         // Contextual-actions owns the selection entry point. Once a structural

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { LoaderCircle } from 'lucide-react';
 import { BrandMark } from './features/topbar/BrandMark';
 import { WelcomeScreen } from './features/welcome/WelcomeScreen';
@@ -64,36 +65,49 @@ const AppShell = () => {
     setScreen(next);
   };
 
-  if (screen === 'welcome') {
-    return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen
-      onOpenWorkspace={() => navigate('workspace')}
-      onOpenSpace3D={() => { setSpace3DOrigin('standalone'); navigate('space3d'); }}
-      onPreloadWorkspace={() => { void loadWorkspaceShell(); }}
-      allowDirectResume={directResumeAvailable}
-      onDirectResume={() => setDirectResumeAvailable(false)}
-    /></ClassroomSessionProvider>;
-  }
+  const renderScreen = () => {
+    if (screen === 'welcome') {
+      return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen
+        onOpenWorkspace={() => navigate('workspace')}
+        onOpenSpace3D={() => { setSpace3DOrigin('standalone'); navigate('space3d'); }}
+        onPreloadWorkspace={() => { void loadWorkspaceShell(); }}
+        allowDirectResume={directResumeAvailable}
+        onDirectResume={() => setDirectResumeAvailable(false)}
+      /></ClassroomSessionProvider>;
+    }
 
-  if (screen === 'space3d') {
-    // Space 3D no se envuelve en ClassroomSessionProvider: su modelo no es el
-    // proyecto 2D y el Modo Aula no lo evalúa.
-    return (
-      <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('space3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
-        <Space3DWorkspace
-          language={project.settings.language}
-          sourceProject={space3dOrigin === 'workspace' ? project : undefined}
-          onOpenHome={() => navigate('welcome')}
-          onOpen2D={() => navigate('workspace')}
-        />
+    if (screen === 'space3d') {
+      // Space 3D no se envuelve en ClassroomSessionProvider: su modelo no es el
+      // proyecto 2D y el Modo Aula no lo evalúa.
+      return (
+        <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('space3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
+          <Space3DWorkspace
+            language={project.settings.language}
+            sourceProject={space3dOrigin === 'workspace' ? project : undefined}
+            onOpenHome={() => navigate('welcome')}
+            onOpen2D={() => navigate('workspace')}
+          />
+        </Suspense>
+      );
+    }
+
+    return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
+      <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
+        <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenSpace3D={() => { setSpace3DOrigin('workspace'); navigate('space3d'); }} />
       </Suspense>
-    );
-  }
+    </ClassroomSessionProvider>;
+  };
 
-  return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
-    <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
-      <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenSpace3D={() => { setSpace3DOrigin('workspace'); navigate('space3d'); }} />
-    </Suspense>
-  </ClassroomSessionProvider>;
+  const reducedMotion = useReducedMotion();
+  const transition = reducedMotion ? { duration: 0 } : { duration: 0.28, ease: [0.32, 0.72, 0, 1] as const };
+
+  return (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <m.div key={screen} className="app-screen-frame" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition}>
+        {renderScreen()}
+      </m.div>
+    </AnimatePresence>
+  );
 };
 
 export default function App() {
