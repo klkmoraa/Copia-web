@@ -81,6 +81,17 @@ export interface MemberModel {
   shearArea?: number; // m²
   density?: number; // kg/m³
   releases?: MemberRelease;
+  /**
+   * Restringe el signo de la fuerza axial que el miembro puede transmitir.
+   *
+   * Ausente o `'both'` es una barra ordinaria y **no cambia ningún resultado
+   * existente**: el análisis lineal sigue siendo lineal. `'tension-only'` es un
+   * cable o un tirante, que se afloja en cuanto se le pide compresión;
+   * `'compression-only'` es un puntal o un contacto, que se separa en cuanto se
+   * le pide tracción. Los resuelve `activeSet.ts` iterando qué barras están
+   * activas, no el solver lineal.
+   */
+  axialBehavior?: 'both' | 'tension-only' | 'compression-only';
   /** Semi-rigid end connection stiffness. Undefined means rigid; zero is a release. */
   rotationalSpringI?: number; // kN·m/rad
   rotationalSpringJ?: number;
@@ -593,6 +604,23 @@ export interface AnalysisResult {
   explanation: ExplanationStep[];
   /** Present only when `analyzeProjectPDelta` produced this result; absent on every first-order run. */
   pDelta?: PDeltaDiagnostics;
+  /** Presente sólo cuando el modelo tiene barras de signo restringido; ausente en cualquier otro caso. */
+  activeSet?: ActiveSetDiagnostics;
+}
+
+/** Cómo terminó la iteración de conjunto activo de las barras de signo restringido. */
+export interface ActiveSetDiagnostics {
+  converged: boolean;
+  /** Iteraciones completas —una resolución lineal cada una— hasta estabilizar el conjunto. */
+  iterations: number;
+  /** Miembros de signo restringido que quedaron trabajando. */
+  activeMemberIds: string[];
+  /** Miembros de signo restringido que quedaron descolgados del modelo. */
+  inactiveMemberIds: string[];
+  /** Motivo de la parada, convergida o no. */
+  reason: string;
+  /** `true` cuando la iteración volvió a un conjunto ya visitado en vez de estabilizarse. */
+  cycled: boolean;
 }
 
 export interface MatrixTrace {
