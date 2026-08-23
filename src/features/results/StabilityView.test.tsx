@@ -184,3 +184,24 @@ describe('vista de estabilidad · el modo en el lienzo', () => {
     await waitFor(() => expect(canvasProbe()).toBe('buckling:1:Modo 2'));
   });
 });
+
+describe('vista de estabilidad · el modo sobrevive a cerrar el panel', () => {
+  it('desmontar la vista NO retira el modo del lienzo', async () => {
+    /* Cerrar «Datos» para mirar el dibujo es el motivo de dibujarlo. La primera
+       versión limpiaba al desmontar y el modo desaparecía justo cuando se iba a
+       ver; lo cazó el QA de navegador. Quien lo retira es `invalidateAnalysis`,
+       junto a la línea de influencia. */
+    const user = userEvent.setup();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(createDefaultProject()));
+    const Harness = ({ open }: { open: boolean }) => <>
+      <ModeShapeProbe />
+      {open ? <StabilityView kind="buckling" studies={studiesStub({ buckling: buckling([3.482]) })} /> : null}
+    </>;
+    const view = render(<ProjectProvider><Harness open /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: 'Ver en el lienzo' }));
+    await waitFor(() => expect(screen.getByLabelText('Modo en el lienzo').textContent).toBe('buckling:0:Modo 1'));
+
+    view.rerender(<ProjectProvider><Harness open={false} /></ProjectProvider>);
+    expect(screen.getByLabelText('Modo en el lienzo').textContent).toBe('buckling:0:Modo 1');
+  });
+});

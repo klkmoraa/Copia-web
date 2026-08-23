@@ -149,6 +149,30 @@ describe('CommandPalette', () => {
     expect(screen.getByRole('option', { name: 'Resultados: Resumen' })).toBeTruthy();
   });
 
+  /**
+   * Pandeo y Modos **no** son capas de evidencia: no encienden nada sobre el
+   * dibujo por sí solos, se piden y se leen en su pestaña. Por eso entran por la
+   * misma puerta que Resumen o Influencia y no por la de N/V/M.
+   */
+  it('ofrece pandeo y modos como destinos de Resultados, no como capas', () => {
+    renderPalette();
+
+    expect(screen.getByRole('option', { name: 'Resultados: Pandeo' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Resultados: Modos' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Evidencia: Pandeo' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Evidencia: Modos' })).toBeNull();
+  });
+
+  it('ofrece el certificado, y lo deshabilita mientras no haya análisis', () => {
+    renderPalette();
+
+    // El nombre accesible arrastra la pista, así que se busca por su inicio.
+    const certificate = screen.getByRole('option', { name: /^Comprobar el resultado/ });
+    // Sin análisis no hay resultado que certificar; ofrecerlo pulsable sería
+    // ofrecer un cálculo que se negaría a sí mismo.
+    expect(certificate.hasAttribute('disabled')).toBe(true);
+  });
+
   it('filters ignoring accents and case, over labels and hints alike', async () => {
     const user = userEvent.setup();
     renderPalette();

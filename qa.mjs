@@ -1792,6 +1792,90 @@ async function educationalExample() {
 }
 
 await verifyWelcomeFirstPaintMaterial();
+/**
+ * Los estudios opcionales, extremo a extremo y con navegador de verdad.
+ *
+ * Lo que este recorrido vigila y ninguna prueba de jsdom puede: que las dos
+ * pestañas nuevas sean **alcanzables** dentro de la tira, que pedir el estudio
+ * devuelva modos, y sobre todo que el modo elegido **se dibuje sobre el
+ * lienzo** — que es lo único que demuestra que el estado cruza de Resultados al
+ * dibujo por el camino que se diseñó.
+ */
+async function stabilityStudies() {
+  const page = await newQaPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`studies ${msg.type()}: ${msg.text()}`); });
+  page.on('pageerror', err => out.pageErrors.push(`studies ${String(err)}`));
+  await loadCleanApp(page);
+  await openTemplateGallery(page);
+  await activateWelcomeLauncher(page, page.getByRole('button', { name: /pórtico de ejemplo/i }).first());
+  await page.getByRole('button', { name: 'Analizar', exact: true }).click();
+  await page.locator('[data-analysis-status="resolved"]').waitFor({ state: 'visible' });
+  await openResultsSurface(page);
+
+  // 1 · Las dos pestañas existen dentro de la MISMA tira, no en una superficie
+  // aparte. Si alguna vez estrenaran cromo propio, esto lo vería.
+  const strip = page.locator('.data-surface');
+  out.checks.stabilityTabsLiveInTheResultsStrip =
+    await strip.getByRole('tab', { name: 'Pandeo', exact: true }).count() === 1
+    && await strip.getByRole('tab', { name: 'Modos', exact: true }).count() === 1;
+
+  // 2 · El límite del número está ANTES de calcular, no aparece con el resultado.
+  await page.getByRole('tab', { name: 'Pandeo', exact: true }).click();
+  const bucklingPanel = page.getByRole('region', { name: 'Pandeo', exact: true });
+  await bucklingPanel.waitFor({ state: 'visible' });
+  // Insensible a mayúsculas a propósito: la frase abre oración en el catálogo y
+  // un `includes` literal ataba el gate a la puntuación, no a lo que afirma.
+  out.checks.bucklingLimitVisibleBeforeComputing =
+    /no es una verificación normativa/i.test(await bucklingPanel.innerText());
+
+  // 3 · Pedirlo devuelve modos con su factor crítico.
+  await bucklingPanel.getByRole('button', { name: 'Calcular pandeo', exact: true }).click();
+  await bucklingPanel.getByRole('option').first().waitFor({ state: 'visible', timeout: 20_000 });
+  const bucklingModes = await bucklingPanel.getByRole('option').count();
+  out.checks.bucklingReturnsModes = bucklingModes > 0;
+  out.metrics.bucklingModes = bucklingModes;
+  const firstFactor = Number((await bucklingPanel.getByRole('option').first().innerText()).match(/[\d.]+/g)?.pop());
+  out.checks.bucklingFactorIsPositive = Number.isFinite(firstFactor) && firstFactor > 0;
+  out.metrics.bucklingFirstFactor = firstFactor;
+
+  // 4 · El modo cruza al lienzo. Se cierra «Datos» porque es modal y el lienzo
+  // queda `inert` detrás: mirar el dibujo es exactamente lo que hace una persona.
+  await bucklingPanel.getByRole('button', { name: 'Ver en el lienzo', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.locator('.data-surface').waitFor({ state: 'hidden' });
+  const modeLayer = page.locator('.mode-shape-layer');
+  await modeLayer.waitFor({ state: 'attached', timeout: 10_000 });
+  const modePaths = await modeLayer.locator('path').count();
+  out.checks.bucklingModeIsDrawnOnTheCanvas = modePaths > 0;
+  out.metrics.bucklingModePaths = modePaths;
+  await page.screenshot({ path: path.join(artifactsDir, 'buckling-mode.png'), fullPage: false });
+
+  // 5 · Los modos de vibración, por la misma puerta.
+  await openResultsSurface(page);
+  await page.getByRole('tab', { name: 'Modos', exact: true }).click();
+  const modalPanel = page.getByRole('region', { name: 'Modos', exact: true });
+  await modalPanel.waitFor({ state: 'visible' });
+  await modalPanel.getByRole('button', { name: 'Calcular modos', exact: true }).click();
+  await modalPanel.getByRole('option').first().waitFor({ state: 'visible', timeout: 20_000 });
+  const modalText = await modalPanel.innerText();
+  out.checks.modalReturnsPeriods = /Hz/.test(modalText) && /rad\/s/.test(modalText);
+  out.checks.modalDeclaresWhereMassComesFrom = modalText.includes('La masa sale de la densidad');
+
+  // 6 · El certificado, en el Resumen, con su límite pintado.
+  await page.getByRole('tab', { name: 'Resumen', exact: true }).click();
+  const certificate = page.getByRole('region', { name: 'Certificado numérico', exact: true });
+  await certificate.waitFor({ state: 'visible' });
+  out.checks.certificateLimitIsPainted =
+    (await certificate.innerText()).includes('uno equivocado y bien resuelto');
+  await certificate.getByRole('button', { name: 'Comprobar el resultado', exact: true }).click();
+  await certificate.getByRole('listitem').first().waitFor({ state: 'visible', timeout: 30_000 });
+  const checkCount = await certificate.getByRole('listitem').count();
+  out.checks.certificatePublishesItsFourChecks = checkCount === 4;
+  out.metrics.certificateChecks = checkCount;
+  await page.screenshot({ path: path.join(artifactsDir, 'numeric-certificate.png'), fullPage: false });
+  await page.close();
+}
+
 await verifyWelcomeReducedMotionActive();
 await desktop();
 Object.assign(out.checks, await verifyInspectorResponsiveViewports());
@@ -1800,6 +1884,7 @@ Object.assign(out.checks, await verifyResultsPhoneLandscapeMaterial());
 await influenceWorkflow();
 await mobile();
 await educationalExample();
+await stabilityStudies();
 await browser.close();
 await previewServer.close();
 const failedChecks = Object.entries(out.checks).filter(([, value]) => value === false);

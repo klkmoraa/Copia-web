@@ -123,6 +123,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setAnalysis(null);
     setResultCursor(null);
     setInfluenceCanvasState(null);
+    /* El modo propio se va con el análisis, por la misma razón que la línea de
+       influencia: es una lectura de un modelo concreto, y dejarlo dibujado
+       sobre una estructura que ya cambió sería enseñar la forma de otra cosa. */
+    setModeShapeState(null);
   }, []);
 
   /** Publishes a model change without assigning history or analysis semantics. */

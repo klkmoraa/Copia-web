@@ -33,6 +33,7 @@ import {
   Play,
   Redo2,
   Sheet,
+  ShieldCheck,
   Sun,
   Undo2,
   Wrench,
@@ -131,6 +132,19 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     shortcut: 'Ctrl Y',
     isEnabled: (ctx) => ctx.canRedo,
     run: (ctx) => ctx.redo(),
+  },
+  {
+    /* Lleva al Resumen, donde vive el botón de la tarjeta. No dispara el
+       cálculo desde aquí: el certificado cuesta cuatro resoluciones y pedirlo
+       sin ver la tarjeta dejaría al usuario esperando algo que no está mirando. */
+    id: 'analysis:certificate',
+    category: 'analysis',
+    icon: ShieldCheck,
+    label: (ctx) => ctx.t('results.computeCertificate'),
+    hint: (ctx) => ctx.t('results.certificateIdle'),
+    isEnabled: (ctx) => ctx.hasAnalysis,
+    deferredOpen: true,
+    run: () => emitWorkspaceCommand('open-data', { tab: 'results', resultTab: 'summary' }),
   },
   {
     id: 'analysis:model-doctor',
@@ -258,9 +272,19 @@ const LAYER_PRESETS: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: Translat
  * así que pedirlas es abrir «Datos» en esa lectura. N/V/M y deformada sí lo
  * tienen y viven en `evidenceLayerCommands`, que no abre nada.
  */
+/**
+ * Lecturas que la paleta abre por su nombre.
+ *
+ * No están las nueve: N, V, M y la deformada se piden como **capas de
+ * evidencia** (`evidenceLayerCommands`, CRI-100), que encienden el dibujo en
+ * vez de abrir el panel. Pandeo y Modos sí entran aquí porque no son capas:
+ * son estudios que se piden y se leen en su pestaña.
+ */
 const PANEL_RESULT_TABS: ReadonlyArray<{ id: ResultTab; labelKey: TranslationKey }> = [
   { id: 'summary', labelKey: 'results.summary' },
   { id: 'reactions', labelKey: 'results.reactions' },
+  { id: 'buckling', labelKey: 'results.buckling' },
+  { id: 'modal', labelKey: 'results.modal' },
   { id: 'influence', labelKey: 'results.influence' },
   { id: 'learn', labelKey: 'results.learn' },
 ];
