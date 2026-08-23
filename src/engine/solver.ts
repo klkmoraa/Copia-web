@@ -100,7 +100,7 @@ const integratePolynomialSquare = (coefficients: readonly number[], length: numb
   }, 0);
 };
 
-const getNodeMap = (project: ProjectModel): Map<string, NodeModel> =>
+export const getNodeMap = (project: ProjectModel): Map<string, NodeModel> =>
   new Map(project.nodes.map((node) => [node.id, node]));
 
 const frameEndTransfersRotation = (member: MemberModel, nodeId: string): boolean => {
@@ -126,7 +126,7 @@ const geometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): Geometr
   return { L, c: dx / L, s: dy / L, dx, dy };
 };
 
-const deformableGeometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): {
+export const deformableGeometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): {
   geometry: Geometry;
   grossLength: number;
   startOffset: number;
@@ -184,7 +184,7 @@ export const geometricStiffness = (L: number, N: number): Matrix => {
   return k;
 };
 
-const trussLocalStiffness = (member: MemberModel, L: number): Matrix => {
+export const trussLocalStiffness = (member: MemberModel, L: number): Matrix => {
   const a = (member.E * member.A) / L;
   return [
     [a, 0, 0, -a, 0, 0],
@@ -357,7 +357,7 @@ const initialEffectEquivalentLoad = (
   return [-axial, 0, -bending, axial, 0, bending];
 };
 
-interface CondensationResult {
+export interface CondensationResult {
   stiffness: Matrix;
   load: number[];
   released: number[];
@@ -369,7 +369,7 @@ interface CondensationResult {
   };
 }
 
-const condenseConnections = (
+export const condenseConnections = (
   k: Matrix,
   f: number[],
   member: MemberModel,
@@ -1255,6 +1255,149 @@ const abortedResult = abortedAnalysis;
  * local stiffness before condensation, iteration over iteration. Every
  * ordinary caller omits it and gets today's first-order behavior unchanged.
  */
+/**
+ * Restricciones cinemáticas del modelo: apoyos, GDL de contabilidad y enlaces
+ * rígidos, ya deduplicadas y reducidas a un conjunto independiente.
+ *
+ * Se extrajo de `analyzeProject` sin cambiarle una línea al cuerpo porque los
+ * problemas de autovalores —pandeo y modal— necesitan **exactamente** estas
+ * filas y ninguna otra: las mismas condiciones de contorno, la misma
+ * ortogonalización, la misma detección de restricciones incompatibles. Tenerlas
+ * escritas dos veces sería garantizar que un día divergen y que el modo propio
+ * de un pórtico deje de corresponder a la estructura que el usuario resolvió.
+ *
+ * `value` sólo importa al análisis estático: un modo propio es homogéneo, así
+ * que quien resuelve autovalores lee `row` e ignora el término independiente.
+ */
+export type ConstraintKind = 'support' | 'bookkeeping' | 'rigid';
+export interface ConstraintDefinition { row: number[]; kind: ConstraintKind; nodeId?: string; value: number }
+
+export const assembleKinematicConstraints = (
+  project: ProjectModel,
+  nodes: Map<string, NodeModel>,
+  nodeIndex: Map<string, number>,
+  ndof: number,
+  prescribedByNode: Map<string, { ux: number; uy: number; rz: number; normal: number }>,
+): ConstraintDefinition[] => {
+  const constraints: ConstraintDefinition[] = [];
+  const addConstraint = (terms: Array<[number, number]>, kind: ConstraintKind, nodeId?: string, value = 0) => {
+    const row = Array(ndof).fill(0);
+    terms.forEach(([index, coefficient]) => { row[index] += coefficient; });
+    constraints.push({ row, kind, nodeId, value });
+  };
+
+  for (const node of project.nodes) {
+    const base = nodeIndex.get(node.id)! * 3;
+    const support = node.support;
+    const prescribed = prescribedByNode.get(node.id);
+    if (support.type === 'fixed') {
+      addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0); addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0); addConstraint([[base + 2, 1]], 'support', node.id, prescribed?.rz ?? 0);
+    } else if (support.type === 'pin') {
+      addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0); addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0);
+    } else if (support.type === 'roller') {
+      const angle = ((support.angleDeg ?? 90) * Math.PI) / 180;
+      addConstraint([[base, Math.cos(angle)], [base + 1, Math.sin(angle)]], 'support', node.id, prescribed?.normal ?? 0);
+    } else if (support.type === 'custom') {
+      if (support.restrainX) addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0);
+      if (support.restrainY) addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0);
+      if (support.restrainR) addConstraint([[base + 2, 1]], 'support', node.id, prescribed?.rz ?? 0);
+    }
+  }
+
+  // Free drafting nodes that do not belong to any member are not structural
+  // degrees of freedom. Keep them in the result ordering, but constrain their
+  // three empty rows so they cannot masquerade as a mechanism.
+  const participatingNodeIds = new Set(project.members.flatMap((member) => [member.i, member.j]));
+  for (const node of project.nodes) {
+    if (participatingNodeIds.has(node.id)) continue;
+    const base = nodeIndex.get(node.id)! * 3;
+    addConstraint([[base, 1]], 'bookkeeping', node.id);
+    addConstraint([[base + 1, 1]], 'bookkeeping', node.id);
+    addConstraint([[base + 2, 1]], 'bookkeeping', node.id);
+  }
+
+  // Rotations that do not participate in any element (truss nodes or fully
+  // released frame ends) are bookkeeping DOFs. Determine participation from
+  // topology instead of comparing EI against the largest (often axial) term.
+  for (const node of project.nodes) {
+    const supportRestrainsRotation = node.support.type === 'fixed' || (node.support.type === 'custom' && Boolean(node.support.restrainR));
+    const nodalSpringParticipatesInRotation = (node.support.spring?.kr ?? 0) > 0;
+    const participatesInRotation = project.members.some((member) => {
+      if (member.i !== node.id && member.j !== node.id) return false;
+      if (member.type === 'rigid') return true;
+      if (node.internalHinge) return false;
+      return frameEndTransfersRotation(member, node.id);
+    });
+    const rotationIndex = nodeIndex.get(node.id)! * 3 + 2;
+    if (!supportRestrainsRotation && !nodalSpringParticipatesInRotation && !participatesInRotation) addConstraint([[rotationIndex, 1]], 'bookkeeping', node.id);
+  }
+
+  // Exact rigid-link kinematic constraints.
+  for (const member of project.members.filter((item) => item.type === 'rigid')) {
+    const ni = nodes.get(member.i)!;
+    const nj = nodes.get(member.j)!;
+    const ii = nodeIndex.get(member.i)! * 3;
+    const ji = nodeIndex.get(member.j)! * 3;
+    const dx = nj.x - ni.x;
+    const dy = nj.y - ni.y;
+    addConstraint([[ji, 1], [ii, -1], [ii + 2, dy]], 'rigid');
+    addConstraint([[ji + 1, 1], [ii + 1, -1], [ii + 2, -dx]], 'rigid');
+    addConstraint([[ji + 2, 1], [ii + 2, -1]], 'rigid');
+  }
+
+  // Remove exact duplicate constraints to avoid an artificial singularity.
+  const uniqueConstraintMap = new Map<string, ConstraintDefinition>();
+  constraints.forEach((definition) => {
+    const key = constraintKey(definition.row);
+    // Supports are added first and take precedence over bookkeeping duplicates.
+    if (!key) return;
+    const existing = uniqueConstraintMap.get(key);
+    if (!existing) {
+      uniqueConstraintMap.set(key, definition);
+      return;
+    }
+    const normalizedValue = (item: ConstraintDefinition) => {
+      const norm = Math.hypot(...item.row);
+      const first = item.row.find((value) => Math.abs(value) > EPS) ?? 1;
+      return item.value / norm * (first < 0 ? -1 : 1);
+    };
+    const a = normalizedValue(existing);
+    const bValue = normalizedValue(definition);
+    if (Math.abs(a - bValue) > 1e-10 * Math.max(1, Math.abs(a), Math.abs(bValue))) {
+      throw new Error(`Existen restricciones cinemáticas incompatibles${definition.nodeId ? ` en el nodo ${definition.nodeId}` : ''}.`);
+    }
+  });
+  const independentConstraints: ConstraintDefinition[] = [];
+  const orthogonalConstraintBasis: Array<{ row: number[]; value: number }> = [];
+  for (const definition of uniqueConstraintMap.values()) {
+    const norm = Math.hypot(...definition.row);
+    if (!(norm > 0)) continue;
+    const residualRow = definition.row.map((value) => value / norm);
+    let residualValue = definition.value / norm;
+    // Re-orthogonalize once: rigid-link loops can be exactly dependent but
+    // contain translations and rotations with very different coefficients.
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (const basis of orthogonalConstraintBasis) {
+        const projection = residualRow.reduce((sum, value, index) => sum + value * basis.row[index], 0);
+        if (Math.abs(projection) <= Number.EPSILON) continue;
+        residualRow.forEach((value, index) => { residualRow[index] = value - projection * basis.row[index]; });
+        residualValue -= projection * basis.value;
+      }
+    }
+    const residualNorm = Math.hypot(...residualRow);
+    const dependenceTolerance = 1e-10 * Math.max(1, Math.sqrt(ndof));
+    if (residualNorm <= dependenceTolerance) {
+      if (Math.abs(residualValue) > 1e-9 * Math.max(1, Math.abs(definition.value / norm))) {
+        throw new Error(`Existen restricciones cinemáticas incompatibles${definition.nodeId ? ` en el nodo ${definition.nodeId}` : ''}.`);
+      }
+      continue;
+    }
+    orthogonalConstraintBasis.push({ row: residualRow.map((value) => value / residualNorm), value: residualValue / residualNorm });
+    independentConstraints.push(definition);
+  }
+  return independentConstraints;
+};
+
 export interface AnalyzeProjectOptions {
   pDeltaAxialForces?: Map<string, number>;
   includeEducationTrace?: boolean;
@@ -1407,125 +1550,7 @@ export const analyzeProject = (
       }
     }
 
-    type ConstraintKind = 'support' | 'bookkeeping' | 'rigid';
-    interface ConstraintDefinition { row: number[]; kind: ConstraintKind; nodeId?: string; value: number }
-    const constraints: ConstraintDefinition[] = [];
-    const addConstraint = (terms: Array<[number, number]>, kind: ConstraintKind, nodeId?: string, value = 0) => {
-      const row = Array(ndof).fill(0);
-      terms.forEach(([index, coefficient]) => { row[index] += coefficient; });
-      constraints.push({ row, kind, nodeId, value });
-    };
-
-    for (const node of project.nodes) {
-      const base = nodeIndex.get(node.id)! * 3;
-      const support = node.support;
-      const prescribed = prescribedByNode.get(node.id);
-      if (support.type === 'fixed') {
-        addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0); addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0); addConstraint([[base + 2, 1]], 'support', node.id, prescribed?.rz ?? 0);
-      } else if (support.type === 'pin') {
-        addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0); addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0);
-      } else if (support.type === 'roller') {
-        const angle = ((support.angleDeg ?? 90) * Math.PI) / 180;
-        addConstraint([[base, Math.cos(angle)], [base + 1, Math.sin(angle)]], 'support', node.id, prescribed?.normal ?? 0);
-      } else if (support.type === 'custom') {
-        if (support.restrainX) addConstraint([[base, 1]], 'support', node.id, prescribed?.ux ?? 0);
-        if (support.restrainY) addConstraint([[base + 1, 1]], 'support', node.id, prescribed?.uy ?? 0);
-        if (support.restrainR) addConstraint([[base + 2, 1]], 'support', node.id, prescribed?.rz ?? 0);
-      }
-    }
-
-    // Free drafting nodes that do not belong to any member are not structural
-    // degrees of freedom. Keep them in the result ordering, but constrain their
-    // three empty rows so they cannot masquerade as a mechanism.
-    const participatingNodeIds = new Set(project.members.flatMap((member) => [member.i, member.j]));
-    for (const node of project.nodes) {
-      if (participatingNodeIds.has(node.id)) continue;
-      const base = nodeIndex.get(node.id)! * 3;
-      addConstraint([[base, 1]], 'bookkeeping', node.id);
-      addConstraint([[base + 1, 1]], 'bookkeeping', node.id);
-      addConstraint([[base + 2, 1]], 'bookkeeping', node.id);
-    }
-
-    // Rotations that do not participate in any element (truss nodes or fully
-    // released frame ends) are bookkeeping DOFs. Determine participation from
-    // topology instead of comparing EI against the largest (often axial) term.
-    for (const node of project.nodes) {
-      const supportRestrainsRotation = node.support.type === 'fixed' || (node.support.type === 'custom' && Boolean(node.support.restrainR));
-      const nodalSpringParticipatesInRotation = (node.support.spring?.kr ?? 0) > 0;
-      const participatesInRotation = project.members.some((member) => {
-        if (member.i !== node.id && member.j !== node.id) return false;
-        if (member.type === 'rigid') return true;
-        if (node.internalHinge) return false;
-        return frameEndTransfersRotation(member, node.id);
-      });
-      const rotationIndex = nodeIndex.get(node.id)! * 3 + 2;
-      if (!supportRestrainsRotation && !nodalSpringParticipatesInRotation && !participatesInRotation) addConstraint([[rotationIndex, 1]], 'bookkeeping', node.id);
-    }
-
-    // Exact rigid-link kinematic constraints.
-    for (const member of project.members.filter((item) => item.type === 'rigid')) {
-      const ni = nodes.get(member.i)!;
-      const nj = nodes.get(member.j)!;
-      const ii = nodeIndex.get(member.i)! * 3;
-      const ji = nodeIndex.get(member.j)! * 3;
-      const dx = nj.x - ni.x;
-      const dy = nj.y - ni.y;
-      addConstraint([[ji, 1], [ii, -1], [ii + 2, dy]], 'rigid');
-      addConstraint([[ji + 1, 1], [ii + 1, -1], [ii + 2, -dx]], 'rigid');
-      addConstraint([[ji + 2, 1], [ii + 2, -1]], 'rigid');
-    }
-
-    // Remove exact duplicate constraints to avoid an artificial singularity.
-    const uniqueConstraintMap = new Map<string, ConstraintDefinition>();
-    constraints.forEach((definition) => {
-      const key = constraintKey(definition.row);
-      // Supports are added first and take precedence over bookkeeping duplicates.
-      if (!key) return;
-      const existing = uniqueConstraintMap.get(key);
-      if (!existing) {
-        uniqueConstraintMap.set(key, definition);
-        return;
-      }
-      const normalizedValue = (item: ConstraintDefinition) => {
-        const norm = Math.hypot(...item.row);
-        const first = item.row.find((value) => Math.abs(value) > EPS) ?? 1;
-        return item.value / norm * (first < 0 ? -1 : 1);
-      };
-      const a = normalizedValue(existing);
-      const bValue = normalizedValue(definition);
-      if (Math.abs(a - bValue) > 1e-10 * Math.max(1, Math.abs(a), Math.abs(bValue))) {
-        throw new Error(`Existen restricciones cinemáticas incompatibles${definition.nodeId ? ` en el nodo ${definition.nodeId}` : ''}.`);
-      }
-    });
-    const independentConstraints: ConstraintDefinition[] = [];
-    const orthogonalConstraintBasis: Array<{ row: number[]; value: number }> = [];
-    for (const definition of uniqueConstraintMap.values()) {
-      const norm = Math.hypot(...definition.row);
-      if (!(norm > 0)) continue;
-      const residualRow = definition.row.map((value) => value / norm);
-      let residualValue = definition.value / norm;
-      // Re-orthogonalize once: rigid-link loops can be exactly dependent but
-      // contain translations and rotations with very different coefficients.
-      for (let pass = 0; pass < 2; pass += 1) {
-        for (const basis of orthogonalConstraintBasis) {
-          const projection = residualRow.reduce((sum, value, index) => sum + value * basis.row[index], 0);
-          if (Math.abs(projection) <= Number.EPSILON) continue;
-          residualRow.forEach((value, index) => { residualRow[index] = value - projection * basis.row[index]; });
-          residualValue -= projection * basis.value;
-        }
-      }
-      const residualNorm = Math.hypot(...residualRow);
-      const dependenceTolerance = 1e-10 * Math.max(1, Math.sqrt(ndof));
-      if (residualNorm <= dependenceTolerance) {
-        if (Math.abs(residualValue) > 1e-9 * Math.max(1, Math.abs(definition.value / norm))) {
-          throw new Error(`Existen restricciones cinemáticas incompatibles${definition.nodeId ? ` en el nodo ${definition.nodeId}` : ''}.`);
-        }
-        continue;
-      }
-      orthogonalConstraintBasis.push({ row: residualRow.map((value) => value / residualNorm), value: residualValue / residualNorm });
-      independentConstraints.push(definition);
-    }
-    const constraintDefinitions = independentConstraints;
+    const constraintDefinitions = assembleKinematicConstraints(project, nodes, nodeIndex, ndof, prescribedByNode);
     const C = constraintDefinitions.map((definition) => definition.row);
     const groundingIssue = getEvidentGroundingIssue(project);
     if (groundingIssue) {
