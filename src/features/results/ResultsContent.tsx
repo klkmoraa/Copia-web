@@ -20,6 +20,7 @@ import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { ReactionsView } from './ReactionsView';
 import { StabilityView } from './StabilityView';
+import { CertificateCard } from './CertificateCard';
 import { LearnView } from './LearnView';
 import type { ResultRef } from './provenance';
 import {
@@ -181,6 +182,11 @@ export const ResultsContent = () => {
       {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
       {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-data', { tab: 'review' })} /> : null}
       {analysis?.success && activeTab === 'summary' ? <ResultSummary /> : null}
+      {/* Junto a la calidad numérica y no dentro de `ResultSummary`: aquella
+          lee del análisis y no necesita nada más, ésta necesita el hook de
+          estudios. Pasarlo a través del resumen sólo para reenviarlo habría
+          hecho que un componente que no lo usa dependiera de él. */}
+      {analysis?.success && activeTab === 'summary' ? <CertificateCard studies={studies} /> : null}
       {analysis?.success && activeTab === 'reactions' ? <ReactionsView /> : null}
       {analysis?.success && (activeTab === 'axial' || activeTab === 'shear' || activeTab === 'moment')
         ? <DiagramView type={activeTab} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
