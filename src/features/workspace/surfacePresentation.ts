@@ -23,17 +23,21 @@ export const BROKER_SURFACE_IDS = [
    * si.
    */
   'detail',
-  'results',
   /**
-   * `dense` es la superficie invocada de los datos densos de Results
-   * —reacciones, influencia y «Entender» (CRI-101)—. No es residente en
-   * ninguna clase: se abre a petición y se cierra devolviendo el foco, por eso
-   * su presentación es siempre modal (`drawer` en X2/M1, `fullscreen` en K0) y
-   * admite `peek`.
+   * Todo lo denso, en una sola superficie con tres pestañas: Resultados ·
+   * Tabla · Revisión.
+   *
+   * Antes eran cuatro ids —`results`, `dense`, `datasheet` y `doctor`— con
+   * cuatro cromos y cuatro lanzadores. Este mismo resolutor ya las obligaba a
+   * ser mutuamente excluyentes (`validateSurfaceCombination`: «drawer y
+   * fullscreen son mutuamente exclusivos»), así que en pantalla nunca hubo más
+   * de una a la vez. Unificarlas no cambia lo que el usuario puede tener
+   * abierto: le da a esa restricción, que ya existía, una sola forma.
+   *
+   * Es invocada, nunca residente: se abre a petición y se cierra devolviendo el
+   * foco, por eso su presentación es modal en las tres clases y admite `peek`.
    */
-  'dense',
-  'datasheet',
-  'doctor',
+  'data',
   'palette',
   'candidatePicker',
   'contextualActions',
@@ -46,30 +50,21 @@ export type SurfaceStatus = 'closed' | 'active' | 'suspended';
 export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Record<SurfaceId, SurfacePresentation>>>> = {
   X2: {
     detail: 'dock',
-    results: 'dock',
-    dense: 'drawer',
-    datasheet: 'drawer',
-    doctor: 'drawer',
+    data: 'drawer',
     palette: 'overlay',
     candidatePicker: 'floating',
     contextualActions: 'inset',
   },
   M1: {
     detail: 'inset',
-    results: 'inset',
-    dense: 'drawer',
-    datasheet: 'drawer',
-    doctor: 'drawer',
+    data: 'drawer',
     palette: 'overlay',
     candidatePicker: 'floating',
     contextualActions: 'inset',
   },
   K0: {
     detail: 'sheet',
-    results: 'sheet',
-    dense: 'fullscreen',
-    datasheet: 'fullscreen',
-    doctor: 'fullscreen',
+    data: 'fullscreen',
     palette: 'sheet',
     candidatePicker: 'sheet',
     contextualActions: 'inset',
@@ -103,10 +98,7 @@ export type SurfaceActivityClass = (typeof SURFACE_ACTIVITY_CLASSES)[number];
 
 export const SURFACE_ACTIVITY_CLASS: Readonly<Record<SurfaceId, SurfaceActivityClass>> = {
   detail: 'layer',
-  results: 'layer',
-  dense: 'tool',
-  datasheet: 'tool',
-  doctor: 'tool',
+  data: 'tool',
   palette: 'layer',
   candidatePicker: 'layer',
   contextualActions: 'derived',

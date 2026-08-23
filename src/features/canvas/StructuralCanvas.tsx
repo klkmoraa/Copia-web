@@ -1803,7 +1803,7 @@ export const StructuralCanvas = ({
         deleteSelection();
         return;
       case 'datasheet':
-        emitWorkspaceCommand('open-datasheet');
+        emitWorkspaceCommand('open-data', { tab: 'table' });
         return;
       case 'structuralEdit':
         emitWorkspaceCommand('open-structural-edit');

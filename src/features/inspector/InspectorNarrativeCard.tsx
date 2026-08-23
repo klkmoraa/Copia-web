@@ -113,7 +113,7 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
       {governingCheck ? <>
         <span>{t('elastic.limitedGoverning', { check: reliabilityCheckLabel(governingCheck, t) })}</span>
         <span className="elastic-demand-limited-message">{describeReliabilityCheck(governingCheck, t)}</span>
-        <button type="button" onClick={() => emitWorkspaceCommand('open-model-doctor')}>
+        <button type="button" onClick={() => emitWorkspaceCommand('open-data', { tab: 'review' })}>
           {t('elastic.actionDoctor')}
         </button>
       </> : null}

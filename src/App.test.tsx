@@ -158,16 +158,30 @@ const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
   // —pie del riel en X2/M1 y chrome flotante en K0—, dos copias sin comando
   // registrado detras; `getByRole` en singular es la prueba de que ya no.
   await user.click(screen.getByRole('button', { name: 'Resultados' }));
-  await waitFor(() => expect(document.querySelector('.results-panel')).toBeTruthy());
+  await waitFor(() => expect(document.querySelector('.results-content')).toBeTruthy());
 };
 
 /**
- * CRI-101 · Reacciones, Influencia y «Aprender» dejaron de ser pestañas del
- * panel: son la superficie `dense`, que se pide desde sus lanzadores.
+ * «Datos» es MODAL en las tres clases: mientras está abierta, el fondo queda
+ * `inert` y la barra superior no es alcanzable. Antes Resultados era un dock
+ * y no atrapaba nada, así que ninguna prueba tenía que cerrarlo para seguir
+ * tecleando fuera. Ahora sí, y es la consecuencia buscada de que todo lo denso
+ * viva en una sola superficie invocada.
+ */
+const closeData = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos' })).toBeNull());
+};
+
+/**
+ * Reacciones, Influencia y «Aprender» vuelven a ser PESTAÑAS de la misma tira
+ * que Resumen, N·V·M y Deformada. Estuvieron partidas en dos componentes que
+ * leían el mismo campo `resultTab`; pedirlas ya no cambia de superficie.
  */
 const openDenseResults = async (user: ReturnType<typeof userEvent.setup>, view: 'reactions' | 'influence' | 'learn') => {
-  await user.click(document.querySelector(`[data-dense-launcher="${view}"]`) as HTMLElement);
-  await waitFor(() => expect(document.querySelector('.dense-results-surface')).toBeTruthy(), { timeout: 5000 });
+  if (!document.querySelector('.results-content')) await openResults(user);
+  await user.click(document.querySelector(`[data-result-tab="${view}"]`) as HTMLElement);
+  await waitFor(() => expect(document.querySelector(`.results-content[data-results-tab="${view}"]`)).toBeTruthy(), { timeout: 5000 });
 };
 
 /**
@@ -342,7 +356,7 @@ describe('structureCo app shell', () => {
 
     // CRI-94 · analizar NO monta Resultados: la superficie se pide. Que no esté
     // antes de pedirla es parte del contrato, no un descuido.
-    expect(document.querySelector('.results-panel')).toBeNull();
+    expect(document.querySelector('.results-content')).toBeNull();
     await openResults(user);
 
     await waitFor(() => {
@@ -359,7 +373,7 @@ describe('structureCo app shell', () => {
 
     await user.click(doctorButton);
 
-    expect(await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 })).toBeTruthy();
     const shell = container.querySelector<HTMLElement>('.app-shell')!;
     expect(shell.inert).toBe(true);
     expect(shell.getAttribute('aria-hidden')).toBe('true');
@@ -367,11 +381,11 @@ describe('structureCo app shell', () => {
 
     await user.keyboard('{Control>}k{/Control}');
     expect(screen.queryByRole('dialog', { name: /paleta de comandos/i })).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'Model Doctor' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Datos' })).toBeTruthy();
 
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos' })).toBeNull());
     // jsdom no implementa `inert` (`'inert' in HTMLElement.prototype === false`),
     // así que React lo escribe como propiedad expando y al desactivarlo la
     // BORRA: «no inerte» se lee aquí como `undefined`, no como `false`. Lo que
@@ -393,12 +407,13 @@ describe('structureCo app shell', () => {
     }, { timeout: 2000 });
     const diagramsBefore = screen.getAllByText(/Diagrama de momento flector/i).length;
 
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
-    await user.keyboard('{Escape}');
+    // Revisión es una pestaña de la misma superficie: ir y volver no puede
+    // costar el análisis ya resuelto.
+    await user.click(screen.getByRole('tab', { name: 'Revisión' }));
+    await screen.findByRole('heading', { name: /modelo listo para revisar|revisi/i }, { timeout: 5000 });
+    await user.click(screen.getByRole('tab', { name: 'Resultados' }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
-    expect(screen.getAllByText(/Diagrama de momento flector/i)).toHaveLength(diagramsBefore);
+    await waitFor(() => expect(screen.getAllByText(/Diagrama de momento flector/i)).toHaveLength(diagramsBefore));
   }, 15_000);
 
   it('returns focus through the complete keyboard launcher path', async () => {
@@ -416,10 +431,10 @@ describe('structureCo app shell', () => {
     await user.keyboard('{Control>}k{/Control}');
     const palette = await screen.findByRole('dialog', { name: /paleta de comandos/i }, { timeout: 5000 });
     await user.click(within(palette).getByRole('option', { name: /Model Doctor/i }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(analyzeButton));
   });
 
@@ -434,22 +449,22 @@ describe('structureCo app shell', () => {
     await openWorkspace(user);
 
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    let doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    let doctor = await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
     let noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     await user.click(within(noLoads).getByRole('button', { name: /reconocer/i }));
     expect(within(noLoads).getByText(/reconocido para esta sesi/i)).toBeTruthy();
-    await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
+    await user.click(within(doctor).getByRole('button', { name: /cerrar datos/i }));
 
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    doctor = await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
     expect(within(doctor).getByText(/reconocido para esta sesi/i)).toBeTruthy();
-    await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
+    await user.click(within(doctor).getByRole('button', { name: /cerrar datos/i }));
 
     await user.click(screen.getByRole('button', { name: /abrir proyectos y ejemplos/i }));
     await user.click(within(screen.getByRole('menu', { name: /abrir proyectos y ejemplos/i }))
       .getByRole('menuitem', { name: /proyecto nuevo/i }));
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    doctor = await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
     noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     expect(within(noLoads).queryByText(/reconocido para esta sesi/i)).toBeNull();
   });
@@ -459,20 +474,33 @@ describe('structureCo app shell', () => {
    * del shell sale del viewport de layout. Fingir la media query dejaba la app
    * montada en `M1` mientras la prueba creía estar en `K0`.
    */
-  it('collapses expanded mobile Results before opening Model Doctor', async () => {
+  /**
+   * En K0 «Datos» es una sola superficie a pantalla completa, así que cambiar
+   * de Resultados a Revisión ya no es sustituir una superficie por otra: es
+   * cambiar de pestaña. La prueba que había aquí medía el colapso del dock
+   * inferior de Resultados antes de abrir el Doctor encima; ese dock ya no
+   * existe, y con él se va la coreografía que exigía. Lo que queda —y sigue
+   * importando— es que el foco vuelva al lanzador al cerrar.
+   */
+  it('cambia de Resultados a Revisión sin sustituir la superficie en K0, y devuelve el foco al cerrar', async () => {
     setViewport('phone');
     const user = userEvent.setup();
     await renderExampleApp(user);
     expect(document.querySelector('.app-shell')?.getAttribute('data-shell-class')).toBe('K0');
-    await openResults(user);
-    const results = document.querySelector<HTMLElement>('.results-panel')!;
-    expect(results.classList.contains('mobile-collapsed')).toBe(false);
 
     const menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    const launcher = within(menu).getByRole('button', { name: 'Model Doctor' });
+    await user.click(launcher);
 
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
-    await waitFor(() => expect(results.classList.contains('mobile-collapsed')).toBe(true));
+    const surface = await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
+    // En K0 el broker la presenta a pantalla completa, no como cajón.
+    expect(surface.classList.contains('sc-modal-surface--fullscreen')).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Revisión' }).getAttribute('aria-selected')).toBe('true');
+
+    // Ir a Resultados NO abre otra superficie: sigue habiendo una sola.
+    await user.click(screen.getByRole('tab', { name: 'Resultados' }));
+    expect(screen.getAllByRole('dialog', { name: 'Datos' })).toHaveLength(1);
+
     await user.keyboard('{Escape}');
     await waitFor(() => expect(document.activeElement)
       .toBe(within(document.querySelector('.topbar') as HTMLElement).getByRole('button', { name: /más acciones/i })));
@@ -527,11 +555,11 @@ describe('structureCo app shell', () => {
     const { container } = render(<App />);
     await openWorkspace(user);
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
-    // CRI-101 · «Reacciones» dejó de ser una pestaña del panel y pasó a ser la
-    // superficie `dense`. La capa de reacciones del lienzo, que es lo que esta
-    // prueba mide, se dibuja con el resultado resuelto y sigue siendo la misma.
-    await openResults(user);
-    expect(document.querySelector('[data-dense-launcher="reactions"]')).toBeTruthy();
+    // «Reacciones» vuelve a ser una pestaña de la misma tira que el resto de
+    // lecturas. La capa de reacciones del LIENZO, que es lo que esta prueba
+    // mide, se dibuja con el resultado resuelto y no depende de qué superficie
+    // esté abierta: por eso aquí no se abre ninguna.
+    expect(document.querySelector('[data-result-tab="reactions"]')).toBeNull();
 
     await waitFor(() => expect(container.querySelector('.reaction-symbol[data-node-id="A"]')).toBeTruthy());
     const reaction = container.querySelector('.reaction-symbol[data-node-id="A"]')!;
@@ -810,14 +838,25 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     await openResults(user);
     await screen.findByTestId('diagram-chart');
+    // «Datos» es modal: hay que cerrarla para llegar a la barra. El análisis
+    // resuelto vive en el store, no en la superficie, así que reabrirla tiene
+    // que devolver el mismo diagrama.
+    await closeData(user);
+
     const name = screen.getByRole('textbox', { name: /nombre del proyecto/i });
     await user.clear(name);
     await user.type(name, 'Marco principal');
     await user.tab();
-    expect(screen.getByTestId('diagram-chart')).toBeTruthy();
+    await openResults(user);
+    expect(await screen.findByTestId('diagram-chart')).toBeTruthy();
+    await closeData(user);
+
     const menu = await openUtilityMenu(user);
     await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
-    expect(screen.getByTestId('diagram-chart')).toBeTruthy();
+    await user.keyboard('{Escape}');
+    // Ya en inglés: el lanzador se llama «Results».
+    await user.click(screen.getByRole('button', { name: 'Results' }));
+    expect(await screen.findByTestId('diagram-chart')).toBeTruthy();
     // Misma holgura que el resto de recorridos que montan la app, analizan y
     // luego teclean: es el test más pesado del archivo y con el timeout por
     // defecto de 5 s vivía al borde bajo carga de suite completa.
@@ -921,7 +960,7 @@ describe('structureCo app shell', () => {
     // lienzo no llega: ni borra ni abre la paleta.
     await user.click(member!);
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await screen.findByRole('dialog', { name: 'Datos' }, { timeout: 5000 });
     expect(shell.inert).toBe(true);
     expect(shell.getAttribute('aria-hidden')).toBe('true');
 

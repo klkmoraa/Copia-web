@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import { Drawer } from '../../design-system/components/overlays';
 import { useI18n } from '../../i18n/useI18n';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
+import { useRetainedState } from '../data/retainedState';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
 import { DatasheetEditorPanel } from './DatasheetEditorPanel';
 import { DatasheetGrid } from './DatasheetGrid';
@@ -99,34 +98,26 @@ const buildSelection = (
   return { kind: 'multi', nodeIds, memberIds };
 };
 
-export interface DatasheetPanelProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  returnFocusTo?: HTMLElement | null;
-  presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
-  onSurfaceReady?: (ready: boolean) => void;
-  /** `default` | `peek` (CRI-102). The broker owns this; the panel only renders it. */
-  extent?: SurfaceExtent;
+/**
+ * La Hoja de datos, como cuerpo de la pestaña «Tabla» de la superficie
+ * «Datos».
+ *
+ * Dejo de montar su propio `Drawer`: el cromo —titulo, cerrar, `peek` y
+ * restaurar— lo pone `DataSurface` una sola vez para las tres pestañas. Lo
+ * unico que sigue siendo suyo es `onPeek`, porque «Localizar» degrada la
+ * superficie en vez de cerrarla (CRI-102 / D-11) y esa decision la toma esta
+ * pestaña, no el cromo.
+ */
+export interface DatasheetContentProps {
   /** Degrades to `peek` instead of closing — "Localizar" never closes the sheet. */
   onPeek?: () => void;
-  /** Restores from `peek` back to `default`. */
-  onRestore?: () => void;
 }
 
-export const DatasheetPanel = ({
-  open,
-  onOpenChange,
-  returnFocusTo,
-  presentation = 'drawer',
-  onSurfaceReady,
-  extent = 'default',
-  onPeek,
-  onRestore,
-}: DatasheetPanelProps) => {
+export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
   const { language, t } = useI18n();
   const { project, updateProject } = useProjectModel();
   const { selection, setSelection } = useWorkspaceUI();
-  const [entity, setEntity] = useState<DatasheetEntity>('nodes');
+  const [entity, setEntity] = useRetainedState<DatasheetEntity>('datasheet.entity', 'nodes');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, ReadonlySet<string>>>({});
   const [sort, setSort] = useState<DatasheetSort | null>(null);
@@ -136,7 +127,11 @@ export const DatasheetPanel = ({
    * Borrador de edición. No es estado del modelo: es lo que el usuario tecleó y
    * todavía no aplicó, y desaparece al aplicar, al cancelar o al cerrar.
    */
-  const [draft, setDraft] = useState<DatasheetEditDraft>(EMPTY_DATASHEET_DRAFT);
+  /* El borrador sin aplicar es lo único de esta pestaña que TIENE que
+     sobrevivir a una suspensión de la superficie (CRI-102 / T-INV-8). Vive en
+     el almacén retenido, que `DataSurface` monta por encima del cajón: dentro
+     del cajón, `AnimatePresence` lo desmontaría al suspender. */
+  const [draft, setDraft] = useRetainedState<DatasheetEditDraft>('datasheet.draft', EMPTY_DATASHEET_DRAFT);
   const [editing, setEditing] = useState<GridPosition | null>(null);
   /** Presente sólo cuando el borrador viene de un pegado, con lo que descartó. */
   const [paste, setPaste] = useState<DatasheetPasteReport | null>(null);
@@ -147,7 +142,7 @@ export const DatasheetPanel = ({
    * su propia barra de Aplicar, y sustituirlo por la revisión mientras se edita
    * le quitaría al usuario justo lo que estaba mirando.
    */
-  const [draftSource, setDraftSource] = useState<'grid' | 'panel' | null>(null);
+  const [draftSource, setDraftSource] = useRetainedState<'grid' | 'panel' | null>('datasheet.draftSource', null);
   /** Ancla del rango con `Mayús`; es estado de interacción, no del modelo. */
   const rangeAnchorRef = useRef<string | null>(null);
 
@@ -185,7 +180,16 @@ export const DatasheetPanel = ({
 
   // Cambiar de entidad invalida orden, filtros, foco y borrador: sus filas y sus
   // columnas son otras, así que un cambio pendiente ya no tendría dónde caer.
+  //
+  // Es un efecto de CAMBIO, no de montaje. Al montar no hay nada que
+  // invalidar, y dispararlo entonces borraba el borrador retenido que acababa
+  // de sobrevivir a una suspensión: la superficie volvía en blanco.
+  const mountedEntityRef = useRef(false);
   useEffect(() => {
+    if (!mountedEntityRef.current) {
+      mountedEntityRef.current = true;
+      return;
+    }
     setFilters({});
     setSort(null);
     setFocus({ row: 0, column: 0 });
@@ -400,23 +404,7 @@ export const DatasheetPanel = ({
     });
   }, []);
 
-  return <Drawer
-    open={open}
-    onOpenChange={onOpenChange}
-    side="bottom"
-    presentation={presentation}
-    title={t('datasheet.title')}
-    description={t('datasheet.description')}
-    closeLabel={t('datasheet.close')}
-    className="datasheet-surface"
-    returnFocusTo={returnFocusTo}
-    restoreFocus={!onSurfaceReady}
-    surfaceId="datasheet"
-    onSurfaceReady={onSurfaceReady}
-    extent={extent}
-    onRestore={onRestore}
-    restoreLabel={t('datasheet.restore')}
-  >
+  return <>
     <div className="datasheet-layout">
       <div className="datasheet-main">
         <div className="datasheet-toolbar">
@@ -542,7 +530,7 @@ export const DatasheetPanel = ({
           focusLabel={t('datasheet.focusObject')}
         />}
     </div>
-  </Drawer>;
+  </>;
 };
 
-export default DatasheetPanel;
+export default DatasheetContent;

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal } from 'lucide-react';
-import { useProject, type ResultTab } from '../../store/ProjectContext';
+import { lazy, Suspense, useEffect, useId, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { AlertCircle, CircleDotDashed, LoaderCircle } from 'lucide-react';
+import { useProject } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
@@ -15,39 +15,20 @@ import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
+import { ReactionsView } from './ReactionsView';
+import { LearnView } from './LearnView';
 import type { ResultRef } from './provenance';
-import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
+import {
+  RESULT_FAMILIES,
+  RESULT_TABS_IN_ORDER,
+  RESULT_TAB_COLOR,
+  RESULT_TAB_LABEL_KEY,
+  resolveResultTab,
+} from '../data/dataSurface';
 
-/**
- * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las
- * lecturas de diagrama del objeto activo. Reacciones, influencia y «Entender»
- * ya no son pestañas — son la superficie `dense`, que se invoca.
- */
-const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> = [
-  { id: 'summary', labelKey: 'results.summary' },
-  { id: 'axial', labelKey: 'results.axial', color: 'axial' },
-  { id: 'shear', labelKey: 'results.shear', color: 'shear' },
-  { id: 'moment', labelKey: 'results.moment', color: 'moment' },
-  { id: 'deformed', labelKey: 'results.deformed' },
-];
-
-const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
-  reactions: 'results.reactions',
-  influence: 'results.influence',
-  learn: 'results.learn',
-};
-
-type ResultsPanelMode = 'compact' | 'expanded' | 'focused';
-
-const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
-const resultFamilies: Array<{ id: string; labelKey: TranslationKey; tabs: ResultTab[] }> = [
-  { id: 'state', labelKey: 'results.familyState', tabs: ['summary'] },
-  { id: 'forces', labelKey: 'results.familyForces', tabs: ['axial', 'shear', 'moment'] },
-  { id: 'shape', labelKey: 'results.familyShape', tabs: ['deformed'] },
-];
+const LazyInfluenceLineView = lazy(() => import('./InfluenceLineView').then((module) => ({ default: module.InfluenceLineView })));
 
 const classroomProgressCopy: Record<ClassroomProgressStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
   geometry: { title: 'classroom.buildTitle', description: 'classroom.buildBody', action: 'classroom.buildAction' },
@@ -56,52 +37,36 @@ const classroomProgressCopy: Record<ClassroomProgressStepId, { title: Translatio
   analysis: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
 };
 
-const readResultsMode = (): ResultsPanelMode => {
-  if (typeof window === 'undefined') return 'expanded';
-  const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
-  if (stored === 'focused') return 'expanded';
-  return stored === 'compact' || stored === 'expanded' ? stored : 'expanded';
-};
-
-// Results ya no consulta el ancho: `K0` es su modo móvil y `phone` su
-// sub-umbral, ambos resueltos una sola vez por el resolutor del shell (R-3).
-
-// WorkspaceShell already tracks window.visualViewport (keyboard-aware, unlike
-// window.innerHeight) and publishes it as --sc-visual-viewport-height on the
-// shell element. Reading that here keeps the resizable panel's bounds correct
-// when the on-screen keyboard opens, without a second resize listener.
-const getViewportHeightPx = (referenceElement: HTMLElement | null): number => {
-  if (typeof window === 'undefined') return 0;
-  if (referenceElement) {
-    const raw = window.getComputedStyle(referenceElement).getPropertyValue('--sc-visual-viewport-height');
-    const parsed = Number.parseFloat(raw);
-    if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  }
-  return window.innerHeight;
-};
-
-export interface ResultsPanelProps {
-  presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
-  status?: SurfaceStatus;
-  onOpenChange?: (open: boolean, trigger?: HTMLElement | null) => void;
-}
-
-export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange }: ResultsPanelProps) => {
-  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor } = useProject();
+/**
+ * El cuerpo de Resultados dentro de la superficie «Datos».
+ *
+ * Lo que YA NO ESTA aqui, y por que. Este componente era un dock inferior
+ * redimensionable con tres modos (compacto · expandido · enfoque), un tirador
+ * de arrastre, una altura persistida, un conmutador movil y una trampa de
+ * `Escape` propia. Todo eso existia porque era un dock, y un dock tiene que
+ * negociar su alto con el lienzo. Dentro de una superficie modal no hay nada
+ * que negociar: el cromo —titulo, cerrar, `peek`— lo pone `DataSurface` una
+ * sola vez para las tres pestañas.
+ *
+ * Lo que SI llego aqui: las tres lecturas que vivian en `DenseResultsSurface`
+ * —Reacciones, Influencia y «Entender»—. Estaban separadas por componente, no
+ * por dominio: las nueve lecturas siempre fueron un solo `ResultTab`.
+ */
+export const ResultsContent = () => {
+  const {
+    project,
+    analysis,
+    resultTab,
+    setResultTab,
+    analyze,
+    selection,
+    isAnalyzing,
+    selectedCombinationId,
+    resultCursor,
+    setInfluenceCanvasState,
+  } = useProject();
   const { t } = useI18n();
-  const isMobile = presentation === 'sheet';
-  const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
-  const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
-  const mobileExpanded = status === 'active';
-  const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
-  const previousAnalysisRef = useRef(analysis);
-  const resizeFrameRef = useRef<number | null>(null);
-  const pendingHeightRef = useRef<number | null>(null);
-  const panelRef = useRef<HTMLElement>(null);
-  const focusedLauncherRef = useRef<HTMLButtonElement | null>(null);
-  const previousPanelModeRef = useRef<ResultsPanelMode>('expanded');
-  const mobileToggleRef = useRef<HTMLButtonElement>(null);
-  const phoneCanvasInteractive = false;
+
   const resultContext = useMemo(() => {
     if (selection?.kind === 'member') return { memberId: selection.id, label: t('results.contextMember', { id: selection.id }) };
     if (selection?.kind === 'multi') {
@@ -124,16 +89,19 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
     const first = analysis?.memberResults[0]?.memberId ?? project.members.find((member) => member.type !== 'rigid')?.id;
     return { memberId: first, label: t('results.contextGlobal') };
   }, [analysis?.memberResults, project.memberLoads, project.members, project.nodalLoads, selection, t]);
+
   const selectedMemberId = resultContext.memberId;
   const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
+  const activeTab = resolveResultTab(resultTab);
+
   const provenanceRef = useMemo<ResultRef | null>(() => {
     if (!analysis?.success) return null;
     const caseOrCombinationId = selectedCombinationId || project.loadCases.find((loadCase) => loadCase.active)?.id || project.loadCases[0]?.id || '—';
-    if (resultTab === 'axial' || resultTab === 'shear' || resultTab === 'moment') {
+    if (activeTab === 'axial' || activeTab === 'shear' || activeTab === 'moment') {
       if (!memberResult) return null;
       const storedStart = memberResult.diagram[0];
       const cursor = resultCursor?.memberId === memberResult.memberId ? resultCursor : null;
-      const quantity = resultTab === 'axial' ? 'N' : resultTab === 'shear' ? 'V' : 'M';
+      const quantity = activeTab === 'axial' ? 'N' : activeTab === 'shear' ? 'V' : 'M';
       return {
         quantity,
         entity: { kind: 'member', id: memberResult.memberId },
@@ -142,10 +110,10 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         position: { x: cursor?.x ?? storedStart?.x ?? 0, side: cursor ? undefined : storedStart?.side },
       };
     }
-    if (resultTab === 'summary' || resultTab === 'reactions' || resultTab === 'deformed' || resultTab === 'learn') {
+    if (activeTab === 'summary' || activeTab === 'reactions' || activeTab === 'deformed' || activeTab === 'learn') {
       const nodeId = selection?.kind === 'node' ? selection.id : analysis.nodeResults[0]?.nodeId;
       if (!nodeId) return null;
-      const reaction = resultTab === 'reactions';
+      const reaction = activeTab === 'reactions';
       return {
         quantity: reaction ? 'R' : 'U',
         entity: { kind: 'node', id: nodeId },
@@ -155,208 +123,68 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       };
     }
     return null;
-  }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
-  const availableTabs = tabs;
-  const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
-  const visibleFamilies = resultFamilies.map((family) => ({
-    ...family,
-    tabs: family.tabs.map((id) => availableTabs.find((tab) => tab.id === id)).filter((tab): tab is (typeof tabs)[number] => Boolean(tab)),
-  })).filter((family) => family.tabs.length > 0);
-  const mobileResultLabel = analysis
-    ? `${t(activeTab.labelKey)} · ${resultContext.label}`
-    : t('results.outputs');
-  const closeMobileResults = useCallback(() => onOpenChange?.(false), [onOpenChange]);
-  useEffect(() => {
-    if (isMobile) setHeight((current) => Math.min(current, Math.min(330, getViewportHeightPx(panelRef.current) * 0.4)));
-  }, [isMobile]);
-  useEffect(() => {
-    if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
-      onOpenChange?.(true, document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    }
-    previousAnalysisRef.current = analysis;
-  }, [analysis, isMobile, onOpenChange]);
-  useEffect(() => () => {
-    if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
-  }, []);
-  useEffect(() => {
-    if (panelMode !== 'focused') window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
-    if (isMobile) return;
-    if (panelMode === 'compact') setHeight(190);
-    else if (panelMode === 'expanded') setHeight((current) => Math.max(current, 320));
-    else setHeight(getViewportHeightPx(panelRef.current) * 0.72);
-  }, [isMobile, panelMode]);
-  useEffect(() => {
-    if (!isMobile || status !== 'active') return undefined;
-    const onSheetEscape = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.key !== 'Escape') return;
-      const visibleModalAbove = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')]
-        .some((element) => {
-          if (element === panelRef.current || panelRef.current?.contains(element)) return false;
-          const style = window.getComputedStyle(element);
-          return !element.hidden && !element.inert && element.getAttribute('aria-hidden') !== 'true'
-            && style.display !== 'none' && style.visibility !== 'hidden';
-        });
-      if (visibleModalAbove) return;
-      event.preventDefault();
-      closeMobileResults();
-    };
-    document.addEventListener('keydown', onSheetEscape);
-    return () => document.removeEventListener('keydown', onSheetEscape);
-  }, [closeMobileResults, isMobile, status]);
-  const scheduleHeight = (next: number) => {
-    pendingHeightRef.current = next;
-    if (resizeFrameRef.current !== null) return;
-    resizeFrameRef.current = window.requestAnimationFrame(() => {
-      resizeFrameRef.current = null;
-      if (pendingHeightRef.current !== null) setHeight(pendingHeightRef.current);
-    });
+  }, [activeTab, analysis, memberResult, project.loadCases, resultCursor, selectedCombinationId, selection, t]);
+
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    let next = index;
+    if (event.key === 'ArrowLeft') next = (index - 1 + RESULT_TABS_IN_ORDER.length) % RESULT_TABS_IN_ORDER.length;
+    else if (event.key === 'ArrowRight') next = (index + 1) % RESULT_TABS_IN_ORDER.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = RESULT_TABS_IN_ORDER.length - 1;
+    else return;
+    event.preventDefault();
+    const target = RESULT_TABS_IN_ORDER[next];
+    setResultTab(target);
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${target}"]`)?.focus());
   };
 
-  const onPointerMove = (event: ReactPointerEvent) => {
-    if (!drag) return;
-    scheduleHeight(Math.max(150, Math.min(getViewportHeightPx(panelRef.current) * 0.72, drag.height + drag.y - event.clientY)));
-  };
-  const resizeBy = (delta: number) => setHeight((current) => Math.max(150, Math.min(getViewportHeightPx(panelRef.current) * 0.72, current + delta)));
-  const choosePanelMode = (next: ResultsPanelMode, launcher: HTMLButtonElement) => {
-    if (next === 'focused' && panelMode !== 'focused') {
-      previousPanelModeRef.current = panelMode;
-      focusedLauncherRef.current = launcher;
-      setPanelMode('focused');
-      window.requestAnimationFrame(() => panelRef.current?.focus());
-      return;
-    }
-    setPanelMode(next);
-  };
-  const leaveFocusedMode = () => {
-    if (panelMode !== 'focused') return;
-    setPanelMode(previousPanelModeRef.current === 'focused' ? 'expanded' : previousPanelModeRef.current);
-    window.requestAnimationFrame(() => focusedLauncherRef.current?.focus());
-  };
+  return <div className="results-content" data-results-tab={activeTab}>
+    {/* Estado del análisis y fiabilidad viven en el TopBar desde CRI-100: son
+        la afirmación más crítica del producto y deben verse sin abrir nada.
+        Aquí sólo queda el contexto — qué objeto describen estas lecturas. */}
+    <p className="results-context">
+      <span>{t('results.center')}</span>
+      <strong>{resultContext.label}</strong>
+    </p>
 
-  return <>
-    <section
-      ref={panelRef}
-      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
-      aria-label={t('results.panel')}
-      role={isMobile ? 'dialog' : undefined}
-      data-workspace-surface="results"
-      data-surface-presentation={presentation}
-      data-surface-status={status}
-      hidden={status !== 'active'}
-      data-results-mode={panelMode}
-      data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
-      tabIndex={-1}
-      style={{ height: isMobile && !mobileExpanded ? 54 : height }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && panelMode === 'focused') {
-          event.preventDefault();
-          leaveFocusedMode();
-        }
-      }}
-      onPointerMove={onPointerMove}
-      onPointerUp={() => setDrag(null)}
-      onPointerCancel={() => setDrag(null)}
-    >
-      <button ref={mobileToggleRef} className="results-mobile-toggle" type="button" aria-expanded={mobileExpanded} aria-controls="results-content" onClick={(event) => {
-        if (mobileExpanded) {
-          if (panelMode === 'focused') setPanelMode('expanded');
-          closeMobileResults();
-        }
-        else {
-          onOpenChange?.(true, event.currentTarget);
-        }
-      }}>
-        <i className={activeTab.color ?? ''} aria-hidden="true" />
-        <strong>{mobileResultLabel}</strong>
-        <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={18} />
-      </button>
-      {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
-        <button
-          type="button"
-          className="results-mobile-focus"
-          aria-label={panelMode === 'focused' ? 'Salir del modo enfoque de resultados' : 'Enfocar resultados en pantalla completa'}
-          aria-pressed={panelMode === 'focused'}
-          onClick={(event) => panelMode === 'focused' ? leaveFocusedMode() : choosePanelMode('focused', event.currentTarget)}
-        >{panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>
-      </div> : null}
-      <button
-        className="resize-handle"
-        role="separator"
-        aria-label={t('results.resize')}
-        aria-orientation="horizontal"
-        aria-valuemin={150}
-        aria-valuemax={Math.round(getViewportHeightPx(panelRef.current) * 0.72)}
-        aria-valuenow={Math.round(height)}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowUp') { event.preventDefault(); resizeBy(event.shiftKey ? 48 : 16); }
-          if (event.key === 'ArrowDown') { event.preventDefault(); resizeBy(event.shiftKey ? -48 : -16); }
-          if (event.key === 'Home') { event.preventDefault(); setHeight(150); }
-          if (event.key === 'End') { event.preventDefault(); setHeight(getViewportHeightPx(panelRef.current) * 0.72); }
-        }}
-        onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setPanelMode('expanded'); setDrag({ y: event.clientY, height }); }}
-      ><GripHorizontal size={22} /></button>
-      <header className="results-commandbar">
-        <div className="results-commandbar__context">
-          {/* Estado del análisis y fiabilidad viven en el TopBar desde CRI-100:
-              son la afirmación más crítica del producto y deben verse sin abrir
-              este panel. Este encabezado sólo conserva el contexto (qué objeto
-              están describiendo los resultados de abajo). */}
-          <span>{t('results.center')}</span>
-          <strong>{resultContext.label}</strong>
-        </div>
-        <div className="results-mode-control" role="group" aria-label={t('results.modeGroup')}>
-          {(['compact', 'expanded', 'focused'] as const).map((mode) => <button
-            key={mode}
-            type="button"
-            aria-pressed={panelMode === mode}
-            onClick={(event) => panelMode === 'focused' && mode === 'focused' ? leaveFocusedMode() : choosePanelMode(mode, event.currentTarget)}
-          >{mode === 'compact' ? t('results.modeCompact') : mode === 'expanded' ? t('results.modeExpanded') : panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>)}
-        </div>
-      </header>
-      <nav className="result-tabs" role="tablist" aria-label={t('results.panel')}>
-        {visibleFamilies.map((family) => <div className="result-tab-family" role="presentation" key={family.id}>
-          <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
-          <div role="presentation">{family.tabs.map((tab) => {
-            const index = availableTabs.findIndex((item) => item.id === tab.id);
-            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
-              let nextIndex = index;
-              if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
-              else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
-              else if (event.key === 'Home') nextIndex = 0;
-              else if (event.key === 'End') nextIndex = availableTabs.length - 1;
-              else return;
-              event.preventDefault();
-              const next = availableTabs[nextIndex];
-              setResultTab(next.id);
-              window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
-            }}>{t(tab.labelKey)}</button>;
-          })}</div>
-        </div>)}
-      </nav>
-      {/* Los datos densos no ocupan sitio: se piden. El lanzador manda su propio
-          elemento en el comando para que el broker devuelva aquí el foco al
-          cerrar, y precarga por hover/foco lo que va a hacer falta. */}
-      <div className="results-dense-launchers" role="group" aria-label={t('results.denseTitle')}>
-        <span className="results-dense-launchers__label">{t('results.denseTitle')}</span>
-        <div>{DENSE_RESULT_VIEWS.map((view) => <button
-          key={view}
-          type="button"
-          data-dense-launcher={view}
-          onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-          onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-          onClick={(event) => emitWorkspaceCommand('open-dense-results', { view, trigger: event.currentTarget })}
-        >{t(denseViewLabelKey[view])}</button>)}</div>
-      </div>
-      <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
-        {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
-        {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
-        {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
-        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
-      </div>
-    </section>
-  </>;
+    <nav className="result-tabs" role="tablist" aria-label={t('results.panel')}>
+      {RESULT_FAMILIES.map((family) => <div className="result-tab-family" role="presentation" key={family.id}>
+        <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
+        <div role="presentation">{family.tabs.map((tab) => {
+          const index = RESULT_TABS_IN_ORDER.indexOf(tab);
+          const color = RESULT_TAB_COLOR[tab];
+          return <button
+            id={`result-tab-${tab}`}
+            key={tab}
+            data-result-tab={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-describedby={`result-family-${family.id}`}
+            aria-controls="results-content"
+            tabIndex={activeTab === tab ? 0 : -1}
+            className={`${activeTab === tab ? 'active' : ''} ${color ?? ''}`.trim()}
+            onClick={() => setResultTab(tab)}
+            onKeyDown={(event) => onTabKeyDown(event, index)}
+          >{t(RESULT_TAB_LABEL_KEY[tab as Exclude<typeof tab, 'issues'>])}</button>;
+        })}</div>
+      </div>)}
+    </nav>
+
+    <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab}`} aria-busy={isAnalyzing}>
+      {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
+      {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-data', { tab: 'review' })} /> : null}
+      {analysis?.success && activeTab === 'summary' ? <ResultSummary /> : null}
+      {analysis?.success && activeTab === 'reactions' ? <ReactionsView /> : null}
+      {analysis?.success && (activeTab === 'axial' || activeTab === 'shear' || activeTab === 'moment')
+        ? <DiagramView type={activeTab} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+      {analysis?.success && activeTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+      {analysis?.success && activeTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}>
+        <LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} />
+      </Suspense> : null}
+      {analysis?.success && activeTab === 'learn' ? <LearnView /> : null}
+      {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
+    </div>
+  </div>;
 };
 
 const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {

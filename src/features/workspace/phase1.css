@@ -28,9 +28,6 @@
 .provenance-card__body span { color:var(--muted); font-size:11px; }.provenance-card__body strong,.provenance-card__body code { min-width:0; overflow-wrap:anywhere; color:var(--text); font-size:10px; }.provenance-card__body code { font-family:"SFMono-Regular",Consolas,monospace; }
 .provenance-card__body>p { grid-column:1/-1; margin:0; padding:10px; border-radius:var(--sc-radius-control); background:color-mix(in srgb,var(--warning) 10%,var(--surface)); color:var(--muted); font-size:10px; line-height:1.45; }
 
-.results-mobile-focus { display:none; min-height:36px; padding:0 10px; border:1px solid var(--border); border-radius:var(--sc-radius-control); background:var(--surface-2); color:var(--accent); font-size:10px; font-weight:700; }
-.results-mobile-commandbar { display:none; flex:0 0 auto; justify-content:flex-end; padding:4px 10px; border-bottom:1px solid var(--border-soft); background:var(--surface); }
-
 /* CRI-94: placement comes only from the broker's presentation attribute. */
 [data-workspace-surface][hidden] { display:none!important; }
 .workspace-surfaces { display:contents; }
@@ -93,9 +90,6 @@
 .inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }
 .inspector-panel[data-surface-presentation='inset'] { position:absolute; z-index:31; inset:8px 8px 8px auto; display:flex; width:min(420px,calc(100% - 16px)); height:auto; max-height:none; clip-path:none; border-radius:var(--sc-radius-lg); }
 .inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 var(--sc-visual-viewport-bottom,0px); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
-.results-panel[data-surface-presentation='dock'] { position:relative; inset:auto; width:auto; }
-.results-panel[data-surface-presentation='inset'] { position:absolute; z-index:8; inset:auto 8px 8px; width:auto; height:min(42dvh,320px)!important; border-radius:var(--sc-radius-lg); }
-.results-panel[data-surface-presentation='sheet'] { position:absolute; z-index:8; inset:auto 0 0; width:100%; height:min(46dvh,420px)!important; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .command-palette-backdrop--sheet { align-items:end; padding:0; background:transparent; pointer-events:none; }
 .command-palette-backdrop--sheet .command-palette { width:100%; max-height:min(88dvh,720px); border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; pointer-events:auto; }
 
@@ -106,8 +100,6 @@
   .inspector-detent-control { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:2px; flex:0 0 auto; margin:14px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left)); padding:0; border-radius:var(--sc-radius-control); background:var(--sc-color-fill-tertiary); }
   .inspector-detent-control button { min-height:var(--sc-control-height-touch); border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--muted); font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); }
   .inspector-detent-control button[aria-pressed='true'] { background:var(--sc-color-surface-1); color:var(--sc-color-text-primary); font-weight:var(--sc-font-weight-semibold); box-shadow:var(--sc-elevation-1); }
-  .results-mobile-focus { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .results-mobile-commandbar { display:flex; }
 }
 
 @media (max-width:700px) {
@@ -115,7 +107,6 @@
   .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(58dvh,540px); }
   .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
   .repeat-preview { top:calc(var(--canvas-safe-top) + 8px); }
-  .results-panel.results-mode-focused { position:fixed; inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); width:100%; height:var(--sc-visual-viewport-height,100dvh)!important; min-height:0; max-height:none; z-index:calc(var(--sc-z-modal) + 1); border-radius:0; }
 }
 
 @media (min-width:701px) {

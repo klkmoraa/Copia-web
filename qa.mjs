@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // CRI-116 · la navegación por la bienvenida vive una sola vez.
-import { openResultsSurface, openTemplateGallery } from './scripts/qa-welcome.mjs';
+import { openDataSurface, openResultsSurface, openTemplateGallery } from './scripts/qa-welcome.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const assetsDir = path.join(root, 'dist', 'assets');
@@ -402,6 +402,32 @@ function hasRaisedMaterial(material) {
     material.webkitBackdropFilter === 'none';
 }
 
+/**
+ * Materia de la superficie «Datos».
+ *
+ * NO es `hasRaisedMaterial`: ese predicado describía un DOCK —un carril
+ * acoplado, con canto sólido en un solo lado—. «Datos» es una superficie del
+ * nivel `sheet`, y el nivel `sheet` de este sistema es un plano OPACO que nace
+ * de un borde y se separa por oclusión de contacto, no por luz ni por
+ * translucidez (`material.css` §sheet). Aquí se comprueba justo eso: relleno
+ * opaco y una proyección que separa, nunca hundida. Los seis niveles y su
+ * respaldo los gobierna `material.test.ts`.
+ */
+function hasSheetMaterial(material, level) {
+  const opaqueAndSeparated = material.backgroundColor !== 'rgba(0, 0, 0, 0)' && material.boxShadow !== 'none';
+  // `sheet` se separa por oclusión de contacto y nunca se hunde. `modal` —el
+  // nivel que toma la superficie a pantalla completa en K0— sí lleva el anillo
+  // interior de medio píxel del sistema, que es `inset` a propósito.
+  return level === 'modal' ? opaqueAndSeparated : opaqueAndSeparated && !material.boxShadow.includes('inset');
+}
+
+/** Lee la materia de «Datos» junto al nivel que declara, que es quien manda. */
+async function readDataSurfaceMaterial(page) {
+  const material = await readComposedMaterial(page, '.data-surface');
+  const level = await page.locator('.data-surface').getAttribute('data-level');
+  return { material, level };
+}
+
 function hasExactBorderGeometry(material, expectedWidths) {
   return material.borderWidths === expectedWidths &&
     material.borderStyles === 'solid solid solid solid';
@@ -627,8 +653,8 @@ function hasTransparentBackground(material) {
 
 async function prepareResultsMaterialTargets(page) {
   return page.evaluate((families) => {
-    const panel = document.querySelector('.results-panel');
-    if (!panel) throw new Error('No se encontrÃ³ el panel de resultados para medir su materia.');
+    const panel = document.querySelector('.data-surface');
+    if (!panel) throw new Error('No se encontro la superficie Datos para medir su materia.');
     const familySources = {};
     let root;
     for (const family of families) {
@@ -678,42 +704,44 @@ async function prepareResultsMaterialTargets(page) {
 
 async function verifyResultsPanelMaterial(page) {
   const checks = {};
-  const panel = await readComposedMaterial(page, '.results-panel');
-  checks.resultsDesktopPanelHasRaisedMaterial = hasRaisedMaterial(panel);
-  checks.resultsDesktopPanelHasNoBackdropFilter =
-    panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
-  checks.resultsDesktopPanelHasTopOnlyGeometry = hasExactBorderGeometry(panel, '1px 0px 0px 0px');
+  // El dock inferior de Resultados desapareció con su cromo, y con él los dos
+  // contratos que sólo describían a un dock: «borde arriba y nada más» y «sin
+  // material translúcido». «Datos» es una superficie modal y sí lleva material,
+  // como el resto de cajones del sistema. Lo que sigue valiendo, y es lo que de
+  // verdad importaba, es que NADA dentro de ella se eleve por su cuenta: la
+  // superficie es el único relieve, y sus cuerpos son planos.
+  await openDataSurface(page, { tab: 'results' });
+  const { material: panel, level } = await readDataSurfaceMaterial(page);
+  checks.dataSurfaceUsesSystemMaterial = hasSheetMaterial(panel, level);
+  // En escritorio llega como cajón, y un cajón es del nivel `sheet`.
+  checks.dataSurfaceDeclaresSheetLevel = level === 'sheet';
 
-  // CRI-119 · Reacciones dejó de ser una pestaña residente del panel (CRI-101):
-  // vive en la superficie densa, invocada por su lanzador. Se abre, se mide su
-  // tabla ahí —no ya dentro de `.results-panel`—, y se cierra antes de seguir
-  // con el resto del panel residente que este mismo check sigue midiendo.
-  await page.locator('[data-dense-launcher="reactions"]').click();
-  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
-  await page.locator('.dense-results-surface .results-table').waitFor({ state: 'visible' });
-  const table = await readComposedMaterial(page, '.dense-results-surface .results-table');
+  await page.locator('[data-result-tab="reactions"]').click();
+  await page.locator('.data-surface .results-table').waitFor({ state: 'visible' });
+  const table = await readComposedMaterial(page, '.data-surface .results-table');
   checks.resultsDesktopResultsTableHasNoContainerMaterial =
     table.borderWidths === '0px 0px 0px 0px' && table.boxShadow === 'none';
-  checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.dense-results-surface .results-table :is(th, td)').first().evaluate((cell) => {
+  checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.data-surface .results-table :is(th, td)').first().evaluate((cell) => {
     const style = getComputedStyle(cell);
     return style.borderBottomWidth === '1px' && style.borderBottomStyle === 'solid';
   });
-  await page.keyboard.press('Escape');
-  await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
+  // La superficie se queda ABIERTA: sus cuerpos son lo que este check mide, y
+  // cerrarla los desmonta. Se cierra al final, cuando ya no hay nada que medir.
+  await page.locator('[data-result-tab="summary"]').click();
 
   const sources = await prepareResultsMaterialTargets(page);
   const expectedFill = await readResolvedColorToken(page, '--sc-color-fill-quaternary');
   try {
     for (const family of resultsFlatFamilies) {
       const selector = sources[family.key] === 'real'
-        ? `.results-panel ${family.selector}`
+        ? `.data-surface ${family.selector}`
         : `[data-qa-results-flat-family="${family.key}"]`;
       const material = await readComposedMaterial(page, selector);
       checks[`resultsDesktopFlat${family.key}HasFlatMaterial`] =
         hasFlatMaterial(material, [expectedFill]);
     }
     const substitutionSelector = sources.EducationNumericalSubstitution === 'real'
-      ? '.results-panel .education-numerical-substitution'
+      ? '.data-surface .education-numerical-substitution'
       : '[data-qa-results-numerical-substitution]';
     const substitution = await readComposedMaterial(page, substitutionSelector);
     checks.resultsDesktopEducationNumericalSubstitutionIsIntegrated =
@@ -732,7 +760,7 @@ async function verifyResultsPanelMaterial(page) {
 
   try {
     await page.emulateMedia({ media: 'print' });
-    const printPanel = await readComposedMaterial(page, '.results-panel');
+    const printPanel = await readComposedMaterial(page, '.data-surface');
     checks.resultsPrintPanelHasTransparentBackground = hasTransparentBackground(printPanel);
     checks.resultsPrintPanelHasNoBorder = printPanel.borderWidths === '0px 0px 0px 0px';
     checks.resultsPrintPanelHasNoShadow = printPanel.boxShadow === 'none';
@@ -743,14 +771,13 @@ async function verifyResultsPanelMaterial(page) {
 }
 
 async function verifyResultsPhonePortraitMaterial(page) {
-  const panel = await readComposedMaterial(page, '.results-panel');
+  const { material: panel, level } = await readDataSurfaceMaterial(page);
   out.metrics.resultsPhonePortrait = {
     ...page.viewportSize(),
     borderWidths: panel.borderWidths,
   };
   return {
-    resultsPhonePortraitPanelHasRaisedMaterial: hasRaisedMaterial(panel),
-    resultsPhonePortraitPanelHasTopOnlyGeometry: hasExactBorderGeometry(panel, '1px 0px 0px 0px'),
+    resultsPhonePortraitSurfaceUsesSheetMaterial: hasSheetMaterial(panel, level),
   };
 }
 
@@ -764,24 +791,15 @@ async function verifyResultsPhoneLandscapeMaterial() {
     await loadCleanApp(page);
     await enterWorkspace(page, { example: true });
     await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-    // CRI-119 · Analizar ya no abre las salidas por su cuenta, y «Reacciones»
-    // dejó de ser una pestaña del panel residente (CRI-101): era sólo la señal
-    // de "el panel ya está listo", que ahora da el propio lanzador denso.
-    await openResultsSurface(page);
-    await page.locator('[data-dense-launcher="reactions"]').waitFor({ state: 'visible' });
-    const resultsPanel = page.locator('.results-panel');
-    if (await resultsPanel.evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
-      await page.locator('.results-mobile-toggle').click();
-    }
-    await page.waitForFunction(() => !document.querySelector('.results-panel')?.classList.contains('mobile-collapsed'));
-    const panel = await readComposedMaterial(page, '.results-panel');
-    // CRI-119 · `phoneCanvasInteractive` está fijo en `false` en
-    // `ResultsPanel.tsx` — el atributo nunca es `'true'`, a propósito: la
-    // propia prueba unitaria de ese contrato
-    // (`ResultsPanel.test.tsx` → "keeps the phone results sheet modeless")
-    // ya NO comprueba este atributo, comprueba directamente que el lienzo
-    // sigue accesible (`!inert`, sin `aria-hidden`). Se mide lo mismo que esa
-    // prueba, no un atributo que el propio componente dejó de usar para esto.
+    // Analizar no abre las salidas por su cuenta: se piden. «Reacciones» vuelve
+    // a ser una pestaña de la misma tira, así que verla es la señal de que la
+    // superficie está montada y en Resultados.
+    await openDataSurface(page, { tab: 'results' });
+    await page.locator('[data-result-tab="reactions"]').waitFor({ state: 'visible' });
+    const { material: panel, level: landscapeLevel } = await readDataSurfaceMaterial(page);
+    // «Datos» es modal en K0, al contrario que el dock modeless que había aquí.
+    // Si el lienzo queda alcanzable o no depende de `inert`, que el proveedor
+    // aplica al confirmarse la superficie: se mide y viaja como métrica.
     const canvasHost = page.locator('.canvas-host');
     const canvasInteractive = await canvasHost.evaluate((element) => (
       !element.inert && element.getAttribute('aria-hidden') !== 'true'
@@ -792,12 +810,12 @@ async function verifyResultsPhoneLandscapeMaterial() {
       canvasInteractive,
     };
     return {
-      resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive,
-      resultsPhoneLandscapePanelHasRaisedMaterial: hasRaisedMaterial(panel),
-      // CRI-119 · El panel es una hoja inferior con canto SUPERIOR, igual en
-      // apaisado que en retrato — no hay regla que le sume un canto izquierdo
-      // en este breakpoint; medido en el producto real: `1px 0px 0px 0px`.
-      resultsPhoneLandscapePanelHasTopOnlyGeometry: hasExactBorderGeometry(panel, '1px 0px 0px 0px'),
+      // «Datos» es MODAL, al revés que el dock modeless que había aquí: lo que
+      // se fija es que se declara como tal. Si el lienzo sigue alcanzable o no
+      // depende de `inert`, que el proveedor aplica al confirmarse la
+      // superficie; eso se mide arriba y viaja como métrica, no como veredicto.
+      resultsPhoneLandscapeSurfaceIsModal: await page.locator('.data-surface').getAttribute('aria-modal') === 'true',
+      resultsPhoneLandscapeSurfaceUsesSheetMaterial: hasSheetMaterial(panel, landscapeLevel),
     };
   } finally {
     await page.close();
@@ -1208,6 +1226,12 @@ async function desktop() {
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   out.checks.momentChart = await page.locator('.diagram-chart.moment .chart-line').count() === 1;
   out.checks.momentCanvas = await page.locator('.diagram-shape.moment').count() > 0;
+  // «Datos» es MODAL: mientras está abierta el lienzo queda `inert` detrás. El
+  // dock inferior que había aquí no atrapaba nada y por eso este recorrido
+  // pasaba del diagrama al lienzo sin cerrar nada. Ahora se cierra, que es lo
+  // que hace una persona: se lee el resultado y se vuelve al dibujo.
+  await page.keyboard.press('Escape');
+  await page.locator('.data-surface').waitFor({ state: 'hidden' });
   // CRI-119 · `getByTitle` buscaba un atributo `title` nativo que estos botones
   // no llevan: `RailTooltip` es un `role="tooltip"` propio, no un `title` del
   // navegador. El nombre accesible real es el `aria-label` de `ToolButton`
@@ -1223,18 +1247,21 @@ async function desktop() {
   out.checks.cutEquations = await page.locator('.cut-equilibrium > code').count() === 3;
   out.checks.cutResiduals = await page.locator('.cut-residuals span').count() === 3;
   await page.screenshot({ path: path.join(artifactsDir, 'moment-and-cut.png'), fullPage: false });
+  await openDataSurface(page, { tab: 'results' });
   await page.getByRole('tab', { name: 'Cortante', exact: true }).click();
   out.checks.shearChart = await page.locator('.diagram-chart.shear').isVisible();
-  // CRI-119 · «Aprender» tampoco es ya una pestaña residente (CRI-101): es la
-  // vista `learn` de la superficie densa, invocada por su lanzador.
-  await page.locator('[data-dense-launcher="learn"]').click();
-  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
-  out.checks.learningSteps = await page.locator('.dense-results-surface .learning-steps details').count();
+  // «Aprender» vuelve a ser una pestaña de la misma tira que Cortante.
+  await page.locator('[data-result-tab="learn"]').click();
+  out.checks.learningSteps = await page.locator('.data-surface .learning-steps details').count();
   await page.keyboard.press('Escape');
-  await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
+  await page.locator('.data-surface').waitFor({ state: 'hidden' });
   await setOverflowSelect(page, 'Idioma', 'en');
-  out.checks.languageEnglish = await page.getByRole('button', { name: 'Analyze', exact: true }).isVisible()
-    && await page.getByRole('tab', { name: 'Shear', exact: true }).isVisible();
+  await openDataSurface(page, { tab: 'results' });
+  out.checks.languageEnglish = await page.getByRole('tab', { name: 'Shear', exact: true }).isVisible();
+  await page.keyboard.press('Escape');
+  await page.locator('.data-surface').waitFor({ state: 'hidden' });
+  out.checks.languageEnglish = out.checks.languageEnglish
+    && await page.getByRole('button', { name: 'Analyze', exact: true }).isVisible();
   await setOverflowSelect(page, 'Language', 'es');
   await page.locator('.desktop-tool-list').getByRole('button', { name: 'Seleccionar (V)', exact: true }).click();
   await page.locator('.member-object').nth(0).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 })));
@@ -1320,8 +1347,8 @@ async function influenceWorkflow() {
   // su lanzador denso ya deja la superficie en esa vista, sin pestaña propia
   // que pulsar además.
   await openResultsSurface(page);
-  await page.locator('[data-dense-launcher="influence"]').click();
-  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
+  await page.locator('[data-result-tab="influence"]').click();
+  await page.locator('.data-surface').waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Calcular', exact: true }).click();
   const lineView = page.locator('.influence-line-view');
   await lineView.getByRole('img', { name: /Línea de influencia M en M1/ }).waitFor({ state: 'visible' });
@@ -1357,11 +1384,10 @@ async function influenceWorkflow() {
   await page.waitForTimeout(350);
   const mobileMetrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   out.checks.influenceMobileNoHorizontalOverflow = mobileMetrics.sw <= mobileMetrics.cw + 1;
-  // CRI-119 · Influencia ya no vive en `.results-panel` (que en K0 sigue
-  // `mobile-collapsed` detrás, irrelevante aquí): vive en la superficie densa,
+  // Influencia vive en la superficie «Datos», pestaña Resultados:
   // que a este ancho se presenta `fullscreen` — sin colapso que destapar, el
   // broker ya la deja a pantalla completa. El check mide esa superficie.
-  const influenceMobilePanel = await page.locator('.dense-results-surface').boundingBox();
+  const influenceMobilePanel = await page.locator('.data-surface').boundingBox();
   out.checks.influenceMobilePanelHeight = (influenceMobilePanel?.height ?? 0) >= 280;
   out.checks.influenceMobileControls = await lineView.getByRole('tab', { name: 'Tren de ejes', exact: true }).isVisible();
   await page.screenshot({ path: path.join(artifactsDir, 'influence-mobile.png'), fullPage: false });
@@ -1517,21 +1543,16 @@ async function mobile() {
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   Object.assign(out.checks, await verifyResultsPhonePortraitMaterial(page));
   const membersBeforeModalShortcut = await page.locator('.member-object').count();
-  // CRI-119 · `closeMobileResults` en `ResultsPanel.tsx` (`onSheetEscape`) llama
-  // `onOpenChange?.(false)` sin condición: Escape en K0 CIERRA la superficie de
-  // resultados entera, no la colapsa a `.mobile-collapsed` — esa clase existe
-  // para el estado inicial antes de expandir, no para lo que deja Escape. Este
-  // script esperaba el colapso; se espera ahora el cierre real, que es lo que
-  // el producto hace y lo que el resto del flujo necesita para seguir con el
-  // Inspector.
-  await page.locator('.results-panel').press('Escape');
-  await page.locator('.results-panel').waitFor({ state: 'hidden' });
+  // Escape cierra «Datos» entera: es una superficie modal, y el cierre lo pone
+  // el cromo compartido. El resto del flujo necesita el lienzo libre para
+  // seguir con el Inspector.
+  await page.locator('.data-surface').press('Escape');
+  await page.locator('.data-surface').waitFor({ state: 'hidden' });
   // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
   await page.getByLabel('Abrir inspector').evaluate((el) => el.click());
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
-  // CRI-119 · `surface="detail"` fuerza la pestaña "Inspector"
-  // (`forcedTab` en `Inspector.tsx`) y por eso NO monta el `tablist` — no hay
-  // pestaña «Inspector» que pulsar en esta variante, sólo el diálogo.
+  // El panel derecho es uno con tres segmentos: monta su `tablist` siempre y
+  // abre en Detalle. El diálogo sigue llamándose «Inspector».
   await page.getByRole('dialog', { name: 'Inspector' }).press('Delete');
   out.checks.mobileInspectorBlocksCanvasShortcuts = await page.locator('.member-object').count() === membersBeforeModalShortcut;
   // CRI-119 · Otra vez la variante `surface="detail"`, sin botón de cierre.
@@ -1576,8 +1597,8 @@ async function educationalExample() {
   out.checks.hibbelerMomentChart = await page.locator('.diagram-chart.moment').isVisible();
   // CRI-119 · «Aprender» tampoco es ya una pestaña residente: es la vista
   // `learn` de la superficie densa, invocada por su lanzador.
-  await page.locator('[data-dense-launcher="learn"]').click();
-  await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
+  await page.locator('[data-result-tab="learn"]').click();
+  await page.locator('.data-surface').waitFor({ state: 'visible' });
   await page.locator('.educational-source').waitFor({ state: 'visible' });
   const sourceText = await page.locator('.educational-source').innerText();
   out.checks.hibbelerSource = sourceText.includes('Ejemplo atribuido') && sourceText.includes('muestra oficial Pearson');
@@ -1587,8 +1608,7 @@ async function educationalExample() {
   await page.setViewportSize({ width: 430, height: 932 });
   const metrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   out.checks.hibbelerMobileNoHorizontalOverflow = metrics.sw <= metrics.cw + 1;
-  // CRI-119 · «Aprender» vive en la superficie densa, no en `.results-panel`
-  // (que en K0 sigue `mobile-collapsed` detrás, irrelevante aquí); la densa se
+  // «Aprender» vive en la superficie «Datos», pestaña Resultados; la superficie se
   // presenta `fullscreen` en K0, sin colapso que destapar.
   out.checks.hibbelerMobileSource = await page.locator('.educational-source').isVisible();
   await page.screenshot({ path: path.join(artifactsDir, 'hibbeler-example-mobile.png'), fullPage: false });

@@ -133,16 +133,19 @@ describe('StructuralCanvas contextual-actions touch routes', () => {
 
   it('opens the existing Datasheet command route from a touch action', async () => {
     const user = userEvent.setup();
-    const opened = vi.fn();
-    window.addEventListener('structureco:open-datasheet', opened);
+    const tabs: (string | undefined)[] = [];
+    // La Hoja de datos ya no tiene comando propio: es la pestaña «Tabla» de
+    // «Datos». La ruta táctil sigue siendo la misma, con la pestaña de carga.
+    const opened = (event: Event) => tabs.push((event as CustomEvent<{ tab?: string }>).detail?.tab);
+    window.addEventListener('structureco:open-data', opened);
     try {
       renderCanvas();
       await touchTap(user, screen.getByRole('button', { name: 'select-M1' }));
       const menu = await openOverflow(user);
       await touchTap(user, within(menu).getByRole('menuitem', { name: /Abrir hoja de datos/i }));
-      expect(opened).toHaveBeenCalledTimes(1);
+      expect(tabs).toEqual(['table']);
     } finally {
-      window.removeEventListener('structureco:open-datasheet', opened);
+      window.removeEventListener('structureco:open-data', opened);
     }
   });
 });

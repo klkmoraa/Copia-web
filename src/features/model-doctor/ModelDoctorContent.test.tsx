@@ -9,7 +9,8 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import type { ProjectModel } from '../../types';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
-import { ModelDoctor } from './ModelDoctor';
+import { DataSurface } from '../data/DataSurface';
+import { ModelDoctorContent } from './ModelDoctorContent';
 import { buildModelDoctorReport } from './modelDoctorDiagnostics';
 
 const withInvalidProperty = (): ProjectModel => {
@@ -35,7 +36,7 @@ const withRepairableTopology = (): ProjectModel => {
   return project;
 };
 
-const renderDoctor = (project: ProjectModel, initiallyOpen = true, buildReport = buildModelDoctorReport) => {
+const renderDoctor = (project: ProjectModel, initiallyOpen = true) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const Harness = () => {
     const [open, setOpen] = useState(initiallyOpen);
@@ -49,12 +50,16 @@ const renderDoctor = (project: ProjectModel, initiallyOpen = true, buildReport =
       <button type="button" onClick={() => updateProject((draft) => ({ ...draft, name: `${draft.name} editado` }))}>Editar proyecto cerrado</button>
       <button type="button" onClick={undo}>Deshacer reparación test</button>
       <button type="button" onClick={redo}>Rehacer reparación test</button>
-      {open ? <ModelDoctor
+      {/* La Revisión no monta su propio cromo: lo pone «Datos». Montar la
+          superficie entera en su pestaña es lo que hace producción, y es lo
+          único que deja probar el cierre, el foco y el `peek` de verdad. */}
+      {open ? <DataSurface
         open
+        tab="review"
+        onTabChange={() => {}}
         onOpenChange={setOpen}
         acknowledgedIds={acknowledgedIds}
         onAcknowledgedIdsChange={setAcknowledgedIds}
-        buildReport={buildReport}
       /> : null}
     </>;
   };
@@ -75,12 +80,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('ModelDoctor surface', () => {
+describe('ModelDoctorContent surface', () => {
   it('shows a useful all-clear state without requiring an analysis result', async () => {
     renderDoctor(createDefaultProject());
 
-    const dialog = await screen.findByRole('dialog', { name: 'Model Doctor' });
-    expect(within(dialog).getByText('0 críticos · 0 advertencias · 0 sugerencias')).toBeTruthy();
+    const dialog = await screen.findByRole('dialog', { name: 'Datos' });
+    // El cuerpo de la pestaña viaja en su propio chunk: llega diferido dentro
+    // de la superficie, así que se espera en vez de darlo por montado.
+    expect(await within(dialog).findByText('0 críticos · 0 advertencias · 0 sugerencias')).toBeTruthy();
     expect(within(dialog).getByRole('heading', { name: /modelo listo para revisar/i })).toBeTruthy();
   });
 
@@ -98,7 +105,7 @@ describe('ModelDoctor surface', () => {
   it('summarizes severity and filters findings without hiding acknowledged criticals', async () => {
     const user = userEvent.setup();
     renderDoctor(withInvalidProperty());
-    const dialog = await screen.findByRole('dialog', { name: 'Model Doctor' });
+    const dialog = await screen.findByRole('dialog', { name: 'Datos' });
 
     expect(within(dialog).getByText(/1 crítico/)).toBeTruthy();
     await user.click(within(dialog).getByRole('button', { name: /críticos/i }));
@@ -137,25 +144,32 @@ describe('ModelDoctor surface', () => {
     expect(screen.getByLabelText('doctor-project-snapshot').textContent).toBe(before);
     expect(screen.getByLabelText('doctor-can-undo').textContent).toBe('false');
 
-    await user.click(screen.getByRole('button', { name: /cerrar model doctor/i }));
+    await user.click(screen.getByRole('button', { name: /cerrar datos/i }));
     await user.click(screen.getByRole('button', { name: 'Abrir Model Doctor' }));
     expect(await screen.findByText(/reconocido para esta sesión/i)).toBeTruthy();
   });
 
-  it('does not diagnose while unmounted and diagnoses fresh state when reopened', async () => {
-    const user = userEvent.setup();
+  /**
+   * La costura `buildReport` es del CUERPO, no del cromo: lo que demuestra es
+   * que el diagnóstico no corre mientras la Revisión no está montada. Con la
+   * superficie unificada eso sigue valiendo, y gana una garantía nueva: abrir
+   * «Datos» en otra pestaña tampoco monta la Revisión, así que tampoco
+   * diagnostica.
+   */
+  it('no diagnostica mientras no está montada, ni con «Datos» abierto en otra pestaña', async () => {
     const buildReport = vi.fn(buildModelDoctorReport);
-    renderDoctor(withWarning(), true, buildReport);
-    await screen.findByRole('dialog', { name: 'Model Doctor' });
-    const callsWhileOpen = buildReport.mock.calls.length;
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(withWarning()));
 
-    await user.click(screen.getByRole('button', { name: /cerrar model doctor/i }));
-    await user.click(screen.getByRole('button', { name: 'Editar proyecto cerrado' }));
-    expect(buildReport).toHaveBeenCalledTimes(callsWhileOpen);
+    const { rerender } = render(<ProjectProvider>
+      <DataSurface open tab="results" onTabChange={() => {}} onOpenChange={() => {}} />
+    </ProjectProvider>);
+    await screen.findByRole('dialog', { name: 'Datos' });
+    expect(buildReport).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Abrir Model Doctor' }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' });
-    expect(buildReport.mock.calls.length).toBeGreaterThan(callsWhileOpen);
+    rerender(<ProjectProvider>
+      <ModelDoctorContent buildReport={buildReport} />
+    </ProjectProvider>);
+    await waitFor(() => expect(buildReport.mock.calls.length).toBeGreaterThan(0));
   });
 
   it('previews every safe topology change without mutating, then applies one undoable intention', async () => {
@@ -305,7 +319,7 @@ describe('ModelDoctor surface', () => {
     expect(screen.getByLabelText('doctor-project-snapshot').textContent).toBe(before);
     expect(screen.getByLabelText('doctor-can-undo').textContent).toBe('false');
     // Localizar degrada a peek: la lista de hallazgos nunca se desmonta (D-11).
-    expect(screen.getByRole('dialog', { name: 'Model Doctor' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Datos' })).toBeTruthy();
     expect(await screen.findByRole('article')).toBeTruthy();
     unsubscribe();
   });
@@ -321,7 +335,19 @@ describe('ModelDoctor surface', () => {
         <button type="button" onClick={() => updateProject((draft) => ({ ...draft, name: `${draft.name} editado` }))}>Editar proyecto cerrado</button>
         <button type="button" onClick={() => setExtent('peek')}>Simular peek</button>
         <button type="button" onClick={() => setExtent('default')}>Simular restaurar</button>
-        <ModelDoctor open onOpenChange={() => {}} extent={extent} onPeek={() => setExtent('peek')} onRestore={() => setExtent('default')} />
+        {/* El `peek` es del CROMO, y el cromo es ahora `DataSurface`: la
+            pestaña Revisión ya no monta su propio Drawer. Por eso esta prueba
+            —que es sobre el ciclo peek/restaurar— monta la superficie entera
+            en su pestaña, y no sólo el cuerpo. */}
+        <DataSurface
+          open
+          tab="review"
+          onTabChange={() => {}}
+          onOpenChange={() => {}}
+          extent={extent}
+          onPeek={() => setExtent('peek')}
+          onRestore={() => setExtent('default')}
+        />
       </>;
     };
     render(<ProjectProvider><PeekHarness /></ProjectProvider>);
@@ -352,11 +378,11 @@ describe('ModelDoctor surface', () => {
     renderDoctor(createDefaultProject(), false);
     const launcher = screen.getByRole('button', { name: 'Abrir Model Doctor' });
     await user.click(launcher);
-    await screen.findByRole('dialog', { name: 'Model Doctor' });
+    await screen.findByRole('dialog', { name: 'Datos' });
 
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(launcher));
   });
 
@@ -365,8 +391,8 @@ describe('ModelDoctor surface', () => {
     project.settings = { ...project.settings, language: 'en' };
     renderDoctor(project);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Model Doctor' });
-    expect(within(dialog).getByText('0 critical · 0 warnings · 0 suggestions')).toBeTruthy();
+    const dialog = await screen.findByRole('dialog', { name: 'Data' });
+    expect(await within(dialog).findByText('0 critical · 0 warnings · 0 suggestions')).toBeTruthy();
     expect(within(dialog).getByRole('heading', { name: /model ready for review/i })).toBeTruthy();
   });
 

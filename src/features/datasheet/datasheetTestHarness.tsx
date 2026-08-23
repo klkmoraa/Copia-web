@@ -4,7 +4,7 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel, Selection } from '../../types';
-import { DatasheetPanel } from './DatasheetPanel';
+import { DatasheetContent } from './DatasheetContent';
 import { createDatasheetProject } from './datasheetFixtures';
 import type { DatasheetEntity } from './datasheetModel';
 
@@ -23,13 +23,6 @@ const ENTITY_LABELS: Record<DatasheetEntity, RegExp> = {
   members: /^Barras/,
   loads: /^Cargas/,
 };
-
-/**
- * Estable a propósito: un `onOpenChange` en línea cambia de identidad en cada
- * render y el efecto de foco del Drawer volvería a llevarse el foco a su botón
- * de cerrar en mitad de una secuencia de teclas.
- */
-const keepOpen = () => {};
 
 export interface RenderDatasheetOptions {
   entity?: DatasheetEntity;
@@ -56,7 +49,7 @@ export const renderDatasheet = async ({ entity = 'nodes' }: RenderDatasheetOptio
     if (project.id !== 'datasheet-fixture') {
       return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
     }
-    return <DatasheetPanel open onOpenChange={keepOpen} />;
+    return <DatasheetContent />;
   };
 
   render(<ProjectProvider><Harness /></ProjectProvider>);

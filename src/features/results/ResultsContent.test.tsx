@@ -8,11 +8,7 @@ import { createSimpleBeamExercise } from '../../education/exerciseTemplates';
 import { ClassroomSessionProvider, useClassroomSession } from '../../store/ClassroomSessionContext';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { ProjectModel } from '../../types';
-import { workspaceCommandEventName } from '../workspace/workspaceCommands';
-import { ResultsPanel } from './ResultsPanel';
-import { useState } from 'react';
-
-const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
+import { ResultsContent } from './ResultsContent';
 
 /**
  * Results ya no consulta `matchMedia`: su modo lo decide la clase que resuelve
@@ -37,10 +33,14 @@ const stubMatchMedia = () => vi.fn().mockImplementation((query: string) => ({
   dispatchEvent: vi.fn(),
 }));
 
+/**
+ * El cuerpo de Resultados ya no tiene cromo propio: ni presentación, ni estado
+ * de superficie, ni `onOpenChange`. Todo eso lo pone `DataSurface`, que es su
+ * único montador en producción. Este arnés monta el cuerpo desnudo, que es
+ * exactamente lo que este archivo debe probar.
+ */
 const ResultsHarness = () => {
   const { project, analysis, resultTab, selection, resultCursor } = useProject();
-  const [open, setOpen] = useState(true);
-  const presentation = window.innerWidth < 1024 ? 'sheet' : 'dock';
   const selectionLabel = selection?.kind === 'member' || selection?.kind === 'node'
     ? `${selection.kind}:${selection.id}`
     : selection?.kind ?? 'none';
@@ -49,7 +49,7 @@ const ResultsHarness = () => {
     <output aria-label="Selección actual">{selectionLabel}</output>
     <output aria-label="Cursor de resultados">{resultCursor ? `${resultCursor.memberId}:${resultCursor.x}:${resultCursor.pinned}` : 'none'}</output>
     <ClassroomDiagnostics />
-    <ResultsPanel presentation={presentation} status={open ? 'active' : 'closed'} onOpenChange={setOpen} />
+    <ResultsContent />
   </ClassroomSessionProvider>;
 };
 
@@ -102,44 +102,32 @@ describe('Results analytical center', () => {
     expect(screen.queryByText(/Siguiente|Construye|Continuar construcción/)).toBeNull();
   });
 
-  it('invokes the dense surface instead of keeping reactions, influence and learn resident', async () => {
-    const user = userEvent.setup();
-    const invocations: Array<{ view: string; trigger: string | null }> = [];
-    const listener = (event: Event) => {
-      const detail = (event as CustomEvent<{ view: string; trigger?: HTMLElement | null }>).detail;
-      invocations.push({ view: detail.view, trigger: detail.trigger?.textContent ?? null });
-    };
-    window.addEventListener(workspaceCommandEventName('open-dense-results'), listener);
-    renderResults();
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
 
-    // Ninguna de las tres sigue siendo pestaña residente del panel.
-    for (const name of ['Reacciones', 'Influencia', 'Aprender']) {
-      expect(screen.queryByRole('tab', { name })).toBeNull();
-    }
-    const launchers = screen.getByRole('group', { name: 'Datos densos' });
-    await user.click(within(launchers).getByRole('button', { name: 'Reacciones' }));
-    await user.click(within(launchers).getByRole('button', { name: 'Influencia' }));
-
-    // El lanzador viaja en el comando: es a donde el broker devuelve el foco.
-    expect(invocations).toEqual([
-      { view: 'reactions', trigger: 'Reacciones' },
-      { view: 'influence', trigger: 'Influencia' },
-    ]);
-    window.removeEventListener(workspaceCommandEventName('open-dense-results'), listener);
-  }, 10_000);
-
-  it('organizes tabs by purpose and supports keyboard plus persistent panel modes', async () => {
+  /**
+   * Las SEIS lecturas viven en una sola tira.
+   *
+   * Estaban partidas entre dos componentes —`ResultsPanel` con Resumen·N·V·M·
+   * Deformada y `DenseResultsSurface` con Reacciones·Influencia·Entender—, y
+   * los dos leían el mismo campo `resultTab`, cuyo tipo ya las contenía todas.
+   * El corte no estaba en el dominio: estaba en dos componentes que decidieron
+   * cuáles de esos valores eran suyos. Esta prueba fija que ya no hay corte.
+   */
+  it('reúne las seis lecturas en una tira y las recorre con el teclado', async () => {
     const user = userEvent.setup();
     renderResults();
 
-    const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
     expect(screen.getByText('Centro analítico')).toBeTruthy();
-    for (const family of ['Estado', 'Esfuerzos', 'Forma']) {
+    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Estudio']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
+    // Reacciones, Influencia y «Entender» ya no se piden desde otro sitio:
+    // son pestañas de esta misma tira.
+    for (const tab of ['Resumen', 'Reacciones', 'Axial', 'Cortante', 'Momento', 'Deformada', 'Influencia', 'Aprender']) {
+      expect(screen.getByRole('tab', { name: tab })).toBeTruthy();
+    }
+    // `issues` no es una lectura que el usuario elija: la pone `analyze()`.
     expect(screen.queryByRole('tab', { name: 'Avisos' })).toBeNull();
+
     const moment = screen.getByRole('tab', { name: 'Momento' });
     expect(moment.getAttribute('aria-selected')).toBe('true');
     expect(moment.getAttribute('aria-describedby')).toBe('result-family-forces');
@@ -149,17 +137,13 @@ describe('Results analytical center', () => {
     await user.keyboard('{ArrowRight}');
     const deformed = screen.getByRole('tab', { name: 'Deformada' });
     await waitFor(() => expect(document.activeElement).toBe(deformed));
+    // El recorrido no se para en la frontera vieja: sigue hasta Estudio.
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Influencia' })));
     await user.keyboard('{Home}');
     expect(screen.getByRole('tab', { name: 'Resumen' }).getAttribute('aria-selected')).toBe('true');
-
-    const focusButton = screen.getByRole('button', { name: 'Enfocar' });
-    await user.click(focusButton);
-    await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('focused'));
-    expect(document.activeElement).toBe(panel);
-    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
-    expect(document.activeElement).toBe(focusButton);
+    await user.keyboard('{End}');
+    expect(screen.getByRole('tab', { name: 'Aprender' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('moves from an empty state to exact summary traceability without recalculating in the UI', async () => {
@@ -219,22 +203,6 @@ describe('Results analytical center', () => {
     expect(maximum.textContent).not.toMatch(/Valor en el cursor/);
   }, 10_000);
 
-  it('lets an unpinned chart Escape close the mobile results sheet', async () => {
-    const user = userEvent.setup();
-    setViewport('tablet');
-    renderResults();
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    const graph = within(chart).getByRole('img', { name: /diagrama .* del miembro/i });
-    expect(screen.getByRole('dialog', { name: /Resultados del an/ }).getAttribute('aria-modal')).toBeNull();
-    expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
-
-    graph.focus();
-    await user.keyboard('{Escape}');
-
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
-  }, 10_000);
 
   it('keeps the solved envelope when only a presentation setting changes', async () => {
     const user = userEvent.setup();
@@ -266,12 +234,15 @@ describe('Results analytical center', () => {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
     expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
-    const denseLaunchers = screen.getByRole('group', { name: 'Dense data' });
+    // Reacciones, Influencia y «Aprender» eran BOTONES de un grupo lanzador
+    // hacia otra superficie. Ahora son pestañas de esta misma tira: mismo
+    // destino, un salto menos, y sin un grupo de lanzadores que mantener.
     for (const view of ['Reactions', 'Influence', 'Learn']) {
-      expect(within(denseLaunchers).getByRole('button', { name: view })).toBeTruthy();
+      expect(screen.getByRole('tab', { name: view })).toBeTruthy();
     }
-    expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Dense data' })).toBeNull();
+    // El dock redimensionable se fue con su cromo: no hay tamaños que elegir.
+    expect(screen.queryByRole('group', { name: 'Results panel size' })).toBeNull();
     // State and reliability moved to the TopBar's AnalysisStatus in CRI-100;
     // this panel no longer renders its own "Ready to analyze" status text.
     await user.click(screen.getByRole('button', { name: 'Analyze structure' }));
@@ -304,117 +275,11 @@ describe('Results analytical center', () => {
     expect(await screen.findByRole('region', { name: 'Global results summary' })).toBeTruthy();
   }, 10_000);
 
-  it('uses a non-modal tablet sheet and normalizes the stored focused content mode', async () => {
-    const user = userEvent.setup();
-    setViewport('tablet');
-    localStorage.setItem(RESULTS_MODE_STORAGE_KEY, 'focused');
-    renderResults();
 
-    const panel = document.querySelector<HTMLElement>('.results-panel') as HTMLElement;
-    expect(panel).toBeTruthy();
-    await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
-    const sheet = await screen.findByRole('dialog', { name: 'Resultados del análisis' });
-    expect(sheet.getAttribute('aria-modal')).toBeNull();
-    expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados del análisis' })).toBeNull());
-  });
 
-  it('keeps the phone results sheet modeless so the canvas remains reachable', async () => {
-    const user = userEvent.setup();
-    setViewport('phone');
-    const { container } = renderResults();
-    const canvasHost = document.createElement('div');
-    canvasHost.className = 'canvas-host';
-    canvasHost.tabIndex = 0;
-    container.prepend(canvasHost);
 
-    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
-    expect(sheet.getAttribute('aria-modal')).toBeNull();
-    expect(sheet.getAttribute('data-canvas-interactive')).toBeNull();
-    expect(canvasHost.inert).not.toBe(true);
-    expect(canvasHost.getAttribute('aria-hidden')).toBeNull();
-    expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
 
-    canvasHost.focus();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
-  });
 
-  it('uses phone focus mode temporarily and reopens as the canvas-preserving panel', async () => {
-    const user = userEvent.setup();
-    setViewport('phone');
-    renderResults();
-
-    const panel = screen.getByRole('dialog', { name: /Resultados del an/ });
-    await user.click(screen.getByRole('button', { name: 'Enfocar resultados en pantalla completa' }));
-
-    expect(panel.getAttribute('data-results-mode')).toBe('focused');
-    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
-    await user.keyboard('{Escape}');
-    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
-
-    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
-    expect(panel.getAttribute('aria-modal')).toBeNull();
-  });
-
-  it('leaves Escape to a visible modal above the modeless phone results', async () => {
-    const user = userEvent.setup();
-    setViewport('phone');
-    renderResults();
-    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
-    const modalEscape = vi.fn();
-    const modal = document.createElement('div');
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.tabIndex = -1;
-    modal.addEventListener('keydown', modalEscape);
-    document.body.append(modal);
-
-    try {
-      modal.focus();
-      await user.keyboard('{Escape}');
-      expect(modalEscape).toHaveBeenCalledOnce();
-      expect(sheet.classList.contains('mobile-collapsed')).toBe(false);
-    } finally {
-      modal.remove();
-    }
-  });
-
-  it('does not alter the camera by fitting the canvas when analysis updates a sheet', async () => {
-    const user = userEvent.setup();
-    setViewport('phone');
-    const onFitCanvas = vi.fn();
-    window.addEventListener('structureco:fit-canvas', onFitCanvas);
-
-    try {
-      renderResults();
-      await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-      await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-      await waitFor(() => expect(screen.getByTestId('diagram-chart')).toBeTruthy());
-      expect(onFitCanvas).not.toHaveBeenCalled();
-    } finally {
-      window.removeEventListener('structureco:fit-canvas', onFitCanvas);
-    }
-  }, 10_000);
-
-  it('keeps native learning summaries inside the mobile focus loop', async () => {
-    const user = userEvent.setup();
-    setViewport('tablet');
-    renderResults();
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    await user.click(screen.getByRole('tab', { name: 'Resumen' }));
-    const sheet = screen.getByRole('dialog', { name: 'Resultados del análisis' });
-    // La procedencia de cada tarjeta sigue siendo un `summary` nativo dentro
-    // de la hoja: cardificar no la sacó del recorrido de foco.
-    const summaries = [...sheet.querySelectorAll<HTMLElement>('summary')];
-    expect(summaries.length).toBeGreaterThan(0);
-    summaries[summaries.length - 1].focus();
-    await user.tab();
-    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /Resumen ·/ }));
-  }, 10_000);
 
   it.skip('legacy prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
@@ -505,12 +370,10 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     expect(screen.getByRole('tab', { name: 'Deformada' })).toBeTruthy();
-    // Aula ve exactamente las mismas familias residentes y los mismos
-    // lanzadores densos que el modo completo: mismo análisis, misma
-    // arquitectura, ninguna vista propia.
-    const launchers = screen.getByRole('group', { name: 'Datos densos' });
+    // Aula ve exactamente las mismas familias que el modo completo: mismo
+    // análisis, misma arquitectura, ninguna vista propia.
     for (const view of ['Reacciones', 'Influencia', 'Aprender']) {
-      expect(within(launchers).getByRole('button', { name: view })).toBeTruthy();
+      expect(screen.getByRole('tab', { name: view })).toBeTruthy();
     }
     expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
 
@@ -518,7 +381,7 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
     expect(screen.getByLabelText('Estado del modelo').textContent).toBe(modelState);
-    expect(within(screen.getByRole('group', { name: 'Datos densos' })).getByRole('button', { name: 'Aprender' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Aprender' })).toBeTruthy();
   }, 10_000);
 
   it('keeps a failed analysis visible when switching into Aula', async () => {

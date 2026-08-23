@@ -15,13 +15,19 @@ describe('bus de comandos del workspace', () => {
     unsubscribe();
   });
 
-  it('abre Model Doctor mediante el mismo bus desde cualquier launcher', () => {
+  /**
+   * Los cuatro comandos que había —uno por superficie densa— son ahora uno con
+   * la pestaña como carga útil. Que la pestaña llegue intacta es lo que
+   * sustituye a tener cuatro nombres distintos.
+   */
+  it('abre «Datos» en la pestaña pedida desde cualquier launcher', () => {
     const handler = vi.fn();
-    const unsubscribe = onWorkspaceCommand('open-model-doctor', handler);
+    const unsubscribe = onWorkspaceCommand('open-data', handler);
 
-    emitWorkspaceCommand('open-model-doctor');
+    emitWorkspaceCommand('open-data', { tab: 'review' });
 
     expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ tab: 'review' });
     unsubscribe();
   });
 
@@ -35,21 +41,21 @@ describe('bus de comandos del workspace', () => {
 
   it('deja de entregar tras darse de baja, sin dejar el listener colgado', () => {
     const handler = vi.fn();
-    onWorkspaceCommand('open-results', handler)();
-    emitWorkspaceCommand('open-results');
+    onWorkspaceCommand('open-data', handler)();
+    emitWorkspaceCommand('open-data', { tab: 'results' });
     expect(handler).not.toHaveBeenCalled();
   });
 
   it('no mezcla comandos distintos', () => {
-    const results = vi.fn();
-    const datasheet = vi.fn();
+    const data = vi.fn();
+    const detail = vi.fn();
     const off = [
-      onWorkspaceCommand('open-results', results),
-      onWorkspaceCommand('open-datasheet', datasheet),
+      onWorkspaceCommand('open-data', data),
+      onWorkspaceCommand('open-detail', detail),
     ];
-    emitWorkspaceCommand('open-datasheet');
-    expect(datasheet).toHaveBeenCalledTimes(1);
-    expect(results).not.toHaveBeenCalled();
+    emitWorkspaceCommand('open-detail', { segment: 'loads' });
+    expect(detail).toHaveBeenCalledTimes(1);
+    expect(data).not.toHaveBeenCalled();
     for (const unsubscribe of off) unsubscribe();
   });
 

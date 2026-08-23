@@ -9,16 +9,20 @@ import type { ShellClass } from './shellComposition';
 const Controls = () => {
   const broker = useSurfacePresentation();
   return <>
-    <button onClick={(event) => broker.openSurface('datasheet', event.currentTarget)}>open datasheet</button>
-    <button onClick={(event) => broker.openSurface('doctor', event.currentTarget)}>open doctor</button>
-    <button onClick={() => broker.closeSurface('datasheet')}>close datasheet</button>
-    <button onClick={() => broker.closeSurface('doctor')}>close doctor</button>
-    <button onClick={() => broker.markSurfaceReady('datasheet', true)}>datasheet ready</button>
-    <button onClick={() => broker.setSurfaceExtent('datasheet', 'peek')}>peek datasheet</button>
-    <button onClick={() => broker.setSurfaceExtent('datasheet', 'default')}>restore datasheet</button>
-    <output data-testid="datasheet-state">{broker.stateFor('datasheet').status}</output>
-    <output data-testid="datasheet-extent">{broker.stateFor('datasheet').extent}</output>
-    <output data-testid="doctor-state">{broker.stateFor('doctor').status}</output>
+    {/* La superficie modal del producto es UNA: «Datos». Este arnés usaba
+        `datasheet` y `doctor` como dos modales distintas para provocar una
+        suspensión entre ellas; ahora la segunda pieza es el panel derecho,
+        que en Compact disputa la misma ranura contextual. */}
+    <button onClick={(event) => broker.openSurface('data', event.currentTarget)}>open data</button>
+    <button onClick={(event) => broker.openSurface('detail', event.currentTarget)}>open detail</button>
+    <button onClick={() => broker.closeSurface('data')}>close data</button>
+    <button onClick={() => broker.closeSurface('detail')}>close detail</button>
+    <button onClick={() => broker.markSurfaceReady('data', true)}>data ready</button>
+    <button onClick={() => broker.setSurfaceExtent('data', 'peek')}>peek data</button>
+    <button onClick={() => broker.setSurfaceExtent('data', 'default')}>restore data</button>
+    <output data-testid="data-state">{broker.stateFor('data').status}</output>
+    <output data-testid="data-extent">{broker.stateFor('data').extent}</output>
+    <output data-testid="detail-state">{broker.stateFor('detail').status}</output>
   </>;
 };
 
@@ -46,45 +50,50 @@ afterEach(() => {
 describe('SurfacePresentationProvider', () => {
   it('keeps an open intent before any lazy surface has mounted', () => {
     render(<ProviderHarness />);
-    fireEvent.click(screen.getByRole('button', { name: 'open datasheet' }));
-    expect(screen.getByTestId('datasheet-state').textContent).toBe('active');
-    expect(screen.queryByRole('dialog', { name: /datasheet/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'open data' }));
+    expect(screen.getByTestId('data-state').textContent).toBe('active');
+    expect(screen.queryByRole('dialog', { name: /datos/i })).toBeNull();
     expect(screen.getByTestId('background').hasAttribute('inert')).toBe(false);
   });
 
+  /**
+   * Suspender es retener, nunca destruir. Se prueba en `K0` porque es la única
+   * clase con una sola ranura contextual: en X2 la superficie modal y el panel
+   * derecho conviven, así que ahí no hay suspensión que demostrar.
+   */
   it('retains a suspended surface instance and its real local draft', () => {
     const RetainedDraft = () => {
       const broker = useSurfacePresentation();
       return <>
         <Controls />
-        {broker.isRetained('datasheet') ? <section
-          data-workspace-surface="datasheet"
-          hidden={broker.stateFor('datasheet').status !== 'active'}
+        {broker.isRetained('data') ? <section
+          data-workspace-surface="data"
+          hidden={broker.stateFor('data').status !== 'active'}
         >
-          <input aria-label="datasheet draft" defaultValue="" />
+          <input aria-label="data draft" defaultValue="" />
         </section> : null}
       </>;
     };
-    render(<ProviderHarness><RetainedDraft /></ProviderHarness>);
-    fireEvent.click(screen.getByRole('button', { name: 'open datasheet' }));
-    fireEvent.change(screen.getByLabelText('datasheet draft'), { target: { value: 'sin aplicar' } });
-    fireEvent.click(screen.getByRole('button', { name: 'open doctor' }));
+    render(<ProviderHarness shellClass="K0"><RetainedDraft /></ProviderHarness>);
+    fireEvent.click(screen.getByRole('button', { name: 'open data' }));
+    fireEvent.change(screen.getByLabelText('data draft'), { target: { value: 'sin aplicar' } });
+    fireEvent.click(screen.getByRole('button', { name: 'open detail' }));
 
-    expect(screen.getByTestId('datasheet-state').textContent).toBe('suspended');
-    expect((screen.getByLabelText('datasheet draft') as HTMLInputElement).value).toBe('sin aplicar');
+    expect(screen.getByTestId('data-state').textContent).toBe('suspended');
+    expect((screen.getByLabelText('data draft') as HTMLInputElement).value).toBe('sin aplicar');
 
-    fireEvent.click(screen.getByRole('button', { name: 'close doctor' }));
-    expect(screen.getByTestId('datasheet-state').textContent).toBe('active');
-    expect((screen.getByLabelText('datasheet draft') as HTMLInputElement).value).toBe('sin aplicar');
+    fireEvent.click(screen.getByRole('button', { name: 'close detail' }));
+    expect(screen.getByTestId('data-state').textContent).toBe('active');
+    expect((screen.getByLabelText('data draft') as HTMLInputElement).value).toBe('sin aplicar');
   });
 
   it('returns focus to the centralized launcher only after a logical close', async () => {
     const Surface = () => {
       const broker = useSurfacePresentation();
       return <>
-        <button onClick={(event) => broker.openSurface('datasheet', event.currentTarget)}>launcher</button>
-        {broker.isRetained('datasheet') ? <section data-workspace-surface="datasheet">
-          <button onClick={() => broker.closeSurface('datasheet')}>surface close</button>
+        <button onClick={(event) => broker.openSurface('data', event.currentTarget)}>launcher</button>
+        {broker.isRetained('data') ? <section data-workspace-surface="data">
+          <button onClick={() => broker.closeSurface('data')}>surface close</button>
         </section> : null}
       </>;
     };
@@ -100,14 +109,14 @@ describe('SurfacePresentationProvider', () => {
   it('applies and completely cleans inert plus aria-hidden after modal readiness', () => {
     const backgroundRef = createRef<HTMLDivElement>();
     render(<ProviderHarness backgroundRef={backgroundRef} />);
-    fireEvent.click(screen.getByRole('button', { name: 'open datasheet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open data' }));
     expect(Boolean(backgroundRef.current?.inert)).toBe(false);
 
-    fireEvent.click(screen.getByRole('button', { name: 'datasheet ready' }));
+    fireEvent.click(screen.getByRole('button', { name: 'data ready' }));
     expect(backgroundRef.current?.inert).toBe(true);
     expect(backgroundRef.current?.getAttribute('aria-hidden')).toBe('true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'close datasheet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'close data' }));
     expect(Boolean(backgroundRef.current?.inert)).toBe(false);
     expect(backgroundRef.current?.hasAttribute('aria-hidden')).toBe(false);
   });
@@ -115,19 +124,19 @@ describe('SurfacePresentationProvider', () => {
   it('clears inert the instant a ready modal surface degrades to peek, and reapplies it on restore (CRI-102)', () => {
     const backgroundRef = createRef<HTMLDivElement>();
     render(<ProviderHarness backgroundRef={backgroundRef} />);
-    fireEvent.click(screen.getByRole('button', { name: 'open datasheet' }));
-    fireEvent.click(screen.getByRole('button', { name: 'datasheet ready' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open data' }));
+    fireEvent.click(screen.getByRole('button', { name: 'data ready' }));
     expect(backgroundRef.current?.inert).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'peek datasheet' }));
-    expect(screen.getByTestId('datasheet-extent').textContent).toBe('peek');
+    fireEvent.click(screen.getByRole('button', { name: 'peek data' }));
+    expect(screen.getByTestId('data-extent').textContent).toBe('peek');
     // La superficie sigue abierta y retenida — sólo dejó de atrapar el fondo.
-    expect(screen.getByTestId('datasheet-state').textContent).toBe('active');
+    expect(screen.getByTestId('data-state').textContent).toBe('active');
     expect(Boolean(backgroundRef.current?.inert)).toBe(false);
     expect(backgroundRef.current?.hasAttribute('aria-hidden')).toBe(false);
 
-    fireEvent.click(screen.getByRole('button', { name: 'restore datasheet' }));
-    expect(screen.getByTestId('datasheet-extent').textContent).toBe('default');
+    fireEvent.click(screen.getByRole('button', { name: 'restore data' }));
+    expect(screen.getByTestId('data-extent').textContent).toBe('default');
     expect(backgroundRef.current?.inert).toBe(true);
     expect(backgroundRef.current?.getAttribute('aria-hidden')).toBe('true');
   });

@@ -2,7 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, us
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
 import type { InspectorSegment } from '../inspector/inspectorSegments';
-import { ResultsPanel } from '../results/ResultsPanel';
 import { StructuralCanvas } from '../canvas/StructuralCanvas';
 import { ToolRail } from '../canvas/ToolRail';
 import { TopBar } from '../topbar/TopBar';
@@ -17,7 +16,7 @@ import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
 import { useSurfacePresentation } from './useSurfacePresentation';
 import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
-import { preloadDenseResultsSurface, type DenseResultView } from '../results/denseResults';
+import type { DataSurfaceTab } from '../data/dataSurface';
 import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
@@ -25,9 +24,7 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
-const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
-const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
-const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
+const LazyDataSurface = lazy(() => import('../data/DataSurface').then((module) => ({ default: module.DataSurface })));
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
@@ -52,13 +49,11 @@ const WorkspaceBrokerContent = ({
   const broker = useSurfacePresentation();
   const { openSurface, closeSurface, toggleSurface, markSurfaceReady, setSurfaceExtent } = broker;
   const detail = broker.stateFor('detail');
-  const results = broker.stateFor('results');
   /** Segmento visible del panel derecho; un comando puede apuntarlo. */
   const [detailSegment, setDetailSegment] = useState<InspectorSegment>('detail');
-  const dense = broker.stateFor('dense');
-  const [denseView, setDenseView] = useState<DenseResultView>('reactions');
-  const datasheet = broker.stateFor('datasheet');
-  const doctor = broker.stateFor('doctor');
+  const data = broker.stateFor('data');
+  /** Pestaña visible de «Datos»; el comando de apertura la apunta. */
+  const [dataTab, setDataTab] = useState<DataSurfaceTab>('results');
   const palette = broker.stateFor('palette');
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
@@ -85,25 +80,22 @@ const WorkspaceBrokerContent = ({
   useEffect(() => {
     const subscriptions = [
       onWorkspaceCommand('open-command-palette', () => openSurface('palette')),
-      onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
-      onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
-      onWorkspaceCommand('open-results', () => openSurface('results')),
       onWorkspaceCommand('open-detail', (request) => {
         if (request?.segment) setDetailSegment(request.segment);
         openSurface('detail', request?.trigger);
       }),
-      /* `dense` es invocada: el lanzador viaja en el propio comando para que el
-         broker sepa a dónde devolver el foco al cerrar.
-         `influence` es además el único de los tres cuya lectura vive también
-         en el lienzo (CanvasResultLayer gatea el overlay de influencia con
-         `resultTab === 'influence'`, el mismo campo que `analyze()` ya mueve
-         a 'issues'/'summary'). CRI-101 dejó esa lectura sin quien la ponga:
-         el resto de superficies densas no tienen lectura en el lienzo, así
-         que no necesitan tocar `resultTab`. */
-      onWorkspaceCommand('open-dense-results', ({ view: requestedView, trigger }) => {
-        setDenseView(requestedView);
-        if (requestedView === 'influence') setResultTab('influence');
-        openSurface('dense', trigger);
+      /* «Datos» es invocada: el lanzador viaja en el comando para que el broker
+         sepa a dónde devolver el foco al cerrar.
+
+         `resultTab` es la única carga útil que sale de la superficie: la lectura
+         de influencia vive TAMBIÉN en el lienzo —`CanvasResultLayer` gatea su
+         overlay con `resultTab === 'influence'`, el mismo campo que `analyze()`
+         mueve a 'issues'/'summary'—, así que pedir esa lectura tiene que
+         escribirla, no sólo abrir la pestaña. */
+      onWorkspaceCommand('open-data', (request) => {
+        if (request?.tab) setDataTab(request.tab);
+        if (request?.resultTab) setResultTab(request.resultTab);
+        openSurface('data', request?.trigger);
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
@@ -111,7 +103,7 @@ const WorkspaceBrokerContent = ({
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
-    (['dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    (['data', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -144,13 +136,15 @@ const WorkspaceBrokerContent = ({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
-      if (datasheet.status === 'active' || doctor.status === 'active') return;
+      // «Datos» tiene su propia edición dentro (la rejilla de la Tabla): la
+      // paleta no se abre encima de ella.
+      if (data.status === 'active') return;
       event.preventDefault();
       toggleSurface('palette', document.activeElement instanceof HTMLElement ? document.activeElement : null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [datasheet.status, doctor.status, toggleSurface]);
+  }, [data.status, toggleSurface]);
 
   // Ctrl/Cmd+Z and Ctrl/Cmd+Y drive the same undo/redo the history buttons use
   // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
@@ -197,31 +191,15 @@ const WorkspaceBrokerContent = ({
     };
   }, [shellRef]);
 
-  const setResultsOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
-    if (open) openSurface('results', trigger);
-    else closeSurface('results');
+  const setDataOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
+    if (open) openSurface('data', trigger);
+    else closeSurface('data');
   }, [closeSurface, openSurface]);
-  const setDatasheetOpen = useCallback((open: boolean) => {
-    if (open) openSurface('datasheet');
-    else closeSurface('datasheet');
-  }, [closeSurface, openSurface]);
-  const setDoctorOpen = useCallback((open: boolean) => {
-    if (open) openSurface('doctor');
-    else closeSurface('doctor');
-  }, [closeSurface, openSurface]);
-  const setDenseOpen = useCallback((open: boolean) => {
-    if (open) openSurface('dense');
-    else closeSurface('dense');
-  }, [closeSurface, openSurface]);
-  const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
-  const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
-  const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
-  // "Localizar" degrada a `peek`, nunca cierra (CRI-102 / D-11): mismo mecanismo
-  // para Datasheet y Doctor, porque es el mismo hueco en las dos superficies.
-  const peekDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'peek'), [setSurfaceExtent]);
-  const restoreDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'default'), [setSurfaceExtent]);
-  const peekDoctor = useCallback(() => setSurfaceExtent('doctor', 'peek'), [setSurfaceExtent]);
-  const restoreDoctor = useCallback(() => setSurfaceExtent('doctor', 'default'), [setSurfaceExtent]);
+  const markDataReady = useCallback((ready: boolean) => markSurfaceReady('data', ready), [markSurfaceReady]);
+  // "Localizar" degrada a `peek`, nunca cierra (CRI-102 / D-11). Era el mismo
+  // mecanismo duplicado en Datasheet y Doctor; con una sola superficie es uno.
+  const peekData = useCallback(() => setSurfaceExtent('data', 'peek'), [setSurfaceExtent]);
+  const restoreData = useCallback(() => setSurfaceExtent('data', 'default'), [setSurfaceExtent]);
 
   return <AppShellLayout
     ref={shellRef}
@@ -250,10 +228,11 @@ const WorkspaceBrokerContent = ({
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
             closeSurface('detail');
-            closeSurface('results');
+            closeSurface('data');
           } else if (!layout.inspectorCollapsed) {
-            // Results stays non-resident even leaving full-canvas (CRI-100);
-            // only the inspector, which the user had open, comes back.
+            // «Datos» no es residente en ninguna clase, así que salir de lienzo
+            // completo no la recupera; sólo vuelve el panel que el usuario
+            // tenía abierto.
             openSurface('detail');
           }
           togglePreference('fullCanvas');
@@ -264,11 +243,6 @@ const WorkspaceBrokerContent = ({
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
-      {broker.isRetained('results') ? <ResultsPanel
-        presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
-        status={results.status}
-        onOpenChange={setResultsOpen}
-      /> : null}
       <ToastNotification />
       {broker.isRetained('palette') ? <Suspense fallback={null}><LazyCommandPalette
         open={palette.status === 'active'}
@@ -277,34 +251,21 @@ const WorkspaceBrokerContent = ({
         presentation={palette.presentation as 'overlay' | 'sheet'}
       /></Suspense> : null}
       {/* Invocada, nunca residente: sólo existe en el árbol mientras el broker
-          la retiene, y desaparece al cerrarse (CRI-101). */}
-      {broker.isRetained('dense') ? <Suspense fallback={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}><LazyDenseResults
-        open={dense.status === 'active'}
-        view={denseView}
-        onViewChange={setDenseView}
-        onOpenChange={setDenseOpen}
-        presentation={dense.presentation as 'drawer' | 'fullscreen'}
-        onSurfaceReady={markDenseReady}
-      /></Suspense> : null}
-      {broker.isRetained('datasheet') ? <Suspense fallback={null}><LazyDatasheet
-        open={datasheet.status === 'active'}
-        onOpenChange={setDatasheetOpen}
-        presentation={datasheet.presentation as 'drawer' | 'fullscreen'}
-        onSurfaceReady={markDatasheetReady}
-        extent={datasheet.extent}
-        onPeek={peekDatasheet}
-        onRestore={restoreDatasheet}
-      /></Suspense> : null}
-      {broker.isRetained('doctor') ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
-        open={doctor.status === 'active'}
-        onOpenChange={setDoctorOpen}
-        onSurfaceReady={markDoctorReady}
-        presentation={doctor.presentation as 'drawer' | 'fullscreen'}
+          la retiene, y desaparece al cerrarse. Era el contrato de `dense`
+          (CRI-101) y ahora vale para las tres pestañas: abrir «Datos» no monta
+          la Hoja de datos ni el Doctor si el usuario está en Resultados. */}
+      {broker.isRetained('data') ? <Suspense fallback={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}><LazyDataSurface
+        open={data.status === 'active'}
+        tab={dataTab}
+        onTabChange={setDataTab}
+        onOpenChange={setDataOpen}
+        presentation={data.presentation as 'drawer' | 'fullscreen'}
+        onSurfaceReady={markDataReady}
+        extent={data.extent}
+        onPeek={peekData}
+        onRestore={restoreData}
         acknowledgedIds={modelDoctorAcknowledgedIds}
         onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
-        extent={doctor.extent}
-        onPeek={peekDoctor}
-        onRestore={restoreDoctor}
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces">

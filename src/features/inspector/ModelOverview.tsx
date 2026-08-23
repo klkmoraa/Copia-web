@@ -99,7 +99,7 @@ export const ModelOverview = () => {
     {doctorTotal !== null && doctorTotal > 0 ? <button
       type="button"
       className="model-overview__action is-warning"
-      onClick={() => emitWorkspaceCommand('open-model-doctor')}
+      onClick={() => emitWorkspaceCommand('open-data', { tab: 'review' })}
     >
       <TriangleAlert size={18} aria-hidden="true" />
       <span>

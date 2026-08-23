@@ -12,33 +12,37 @@ import {
 } from 'lucide-react';
 import { Button } from '../../design-system/components/controls';
 import { projectCommandSnapshot } from '../../commands/projectCommand';
-import { Drawer } from '../../design-system/components/overlays';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
 import { presentModelDoctorFinding } from './modelDoctorPresentation';
 import { prepareTopologyRepair, type TopologyRepairPreview } from './topologyRepairPreview';
 import './modelDoctor.css';
 
+/**
+ * El Model Doctor, como cuerpo de la pestaña «Revisión» de la superficie
+ * «Datos».
+ *
+ * Deja de montar su propio `Drawer`: el cromo lo pone `DataSurface` una sola
+ * vez para las tres pestañas. Conserva `onPeek` porque «Localizar» degrada la
+ * superficie en vez de cerrarla (CRI-102 / D-11), y esa decisión es suya.
+ */
 export interface ModelDoctorProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSurfaceReady?: (ready: boolean) => void;
   acknowledgedIds?: ReadonlySet<string>;
   onAcknowledgedIdsChange?: (ids: Set<string>) => void;
   /** Test seam for proving the lazy surface does not diagnose while unmounted. */
   buildReport?: typeof buildModelDoctorReport;
-  returnFocusTo?: HTMLElement | null;
-  presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
-  /** `default` | `peek` (CRI-102). The broker owns this; the panel only renders it. */
-  extent?: SurfaceExtent;
   /** Degrades to `peek` instead of closing — "Localizar" never closes the Doctor. */
   onPeek?: () => void;
-  /** Restores from `peek` back to `default`. */
-  onRestore?: () => void;
+  /**
+   * Cierra la superficie entera. Lo pide «Usar herramienta»: el usuario se va
+   * al lienzo a dibujar, y ahí no quiere la superficie ni en `peek`. Es la
+   * única acción del Doctor que cierra, y por eso el cromo compartido le pasa
+   * su propio cierre en vez de que esta pestaña lo invente.
+   */
+  onClose?: () => void;
 }
 
 type FindingFilter = 'all' | ModelDoctorSeverity;
@@ -224,18 +228,12 @@ const RepairPreview = ({
   </section>;
 };
 
-export const ModelDoctor = ({
-  open,
-  onOpenChange,
-  onSurfaceReady,
+export const ModelDoctorContent = ({
   acknowledgedIds,
   onAcknowledgedIdsChange,
   buildReport = buildModelDoctorReport,
-  returnFocusTo,
-  presentation = 'drawer',
-  extent = 'default',
   onPeek,
-  onRestore,
+  onClose,
 }: ModelDoctorProps) => {
   const { project, executePreparedTopologyRepair } = useProjectModel();
   const { setActiveTool, setSelection } = useWorkspaceUI();
@@ -345,23 +343,7 @@ export const ModelDoctor = ({
     { value: 'suggestion', label: copy.suggestion, count: report.counts.suggestion },
   ];
 
-  return <Drawer
-    open={open}
-    onOpenChange={onOpenChange}
-    title="Model Doctor"
-    description={copy.description}
-    closeLabel={copy.close}
-    side="right"
-    presentation={presentation}
-    className="model-doctor-surface"
-    returnFocusTo={returnFocusTo}
-    restoreFocus={!onSurfaceReady}
-    surfaceId="doctor"
-    onSurfaceReady={onSurfaceReady}
-    extent={extent}
-    onRestore={onRestore}
-    restoreLabel={copy.restore}
-  >
+  return <>
     {preview ? <RepairPreview
       preview={preview}
       stale={previewStale}
@@ -455,7 +437,7 @@ export const ModelDoctor = ({
                 : <span className="model-doctor-location-unavailable">{copy.unavailableLocation}</span>}
               {finding.suggestedTool ? <Button aria-label={`${copy.useTool}: ${presented.title}`} size="touch" variant="ghost" leadingIcon={<Wrench />} onClick={() => {
                 setActiveTool(finding.suggestedTool!);
-                onOpenChange(false);
+                onClose?.();
               }}>{copy.useTool}</Button> : null}
               {finding.repair?.available ? <Button id={previewActionId} aria-label={`${copy.previewAction}: ${presented.title}`} size="touch" leadingIcon={<Wrench />} onClick={() => openRepairPreview(previewActionId)}>{copy.previewAction}</Button> : null}
               {finding.canAcknowledge ? <Button aria-label={`${isAcknowledged ? copy.unacknowledge : copy.acknowledge}: ${presented.title}`} size="touch" variant="ghost" onClick={() => toggleAcknowledged(finding.id)}>
@@ -467,7 +449,7 @@ export const ModelDoctor = ({
         })}
       </div>
     </>}</>}
-  </Drawer>;
+  </>;
 };
 
-export default ModelDoctor;
+export default ModelDoctorContent;

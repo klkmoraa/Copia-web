@@ -99,16 +99,32 @@ export const continueStoredProject = async (page, { timeout = 20_000 } = {}) => 
  * panel que nadie había abierto. Se pulsa el lanzador real; el evento de
  * comando queda de reserva para los viewports donde el lanzador se repliega.
  */
-export const openResultsSurface = async (page, { timeout = 15_000 } = {}) => {
-  const panel = page.locator('.results-panel');
-  if (await panel.isVisible().catch(() => false)) return panel;
-
-  const launcher = page.getByRole('button', { name: /^resultados$/i }).first();
-  if (await launcher.count()) {
-    await launcher.click().catch(() => undefined);
-    if (await panel.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false)) return panel;
+/**
+ * Abre «Datos» en una pestaña. Resultados, Tabla y Revisión son pestañas de la
+ * MISMA superficie: no hay cuatro cromos que abrir, hay uno y una pestaña que
+ * apuntar.
+ */
+export const openDataSurface = async (page, { tab = 'results', timeout = 15_000 } = {}) => {
+  const surface = page.locator('.data-surface');
+  if (!await surface.isVisible().catch(() => false)) {
+    const launcher = page.getByRole('button', { name: /^resultados$/i }).first();
+    if (await launcher.count()) {
+      await launcher.click().catch(() => undefined);
+    }
+    if (!await surface.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false)) {
+      await page.evaluate((requested) => window.dispatchEvent(
+        new CustomEvent('structureco:open-data', { detail: { tab: requested } }),
+      ), tab);
+      await surface.waitFor({ state: 'visible', timeout });
+    }
   }
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:open-results')));
-  await panel.waitFor({ state: 'visible', timeout });
-  return panel;
+  const target = page.locator(`[data-data-tab="${tab}"][role="tab"]`);
+  if (await target.count() && await target.getAttribute('aria-selected') !== 'true') {
+    await target.click();
+  }
+  await page.locator(`.data-surface-panel[data-data-tab="${tab}"]`).waitFor({ state: 'visible', timeout });
+  return surface;
 };
+
+/** Compatibilidad con los llamantes que sólo quieren Resultados. */
+export const openResultsSurface = async (page, options = {}) => openDataSurface(page, { ...options, tab: 'results' });

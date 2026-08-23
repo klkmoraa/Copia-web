@@ -7,7 +7,8 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { workspaceCommandEventName } from '../workspace/workspaceCommands';
-import { DatasheetPanel } from './DatasheetPanel';
+import { DataSurface } from '../data/DataSurface';
+import { DatasheetContent } from './DatasheetContent';
 import { createDatasheetProject } from './datasheetFixtures';
 import { useState } from 'react';
 
@@ -16,12 +17,6 @@ beforeEach(() => localStorage.clear());
 
 const setup = () => userEvent.setup({ delay: null });
 
-/**
- * Estable a propósito: un `onOpenChange` en línea cambia de identidad en cada
- * render y el efecto de foco del Drawer volvería a llevarse el foco a su botón
- * de cerrar. `WorkspaceShell` pasa el `setDatasheetOpen` del estado.
- */
-const keepOpen = () => {};
 
 /**
  * Siembra el proyecto de la fixture y expone la selección viva del workspace.
@@ -36,7 +31,7 @@ const Harness = ({ onSelection }: { onSelection: (selection: Selection) => void 
   if (project.id !== 'datasheet-fixture') {
     return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
   }
-  return <DatasheetPanel open onOpenChange={keepOpen} />;
+  return <DatasheetContent />;
 };
 
 const renderDatasheet = async () => {
@@ -67,7 +62,10 @@ describe('datasheet panel', () => {
         <button type="button" onClick={() => setOpen(false)}>suspender</button>
         <button type="button" onClick={() => setOpen(true)}>reanudar</button>
         <output aria-label="X N1 almacenada">{project.nodes.find((node) => node.id === 'N1')?.x}</output>
-        <DatasheetPanel open={open} onOpenChange={setOpen} presentation="drawer" />
+        {/* Retener es del CROMO. La Tabla ya no monta su propio Drawer, así que
+            lo que se suspende y se reanuda aquí es la superficie entera en su
+            pestaña — que es exactamente lo que hace el broker en producción. */}
+        <DataSurface open={open} tab="table" onTabChange={() => {}} onOpenChange={setOpen} />
       </>;
     };
     render(<ProjectProvider><ContinuityHarness /></ProjectProvider>);
@@ -78,7 +76,7 @@ describe('datasheet panel', () => {
     expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
 
     await user.click(screen.getByRole('button', { name: 'suspender' }));
-    expect(screen.queryByRole('dialog', { name: /Hoja de datos/ })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: /Datos/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'reanudar' }));
 
     expect((await screen.findByLabelText(/^X \(m\)/) as HTMLInputElement).value).toBe('12.75');
@@ -167,7 +165,7 @@ describe('datasheet panel', () => {
       if (project.id !== 'datasheet-fixture') {
         return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
       }
-      return <DatasheetPanel open onOpenChange={onOpenChange} onPeek={onPeek} />;
+      return <DatasheetContent onPeek={onPeek} />;
     };
     render(<ProjectProvider><Seeded /></ProjectProvider>);
     await user.click(screen.getByRole('button', { name: 'sembrar' }));
@@ -194,9 +192,11 @@ describe('datasheet panel', () => {
       }
       return <>
         <output aria-label="X N1 almacenada">{project.nodes.find((node) => node.id === 'N1')?.x}</output>
-        <DatasheetPanel
+        <DataSurface
           open
-          onOpenChange={keepOpen}
+          tab="table"
+          onTabChange={() => {}}
+          onOpenChange={() => {}}
           extent={extent}
           onPeek={() => setExtent('peek')}
           onRestore={() => setExtent('default')}
@@ -221,7 +221,7 @@ describe('datasheet panel', () => {
     expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
 
     // El asa de peek es el único control de restaurar y es operable por teclado.
-    await user.click(screen.getByRole('button', { name: /Restaurar hoja de datos/i }));
+    await user.click(screen.getByRole('button', { name: /Volver a Datos/i }));
     expect((await screen.findByLabelText(/^X \(m\)/) as HTMLInputElement).value).toBe('12.75');
     expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
   });

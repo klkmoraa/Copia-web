@@ -206,14 +206,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
   // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
   // just because the TopBar itself re-rendered for an unrelated reason. Its
-  // body is the same `emitWorkspaceCommand('open-model-doctor')` the registry's
+  // body is the same `emitWorkspaceCommand('open-data', { tab: 'review' })` the registry's
   // `analysis:model-doctor` command runs — kept as its own `useCallback` (rather
   // than `modelDoctorCommand.run`, a fresh closure every render) only because
   // `AnalysisStatus` is itself a protected, re-render-sensitive component
   // (CRI-100); the visible "Model Doctor" buttons below read straight off
   // `modelDoctorCommand` instead.
   const openModelDoctor = useCallback(() => {
-    emitWorkspaceCommand('open-model-doctor');
+    emitWorkspaceCommand('open-data', { tab: 'review' });
   }, []);
   const closeImportCenter = () => {
     setImportCenterOpen(false);
@@ -456,8 +456,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             exportación · resto. El separador de medio píxel entre grupos lo pone
             el CSS, que es donde vive el reparto visual. */}
         <div className="topbar-tool-group" role="group" aria-label={t('menu.sectionViews')}>
-          {/* Resultados vive aqui y sólo aqui. El pie del riel y el lanzador
-              flotante lo abrian por su cuenta, sin comando registrado detras. */}
+          {/* Tres lanzadores, tres destinos, UNA superficie: cada botón abre
+              «Datos» en su pestaña. No se colapsan en un solo botón «Datos»
+              porque el de Model Doctor es contrato protegido (D-14 · CRI-95:
+              «nunca desaparece ni pierde su etiqueta accesible»), y porque una
+              pestaña es un destino propio: llevar a las tres al mismo sitio y
+              obligar a buscar la pestaña sería cambiar tres puertas correctas
+              por una puerta y un paso de más. */}
           <IconButton
             variant="secondary"
             className="icon-button results-launcher"

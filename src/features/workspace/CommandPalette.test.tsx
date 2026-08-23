@@ -70,13 +70,13 @@ describe('CommandPalette', () => {
   it('offers Model Doctor before analysis and emits the shared open command', async () => {
     const user = userEvent.setup();
     const openDoctor = vi.fn();
-    window.addEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
+    window.addEventListener(workspaceCommandEventName('open-data'), openDoctor);
     renderPalette();
 
     await user.click(screen.getByRole('option', { name: /Model Doctor/i }));
 
     await waitFor(() => expect(openDoctor).toHaveBeenCalledTimes(1));
-    window.removeEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
+    window.removeEventListener(workspaceCommandEventName('open-data'), openDoctor);
   });
 
   it('offers the structure generator and emits the shared open command', async () => {

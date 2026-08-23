@@ -136,7 +136,7 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     label: () => 'Model Doctor',
     hint: (ctx) => ctx.t('palette.modelDoctorHint'),
     deferredOpen: true,
-    run: () => emitWorkspaceCommand('open-model-doctor'),
+    run: () => emitWorkspaceCommand('open-data', { tab: 'review' }),
   },
   {
     /**
@@ -152,7 +152,7 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     label: (ctx) => ctx.t('results.outputs'),
     hint: (ctx) => ctx.t('palette.openResultsHint'),
     deferredOpen: true,
-    run: () => emitWorkspaceCommand('open-results'),
+    run: () => emitWorkspaceCommand('open-data', { tab: 'results' }),
   },
   {
     id: 'tool:datasheet',
@@ -161,7 +161,7 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     label: (ctx) => ctx.t('datasheet.title'),
     hint: (ctx) => ctx.t('datasheet.description'),
     deferredOpen: true,
-    run: () => emitWorkspaceCommand('open-datasheet'),
+    run: () => emitWorkspaceCommand('open-data', { tab: 'table' }),
   },
   {
     id: 'tool:structure-generator',
@@ -249,8 +249,10 @@ const LAYER_PRESETS: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: Translat
 ];
 
 /**
- * Only the dense/second-half surfaces still open the Results panel (CRI-100):
- * summary, reactions, influence and "learn" have no canvas-layer equivalent yet.
+ * Las lecturas que sólo existen dentro de la superficie: resumen, reacciones,
+ * influencia y «Entender» no tienen equivalente como capa del lienzo (CRI-100),
+ * así que pedirlas es abrir «Datos» en esa lectura. N/V/M y deformada sí lo
+ * tienen y viven en `evidenceLayerCommands`, que no abre nada.
  */
 const PANEL_RESULT_TABS: ReadonlyArray<{ id: ResultTab; labelKey: TranslationKey }> = [
   { id: 'summary', labelKey: 'results.summary' },
@@ -274,10 +276,7 @@ const resultTabCommands = (ctx: CommandContext): CommandListItem[] => PANEL_RESU
   icon: ChartNoAxesCombined,
   label: ctx.t('palette.openResultTab', { tab: ctx.t(tab.labelKey) }),
   disabled: !ctx.hasAnalysis,
-  run: () => {
-    ctx.setResultTab(tab.id);
-    emitWorkspaceCommand('open-results');
-  },
+  run: () => emitWorkspaceCommand('open-data', { tab: 'results', resultTab: tab.id }),
 }));
 
 /**

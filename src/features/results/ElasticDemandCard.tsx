@@ -64,7 +64,7 @@ export const ElasticDemandCard = () => {
     type="button"
     className="elastic-demand-action"
     data-testid="elastic-index-action"
-    onClick={() => emitWorkspaceCommand('open-model-doctor')}
+    onClick={() => emitWorkspaceCommand('open-data', { tab: 'review' })}
   >{t('elastic.actionDoctor')}</button>;
 
   if (view.status === 'unavailable') {

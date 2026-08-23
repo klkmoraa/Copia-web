@@ -6,7 +6,7 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
-import { DatasheetPanel } from './DatasheetPanel';
+import { DatasheetContent } from './DatasheetContent';
 import { createDatasheetProject } from './datasheetFixtures';
 
 /**
@@ -25,13 +25,6 @@ import { createDatasheetProject } from './datasheetFixtures';
 afterEach(cleanup);
 beforeEach(() => localStorage.clear());
 
-/**
- * Estable a propósito. Un `onOpenChange` en línea cambia de identidad en cada
- * render, y el efecto de foco del Drawer se volvería a ejecutar devolviendo el
- * foco a su botón de cerrar en mitad de la secuencia de teclas. `WorkspaceShell`
- * pasa el `setDatasheetOpen` del estado, que sí es estable.
- */
-const keepOpen = () => {};
 
 const Harness = ({ onSelection }: { onSelection: (selection: Selection) => void }) => {
   const { project, replaceProject } = useProjectModel();
@@ -40,7 +33,7 @@ const Harness = ({ onSelection }: { onSelection: (selection: Selection) => void 
   if (project.id !== 'datasheet-fixture') {
     return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
   }
-  return <DatasheetPanel open onOpenChange={keepOpen} />;
+  return <DatasheetContent />;
 };
 
 const renderDatasheet = async () => {

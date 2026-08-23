@@ -477,7 +477,7 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 .workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
 .toolbar { padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
 .desktop-tool-list { display:contents; }
-.mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle,.results-sheet-backdrop { display:none; }
+.mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop { display:none; }
 .tool-button { min-height: 56px; width: 100%; border: 0; background: transparent; border-radius:var(--sc-radius-control); display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 7px; text-align: left; padding: 0 11px; color: var(--text); }
 .tool-button svg { color: currentColor; }
 .tool-button span { font-size: 13px; }
@@ -844,16 +844,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .legend-list { display: grid; gap: 9px; font-size: 11px; }
 .legend-list span { display: flex; align-items: center; gap: 8px; }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }.legend-dot.axial{background:var(--axial)}.legend-dot.shear{background:var(--shear)}.legend-dot.moment{background:var(--moment)}.legend-dot.force{background:var(--force)}.legend-dot.dimension{background:var(--dimension)}.legend-dot.axis{background:var(--axis)}
-
-.results-panel { flex: 0 0 auto; min-height: 150px; max-height: 72dvh; position: relative; display: flex; flex-direction: column; container-type: inline-size; container-name: results-panel; }
 /* The inspector's resize handle can narrow this panel independently of the
    viewport (desktop, wide inspector open), which is exactly the case
    viewport-width media queries can't see — a container query catches it. */
-@container results-panel (max-width: 560px) {
-  .results-commandbar__context>span,
-  .result-tab-family__label { display:none; }
-}
-.resize-handle { position: absolute; z-index: 5; left: 50%; top: -14px; transform: translateX(-50%); width: 64px; height: 28px; border: 1px solid var(--border); background: var(--surface); color: var(--subtle); border-radius:var(--sc-radius-card); display: grid; place-items: center; cursor: ns-resize; touch-action:none; }
 .result-tabs { height: 38px; flex: 0 0 38px; border-bottom: 0.5px solid var(--sc-color-border); display: flex; align-items: stretch; padding: 0 14px; gap: 2px; overflow-x: auto; }
 .result-tabs,.toolbar { scrollbar-width:none; }
 .result-tabs::-webkit-scrollbar,.toolbar::-webkit-scrollbar { display:none; }
@@ -896,12 +889,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
    chart stayed a fixed size, leaving a wall of empty space below both. In
    focus the guidance column is dropped and the chart stretches to fill the
    freed height instead. */
-.results-panel.results-mode-focused .diagram-guidance,
-.results-panel.results-mode-focused .deformation-guidance { display:none; }
-.results-panel.results-mode-focused .diagram-result-layout,
-.results-panel.results-mode-focused .deformation-result-layout { display:flex; flex-direction:column; height:100%; }
-.results-panel.results-mode-focused .diagram-chart { flex:1 1 auto; min-height:0; }
-.results-panel.results-mode-focused .diagram-chart svg { flex:1 1 auto; height:auto; min-height:240px; }
 .diagram-guidance { border-right:1px solid var(--border); padding:14px 20px; display:grid; grid-template-columns:24px 1fr; align-content:start; gap:10px 10px; }
 .diagram-guidance strong{font-size:11px}.diagram-guidance p{margin:3px 0 8px;color:var(--muted);font-size:10px;line-height:1.4}
 .step-badge{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;color:white;font-size:10px;background: var(--accent-fill)}.step-badge.axial{background:var(--axial)}.step-badge.shear{background:var(--shear)}.step-badge.moment{background:var(--moment)}.step-badge.muted{background:var(--subtle)}
@@ -914,19 +901,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 /* Focus mode has a lot of extra height to spend; on wide screens the step
    list reflows into two columns instead of a single ever-taller column,
    while the explorer/pedagogy/toolbar/source sections stay full width. */
-@media (min-width:1024px) {
-  .results-panel.results-mode-focused .learning-steps {
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    align-items:start;
-    gap:9px 14px;
-  }
-  .results-panel.results-mode-focused .learning-steps > .education-explorer,
-  .results-panel.results-mode-focused .learning-steps > .classroom-pedagogy,
-  .results-panel.results-mode-focused .learning-steps > .learning-toolbar,
-  .results-panel.results-mode-focused .learning-steps > .educational-source {
-    grid-column:1/-1;
-  }
-}
 .education-explorer{border-radius:var(--sc-radius-card);overflow:hidden;margin-bottom:5px}.education-explorer-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;background:color-mix(in srgb,var(--accent) 7%,var(--surface))}.education-explorer-heading>div{display:flex;flex-direction:column;gap:2px}.education-explorer-heading strong{font-size:12px}.education-explorer-heading small{font-size:11px;color:var(--muted)}.education-explorer-heading>span{font-size:11px;color:var(--accent);font-weight:700}.education-stage-tabs{display:flex;gap:3px;padding:5px 7px;border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);overflow-x:auto}.education-stage-tabs button{border:0;background:transparent;border-radius:var(--sc-radius-control);padding:7px 10px;font-size:11px;color:var(--muted);white-space:nowrap}.education-stage-tabs button.active{background:var(--accent-soft);color:var(--accent-on-soft);font-weight:590}.education-stage{padding:12px}.education-stage>p{font-size:10px;line-height:1.5;color:var(--muted)}.education-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.education-kpis>div{display:flex;flex-direction:column;gap:3px;padding:8px;border-radius:var(--sc-radius-control);background:var(--surface-2)}.education-kpis span{font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0}.education-kpis strong{font-size:11px;overflow:hidden;text-overflow:ellipsis}.education-element-controls{display:flex;gap:10px;margin-bottom:9px}.education-element-controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}.education-element-controls select{border:1px solid var(--border);background:var(--surface);border-radius:var(--sc-radius-control);padding:5px 24px 5px 7px;font-size:10px}.matrix-view{margin-top:10px;border-radius:var(--sc-radius-control);overflow:hidden}.matrix-view-heading{display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2)}.matrix-view-heading strong{font-size:10px}.matrix-view-heading span,.matrix-view>small{font-size:10px;color:var(--muted)}.matrix-view>small{display:block;padding:5px 10px}.matrix-scroll{overflow:auto;max-height:250px}.matrix-view table{border-collapse:collapse;min-width:100%;font-family:"SFMono-Regular",Consolas,monospace;font-size:10px}.matrix-view th,.matrix-view td{padding:5px 7px;border-right:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);text-align:right;white-space:nowrap}.matrix-view th{position:sticky;top:0;background:var(--surface-2);z-index:1}.matrix-view td.zero{color:var(--subtle)}.dof-table tbody tr{cursor:pointer}.dof-table tbody tr:hover{background:var(--accent-soft)}.verification-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.verification-grid>div{padding:10px;border:1px solid var(--border);border-radius:var(--sc-radius-control);display:flex;flex-direction:column;gap:3px}.verification-grid>div.passed{border-color:color-mix(in srgb,var(--success) 35%,var(--border));background:color-mix(in srgb,var(--success) 6%,var(--surface))}.verification-grid>div.warning{border-color:color-mix(in srgb,var(--warning) 35%,var(--border))}.verification-grid span,.verification-grid small{font-size:10px;color:var(--muted)}.verification-grid strong{font-size:12px}.response-selector{display:flex;padding:2px;background:var(--surface-2);border-radius:var(--sc-radius-control)}.response-selector button{width:30px;height:26px}.response-selector button.active{background:var(--sc-color-surface-inset);color:var(--accent);box-shadow:none}.diagram-chart.deformation .chart-line{stroke:var(--accent);stroke-width:2}.deformation-guidance .step-badge.deformed{background: var(--accent-fill);color:var(--accent-foreground)}
 
 /* Numerical substitution (AG-014): the reader compares this block against the matrix
@@ -1038,7 +1012,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .inspector-panel::before { content:''; width:42px; height:5px; border-radius:var(--sc-radius-xs); background:var(--border); position:absolute; left:50%; top:7px; transform:translateX(-50%); }
   .inspector-tabs { grid-template-columns:repeat(3,minmax(0,1fr)) 46px; padding-top:10px;height:60px;flex-basis:60px; }.mobile-inspector-close { display:grid!important; place-items:center; width:36px; height:36px; align-self:center; justify-self:center; border-radius:var(--sc-radius-control)!important; color:var(--muted)!important; }.mobile-inspector-close:hover { background:var(--surface-2)!important; color:var(--text)!important; }.mobile-inspector-close::after { display:none; }
   .mobile-inspector-backdrop { display:block; position:absolute; z-index:var(--sc-z-topbar); inset:0; border:0; background:var(--sc-color-overlay-soft); }
-  .results-panel { min-height:180px; max-height:58dvh; }
   .results-body { padding-bottom:calc(70px + env(safe-area-inset-bottom)); }
   .diagram-result-layout { grid-template-columns:1fr; }
   .diagram-guidance { display:none; }
@@ -1060,7 +1033,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 }
 
 @media print {
-  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.professional-note,.canvas-navigator,.resize-handle{display:none!important}.workspace{display:block}.center-stage{display:block}.canvas-host{height:58vh}.results-panel{height:auto!important;max-height:none;border:0}.results-body{overflow:visible;padding-bottom:0}.result-tabs{display:none}.structural-canvas{height:58vh}.diagram-result-layout{grid-template-columns:1fr}.diagram-guidance{display:none}
+  html,body,#root{overflow:visible;height:auto}.topbar,.toolbar,.inspector-panel,.professional-note,.canvas-navigator,.data-surface-tabs{display:none!important}
+  /* Imprimir con «Datos» abierta no debe pintar el cajón: el papel no tiene
+     superficies modales. Se aplana la superficie y se retira su velo. */
+  .sc-overlay{position:static!important;background:none!important;inset:auto!important;display:block!important}
+  .data-surface{position:static!important;width:auto!important;max-width:none!important;height:auto!important;max-height:none!important;transform:none!important;background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.workspace{display:block}.center-stage{display:block}.canvas-host{height:58vh}.results-body{overflow:visible;padding-bottom:0}.result-tabs{display:none}.structural-canvas{height:58vh}.diagram-result-layout{grid-template-columns:1fr}.diagram-guidance{display:none}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1113,8 +1090,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .brand-mark { width:26px; font-size:25px; }.topbar { padding-left:8px; padding-right:8px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
   .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:var(--sc-radius-card); }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
-  .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }
-  .results-panel { min-height:164px; max-height:58dvh; }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
+  .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
   .professional-note { flex-basis:18px; font-size:10px; line-height:1.15; }
   .diagram-chart { padding:9px 10px 8px; }
   .diagram-chart-heading{gap:7px}.diagram-chart-heading label span{display:none}.diagram-chart-heading strong{font-size:10px}.diagram-chart svg{height:202px}
@@ -1149,7 +1125,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 @media (max-width:1023px) and (max-height:600px) {
   .canvas-host { min-height:112px; }
-  .results-panel { min-height:128px; max-height:42dvh; height:42dvh!important; }
   .professional-note { display:none; }
   .toolbar { bottom:8px; }
   .canvas-navigator { bottom:70px; }
@@ -1218,25 +1193,10 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .result-table-card { padding:0; border-radius:var(--sc-radius-control); overflow:hidden; }
 
 /* Lanzadores de la superficie densa: no son pestañas, son invocaciones. */
-.results-dense-launchers { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; padding:0 18px 8px; }
-.results-dense-launchers__label { color:var(--muted); font-size:10px; font-weight:700; letter-spacing:0; text-transform:none; }
-.results-dense-launchers>div { display:flex; flex-wrap:wrap; gap:6px; }
-.results-dense-launchers button { min-height:26px; padding:0 10px; border:0.5px solid var(--sc-color-border); border-radius:var(--sc-radius-control); background:var(--sc-color-surface-1); box-shadow:var(--sc-elevation-1); color:var(--text); font:inherit; font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); cursor:pointer; }
-.results-dense-launchers button:hover { background:var(--sc-color-fill-quaternary); }
-.results-dense-launchers button:focus-visible { outline:var(--sc-focus-ring-width) solid color-mix(in srgb,var(--focus) 45%,transparent); outline-offset:var(--sc-focus-ring-offset); }
 
 /* Superficie `dense`: la presenta el broker (drawer en X2/M1, fullscreen en
    K0). Aquí sólo vive su interior — nunca su elevación. */
-.dense-results-surface .dense-results-tabs { display:flex; flex-wrap:wrap; gap:6px; padding-bottom:10px; }
-.dense-results-tabs button { min-height:26px; padding:0 10px; border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--muted); font:inherit; font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); cursor:pointer; }
-.dense-results-tabs button:hover { background:var(--sc-color-fill-quaternary); color:var(--text); }
-.dense-results-tabs button.active { background:var(--sc-color-action-primary); color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-semibold); }
-.dense-results-tabs button:focus-visible { outline:var(--sc-focus-ring-width) solid color-mix(in srgb,var(--focus) 45%,transparent); outline-offset:var(--sc-focus-ring-offset); }
-.dense-results-panel { min-width:0; display:grid; gap:12px; }
 .dense-reactions { min-width:0; display:grid; gap:10px; }
-@media (max-width:700px) {
-  .results-dense-launchers { padding:0 10px 8px; }
-}
 .scenario-card-failure { grid-column:1/-1; color:var(--muted); font-size:10px; }
 .summary-table-wrap { overflow:auto; }
 .result-extrema-table caption { padding:8px 10px; text-align:left; background:var(--surface-2); color:var(--muted); font-size:11px; }
@@ -1384,7 +1344,6 @@ button,
 .result-tabs button.active.shear { color:var(--shear); }
 .result-tabs button.active.moment { color:var(--moment); }
 .result-tabs button.active.influence { color:var(--deformed); }
-.resize-handle { border-color:var(--border-soft); box-shadow:var(--sc-shadow-raised); }
 .empty-results,.failed-results {
   min-height:calc(100% - 32px);
   margin:16px;
@@ -1602,35 +1561,6 @@ button,
   .mobile-palette-tool.tool-distributedLoad { --tool-color:var(--sc-color-tool-distributed-load); }
   .mobile-palette-tool.tool-moment { --tool-color:var(--sc-color-tool-moment); }
   .mobile-palette-tool.tool-delete { --tool-color:var(--sc-color-tool-destructive); }
-
-  .results-mobile-toggle {
-    display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto;
-    align-items:center;
-    gap:10px;
-    width:100%;
-    height:50px;
-    min-height:50px;
-    padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));
-    border:0;
-    border-bottom:1px solid var(--border-soft);
-    background:var(--surface);
-    color:var(--text);
-    text-align:left;
-  }
-  .results-mobile-toggle i { width:20px; height:4px; border-radius:var(--sc-radius-xs); background: var(--accent-ink); }
-  .results-mobile-toggle i.axial { background:var(--axial); }
-  .results-mobile-toggle i.shear { background:var(--shear); }
-  .results-mobile-toggle i.moment { background:var(--moment); }
-  .results-mobile-toggle i.influence { background:var(--deformed); }
-  .results-mobile-toggle strong { overflow:hidden; text-overflow:ellipsis; font-size:12px; white-space:nowrap; }
-  .results-panel { min-height:220px; max-height:58dvh; }
-  .results-panel.mobile-collapsed { min-height:54px; max-height:54px; height:54px!important; overflow:hidden; }
-  .results-panel.mobile-collapsed .results-mobile-toggle { height:54px; border-bottom:0; }
-  .results-panel.mobile-collapsed .resize-handle,
-  .results-panel.mobile-collapsed .result-tabs,
-  .results-panel.mobile-collapsed .results-body { display:none; }
-  .resize-handle { display:none; }
   .results-body { padding-bottom:8px; }
   .influence-line-view { margin:8px; }
   .influence-line-view .diagram-chart { margin:0 8px; }
@@ -1717,8 +1647,6 @@ button,
     border-radius:var(--sc-radius-panel) 0 0 18px;
   }
   .inspector-panel::before { display:none; }
-  .results-panel { min-height:180px; max-height:56dvh; height:min(46dvh,320px)!important; }
-  .results-panel.mobile-collapsed { min-height:50px; max-height:50px; height:50px!important; }
   .mobile-actions-menu,.project-menu { max-height:calc(100dvh - 58px); }
 }
 
@@ -1729,8 +1657,8 @@ html { -webkit-tap-highlight-color:transparent; }
 .welcome-base { display:contents; }
 .canvas-host { contain:layout paint; }
 .toolbar { contain:layout style; }
-.inspector-panel,.results-panel { contain:layout paint style; }
-.welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel,.results-panel,.professional-note {
+.inspector-panel { contain:layout paint style; }
+.welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel,.professional-note {
   transition:var(--sc-transition-theme);
 }
 
@@ -1751,9 +1679,6 @@ button:not(:disabled):active,.selection-card:active {
 .mobile-inspector-backdrop,.import-center-backdrop,.new-exercise-backdrop { animation:native-fade-in var(--motion-standard) var(--ease-enter) both; }
 .import-center-dialog,.new-exercise-dialog { animation:native-dialog-in var(--motion-slow) var(--ease-native) both; }
 .results-body>*,.canvas-result-legend { animation:native-content-in var(--motion-standard) var(--ease-native) both; }
-.results-panel { transition:height var(--motion-slow) var(--ease-native),min-height var(--motion-slow) var(--ease-native),max-height var(--motion-slow) var(--ease-native),background-color var(--motion-standard) ease,border-color var(--motion-standard) ease; }
-.results-toggle-chevron { transition:transform var(--motion-standard) var(--ease-native); }
-.results-toggle-chevron.expanded { transform:rotate(180deg); }
 /* El icono NO lleva su propio hundimiento: la tecla entera baja con
    `--sc-press-transform` (ui.css, `.sc-tool-button.is-active`). Un empujón
    extra sobre el glifo era un segundo desplazamiento, con otra magnitud y fuera
@@ -1807,7 +1732,7 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (prefers-reduced-transparency:reduce) {
-  .import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop,.results-sheet-backdrop { backdrop-filter:none!important; }
+  .import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop { backdrop-filter:none!important; }
 }
 
 @media (prefers-reduced-motion:reduce) {
@@ -1821,17 +1746,11 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-technical)!important;
 }
 
-.results-panel :is(button,input,select),
-.inspector-panel :is(button,input,select),
-.quick-entry-bar :is(button,input,select),
-.import-center-dialog :is(button,input,select) {
+.inspector-panel :is(button,input,select),.quick-entry-bar :is(button,input,select),.import-center-dialog :is(button,input,select) {
   font-size:var(--sc-font-size-control)!important;
 }
 
-.results-panel :is(small,p,dt,dd,span,td,th,caption,code),
-.inspector-panel :is(small,p,label,span),
-.quick-entry-bar :is(small,span,strong),
-.import-center-dialog :is(small,p) {
+.inspector-panel :is(small,p,label,span),.quick-entry-bar :is(small,span,strong),.import-center-dialog :is(small,p) {
   font-size:var(--sc-font-size-label)!important;
   line-height:1.4;
 }
@@ -1846,12 +1765,7 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (pointer:coarse) {
-  .results-panel :is(button,input,select),
-  .inspector-panel :is(button,input,select),
-  .quick-entry-bar button,
-  .import-center-dialog button,
-  .canvas-hint button,
-  .mobile-inspector-toggle {
+  .inspector-panel :is(button,input,select),.quick-entry-bar button,.import-center-dialog button,.canvas-hint button,.mobile-inspector-toggle {
     min-width:var(--sc-control-height-touch);
     min-height:var(--sc-control-height-touch);
   }
@@ -1860,7 +1774,6 @@ button:not(:disabled):active,.selection-card:active {
      an academic exercise measured 296x33 on a phone (AG-014). Only the height gets a floor
      — a min-width would stretch a three-word link across its whole column — and the
      inline-flex is what lets an inline anchor honour a height at all. */
-  .results-panel a[href],
   .inspector-panel a[href],
   .import-center-dialog a[href] {
     display:inline-flex;
@@ -2269,9 +2182,6 @@ button:not(:disabled):active,.selection-card:active {
   grid-template-columns:minmax(0,1fr);
   grid-template-rows:minmax(0,1fr);
 }
-.app-shell[data-full-canvas='true'] :is(.toolbar,.inspector-panel,.results-panel,.mobile-inspector-toggle,.mobile-inspector-backdrop) {
-  display:none!important;
-}
 .app-shell[data-full-canvas='true'] .center-stage {
   grid-column:1;
   grid-row:1;
@@ -2617,38 +2527,6 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* Phase 9: analytical results center -------------------------------------- */
-.results-commandbar {
-  min-height:52px;
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  padding:7px 16px 7px 20px;
-  border-bottom:1px solid var(--border-soft);
-  background:color-mix(in srgb,var(--surface) 96%,var(--accent-soft));
-}
-.results-commandbar__context { min-width:0; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:baseline; gap:5px 10px; }
-.results-commandbar__context>span { grid-column:1/-1; color:var(--muted); font-size:11px!important; font-weight:590; letter-spacing:0; text-transform:none; }
-.results-commandbar__context strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
-.results-commandbar__context small { display:inline-flex; align-items:center; gap:5px; color:var(--muted); white-space:nowrap; }
-.results-commandbar__context small::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--subtle); }
-.results-commandbar__context small.is-resolved::before { background:var(--success); }
-.results-commandbar__context small.is-warning::before { background:var(--warning); }
-.results-mode-control { flex:0 0 auto; display:flex; gap:2px; padding:2px; border:0; border-radius:var(--sc-radius-control); background:var(--sc-color-fill-tertiary); }
-.results-mode-control button { min-height:22px; padding:0 8px; border:0; border-radius:calc(var(--sc-radius-control) - 2px); background:transparent; color:var(--muted); font-size:var(--sc-font-size-label)!important; font-weight:var(--sc-font-weight-medium); }
-.results-mode-control button:hover { color:var(--text); }
-.results-mode-control button[aria-pressed='true'] { background:var(--sc-color-surface-1); color:var(--text); box-shadow:var(--sc-elevation-1); font-weight:var(--sc-font-weight-semibold); }
-@media (min-width:1024px) {
-  .results-panel.results-mode-focused { height:72dvh!important; max-height:72dvh; z-index:8; box-shadow:var(--sc-shadow-sheet); }
-  .results-panel.results-mode-focused:focus { outline:0; }
-  .results-panel.results-mode-focused:focus-visible { outline:var(--sc-focus-ring-width) solid var(--focus); outline-offset:calc(-1 * var(--sc-focus-ring-width)); box-shadow:var(--sc-shadow-sheet); }
-}
-.results-panel.results-mode-compact .results-commandbar { min-height:42px; padding-block:4px; }
-.results-panel.results-mode-compact .results-commandbar__context>span,
-.results-panel.results-mode-compact .result-tab-family__label { display:none; }
-.results-panel.results-mode-compact .result-tabs { height:43px; flex-basis:43px; }
-.results-panel.results-mode-compact .result-tabs button { height:43px; }
 .result-tabs { height:52px; flex-basis:52px; align-items:stretch; gap:8px; padding-inline:14px; }
 .result-tab-family { flex:0 0 auto; display:grid; grid-template-rows:15px minmax(0,1fr); align-items:stretch; border-right:0.5px solid var(--sc-color-divider); padding:2px 10px 0 0; }
 .result-tab-family:last-child { border-right:0; padding-right:0; }
@@ -2661,14 +2539,6 @@ button:not(:disabled):active,.selection-card:active {
 .result-object-link:hover,.result-object-link[aria-pressed='true'] { color:var(--selection); background:color-mix(in srgb,var(--selection) 10%,transparent); }
 
 @media (max-width:1023px) {
-  .results-sheet-backdrop { display:block; position:absolute; inset:0; z-index:7; border:0; background:var(--sc-color-overlay-sheet); }
-  .results-panel:not(.mobile-collapsed) { position:absolute; inset:auto 0 0; z-index:8; width:100%; border-radius:var(--sc-radius-card) 14px 0 0; }
-  .results-commandbar { min-height:46px; padding:5px 12px; }
-  .results-mode-control { display:none; }
-  .results-commandbar__context { width:100%; grid-template-columns:minmax(0,1fr) auto; }
-  .results-commandbar__context>span { display:none; }
-  .results-commandbar__context strong { font-size:12px; }
-  .results-panel.mobile-collapsed .results-commandbar { display:none; }
   .result-tabs { height:54px; flex-basis:54px; gap:7px; padding-inline:10px; }
   .result-tab-family { grid-template-rows:14px minmax(0,1fr); padding-right:7px; }
   .result-tab-family__label { padding-left:7px; font-size:7px!important; }
@@ -2676,24 +2546,18 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (max-width:700px) {
-  .results-commandbar__context small { display:none; }
   .result-tabs { height:50px; flex-basis:50px; }
   .result-tab-family { display:flex; padding-top:0; }
   .result-tab-family__label { display:none; }
   .result-tabs button { height:50px; }
 }
 
-@media (prefers-reduced-motion:reduce) {
-  .results-panel { transition:none!important; }
-}
-
-/* .results-mode-control and .result-tabs set their own height/min-height per
-   breakpoint above; on a coarse pointer that can leave them under 44px (e.g.
-   the 30px mode buttons at >=1024px, reachable on an iPad or a touchscreen
-   laptop). Floor them here — min-height never shrinks a taller declaration,
-   so this only ever raises, never fights, those existing rules. */
+/* `.result-tabs` fija su propia altura por breakpoint; con puntero grueso eso
+   puede dejar los botones por debajo de 44px (iPad, portátil táctil). Se les
+   pone suelo aquí — `min-height` nunca encoge una declaración más alta, así que
+   sólo sube, nunca pelea con las de arriba. El control de modos que compartía
+   este suelo se fue con el dock inferior de Resultados. */
 @media (pointer:coarse) {
-  .results-mode-control button { min-height:var(--sc-control-height-touch); }
   .result-tabs button { min-height:var(--sc-control-height-touch); min-width:var(--sc-control-height-touch); }
 }
 
@@ -2736,26 +2600,6 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (max-width:700px) {
-  .results-panel[data-canvas-interactive='true'] {
-    position:relative;
-    z-index:var(--sc-z-modal);
-    inset:auto;
-    flex:0 0 auto;
-    width:100%;
-    height:min(46dvh,420px)!important;
-    min-height:min(180px,46dvh);
-    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 168px);
-    border-radius:var(--sc-radius-panel) 18px 0 0;
-  }
-  .results-panel:not(.mobile-collapsed) .results-mobile-toggle {
-    height:54px;
-    min-height:54px;
-    padding-top:0;
-  }
-  .results-panel:not(.mobile-collapsed) .results-body {
-    padding-bottom:max(18px,env(safe-area-inset-bottom));
-    scroll-padding-bottom:max(24px,env(safe-area-inset-bottom));
-  }
   .mobile-inspector-toggle {
     top:auto;
     bottom:calc(72px + env(safe-area-inset-bottom));
@@ -2765,14 +2609,6 @@ button:not(:disabled):active,.selection-card:active {
     bottom:var(--sc-visual-viewport-bottom,0px);
     height:min(78dvh,720px,calc(var(--sc-visual-viewport-height,100dvh) - 8px));
     max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px);
-  }
-}
-
-@media (max-width:700px) and (max-height:480px) {
-  .results-panel:not(.mobile-collapsed) {
-    height:min(44dvh,180px)!important;
-    min-height:min(150px,42dvh);
-    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 140px);
   }
 }
 
@@ -2844,19 +2680,6 @@ button:not(:disabled):active,.selection-card:active {
     font-size:10px!important;
   }
   .canvas-result-legend i { width:16px; }
-
-  .results-commandbar {
-    display:none!important;
-  }
-  .results-panel[data-canvas-interactive='true'] {
-    height:min(42dvh,420px)!important;
-    min-height:min(176px,42dvh);
-  }
-  .results-panel:not(.mobile-collapsed) .results-mobile-toggle {
-    height:48px;
-    min-height:48px;
-    padding-inline:12px;
-  }
   .result-tabs {
     height:46px;
     flex-basis:46px;
@@ -2901,45 +2724,6 @@ button:not(:disabled):active,.selection-card:active {
   .center-stage {
     grid-column:1;
     grid-row:1;
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) {
-    display:grid;
-    grid-template-columns:minmax(0,58%) minmax(0,42%);
-    grid-template-rows:auto minmax(0,1fr);
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) > .classroom-workspace-journey {
-    grid-column:1/-1;
-    grid-row:1;
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) > .canvas-host {
-    grid-column:1;
-    grid-row:2;
-    min-width:0;
-    min-height:0;
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) > .results-panel[data-canvas-interactive='true'] {
-    grid-column:2;
-    grid-row:2;
-    width:100%;
-    height:100%!important;
-    min-height:0;
-    max-height:none;
-    --results-hairline-width:1px 0 0 1px;
-    border-radius:var(--sc-radius-card) 0 0;
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-mode-badge {
-    top:8px;
-    left:8px;
-    max-width:calc(100% - 66px);
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-result-legend {
-    top:96px;
-    left:10px;
-    max-width:calc(100% - 20px);
-  }
-  .center-stage:has(> .results-panel:not(.mobile-collapsed)) .canvas-navigator {
-    right:8px;
-    bottom:8px;
   }
   .canvas-host .canvas-layer-popover {
     top:60px;
@@ -3034,16 +2818,14 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* Cambio de tema Día/Noche con transición coordinada de superficies. */
-.app-shell, .topbar, .toolbar, .inspector-panel, .results-panel,
-.center-stage, .welcome-screen, .professional-note {
+.app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen, .professional-note {
   transition: var(--sc-transition-theme);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .inspector-tabs button::after, .result-tabs button::after { transition: none; }
   .tool-button, .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab, .segmented-control button { transition: none; }
-  .app-shell, .topbar, .toolbar, .inspector-panel, .results-panel,
-  .center-stage, .welcome-screen, .professional-note { transition: none; }
+  .app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen, .professional-note { transition: none; }
 }
 
 .sc-toast-container { position:fixed; z-index:var(--sc-z-toast); bottom:calc(24px + env(safe-area-inset-bottom)); right:calc(24px + env(safe-area-inset-right)); display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:calc(100vw - 32px); width:360px; }
@@ -3179,8 +2961,7 @@ button:not(:disabled):active,.selection-card:active {
   box-shadow:none;
 }
 
-.inspector-panel,
-.results-panel {
+.inspector-panel {
   background:var(--sc-color-surface-1);
   border-color:var(--sc-color-border);
   box-shadow:none;
@@ -3188,7 +2969,6 @@ button:not(:disabled):active,.selection-card:active {
 
 .toolbar { padding:8px 8px; }
 .inspector-panel { border-left:1px solid var(--sc-color-border); }
-.results-panel { border-top:1px solid var(--sc-color-border); }
 
 .brand-mark { color:var(--accent); }
 .project-name input {
@@ -3290,10 +3070,6 @@ button:not(:disabled):active,.selection-card:active {
   .welcome-template-card:active { transform:none; }
 }
 
-@media print {
-  .results-panel { background:transparent !important; border:0 !important; box-shadow:none !important; }
-}
-
 /* ========================================================================
    SEGUNDA PASADA CLAY · composición y comportamiento del sistema oficial
    ------------------------------------------------------------------------
@@ -3378,8 +3154,7 @@ button:not(:disabled):active,.selection-card:active {
 /* Workspace: barras, navegación y chrome del lienzo --------------------- */
 .topbar,
 .toolbar,
-.inspector-panel,
-.results-panel {
+.inspector-panel {
   background:var(--surface);
   border-color:var(--border);
   box-shadow:none;
@@ -3583,9 +3358,6 @@ button:not(:disabled):active,.selection-card:active {
 .response-selector,
 .filter-chip-row { background:var(--sc-color-surface-2); box-shadow:none; }
 .combination-card[open] { background:var(--surface); box-shadow:var(--sc-elevation-1); }
-
-.results-panel { border-top:1px solid var(--border); }
-.results-commandbar { background:var(--surface); }
 .result-tab-family { border-color:var(--border-soft); }
 .results-table tbody tr:hover td { background:color-mix(in srgb,var(--accent) 8%,var(--surface)); }
 
@@ -3656,12 +3428,6 @@ button:not(:disabled):active,.selection-card:active {
 
 /* Results: lectura técnica compacta con la materia y la respuesta física del
    brandbook. La propuesta aporta la jerarquía, no sus negros ni halos. */
-.results-commandbar { min-height:42px; padding:7px 14px; }
-.results-commandbar__context > span,
-.results-commandbar__context > strong,
-.results-mode-control button,
-.results-mode-control { padding:3px; border-radius:var(--sc-radius-pill); background:var(--sc-color-surface-2); box-shadow:none; }
-.results-mode-control button[aria-pressed='true'] { background:var(--surface); color:var(--accent); box-shadow:var(--sc-elevation-1); }
 .result-tabs { min-height:42px; height:42px; flex-basis:42px; gap:2px; padding:0 10px; }
 .result-tabs button { height:42px; padding:0 11px; border-radius:var(--sc-radius-sm) var(--sc-radius-sm) 0 0; }
 .result-tabs button.active { background:var(--sc-color-surface-2); box-shadow:none; }
@@ -3784,10 +3550,6 @@ button:not(:disabled):active,.selection-card:active {
   .welcome-template-card:hover,
   .tool-button:hover:not(:disabled),
   .tool-button:active:not(:disabled) { transform:none; }
-}
-
-@media print {
-  .results-panel { background:transparent !important; border:0 !important; box-shadow:none !important; }
 }
 
 /* Rail compacto: el estado contraído conserva la geometría de la referencia
@@ -4705,18 +4467,6 @@ button:not(:disabled):active,.selection-card:active {
   box-shadow:none;
   transform:var(--sc-press-transform);
 }
-.results-mode-control button {
-  border:var(--sc-hairline);
-  background:var(--sc-color-surface-1);
-  box-shadow:var(--sc-elevation-1);
-  transition:var(--sc-transition-control);
-}
-.results-mode-control button[aria-pressed='true'] {
-  color:var(--accent);
-  background:var(--sc-color-surface-inset);
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
 
 /* --- TopBar: disparador de la paleta ----------------------------------- */
 .topbar-command-button {
@@ -4923,7 +4673,6 @@ button:not(:disabled):active,.selection-card:active {
   .section-viewer-modes button.active,
   .result-tabs button:hover:not(.active),
   .result-tabs button.active,
-  .results-mode-control button[aria-pressed='true'],
   .topbar-command-button:hover,
   .topbar-command-button:active { transform:none; transition:none; }
 }
@@ -5294,4 +5043,65 @@ button:not(:disabled):active,.selection-card:active {
 }
 @media (forced-colors:active) {
   .portal-hero__body { filter: none; }
+}
+
+/* Superficie «Datos» -------------------------------------------------------
+   Un cromo para las tres pestañas. Sustituye al dock inferior de Resultados,
+   a la superficie `dense`, y a los cromos propios de la Hoja de datos y del
+   Model Doctor: cuatro superficies que el broker ya obligaba a excluirse. */
+.data-surface-tabs { display:flex; flex-wrap:wrap; gap:var(--sc-space-1); padding-bottom:var(--sc-space-3); }
+.data-surface-tabs button {
+  min-height:var(--sc-control-height-sm);
+  padding:0 var(--sc-space-3);
+  border:0;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font:inherit;
+  font-size:var(--sc-font-size-label);
+  font-weight:var(--sc-font-weight-medium);
+  cursor:pointer;
+}
+.data-surface-tabs button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
+.data-surface-tabs button.active { background:var(--sc-color-action-primary); color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-semibold); }
+.data-surface-tabs button:focus-visible { outline:var(--sc-focus-ring-width) solid color-mix(in srgb,var(--focus) 45%,transparent); outline-offset:var(--sc-focus-ring-offset); }
+.data-surface-panel { min-width:0; display:grid; gap:var(--sc-space-3); container-type:inline-size; container-name:data-surface; }
+
+/* «Datos» es densa: reacciones, una rejilla del modelo entero y diagramas con
+   su columna de lectura. El cajón por defecto del sistema mide 420px y ahí la
+   lectura de un diagrama se parte. Se le da su propio ancho, acotado al
+   viewport. */
+.data-surface.sc-modal-surface--right { width:min(720px, 100vw); }
+
+/* Y aun con ese ancho, el contenido puede quedar estrecho: lo que manda no es
+   el viewport —que en X2 es ancho— sino el CONTENEDOR. Una `@media` no puede
+   ver esto; una `@container` sí, y es la misma solución que el panel anterior
+   ya usaba antes de entrar aquí. */
+/* La cabecera del diagrama se diseñó para el ancho de un dock a sangre. Dentro
+   del cajón se le acaba el renglón y parte «Diagrama de momento flector» en
+   tres líneas y la pista del cursor en cinco. Aquí reparte en dos renglones y
+   la pista, que es una ayuda y no un dato, cede el sitio. */
+@container data-surface (max-width: 760px) {
+  .diagram-chart-heading { flex-wrap:wrap; row-gap:4px; }
+  .diagram-chart-heading strong { flex:1 0 100%; order:-1; }
+  .diagram-chart-heading small { display:none; }
+}
+
+@container data-surface (max-width: 560px) {
+  .diagram-result-layout,
+  .deformation-result-layout { grid-template-columns:1fr; }
+  .diagram-guidance,
+  .deformation-guidance { display:none; }
+  .results-metric-cards { grid-template-columns:1fr; }
+  .result-tab-family__label { display:none; }
+}
+
+/* El cuerpo de Resultados dentro de la superficie. Sin alto propio: lo pone el
+   cajón, que es quien negocia con la pantalla. */
+.results-content { display:grid; gap:var(--sc-space-3); min-width:0; }
+.results-context { display:flex; align-items:baseline; gap:var(--sc-space-2); margin:0; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); }
+.results-context strong { overflow:hidden; color:var(--sc-color-text-primary); text-overflow:ellipsis; white-space:nowrap; }
+
+@media (pointer:coarse) {
+  .data-surface-tabs button { min-height:var(--sc-control-height-touch); }
 }

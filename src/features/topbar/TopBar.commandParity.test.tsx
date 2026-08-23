@@ -111,15 +111,16 @@ describe('commandRegistry: TopBar and Palette resolve the same command (construc
       expect(buttonCommand.label).toBe(paletteCommand.label);
       expect(buttonCommand.id).toBe(paletteCommand.id);
 
-      const events: string[] = [];
-      const unsubscribeDatasheet = onWorkspaceCommand('open-datasheet', () => events.push('open-datasheet'));
-      const unsubscribeDoctor = onWorkspaceCommand('open-model-doctor', () => events.push('open-model-doctor'));
+      // Los dos destinos viajan ahora por UN comando con la pestaña como carga
+      // útil, así que la paridad se comprueba sobre la pestaña, no sobre el
+      // nombre del evento: botón y paleta tienen que pedir la misma.
+      const tabs: (string | undefined)[] = [];
+      const unsubscribe = onWorkspaceCommand('open-data', (request) => tabs.push(request?.tab));
       buttonCommand.run();
       paletteCommand.run();
-      unsubscribeDatasheet();
-      unsubscribeDoctor();
-      expect(events).toHaveLength(2);
-      expect(new Set(events).size).toBe(1); // same event both times — same underlying action
+      unsubscribe();
+      expect(tabs).toHaveLength(2);
+      expect(new Set(tabs).size).toBe(1); // same tab both times — same underlying action
     }
   });
 
@@ -162,7 +163,9 @@ describe('TopBar rendered live: shares real state with the Palette, not a parall
   it('clicking the rendered Datasheet button and the rendered Palette entry emit the same workspace command', async () => {
     const user = userEvent.setup();
     const events: string[] = [];
-    const unsubscribe = onWorkspaceCommand('open-datasheet', () => events.push('button-or-palette'));
+    const unsubscribe = onWorkspaceCommand('open-data', (request) => events.push(request?.tab ?? 'results'));
+    // Botón y paleta piden la MISMA pestaña: eso es la paridad ahora que los
+    // cuatro comandos por superficie son uno con la pestaña como carga útil.
 
     render(<TopBarHarness>
       <TopBar />
@@ -175,7 +178,7 @@ describe('TopBar rendered live: shares real state with the Palette, not a parall
     // The Palette defers its effect a frame past its own close (CRI-103
     // choreography); the button fires immediately — both still land on the
     // same event, proving the same underlying `run`.
-    await waitFor(() => expect(events).toEqual(['button-or-palette', 'button-or-palette']));
+    await waitFor(() => expect(events).toEqual(['table', 'table']));
     unsubscribe();
   });
 
@@ -206,9 +209,9 @@ describe('TopBar source: no second hand-written implementation of a registered c
     expect(source).not.toContain('window.print()');
   });
 
-  it('emits open-model-doctor exactly once, in the documented stable-callback exception for the memoized AnalysisStatus prop', () => {
+  it('emite la apertura de la Revisión exactamente una vez, en la excepción documentada del callback estable', () => {
     const codeLines = source.split('\n').filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'));
-    const occurrences = codeLines.filter((line) => line.includes("emitWorkspaceCommand('open-model-doctor')")).length;
+    const occurrences = codeLines.filter((line) => line.includes("emitWorkspaceCommand('open-data', { tab: 'review' })")).length;
     expect(occurrences).toBe(1);
     expect(source).toContain('kept as its own `useCallback`');
   });

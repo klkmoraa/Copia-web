@@ -226,7 +226,7 @@ describe('TopBar information architecture', () => {
   it('places Model Doctor and Estado in the protected status zone and opens the Doctor directly', async () => {
     const user = userEvent.setup();
     const openDoctor = vi.fn();
-    const unsubscribe = onWorkspaceCommand('open-model-doctor', openDoctor);
+    const unsubscribe = onWorkspaceCommand('open-data', (request) => { if (request?.tab === 'review') openDoctor(); });
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     const status = container.querySelector<HTMLElement>('[data-topbar-zone="status"]')!;

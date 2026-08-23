@@ -72,7 +72,7 @@ describe('Panorama del modelo', () => {
   it('publica los hallazgos del Model Doctor y abre su superficie', async () => {
     const user = userEvent.setup();
     const commands: string[] = [];
-    const unsubscribe = onWorkspaceCommand('open-model-doctor', () => commands.push('doctor'));
+    const unsubscribe = onWorkspaceCommand('open-data', (request) => commands.push(request?.tab ?? 'results'));
 
     // Un pórtico sin ningún apoyo es un mecanismo: el Doctor tiene que verlo.
     const project = createDefaultProject();
@@ -81,7 +81,7 @@ describe('Panorama del modelo', () => {
 
     const finding = await screen.findByRole('button', { name: /Model Doctor encontró/ }, { timeout: 5000 });
     await user.click(finding);
-    expect(commands).toEqual(['doctor']);
+    expect(commands).toEqual(['review']);
     unsubscribe();
   });
 
