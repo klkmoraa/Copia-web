@@ -16,5 +16,22 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "./",
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/x-structureco": [
+          ".structureco"
+        ]
+      }
+    }
+  ],
+  "dir": "ltr"
 }
