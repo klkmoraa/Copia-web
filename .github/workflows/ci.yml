@@ -59,6 +59,9 @@ jobs:
       - name: Presupuestos de rendimiento
         run: npm run verify:perf
 
+      - name: Chunk de entrada limpio
+        run: npm run verify:entry
+
       - name: Conservar el build en caso de fallo
         if: failure()
         uses: actions/upload-artifact@v4

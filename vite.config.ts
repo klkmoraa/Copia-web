@@ -88,6 +88,11 @@ export default defineConfig({
     },
   },
   test: {
+    /* El inglés ya no viaja en el chunk de entrada: se pide bajo demanda. Este
+       arranque lo registra antes de la primera prueba para que las que rinden
+       en inglés no tengan que volverse asíncronas. El instante sin catálogo se
+       prueba aparte, con el registro limpio (`catalogs.test.ts`). */
+    setupFiles: ['src/i18n/testCatalogSetup.ts'],
     // The quality gate must only observe the real product. Backups, worktrees and
     // vendored copies of the app live beside `src/` and would otherwise be collected,
     // reporting stale failures and inflating the suite by an order of magnitude.

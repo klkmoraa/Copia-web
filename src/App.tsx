@@ -6,6 +6,7 @@ import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
+import { rememberLanguage } from './i18n/languagePreference';
 import './styles.css';
 import './design-system/material.css';
 /* La biblioteca de componentes viaja en el chunk de ENTRADA, no sólo con la
@@ -47,6 +48,11 @@ const AppShell = () => {
 
   useEffect(() => {
     document.documentElement.lang = project.settings.language;
+    /* El catálogo inglés ya no viaja en el chunk de entrada, así que el próximo
+       arranque necesita saber cuál pedir antes de que IndexedDB conteste. Se
+       anota aquí porque este efecto ya es el punto donde el idioma real del
+       proyecto se hace visible para todo lo de fuera de React. */
+    rememberLanguage(project.settings.language);
   }, [project.settings.language]);
 
   useEffect(() => {

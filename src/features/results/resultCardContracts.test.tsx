@@ -3,7 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { es, en } from '../../i18n/catalogs';
+import { en } from '../../i18n/catalogEn';
+import { es } from '../../i18n/catalogs';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { ResultExtremeCard } from './ResultExtremeCard';
 
