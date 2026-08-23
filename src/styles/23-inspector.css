@@ -1,0 +1,256 @@
+/* Inspector, results, fields and physical switches ---------------------- */
+.inspector-tabs,
+.result-tabs { border-color:var(--border); }
+.inspector-tabs button,
+.result-tabs button { transition:color var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
+.inspector-tabs button.active,
+.result-tabs button.active { color:var(--accent); background:var(--sc-color-surface-2); box-shadow:none; }
+.inspector-summary,
+.selection-card,
+.inspector-note,
+.combination-card,
+.norm-source,
+.compact-toggle-grid label { background:var(--sc-color-surface-2); border:0; box-shadow:none; }
+
+.toggle-row input[type='checkbox'],
+.compact-toggle-grid input[type='checkbox'] {
+  appearance:none;
+  -webkit-appearance:none;
+  position:relative;
+  margin:0;
+  width:44px;
+  height:25px;
+  flex:0 0 44px;
+  border:0;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  cursor:pointer;
+  transition:background var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard);
+}
+.toggle-row input[type='checkbox']::after,
+.compact-toggle-grid input[type='checkbox']::after {
+  content:'';
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:19px;
+  height:19px;
+  border-radius:50%;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-elevation-1);
+  transition:transform 240ms var(--sc-ease-standard);
+}
+.toggle-row input[type='checkbox']:checked,
+.compact-toggle-grid input[type='checkbox']:checked {
+  background:var(--sc-color-action-primary);
+  box-shadow:none;
+}
+.toggle-row input[type='checkbox']:checked::after,
+.compact-toggle-grid input[type='checkbox']:checked::after { transform:translateX(19px); }
+.toggle-row input[type='checkbox']:focus-visible,
+.compact-toggle-grid input[type='checkbox']:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
+.compact-toggle-grid input[type='checkbox'] { width:34px; height:21px; flex-basis:34px; }
+.compact-toggle-grid input[type='checkbox']::after { width:15px; height:15px; }
+.compact-toggle-grid input[type='checkbox']:checked::after { transform:translateX(13px); }
+.compact-toggle-grid label:has(input:checked) { color:var(--accent); background:var(--surface); box-shadow:var(--sc-elevation-1); }
+
+/* La pista es la ranura; las teclas y su estado se visten al final del archivo. */
+.segmented-control,
+.learning-level,
+.response-selector,
+.filter-chip-row { background:var(--sc-color-surface-2); box-shadow:none; }
+.combination-card[open] { background:var(--surface); box-shadow:var(--sc-elevation-1); }
+.result-tab-family { border-color:var(--border-soft); }
+.results-table tbody tr:hover td { background:color-mix(in srgb,var(--accent) 8%,var(--surface)); }
+
+/* Overlays and feedback ------------------------------------------------- */
+.popover,
+.import-center-dialog,
+.new-exercise-dialog,
+.sc-toast-card,
+.mobile-tool-palette,
+.inspector-panel.mobile-open {
+  background:var(--surface);
+  border-color:color-mix(in srgb,var(--border) 72%,white);
+  border-style:solid;
+  border-width:var(--inspector-hairline-width,1px);
+  box-shadow:var(--sc-elevation-2);
+}
+.popover button { transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press), box-shadow var(--sc-motion-fast) var(--sc-ease-standard); }
+.popover button:hover,
+.popover button:focus-visible { background:var(--sc-color-surface-2); color:var(--accent); }
+.popover button:active { background:var(--sc-color-surface-2); box-shadow:none; transform:var(--sc-press-transform); }
+.sc-toast-card__icon { border-radius:var(--sc-radius-sm); box-shadow:none; }
+.sc-spinner__ring { border-color:color-mix(in srgb,currentColor 24%,transparent); border-top-color:currentColor; }
+.analysis-status { box-shadow:var(--sc-elevation-1); transition:transform var(--sc-motion-press) var(--sc-ease-press), box-shadow var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard); }
+.analysis-status:active { transform:var(--sc-press-transform); box-shadow:none; }
+
+@media (max-width:1023px) {
+  .sc-icon-button.experimental-3d-button { display:none; }
+  .welcome-launcher-card:hover,
+  .welcome-import-card:hover,
+  .welcome-template-card:hover { transform:none; }
+  .mobile-tool-palette,
+  .inspector-panel.mobile-open { border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+}
+
+/* El rail del mockup conserva etiqueta e icono en escritorio. El dock físico
+   compacto sigue reservado al breakpoint móvil, sin desplazar Results de su
+   posición debajo del canvas. */
+@media (min-width:1024px) and (max-width:1439px) {
+  :root { --toolbar-w:var(--sc-layout-rail); }
+  .toolbar { padding:10px 9px; gap:4px; }
+  .tool-button { grid-template-columns:32px minmax(0,1fr) auto; justify-items:stretch; min-height:52px; padding:0 9px; }
+  .tool-button > span:not(.sc-tool-button__icon),
+  .selection-tip span { display:inline; }
+  .tool-button kbd { display:block; }
+  .selection-tip { justify-content:flex-start; }
+}
+
+/* Noche según el brandbook: los controles neutros son petróleo, no negro
+   puro ni verdes por rebote. El acento sólo aparece en una acción primaria,
+   selección o foco explícito. */
+:root[data-theme='dark'] .topbar .project-name input,
+:root[data-theme='dark'] .number-control,
+:root[data-theme='dark'] .select-field select,
+:root[data-theme='dark'] .inspector-numeric-field__control,
+:root[data-theme='dark'] .diagram-cursor-readout {
+  background:var(--sc-color-surface-input);
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:none;
+}
+:root[data-theme='dark'] .topbar .project-name input:hover {
+  background:var(--sc-color-surface-elevated);
+  border-color:var(--sc-color-border);
+}
+:root[data-theme='dark'] .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button,.welcome-header-icon) {
+  background:transparent;
+  border:0;
+}
+
+/* Results: lectura técnica compacta con la materia y la respuesta física del
+   brandbook. La propuesta aporta la jerarquía, no sus negros ni halos. */
+.result-tabs { min-height:42px; height:42px; flex-basis:42px; gap:2px; padding:0 10px; }
+.result-tabs button { height:42px; padding:0 11px; border-radius:var(--sc-radius-sm) var(--sc-radius-sm) 0 0; }
+.result-tabs button.active { background:var(--sc-color-surface-2); box-shadow:none; }
+
+.result-summary-workspace { padding:10px 14px 14px; gap:10px; }
+/* La materia la pone `material.css` (`data-level='raised'`): esta tarjeta no
+   pinta fondo ni borde propios, porque cambiarlos según el estado sería decir
+   con la materia lo que ya dice el texto. `--quality-color` sólo alcanza a la
+   etiqueta y a la píldora de estado. */
+.numeric-quality-card {
+  --quality-color:var(--success);
+  display:grid;
+  gap:9px;
+  padding:11px 12px;
+  border-radius:var(--sc-radius-sm);
+}
+.numeric-quality-card[data-state='limited'] { --quality-color:var(--warning); }
+.numeric-quality-card[data-state='unreliable'],
+.numeric-quality-card[data-state='failed'] { --quality-color:var(--error); }
+.numeric-quality-card[data-state='unavailable'] { --quality-color:var(--muted); }
+.failed-results-layout { min-height:100%; padding:12px 14px; display:grid; grid-template-rows:auto 1fr; gap:10px; }
+.failed-results-layout .failed-results { min-height:0; padding:16px; }
+.numeric-quality-heading { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+.numeric-quality-heading > div { display:grid; gap:2px; }
+.numeric-quality-heading span { color:var(--quality-color); font-size:10px; font-weight:700; letter-spacing:0; text-transform:none; }
+.numeric-quality-heading h3 { margin:0; color:var(--text); font-size:13px; }
+.numeric-quality-heading .numeric-quality-state { padding:3px 8px; border-radius:var(--sc-radius-pill); background:color-mix(in srgb,var(--quality-color) 14%,transparent); }
+.numeric-quality-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:0; }
+.numeric-quality-metrics > div { min-width:0; padding:7px 8px; border-radius:var(--sc-radius-control); background:var(--surface); }
+.numeric-quality-metrics dt { color:var(--muted); font-size:10px; }
+.numeric-quality-metrics dd { overflow:hidden; margin:2px 0 0; color:var(--text); font-family:var(--sc-font-mono); font-size:10px; font-weight:590; text-overflow:ellipsis; white-space:nowrap; }
+.numeric-quality-governing,.numeric-quality-limit { margin:0; font-size:8.5px; line-height:1.45; }
+.numeric-quality-governing { color:var(--text); }
+.numeric-quality-causes { margin:0; padding-left:18px; color:var(--text); font-size:8.5px; line-height:1.45; }
+.numeric-quality-limit { color:var(--muted); }
+.p-delta-summary { display:grid; gap:5px; padding:10px 12px; border:1px solid color-mix(in srgb,var(--warning) 30%,var(--border)); border-radius:var(--sc-radius-sm); background:color-mix(in srgb,var(--warning) 5%,var(--surface)); }
+.p-delta-summary > strong { display:flex; align-items:center; gap:7px; }
+.p-delta-summary small { color:var(--muted); line-height:1.4; }
+.experimental-badge { padding:2px 7px; border-radius:var(--sc-radius-pill); background:color-mix(in srgb,var(--warning) 14%,transparent); color:var(--sc-color-state-warning-foreground); font-size:var(--sc-font-size-caption); font-weight:var(--sc-font-weight-semibold); letter-spacing:0; text-transform:none; }
+@media (max-width:700px) {
+  .numeric-quality-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .numeric-quality-heading { align-items:flex-start; }
+}
+.summary-table-wrap { border:0; border-radius:0; background:transparent; box-shadow:none; }
+.result-extrema-table { font-family:var(--sc-font-mono); }
+.result-extrema-table caption { background:transparent; color:var(--muted); font-family:var(--sc-font-mono); letter-spacing:0; text-transform:none; }
+.result-extrema-table :is(th,td) { border-bottom-color:var(--border-soft); }
+.result-extrema-table thead th { color:var(--muted); font-size:11px; font-weight:600; letter-spacing:0; }
+.result-extrema-table tbody th { color:var(--text); font-weight:590; }
+.result-extrema-table td button { border-radius:var(--sc-radius-control); transition:color var(--sc-motion-fast) var(--sc-ease-standard), background var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
+.result-extrema-table td button:hover:not(:disabled) { background:color-mix(in srgb,var(--accent) 8%,transparent); color:var(--accent); }
+.result-extrema-table td button:active:not(:disabled) { transform:var(--sc-press-transform); }
+
+/* La marca es el ancla de la cabecera, no un icono auxiliar. Gana presencia
+   en escritorio sin reducir objetivos táctiles ni sacrificar el título del
+   proyecto en móvil. */
+@media (min-width:701px) {
+  .brand-mark,
+  .brand-mark svg { width:46px; height:46px; }
+  .brand-block { gap:10px; }
+  .top-divider { height:46px; }
+}
+
+/* Inspector y capas: tarjetas, switches y grupos adoptan las piezas del
+   brandbook. La densidad de la propuesta se traduce a superficies físicas,
+   no a ranuras negras ni a brillo de neón. */
+/* CRI-105 · el resumen se renderiza DENTRO de `.inspector-panel`, que ya es
+   RAISED: darle canto de volumen y sombra propia era la pareja de elevaciones
+   anidadas sin cambio de nivel que V-04 prohíbe. Se queda como agrupación —
+   fondo y trazo fino— y la elevación la sigue poniendo el panel, una sola vez.
+   La cavidad de sus métricas sí es otro nivel (INSET) y se conserva. */
+.inspector-panel .inspector-summary {
+  background:var(--surface);
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:none;
+}
+.inspector-panel .inspector-summary__metrics > div {
+  background:var(--sc-color-surface-2);
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:none;
+}
+.inspector-panel .inspector-property-group__header { margin-bottom:12px; }
+.inspector-panel .inspector-property-group__mode { color:var(--accent); }
+.inspector-panel .toggle-row { transition:background var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
+.inspector-panel .toggle-row:hover { background:color-mix(in srgb,var(--accent) 5%,transparent); }
+
+#workspace-canvas .canvas-layer-row {
+  min-height:56px;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transition:background var(--sc-motion-control) var(--sc-ease-standard), border-color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
+}
+#workspace-canvas .canvas-layer-row:hover:not(:disabled) { background:var(--surface); border-color:var(--sc-color-border); box-shadow:var(--sc-elevation-1); }
+#workspace-canvas .canvas-layer-row:active:not(:disabled) { box-shadow:none; transform:var(--sc-press-transform); }
+#workspace-canvas .canvas-layer-icon { background:var(--surface); box-shadow:var(--sc-elevation-1); }
+#workspace-canvas .canvas-layer-row[aria-checked='true'] .canvas-layer-icon { background:color-mix(in srgb,var(--accent) 12%,var(--surface)); color:var(--accent); }
+#workspace-canvas .canvas-layer-reset { border:0; background:var(--sc-color-surface-2); box-shadow:none; }
+#workspace-canvas .canvas-layer-reset:hover:not(:disabled) { background:var(--surface); box-shadow:var(--sc-elevation-1); }
+
+@media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
+  .inspector-panel.mobile-open { border-radius:var(--sc-radius-lg) 0 0 var(--sc-radius-lg); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .welcome-launcher-card,
+  .welcome-import-card,
+  .welcome-template-card,
+  .welcome-template-footer svg,
+  .tool-button,
+  .mobile-tool-dock .tool-button.active svg,
+  .toggle-row input[type='checkbox'],
+  .compact-toggle-grid input[type='checkbox'],
+  .toggle-row input[type='checkbox']::after,
+  .compact-toggle-grid input[type='checkbox']::after,
+  .popover button,
+  .analysis-status { transition:none!important; }
+  .welcome-launcher-card:hover,
+  .welcome-import-card:hover,
+  .welcome-template-card:hover,
+  .tool-button:hover:not(:disabled),
+  .tool-button:active:not(:disabled) { transform:none; }
+}

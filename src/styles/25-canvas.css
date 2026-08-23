@@ -1,0 +1,237 @@
+/* --- Presets de capas ------------------------------------------------- */
+.canvas-layer-presets {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  padding:9px 11px;
+  border-bottom:1px solid var(--border-soft);
+}
+.canvas-layer-preset {
+  min-height:28px;
+  padding:0 10px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  color:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:700;
+  letter-spacing:0;
+  text-transform:none;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.canvas-layer-preset:hover { color:var(--text); box-shadow:var(--sc-elevation-1); }
+.canvas-layer-preset.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+
+/* --- Mapa de demanda estructural -------------------------------------- */
+/* Rampa secuencial de magnitud, no semáforo de seguridad: el color dice cuánta
+   demanda elástica estimada hay, nunca si eso es aceptable. Las barras sin η
+   publicable (sin Fy o W verificables, o análisis no confiable) no entran en el
+   mapa y conservan su trazo técnico — el mapa no rellena huecos.
+
+   El color cede ante selección y foco pedagógico: el estado de interacción
+   manda sobre la lectura. */
+.member-object.has-demand .member-line { stroke:var(--member-demand-color); }
+/* Alcanzar la referencia Fy se redunda en forma, no sólo en color. */
+.member-object.has-demand[data-demand-at-reference='true'] .member-line {
+  stroke-dasharray:7 3;
+}
+/* Un miembro que no pudo evaluarse no puede parecer uno de η baja: se dibuja
+   punteado y atenuado, y la leyenda cuenta cuántos son. */
+.member-object.is-unevaluated .member-line {
+  stroke:var(--sc-color-demand-unevaluated);
+  stroke-dasharray:2 4;
+  opacity:.55;
+}
+.member-object.has-demand.selected .member-line,
+.member-object.has-demand.learning-highlight .member-line,
+.member-object.is-unevaluated.selected .member-line,
+.member-object.is-unevaluated.learning-highlight .member-line {
+  stroke:var(--selection);
+  stroke-dasharray:none;
+  opacity:1;
+}
+
+/* --- Leyenda del mapa de demanda -------------------------------------- */
+/* Sin leyenda el color es decoración: declara qué mide la rampa, cuántos
+   miembros entraron en la lectura y dónde deja de distinguir magnitud. */
+.canvas-demand-legend {
+  position:absolute;
+  inset-block-end:12px;
+  inset-inline-start:12px;
+  z-index:3;
+  max-width:min(320px,calc(100% - 24px));
+  padding:9px 11px;
+  display:grid;
+  gap:5px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  pointer-events:none;
+}
+.canvas-demand-legend strong { color:var(--text); font-size:12px; }
+.canvas-demand-legend small { margin:0; }
+.canvas-demand-ramp {
+  height:9px;
+  border-radius:var(--sc-radius-pill);
+  background:linear-gradient(
+    90deg,
+    var(--sc-color-demand-base) 0%,
+    var(--sc-color-demand-peak) 50%,
+    var(--sc-color-demand-reference) 50%,
+    var(--sc-color-demand-reference-peak) 100%
+  );
+}
+.canvas-demand-scale {
+  display:flex;
+  justify-content:space-between;
+  font-family:var(--sc-font-mono);
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+.canvas-demand-scale i { font-style:normal; }
+.canvas-demand-unevaluated { color:var(--sc-color-demand-unevaluated); }
+.canvas-demand-saturated { color:var(--sc-color-state-warning-foreground); }
+
+@media (max-width: 640px) {
+  .canvas-demand-legend { inset-block-end:8px; inset-inline-start:8px; max-width:calc(100% - 16px); }
+}
+
+/* --- Minimapa radar -----------------------------------------------------
+   Glifo dentro de `.canvas-navigator`, no una superficie flotante propia:
+   sin posición absoluta, la fila la reparte el flexbox del navegador. */
+.canvas-minimap {
+  width:132px;
+  height:88px;
+  padding:6px;
+  display:block;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.canvas-minimap:hover { box-shadow:var(--sc-elevation-1); }
+.canvas-minimap:active { box-shadow:none; transform:var(--sc-press-transform); }
+.canvas-minimap svg { width:100%; height:100%; display:block; }
+.canvas-minimap-members line { stroke:var(--muted); stroke-width:1.4; opacity:.72; }
+.canvas-minimap-nodes circle { fill:var(--accent); }
+.canvas-minimap-viewport {
+  fill:color-mix(in srgb,var(--accent) 12%,transparent);
+  stroke:var(--accent);
+  stroke-width:1.2;
+}
+
+/* --- Lupa táctil ------------------------------------------------------- */
+/* El contenedor tiene tamaño cero y se planta en el punto de contacto: cada
+   pieza se coloca respecto a ese punto. La lente y la cota van apartadas del
+   dedo, la retícula se queda debajo marcando dónde está exactamente. */
+.canvas-touch-loupe {
+  position:absolute;
+  z-index:12;
+  width:0;
+  height:0;
+  pointer-events:none;
+}
+.canvas-touch-loupe-reticle {
+  position:absolute;
+  left:0;
+  top:0;
+  translate:-50% -50%;
+  width:46px;
+  height:46px;
+  border-radius:var(--sc-radius-pill);
+  border:1.5px solid color-mix(in srgb,var(--accent) 68%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--sc-color-surface-elevated) 74%,transparent);
+  background:
+    linear-gradient(var(--accent),var(--accent)) center/13px 1.5px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) center/1.5px 13px no-repeat;
+}
+.canvas-touch-loupe-lens {
+  position:absolute;
+  left:0;
+  translate:-50% 0;
+  display:block;
+  filter:drop-shadow(0 6px 14px color-mix(in srgb,var(--sc-color-text-primary) 22%,transparent));
+}
+.canvas-touch-loupe-coord {
+  position:absolute;
+  left:0;
+  translate:-50% 0;
+  padding:5px 10px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-elevation-1);
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-technical);
+  font-variant-numeric:var(--sc-numeric-variant);
+  white-space:nowrap;
+}
+/* Encima del dedo por defecto; debajo cuando el contacto está tan arriba que
+   la lente se saldría del lienzo. `bottom`/`top` se miden desde el punto de
+   contacto porque el contenedor no tiene tamaño. */
+.canvas-touch-loupe[data-placement='above'] .canvas-touch-loupe-lens { bottom:40px; }
+.canvas-touch-loupe[data-placement='above'] .canvas-touch-loupe-coord { bottom:150px; }
+.canvas-touch-loupe[data-placement='below'] .canvas-touch-loupe-lens { top:40px; }
+.canvas-touch-loupe[data-placement='below'] .canvas-touch-loupe-coord { top:150px; }
+/* El fondo de la lente es el del lienzo: lo ampliado tiene que leerse sobre el
+   mismo papel, no sobre una superficie de chrome. */
+.canvas-touch-loupe-ground { fill:var(--canvas-bg); }
+.canvas-touch-loupe-rim { fill:none; stroke:var(--sc-color-border-canvas-chrome); stroke-width:2; }
+.canvas-touch-loupe-crosshair { stroke:color-mix(in srgb,var(--accent) 72%,transparent); stroke-width:1.2; }
+
+/* --- Sellos de extremos M/V sobre el diagrama -------------------------- */
+/* El color es el de la magnitud que se está mirando, el mismo del diagrama:
+   la capa declara cuál y el sello lo hereda. */
+.critical-point-layer { --critical-color:var(--moment); }
+.critical-point-layer.is-shear { --critical-color:var(--shear); }
+.critical-point-stem { stroke:var(--critical-color); stroke-width:1; stroke-dasharray:3 2; opacity:.6; }
+.critical-point-dot { fill:var(--critical-color); stroke:var(--canvas-bg); stroke-width:1.2; }
+.critical-point-marker.is-min .critical-point-dot { fill:var(--canvas-bg); stroke:var(--critical-color); stroke-width:2; }
+.critical-point-stamp {
+  fill:color-mix(in srgb,var(--critical-color) 10%,var(--sc-color-surface-1));
+  stroke:none;
+}
+.critical-point-value {
+  fill:var(--critical-color);
+  font-family:var(--sc-font-mono);
+  font-size:10px;
+  font-weight:var(--sc-font-weight-semibold);
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+.critical-point-station {
+  fill:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:10px;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+
+/* --- Tarjeta contextual del corte: η y estación ------------------------ */
+.cut-demand-badge {
+  padding:1px 7px;
+  border-radius:var(--sc-radius-pill);
+  border:1px solid currentColor;
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:590;
+  letter-spacing:0;
+}
+.cut-demand-badge[data-status='available'] { color:var(--sc-color-demand-peak); }
+.cut-demand-badge[data-at-reference='true'] { color:var(--sc-color-demand-reference); border-width:2px; }
+/* Sin dato verificable el corte no inventa un η: lo dice, en gris y en texto. */
+.cut-demand-badge[data-status='unavailable'] { color:var(--subtle); border-style:dashed; }
+.cut-station { color:var(--subtle); font-family:var(--sc-font-mono); }

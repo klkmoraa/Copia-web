@@ -1,0 +1,301 @@
+/* Phase 9: analytical results center -------------------------------------- */
+.result-tabs { height:52px; flex-basis:52px; align-items:stretch; gap:8px; padding-inline:14px; }
+.result-tab-family { flex:0 0 auto; display:grid; grid-template-rows:15px minmax(0,1fr); align-items:stretch; border-right:0.5px solid var(--sc-color-divider); padding:2px 10px 0 0; }
+.result-tab-family:last-child { border-right:0; padding-right:0; }
+.result-tab-family__label { align-self:center; padding-left:9px; color:var(--subtle); font-size:10px!important; font-weight:590; letter-spacing:0; text-transform:none; }
+.result-tab-family>div { display:flex; align-items:stretch; }
+.result-tabs button { height:36px; padding-inline:9px; }
+.results-table caption { padding:6px 10px; text-align:left; color:var(--muted); background:var(--sc-color-fill-quaternary); border-bottom:0.5px solid var(--sc-color-divider); }
+.results-table tbody tr[aria-selected='true'] { background:var(--selection-soft); }
+.result-object-link { min-width:42px; border:0; border-radius:var(--sc-radius-control); padding:5px 7px; background:transparent; color:var(--text); font:inherit; font-weight:590; text-align:left; }
+.result-object-link:hover,.result-object-link[aria-pressed='true'] { color:var(--selection); background:color-mix(in srgb,var(--selection) 10%,transparent); }
+
+@media (max-width:1023px) {
+  .result-tabs { height:54px; flex-basis:54px; gap:7px; padding-inline:10px; }
+  .result-tab-family { grid-template-rows:14px minmax(0,1fr); padding-right:7px; }
+  .result-tab-family__label { padding-left:7px; font-size:7px!important; }
+  .result-tabs button { min-width:68px; height:44px; padding-inline:9px; }
+}
+
+@media (max-width:700px) {
+  .result-tabs { height:50px; flex-basis:50px; }
+  .result-tab-family { display:flex; padding-top:0; }
+  .result-tab-family__label { display:none; }
+  .result-tabs button { height:50px; }
+}
+
+/* `.result-tabs` fija su propia altura por breakpoint; con puntero grueso eso
+   puede dejar los botones por debajo de 44px (iPad, portátil táctil). Se les
+   pone suelo aquí — `min-height` nunca encoge una declaración más alta, así que
+   sólo sube, nunca pelea con las de arriba. El control de modos que compartía
+   este suelo se fue con el dock inferior de Resultados. */
+@media (pointer:coarse) {
+  .result-tabs button { min-height:var(--sc-control-height-touch); min-width:var(--sc-control-height-touch); }
+}
+
+/* Phase 11: responsive multidispositivo y experiencia tactil ------------- */
+@media (min-width:1024px) {
+  .inspector-panel { position:relative; }
+}
+.inspector-resize-handle {
+  position:absolute;
+  z-index:3;
+  inset:0 auto 0 -7px;
+  width:14px;
+  min-width:14px;
+  height:100%;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--muted);
+  cursor:col-resize;
+  touch-action:none;
+}
+.inspector-resize-handle::before {
+  content:"";
+  position:absolute;
+  top:50%;
+  left:6px;
+  width:3px;
+  height:54px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--border);
+  transform:translateY(-50%);
+}
+.inspector-resize-handle:hover::before,
+.inspector-resize-handle:focus-visible::before { background: var(--accent-ink); }
+.inspector-resize-handle:focus-visible { outline:3px solid var(--focus); outline-offset:-3px; }
+
+@media (max-width:1023px) {
+  .inspector-resize-handle { display:none; }
+}
+
+@media (max-width:700px) {
+  .mobile-inspector-toggle {
+    top:auto;
+    bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  .inspector-panel.mobile-open {
+    position:fixed;
+    bottom:var(--sc-visual-viewport-bottom,0px);
+    height:min(78dvh,720px,calc(var(--sc-visual-viewport-height,100dvh) - 8px));
+    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px);
+  }
+}
+
+@media (max-width:1023px) {
+  .classroom-workspace-journey { padding:8px 11px; gap:5px; }
+  .classroom-workspace-journey .classroom-journey__steps { grid-template-columns:1fr; }
+  .classroom-workspace-journey .classroom-journey__steps li:not([aria-current='step']) { display:none; }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] { grid-template-columns:25px minmax(0,1fr) minmax(138px,auto); align-items:center; padding:5px 7px; }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step']>div { grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:10px; }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] strong,.classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] small { grid-column:1; }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] button { grid-column:2; grid-row:1 / span 2; min-width:138px; margin:0; }
+  .classroom-workspace-journey .classroom-journey__notice { max-height:none; overflow:visible; }
+}
+
+@media (max-width:700px) {
+  .classroom-workspace-journey .classroom-journey__header>div>span { display:none; }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] { grid-template-columns:25px minmax(0,1fr); }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step']>div { display:grid; grid-template-columns:minmax(0,1fr); }
+  .classroom-workspace-journey .classroom-journey__steps li[aria-current='step'] button { grid-column:1 / -1; grid-row:auto; min-width:0; }
+  .learning-level button { min-height:44px; }
+}
+
+@media (max-width:700px) {
+  .canvas-mode-badge {
+    min-height:36px;
+    max-width:calc(100% - 64px);
+    padding:5px 8px;
+    gap:5px;
+    border-radius:var(--sc-radius-control);
+  }
+  .canvas-mode-badge strong { font-size:12px; }
+  .canvas-mode-badge .touch-gesture-hint {
+    position:absolute!important;
+    width:1px!important;
+    height:1px!important;
+    padding:0!important;
+    margin:-1px!important;
+    overflow:hidden!important;
+    clip:rect(0,0,0,0)!important;
+    white-space:nowrap!important;
+    border:0!important;
+  }
+  .canvas-mode-badge.placing-load {
+    max-width:calc(100% - 20px);
+    min-height:44px;
+    padding:1px 3px 1px 9px;
+  }
+  .canvas-mode-badge.placing-load button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    margin:0;
+  }
+  .canvas-result-legend {
+    top:52px;
+    width:max-content;
+    max-width:calc(100% - 72px);
+    padding:6px 8px;
+    gap:3px 7px;
+    border-radius:var(--sc-radius-control);
+  }
+  .canvas-result-legend strong { font-size:11px!important; }
+  .canvas-result-legend span {
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px!important;
+  }
+  .canvas-result-legend i { width:16px; }
+  .result-tabs {
+    height:46px;
+    flex-basis:46px;
+    gap:4px;
+    padding-inline:6px;
+  }
+  .result-tab-family { padding-right:3px; }
+  .result-tabs button {
+    min-width:62px;
+    height:44px;
+    padding-inline:8px;
+    font-size:12px!important;
+  }
+}
+
+@media (max-width:700px) {
+  :root { --topbar-h:48px; }
+  .brand-mark,.brand-mark svg { width:24px; height:24px; }
+  .project-name input { font-size:12px; }
+  .toolbar {
+    height:calc(58px + env(safe-area-inset-bottom));
+    min-height:calc(58px + env(safe-area-inset-bottom));
+    padding:3px max(6px,env(safe-area-inset-right))
+      calc(3px + env(safe-area-inset-bottom))
+      max(6px,env(safe-area-inset-left));
+  }
+  .mobile-tool-dock .tool-button {
+    height:50px;
+    min-height:50px;
+    padding:2px 1px;
+    gap:1px;
+    border-radius:var(--sc-radius-control);
+  }
+  .mobile-tool-dock .tool-button svg { width:19px; height:19px; }
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {
+    font-size:11px!important;
+  }
+}
+
+@media (max-width:700px) and (orientation:landscape) and (max-height:600px) {
+  .workspace { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; }
+  .center-stage {
+    grid-column:1;
+    grid-row:1;
+  }
+  .canvas-host .canvas-layer-popover {
+    top:60px;
+    right:max(8px,env(safe-area-inset-right));
+  }
+  .toolbar {
+    grid-column:1;
+    grid-row:2;
+    width:100%;
+    --toolbar-hairline-width:1px 0 0;
+  }
+  .mobile-tool-dock { grid-template-columns:repeat(6,minmax(0,1fr)); align-items:stretch; gap:2px; }
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {
+    display:block;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .mobile-tool-sheet-backdrop {
+    inset:var(--topbar-h) 0 calc(58px + env(safe-area-inset-bottom)) 0;
+  }
+  .mobile-tool-palette {
+    left:max(8px,env(safe-area-inset-left));
+    right:max(8px,env(safe-area-inset-right));
+    bottom:calc(58px + env(safe-area-inset-bottom));
+    width:auto;
+    max-height:calc(100dvh - var(--topbar-h) - 68px - env(safe-area-inset-bottom));
+  }
+}
+
+/* ========================================================================
+   REDISEÑO 2026-08 · Capa de refinamiento visual
+   Mesa Modular + Laboratorio Nocturno + Instrumento de Precisión.
+   Microinteracciones y consistencia sobre superficies existentes; no
+   altera estructura funcional ni comportamiento. Se consolida al final
+   del archivo para una cascada predecible.
+   ===================================================================== */
+
+/* Tabs del Inspector y de Resultados: subrayado con transición suave. */
+.inspector-tabs button, .result-tabs button {
+  transition: color var(--sc-motion-control) var(--sc-ease-standard);
+}
+.inspector-tabs button::after, .result-tabs button::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent-ink);
+  border-radius:var(--sc-radius-xs);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--sc-motion-control) var(--sc-ease-emphasized);
+}
+.result-tabs button::after { left: 10px; right: 10px; }
+.inspector-tabs button.active::after, .result-tabs button.active::after {
+  transform: scaleX(1);
+}
+.result-tabs button.active.axial::after { background: var(--axial); }
+.result-tabs button.active.shear::after { background: var(--shear); }
+.result-tabs button.active.moment::after { background: var(--moment); }
+.result-tabs button.active.influence::after { background: var(--deformed); }
+.inspector-tabs button:hover:not(.active), .result-tabs button:hover:not(.active) {
+  color: var(--text);
+}
+
+/* Tablas de resultados: lectura por fila con hover discreto. */
+.results-table tbody tr { transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
+.results-table tbody tr:hover td { background: color-mix(in srgb, var(--sc-color-selection) 26%, transparent); }
+
+/* Controles segmentados: transición compartida. El relieve de cada estado lo
+   declara una sola vez la capa de materia del final del archivo. */
+.segmented-control button, .learning-level button, .response-selector button {
+  transition: var(--sc-transition-control);
+}
+
+/* Scrollbars finas y tematizadas (WebKit + Firefox). */
+.inspector-scroll, .results-body, .toolbar, .table-wrap, .matrix-scroll, .sc-modal-surface__body {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--sc-color-border-strong) 72%, transparent) transparent;
+}
+.inspector-scroll::-webkit-scrollbar, .results-body::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar, .matrix-scroll::-webkit-scrollbar,
+.sc-modal-surface__body::-webkit-scrollbar { width: 8px; height: 8px; }
+.inspector-scroll::-webkit-scrollbar-thumb, .results-body::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb, .matrix-scroll::-webkit-scrollbar-thumb,
+.sc-modal-surface__body::-webkit-scrollbar-thumb {
+  border-radius:var(--sc-radius-control);
+  background: color-mix(in srgb, var(--sc-color-border-strong) 72%, transparent);
+}
+
+/* Cambio de tema Día/Noche con transición coordinada de superficies. */
+.app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen {
+  transition: var(--sc-transition-theme);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inspector-tabs button::after, .result-tabs button::after { transition: none; }
+  .tool-button, .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab, .segmented-control button { transition: none; }
+  .app-shell, .topbar, .toolbar, .inspector-panel, .center-stage, .welcome-screen { transition: none; }
+}

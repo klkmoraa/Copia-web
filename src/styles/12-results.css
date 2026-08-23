@@ -1,0 +1,82 @@
+.result-summary-workspace { padding:12px 16px 18px; display:grid; gap:12px; }
+.result-summary-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.result-summary-header>div:first-child { display:grid; gap:2px; }
+.result-summary-header strong { font-size:12px; }
+.result-summary-header span { color:var(--muted); font-size:11px; }
+.result-summary-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.result-summary-actions button { min-height:34px; padding:0 10px; border:0; border-radius:var(--sc-radius-control); background:var(--surface); color:var(--text); display:flex; align-items:center; gap:6px; font-size:11px; font-weight:590; box-shadow:var(--sc-elevation-1); transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
+.result-summary-actions button:hover:not(:disabled) { box-shadow:var(--sc-elevation-1); }
+.result-summary-actions button:active:not(:disabled) { box-shadow:none; transform:var(--sc-press-transform); }
+/* Tarjetas de extremo (CRI-101 · V-10).
+   La materia la pone `material.css` por `data-level='raised'`: aquí no hay
+   fondo, borde ni sombra, precisamente para que un resultado favorable y uno
+   desfavorable no puedan divergir. Tampoco hay ninguna regla que dependa del
+   signo o de un umbral: el color técnico sólo llega a la etiqueta. */
+.result-extreme-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
+.result-extreme-card { --extreme-color:var(--muted); min-width:0; padding:10px 11px; border-radius:var(--sc-radius-control); display:grid; align-content:start; gap:5px; }
+.result-extreme-card[data-accent='axial'] { --extreme-color:var(--axial); }
+.result-extreme-card[data-accent='shear'] { --extreme-color:var(--shear); }
+.result-extreme-card[data-accent='moment'] { --extreme-color:var(--moment); }
+.result-extreme-card[data-accent='deformation'] { --extreme-color:var(--deformed); }
+.result-extreme-card[data-accent='reaction'] { --extreme-color:var(--accent); }
+.result-extreme-card__label { margin:0; color:var(--extreme-color); font-size:var(--sc-font-size-caption); font-weight:var(--sc-font-weight-semibold); letter-spacing:0; text-transform:none; }
+/* El número nunca se colorea por lo que vale: hereda el color del texto. */
+.result-extreme-card__value { margin:0; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px; color:var(--text); }
+.result-extreme-card__value strong { overflow-wrap:anywhere; font-family:var(--sc-font-mono); font-size:14px; font-variant-numeric:tabular-nums; }
+.result-extreme-card__unit { color:var(--muted); font-family:var(--sc-font-mono); font-size:10px; }
+.result-extreme-card__facts { margin:0; display:grid; gap:2px; }
+.result-extreme-card__facts>div { display:flex; flex-wrap:wrap; gap:4px; }
+.result-extreme-card__facts dt { color:var(--muted); font-size:10px; }
+.result-extreme-card__facts dd { margin:0; min-width:0; overflow-wrap:anywhere; color:var(--text); font-size:11px; }
+/* Fiabilidad: línea propia, en texto. Se distingue en escala de grises porque
+   lo que cambia es la palabra y su peso, nunca un color sobre el valor. */
+.result-extreme-card__reliability dd[data-reliability='unreliable'],
+.result-extreme-card__reliability dd[data-reliability='failed'] { font-weight:590; text-decoration:underline; text-underline-offset:2px; }
+.result-extreme-card__locate { min-height:30px; margin-top:1px; padding:0 8px; border:0; border-radius:var(--sc-radius-control); background:var(--surface-2); color:var(--text); display:inline-flex; align-items:center; justify-self:start; gap:5px; font:inherit; font-size:11px; font-weight:590; cursor:pointer; }
+.result-extreme-card__locate:hover { color:var(--accent); }
+.result-extreme-card__locate:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+.result-extreme-card .provenance-card { margin:0; }
+.diagram-cursor-metric { display:grid; align-content:start; gap:2px; padding:10px 11px; }
+.diagram-cursor-metric span { color:var(--muted); font-size:10px; }
+.diagram-cursor-metric strong { font-family:var(--sc-font-mono); font-size:12px; }
+.diagram-cursor-metric small { color:var(--subtle); font-size:10px; }
+
+/* Tarjeta que enmarca una tabla: la tarjeta es el marco, la tabla va plana. */
+.result-table-card { padding:0; border-radius:var(--sc-radius-control); overflow:hidden; }
+
+/* Lanzadores de la superficie densa: no son pestañas, son invocaciones. */
+
+/* Superficie `dense`: la presenta el broker (drawer en X2/M1, fullscreen en
+   K0). Aquí sólo vive su interior — nunca su elevación. */
+.dense-reactions { min-width:0; display:grid; gap:10px; }
+.scenario-card-failure { grid-column:1/-1; color:var(--muted); font-size:10px; }
+.summary-table-wrap { overflow:auto; }
+.result-extrema-table caption { padding:8px 10px; text-align:left; background:var(--surface-2); color:var(--muted); font-size:11px; }
+.result-extrema-table td button { width:100%; border:0; background:transparent; color:var(--text); padding:4px; display:grid; gap:1px; text-align:right; font:inherit; }
+.result-extrema-table td button:hover { color:var(--accent); }.result-extrema-table td button small { color:var(--subtle); font-size:10px; }
+.scenario-comparison { display:grid; gap:9px; padding-top:2px; }
+.scenario-comparison-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; }.scenario-comparison-heading>div { display:grid; gap:2px; }.scenario-comparison-heading span,.scenario-comparison-heading small { color:var(--muted); font-size:11px; }
+.scenario-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:7px; }
+.scenario-cards article { padding:9px 10px; border:1px solid var(--border); border-radius:var(--sc-radius-control); display:grid; grid-template-columns:1fr auto; gap:5px 9px; }
+.scenario-cards article>strong { grid-column:1/-1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }.scenario-cards article span { display:contents; font-size:11px; }.scenario-cards article b { color:var(--muted); }
+.envelope-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }.envelope-summary span { padding:8px 10px; border-radius:var(--sc-radius-control); background:var(--surface-2); color:var(--muted); font-size:11px; display:grid; gap:2px; }.envelope-summary b { color:var(--text); }
+.spin { animation:spin var(--motion-loading) linear infinite; } @keyframes spin { to { transform:rotate(360deg); } }
+.issue-action { min-height:32px; margin-top:6px; padding:0 10px; border:0; border-radius:var(--sc-radius-control); background:var(--surface); color:var(--accent); font-size:11px; font-weight:700; box-shadow:var(--sc-elevation-1); transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
+.issue-action:hover:not(:disabled) { box-shadow:var(--sc-elevation-1); }
+.issue-action:active:not(:disabled) { box-shadow:none; transform:var(--sc-press-transform); }
+
+@media (max-width:700px) {
+  .canvas-result-legend { left:10px; top:48px; width:min(230px,calc(100% - 20px)); padding:7px 9px; }
+  .canvas-result-legend small { display:none; }
+  .result-summary-workspace { padding:9px 10px 72px; }
+  .result-summary-header { align-items:flex-start; flex-direction:column; }
+  .result-summary-actions { justify-content:flex-start; }
+  .result-extreme-grid { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  .scenario-comparison-heading { align-items:flex-start; flex-direction:column; }
+  .envelope-summary { grid-template-columns:1fr; }
+  .quick-entry-bar { left:8px; right:8px; bottom:70px; transform:none; width:auto; max-width:none; flex-wrap:wrap; padding:6px; gap:5px; }
+  .quick-entry-heading { width:100%; justify-content:space-between; }
+  .quick-entry-bar>label { flex:1 1 0; width:auto; }
+  .quick-entry-bar>button[type='submit'] { flex:1 1 auto; padding:0 9px; }
+  .quick-entry-cancel { flex:0 0 auto; }
+}

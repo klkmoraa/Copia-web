@@ -1,0 +1,366 @@
+/* El valor publicado. Es el dato principal de las dos tarjetas y por eso va en
+   monoespaciada tabular: dos lecturas seguidas alinean sus dígitos. */
+.elastic-index-value {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:15px;
+  font-weight:700;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+
+/* Riel de magnitud. Decorativo por contrato (`aria-hidden`): η puede superar 1
+   y `role="meter"` obliga a aria-valuenow ≤ aria-valuemax; el valor y la banda
+   ya viajan en texto justo encima. */
+.elastic-index-scale {
+  position:relative;
+  height:12px;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  overflow:hidden;
+}
+.elastic-index-fill {
+  position:absolute;
+  inset-block:0;
+  inset-inline-start:0;
+  border-radius:var(--sc-radius-pill);
+  background:linear-gradient(90deg,var(--sc-color-demand-base),var(--sc-color-demand-peak));
+  transition:width var(--sc-motion-standard) var(--sc-ease-standard);
+}
+/* Alcanzar la referencia no se dice sólo con color: el relleno cambia de
+   textura, así una captura en escala de grises sigue distinguiéndolo. */
+.elastic-index-scale[data-at-reference='true'] .elastic-index-fill {
+  background:repeating-linear-gradient(
+    135deg,
+    var(--sc-color-demand-reference) 0 5px,
+    color-mix(in srgb,var(--sc-color-demand-reference) 55%,transparent) 5px 10px
+  );
+}
+.elastic-index-reference {
+  position:absolute;
+  inset-block:0;
+  width:2px;
+  transform:translateX(-2px);
+  background:color-mix(in srgb,var(--text) 55%,transparent);
+}
+
+/* Cobertura: cuántos miembros entraron en la lectura. Va en la cabecera porque
+   cambia lo que el número significa, no es un detalle de procedencia. */
+.elastic-demand-coverage {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 10px;
+  border:1px solid currentColor;
+  border-radius:var(--sc-radius-pill);
+  color:var(--sc-color-demand-peak);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:590;
+}
+.elastic-demand-coverage[data-coverage='partial'],
+.elastic-demand-coverage[data-coverage='unavailable'] {
+  color:var(--sc-color-state-warning-foreground);
+  border-style:dashed;
+}
+
+/* Alcance de la lectura: «mayor entre X/Y evaluables» cuando falta cobertura.
+   Es texto normal, no una nota al pie, porque acota la afirmación principal. */
+.elastic-index-scope {
+  margin:0;
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand[data-coverage='partial'] .elastic-index-scope { color:var(--text); }
+
+/* η ≥ 1: el único hecho con significado físico propio, dicho en palabras. */
+.elastic-index-reference-note {
+  margin:0;
+  padding:5px 8px;
+  border-inline-start:3px solid var(--sc-color-demand-reference);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+
+/* --- Tarjeta del índice elástico (Resumen) ---------------------------- */
+.elastic-demand {
+  display:grid;
+  gap:9px;
+  padding:12px;
+  border-radius:var(--sc-radius-sm);
+}
+.elastic-demand-header { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.elastic-demand-title { display:flex; align-items:center; gap:6px; }
+.elastic-demand-title strong { font-size:13px; }
+.elastic-demand[data-status='available'] .elastic-demand-title svg { color:var(--sc-color-demand-peak); }
+.elastic-demand[data-at-reference='true'] .elastic-demand-title svg { color:var(--sc-color-demand-reference); }
+.elastic-demand[data-status='unavailable'] .elastic-demand-title svg { color:var(--subtle); }
+.elastic-demand-blocked {
+  margin:0;
+  color:var(--text);
+  font-size:var(--sc-font-size-technical);
+  line-height:var(--sc-line-height-compact);
+}
+/* Causa de un análisis bloqueado. Deliberadamente distinta de
+   `.elastic-demand-limited`: `limited` es una lectura que sí se publica,
+   `unreliable` es una que no, y no deben parecer el mismo estado. */
+.elastic-demand-blocked-cause {
+  margin:0;
+  padding:6px 8px;
+  display:grid;
+  gap:3px;
+  border-inline-start:3px solid var(--sc-color-state-error);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand-missing {
+  margin:0;
+  padding-inline-start:18px;
+  display:grid;
+  gap:4px;
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand-limited {
+  margin:0;
+  padding:6px 8px;
+  display:grid;
+  gap:3px;
+  justify-items:start;
+  border-inline-start:3px solid var(--sc-color-state-warning);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+/* La causa, literal desde el check que gobierna: «limitada» a secas no es
+   accionable. */
+.elastic-demand-limited-message {
+  color:var(--muted);
+  font-family:var(--sc-font-mono);
+  overflow-wrap:anywhere;
+}
+.elastic-demand-limited button {
+  min-height:var(--sc-size-target-touch);
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  cursor:pointer;
+}
+.elastic-demand-limited button:hover { text-decoration:underline; }
+.elastic-demand-action {
+  justify-self:start;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:var(--sc-size-target-touch);
+  padding:6px 12px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-2);
+  color:var(--accent);
+  font:inherit;
+  font-size:var(--sc-font-size-caption);
+  cursor:pointer;
+}
+.elastic-demand-action:hover { text-decoration:underline; }
+.elastic-demand-grid {
+  margin:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:6px;
+}
+.elastic-demand-grid > div {
+  padding:6px 8px;
+  display:grid;
+  gap:2px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  min-width:0;
+}
+.elastic-demand-grid dt { color:var(--subtle); font-size:var(--sc-font-size-caption); font-family:var(--sc-font-mono); }
+.elastic-demand-grid dd {
+  margin:0;
+  display:grid;
+  gap:2px;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:12px;
+  font-variant-numeric:var(--sc-numeric-variant);
+  min-width:0;
+}
+/* La procedencia es lo que hace auditable el número: se muestra siempre, con
+   el id del catálogo y no sólo el nombre comercial. */
+.elastic-demand-grid dd small {
+  color:var(--subtle);
+  font-family:var(--sc-font-ui);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  overflow-wrap:anywhere;
+}
+.elastic-demand-locate {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:var(--sc-size-target-touch);
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  cursor:pointer;
+}
+.elastic-demand-locate:hover { text-decoration:underline; }
+
+/* Disclosure de la cadena de derivación: cerrado por defecto para no competir
+   con el valor, disponible sin salir de la tarjeta. */
+.elastic-how { font-size:var(--sc-font-size-caption); color:var(--muted); }
+.elastic-how > summary {
+  min-height:var(--sc-size-target-touch);
+  display:flex;
+  align-items:center;
+  color:var(--accent);
+  cursor:pointer;
+}
+.elastic-how-chain {
+  margin:6px 0 4px;
+  font-family:var(--sc-font-mono);
+  color:var(--text);
+  overflow-x:auto;
+}
+.elastic-how-steps {
+  margin:0;
+  padding-inline-start:18px;
+  display:grid;
+  gap:3px;
+  font-family:var(--sc-font-mono);
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow-wrap:anywhere;
+}
+.elastic-how-split { margin:6px 0 0; font-family:var(--sc-font-mono); }
+.elastic-how-reference {
+  margin:6px 0 0;
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-how-reference svg { flex:none; margin-top:2px; }
+.elastic-demand-skipped { display:grid; gap:4px; font-size:var(--sc-font-size-caption); color:var(--muted); }
+.elastic-demand-skipped p { margin:0; }
+.elastic-demand-skipped ul { margin:0; padding-inline-start:18px; display:grid; gap:3px; }
+.elastic-demand-skipped button {
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  text-align:start;
+  cursor:pointer;
+}
+.elastic-demand-skipped button:hover { text-decoration:underline; }
+
+@media (max-width: 640px) {
+  .elastic-demand-grid { grid-template-columns:1fr; }
+  .inspector-narrative-values { grid-template-columns:1fr; }
+  .elastic-index-value { font-size:14px; }
+}
+
+/* --- Resultados más compactos ------------------------------------------ */
+/* Las etiquetas de familia repetían en la barra lo que la propia pestaña ya
+   dice y añadían ~480px de ancho: forzaban scroll horizontal permanente en
+   portátiles. Se conservan en el árbol de accesibilidad (`aria-describedby`
+   sigue apuntando a ellas) y desaparecen sólo del dibujo, sustituidas por un
+   divisor entre grupos. */
+@media (min-width:768px) {
+  .result-tabs .result-tab-family__label {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .result-tabs .result-tab-family + .result-tab-family {
+    padding-inline-start:8px;
+    border-inline-start:1px solid var(--border-soft);
+  }
+  .result-tabs button { padding-inline:10px; }
+}
+.result-tabs button {
+  border:var(--sc-hairline);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  transition:var(--sc-transition-control);
+}
+.result-tabs button:hover:not(.active) { box-shadow:var(--sc-elevation-1); }
+.result-tabs button.active {
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--accent) 26%,var(--border));
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+
+/* --- TopBar: disparador de la paleta ----------------------------------- */
+.topbar-command-button {
+  min-height:var(--sc-control-height-sm);
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  color:var(--muted);
+  font-size:var(--sc-font-size-technical);
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.topbar-command-button:hover { color:var(--text); box-shadow:var(--sc-elevation-1); }
+.topbar-command-button:active { box-shadow:none; transform:var(--sc-press-transform); }
+.topbar-command-button kbd {
+  padding:1px 5px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+/* El ancho de la zona de acciones dejó de ser el recurso escaso al reducirse el
+   contexto de cuatro selectores a un ítem: el umbral baja de 1536px a 1280px,
+   que es donde la medición dice que la barra empieza a apretar de verdad. Por
+   debajo, el botón se contrae a icono y devuelve ~80px. */
+@media (max-width:1279px) {
+  .topbar-command-button { width:var(--sc-control-height-sm); padding:0; justify-content:center; }
+  .topbar-command-button span,
+  .topbar-command-button kbd { display:none; }
+}
+/* CRI-115 · LEDGER-06. Contraído a icono el botón hereda `--sc-control-height-sm`
+   (36px) y medía 36x36 en K0 — por debajo del piso táctil. Model Doctor es uno de
+   los dos elementos que D-14/CRI-95 protege de degradar nunca en Compact, así que
+   su target no puede ser el que primero cede. Sólo con puntero grueso: con ratón
+   el botón compacto sigue siendo legítimo y la Cinta no pierde los ~8px. */
+@media (pointer:coarse) {
+  .topbar-command-button { min-width: var(--sc-size-target-touch); min-height: var(--sc-size-target-touch); }
+}
+@media (pointer:coarse) and (max-width:1279px) {
+  .topbar-command-button { width: var(--sc-size-target-touch); }
+}

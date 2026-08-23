@@ -1,0 +1,368 @@
+/* Phase 3: canvas chrome and reserved safe zones -------------------------
+   Los márgenes seguros (`--canvas-safe-*`) los fija en línea
+   `StructuralCanvas.tsx` a partir de `canvasSafeInsetsFor(size)` — la misma
+   función que reparte las etiquetas del lienzo — no una media query de aquí.
+   Antes vivían en dos sitios (TS y CSS) y el ancho de ventana de la media
+   query podía divergir del ancho medido del propio `canvas-host` (que se
+   angosta con el inspector acoplado sin cruzar ningún punto de quiebre). */
+.canvas-mode-badge {
+  top:12px;
+  left:12px;
+  min-height:36px;
+  max-width:min(470px,calc(100% - 270px));
+  border-radius:var(--sc-radius-control);
+}
+/* --- Navegador: dónde estoy ---------------------------------------------
+   Minimapa + cámara + escala + coordenadas, una sola pastilla en la esquina
+   inferior-derecha — antes cuatro superficies flotantes independientes
+   (`.canvas-controls`, `.canvas-status`, `.canvas-minimap` y el chip de
+   repetir) que competían por el mismo borde y llegaron a solaparse (el chip
+   de repetir caía a 4px del radar). En reposo se ve la miniatura y la
+   escala; apuntar o enfocar revela la cámara y las coordenadas (opacity,
+   regla 5 del sistema — nunca `display`). Sin hover disponible (K0/M1) el
+   navegador no lleva minimapa y el resto queda siempre visible, que es como
+   ya se comportaba el chrome de cámara en esas anchuras. */
+.canvas-navigator {
+  position:absolute;
+  z-index:9;
+  right:12px;
+  bottom:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+}
+.canvas-navigator__scale {
+  padding:2px 8px;
+  border-radius:var(--sc-radius-control);
+  color:var(--muted);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.canvas-navigator__reveal {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.canvas-navigator:hover .canvas-navigator__reveal,
+.canvas-navigator:focus-within .canvas-navigator__reveal { opacity:1; pointer-events:auto; }
+.canvas-navigator__controls {
+  display:flex;
+  border-radius:var(--sc-radius-control);
+  overflow:hidden;
+}
+.canvas-navigator__controls .sc-icon-button { border-radius:0; }
+.canvas-navigator__controls .sc-icon-button + .sc-icon-button { border-left:1px solid var(--border-soft); }
+.canvas-navigator__controls .sc-icon-button:hover { background:var(--sc-color-fill-quaternary); color:var(--text); }
+.canvas-navigator__controls .sc-icon-button:active { background:var(--sc-color-fill-tertiary); transform:var(--sc-press-transform); }
+.canvas-navigator__coordinates {
+  min-height:38px;
+  padding:0 11px;
+  display:flex;
+  align-items:center;
+  border-radius:var(--sc-radius-control);
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+/* El panel de capas baja por el mismo borde derecho y cubriría el
+   navegador: dos objetos en el mismo sitio no se resuelven apilándolos, se
+   resuelve mostrando uno. */
+.canvas-host:has(.canvas-layer-popover .sc-popover__surface) .canvas-navigator { display:none; }
+@media (max-width:1023px) {
+  /* El minimapa es un recurso de escritorio: en táctil el lienzo es el
+     recurso escaso y el radar se retira entero (ver más abajo). Sin hover
+     que lo revele, el resto del navegador queda siempre visible. */
+  .canvas-navigator__reveal { opacity:1; pointer-events:auto; }
+}
+.canvas-feedback { top:calc(var(--canvas-safe-top) + 8px); }
+.canvas-result-legend { top:calc(var(--canvas-safe-top) + 8px); left:12px; }
+.canvas-hint { top:calc(var(--canvas-safe-top) + 8px); }
+.quick-entry-bar { bottom:calc(var(--canvas-safe-bottom) + 8px); }
+
+/* El chrome del lienzo es opaco desde el ciclo 2. En escritorio, el ancho
+   heredado del badge y la leyenda invadía el diagrama de momento: con vidrio
+   se alcanzaba a leer lo que quedaba debajo; con arcilla ya no. Se compactan
+   sólo los dos overlays persistentes que ocupaban el margen izquierdo. Los
+   estados de colocación conservan su ancho completo y móvil mantiene su
+   composición específica. */
+@media (min-width:1024px) {
+  .canvas-mode-badge:not(.placing-load) {
+    max-width:min(156px,calc(100% - 28px));
+    overflow:hidden;
+    white-space:nowrap;
+  }
+  .canvas-mode-badge:not(.placing-load) :is(.desktop-gesture-hint,.canvas-action-instruction) {
+    flex:1 1 auto;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .canvas-result-legend {
+    width:min(156px,calc(100% - 32px));
+    padding:7px 8px;
+    gap:3px 6px;
+  }
+  .canvas-result-legend small {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .canvas-result-legend span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .canvas-result-legend i { width:16px; }
+}
+
+@media (max-width:1023px) {
+  .canvas-mode-badge {
+    top:10px;
+    left:max(10px,env(safe-area-inset-left));
+    max-width:calc(100% - 260px);
+  }
+  .canvas-navigator {
+    right:max(10px,env(safe-area-inset-right));
+    bottom:calc(82px + env(safe-area-inset-bottom));
+  }
+  .canvas-result-legend { top:104px; left:10px; }
+  .canvas-feedback { top:104px; }
+  .canvas-hint { top:104px; }
+  .quick-entry-bar { bottom:70px; }
+}
+
+@media (pointer:coarse) {
+  /* Sin cursor persistente, el lector de coordenadas no informa de nada. */
+  .canvas-navigator__coordinates { display:none; }
+}
+
+@media (max-width:460px) {
+  .canvas-mode-badge { top:8px; left:8px; max-width:calc(100% - 66px); }
+  .canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }
+  .desktop-gesture-hint { display:none; }
+  .touch-gesture-hint { display:inline; }
+  .canvas-result-legend { top:96px; width:calc(100% - 20px); }
+  .canvas-feedback { top:96px; }
+  .canvas-hint { top:96px; }
+}
+
+/* Phase 3: session-only information layers -------------------------------
+   El disparador y la superficie del popover de capas son el `Popover`
+   genérico del sistema (`.sc-popover*`, `ui.css`) — el mismo que funde las
+   cuatro decisiones de análisis en la barra superior desde la fase 2. Sólo
+   se fija aquí su posición flotante sobre el lienzo; material, elevación,
+   estado abierto y comportamiento táctil ya vienen del componente. Snap y
+   rejilla entraron como los dos primeros conmutadores del popover: antes
+   eran chips inertes (`pointer-events:none`, invisibles a ≤460px) que no
+   conmutaban nada y cuyo único control real vivía duplicado en Inspector ›
+   Vista. */
+.canvas-host .canvas-layer-popover {
+  position:absolute;
+  z-index:26;
+  top:10px;
+  right:12px;
+}
+.canvas-layer-popover .sc-popover__trigger {
+  width:40px;
+  min-height:40px;
+  height:40px;
+  padding:0;
+}
+.canvas-layer-popover .sc-popover__surface {
+  width:min(292px,calc(100vw - 24px));
+  max-height:calc(100dvh - var(--topbar-h) - env(safe-area-inset-top) - 60px);
+  overflow-y:auto;
+}
+.canvas-layer-view-toggles { display:grid; gap:2px; padding-bottom:8px; margin-bottom:8px; border-bottom:0.5px solid var(--sc-color-divider); }
+.canvas-layer-list {
+  min-height:0;
+  display:grid;
+  gap:2px;
+  padding:7px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.canvas-layer-row {
+  width:100%;
+  min-height:52px;
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr) 34px;
+  align-items:center;
+  gap:8px;
+  padding:5px 7px;
+  border:0;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+}
+.canvas-layer-row:hover:not(:disabled) { background:var(--surface-2); }
+.canvas-layer-row:disabled { cursor:default; opacity:.86; }
+.canvas-layer-icon {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:var(--sc-radius-control);
+  background:var(--surface-2);
+  color:var(--muted);
+}
+.canvas-layer-row[aria-checked='true'] .canvas-layer-icon { color:var(--accent-on-soft); background:var(--accent-soft); }
+.canvas-layer-copy { display:grid; min-width:0; gap:2px; }
+.canvas-layer-copy strong { font-size:12px; line-height:1.2; }
+.canvas-layer-copy small { color:var(--muted); font-size:10px; line-height:1.28; }
+/* CRI-105 · el interruptor de capas vive UNA sola vez, en
+   `design-system/components/ui.css` como `.sc-layer-toggle__switch`.
+   Aquí había dos definiciones base incompatibles de `.canvas-layer-switch`
+   —32×18 con pulgar de 14px arriba y 38×22 con pulgar de 16px más abajo, cada
+   una con su propia iluminación— peleando por la cascada, y ninguna de las dos
+   tenía marcado: `LayerToggle` (`design-system/components/editor.tsx`) emite
+   `.sc-layer-toggle__switch`, nunca `.canvas-layer-switch`. Las dos estaban
+   muertas desde que el componente se movió al Design System. */
+.canvas-layer-reset {
+  min-height:42px;
+  margin:0 7px 7px;
+  border:1px solid var(--border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--surface);
+  color:var(--muted);
+  font-size:12px;
+  font-weight:590;
+}
+.canvas-layer-reset:hover { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 32%,var(--border)); }
+
+@media (max-width:1023px) {
+  .canvas-host .canvas-layer-popover {
+    top:64px;
+    right:max(10px,env(safe-area-inset-right));
+  }
+  .canvas-layer-popover .sc-popover__trigger { width:44px; min-height:44px; height:44px; }
+  .canvas-layer-row { min-height:56px; }
+}
+
+@media (max-width:460px) {
+  .canvas-host .canvas-layer-popover { top:60px; right:8px; }
+}
+
+/* Phase 6: application shell composition -------------------------------- */
+.app-shell-skip-link {
+  position:fixed;
+  z-index:calc(var(--sc-z-topbar) + 20);
+  top:max(8px,env(safe-area-inset-top));
+  left:max(8px,env(safe-area-inset-left));
+  min-height:var(--sc-control-height-touch);
+  display:flex;
+  align-items:center;
+  padding:0 14px;
+  border:2px solid var(--focus);
+  border-radius:var(--sc-radius-control);
+  background:var(--surface);
+  color:var(--text);
+  font-size:var(--sc-font-size-control);
+  font-weight:var(--sc-font-weight-semibold);
+  box-shadow:var(--sc-elevation-1);
+  transform:translateY(calc(-100% - 20px));
+  transition:transform var(--motion-fast) var(--ease-native);
+}
+.app-shell-skip-link:focus { transform:translateY(0); }
+.overflow-layout-actions { display:grid; gap:2px; padding-block:4px; border-block:1px solid var(--border-soft); }
+.overflow-layout-actions button { justify-content:flex-start; }
+
+@media (min-width:1024px) {
+  .app-shell[data-inspector-collapsed='true'] .workspace {
+    grid-template-columns:var(--toolbar-w) minmax(0,1fr);
+  }
+  .app-shell[data-inspector-collapsed='true'] .inspector-panel { display:none; }
+}
+
+.app-shell[data-full-canvas='true'] .workspace {
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+}
+.app-shell[data-full-canvas='true'] .center-stage {
+  grid-column:1;
+  grid-row:1;
+}
+.app-shell[data-full-canvas='true'] .canvas-host { flex:1; }
+
+@media print {
+  .app-shell-skip-link { display:none!important; }
+}
+
+/* Phase 7: canvas-first rail and component-library adapters ------------- */
+/* Ancla del tooltip por herramienta (CRI-98): ocupa la celda del grid igual
+   que el botón que envuelve, sin alterar su tamaño o su foco. */
+.tool-rail .tool-group-actions .tool-rail-tooltip-anchor { display:block; width:100%; }
+/* La burbuja se porta a `document.body`: nunca la recorta el scroll del
+   riel. Visible por foco y por hover — nunca sólo por hover (LEDGER §4.4). */
+.tool-rail-tooltip {
+  position:fixed;
+  z-index:var(--sc-z-popover);
+  transform:translateY(-50%);
+  width:max-content;
+  max-width:220px;
+  padding:6px 9px;
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-text-primary);
+  color:var(--sc-color-bg-app);
+  box-shadow:var(--sc-elevation-2);
+  font-size:var(--sc-font-size-caption);
+  line-height:1.3;
+  pointer-events:none;
+}
+.tool-rail .sc-tool-button__icon svg { color:var(--tool-color,var(--accent)); }
+.tool-rail .sc-tool-button__copy strong { color:var(--text); font-size:var(--sc-font-size-body); font-weight:var(--sc-font-weight-regular); }
+.tool-rail:not(.is-compact) .sc-tool-button__copy strong {
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  line-height:1.3;
+}
+/* Elegida: la fila entera se rellena de acento, así que TODO lo que va encima
+   —glifo, etiqueta y atajo— pasa a la tinta del relleno. Dejar el glifo con su
+   color de familia sobre el azul lo hundía por debajo del suelo de contraste. */
+.tool-rail .sc-tool-button.is-active .sc-tool-button__copy strong { color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-medium); }
+.tool-rail .sc-tool-button.is-active .sc-tool-button__icon svg { color:var(--sc-color-action-foreground); }
+.canvas-layer-row.sc-layer-toggle { grid-template-columns:36px minmax(0,1fr) 34px; }
+.canvas-layer-row .sc-layer-toggle__icon { width:34px; height:34px; }
+.canvas-layer-row .sc-layer-toggle__copy strong { font-size:12px; line-height:1.2; }
+.canvas-layer-row .sc-layer-toggle__copy small { font-size:10px; line-height:1.28; }
+.canvas-layer-row.sc-layer-toggle.is-checked .sc-layer-toggle__icon { color:var(--accent-on-soft); background:var(--accent-soft); }
+
+@media (min-width:1440px) {
+  .app-shell[data-tool-rail-compact='true']:not([data-full-canvas='true']) .workspace {
+    grid-template-columns:var(--sc-layout-rail-compact) minmax(0,1fr) var(--inspector-w);
+  }
+  .app-shell[data-tool-rail-compact='true'][data-inspector-collapsed='true'] .workspace {
+    grid-template-columns:var(--sc-layout-rail-compact) minmax(0,1fr);
+  }
+  .tool-rail.is-compact { padding:8px; gap:2px; }
+  .tool-rail.is-compact .tool-group { gap:3px; }
+  .tool-rail.is-compact .tool-group + .tool-group { padding-top:5px; border-top:1px solid var(--border-soft); }
+  .tool-rail.is-compact .tool-group-heading {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .tool-rail.is-compact .tool-group-actions { justify-items:center; gap:1px; }
+  .tool-rail.is-compact .selection-tip { justify-content:center; }
+  .tool-rail.is-compact .selection-tip span { display:none; }
+}
+
+@media (max-width:1439px) {
+  .overflow-toolrail-action { display:none!important; }
+}

@@ -1,0 +1,188 @@
+/* --- Inspector: vista previa de la selección --------------------------- */
+.inspector-selection-preview {
+  margin:9px 0 0;
+  padding:8px;
+  display:grid;
+  gap:5px;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+}
+.inspector-selection-preview svg { width:100%; height:auto; display:block; }
+.inspector-selection-preview figcaption {
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  text-align:center;
+}
+.inspector-selection-preview .preview-members line { stroke:var(--muted); stroke-width:2; stroke-linecap:round; }
+.inspector-selection-preview .preview-members line.is-focus { stroke:var(--selection); stroke-width:3.4; }
+.inspector-selection-preview .preview-nodes circle { fill:var(--node-fill); stroke:var(--member); stroke-width:1.4; }
+.inspector-selection-preview .preview-nodes circle.is-focus { fill:var(--selection); stroke:var(--selection); }
+.inspector-selection-preview .preview-support { fill:none; stroke:var(--member); stroke-width:1.3; stroke-linecap:round; }
+.inspector-selection-preview .preview-support.is-focus { stroke:var(--selection); stroke-width:1.7; }
+/* La carga se dibuja con su color técnico, el mismo del lienzo: quien la
+   reconoce ahí la reconoce aquí sin traducir nada. */
+.inspector-selection-preview .preview-arrow line { stroke:var(--force); stroke-width:1.8; stroke-linecap:round; }
+.inspector-selection-preview .preview-arrow polygon { fill:var(--force); stroke:none; }
+.inspector-selection-preview .preview-load-band {
+  fill:color-mix(in srgb,var(--shear) 22%,transparent);
+  stroke:var(--shear);
+  stroke-width:1.4;
+  stroke-linejoin:round;
+}
+.inspector-selection-preview [data-load-kind='distributed'] .preview-arrow line { stroke:var(--shear); }
+.inspector-selection-preview [data-load-kind='distributed'] .preview-arrow polygon { fill:var(--shear); }
+.inspector-selection-preview .preview-moment path { fill:none; stroke:var(--moment); stroke-width:1.8; stroke-linecap:round; }
+.inspector-selection-preview .preview-moment polygon { fill:var(--moment); stroke:none; }
+.inspector-selection-preview .preview-load-label {
+  fill:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:10px;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+@media (max-width:700px) {
+  .inspector-selection-preview { margin-top:6px; padding:6px; gap:3px; }
+  .inspector-selection-preview figcaption { line-height:1.2; }
+}
+
+/* --- Inspector: visor de sección --------------------------------------- */
+.section-viewer {
+  margin-top:10px;
+  padding:10px;
+  display:grid;
+  gap:8px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+}
+.section-viewer-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.section-viewer-title { display:grid; gap:1px; min-width:0; }
+.section-viewer-title strong { font-size:13px; }
+.section-viewer-title span { color:var(--muted); font-size:var(--sc-font-size-caption); }
+.section-viewer-modes { display:flex; gap:4px; }
+.section-viewer-modes button {
+  min-height:26px;
+  padding:0 8px;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  font-weight:590;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.section-viewer-modes button:hover:not(:disabled) { color:var(--text); box-shadow:var(--sc-elevation-1); }
+.section-viewer-modes button:disabled { opacity:.5; cursor:not-allowed; }
+.section-viewer-modes button.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+.section-viewer-canvas {
+  padding:6px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+}
+.section-viewer-canvas svg { width:100%; height:auto; display:block; }
+.section-viewer .section-shape { fill:var(--surface-2); stroke:var(--accent); stroke-width:2; }
+/* En modo tensiones el contorno va *encima* del degradado: si conservara el
+   relleno taparía justo el mapa que tiene que enmarcar. */
+.section-viewer .section-shape--outline { fill:none; }
+.section-viewer .section-shape-void { fill:var(--canvas-bg); stroke:var(--border); stroke-width:1.2; }
+.section-viewer .section-neutral-axis { stroke:var(--axis); stroke-width:1.2; stroke-dasharray:4 2; }
+.section-viewer .section-axis-label,
+.section-viewer .section-dimension text,
+.section-viewer .section-stress-label {
+  font-family:var(--sc-font-mono);
+  font-size:10px;
+  font-weight:700;
+}
+.section-viewer .section-axis-label { fill:var(--muted); }
+.section-viewer .section-dimension line { stroke:var(--dimension); stroke-width:1; }
+.section-viewer .section-dimension text { fill:var(--text); }
+/* Sin trazo: el borde lo pone `.section-shape--outline` con la forma real. */
+.section-viewer .section-stress-fill { stroke:none; }
+.section-viewer .section-stress-label { fill:var(--text); }
+.section-viewer-chips { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.section-viewer-chips > div {
+  padding:6px 8px;
+  display:grid;
+  gap:1px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  min-width:0;
+}
+.section-viewer-chips dt { color:var(--subtle); font-family:var(--sc-font-mono); font-size:var(--sc-font-size-caption); }
+.section-viewer-chips dd {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:11px;
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* --- Índice elástico estimado (Inspector + Resumen) -------------------- */
+/* Una sola hoja para las dos superficies: el view-model es el mismo
+   (`elasticDemand`), así que la apariencia tampoco puede divergir. Sin tonos
+   `safe/warning/overstressed` —codificaban un juicio de seguridad— y sin la
+   marca del 0,85. La única marca del riel es la referencia η = 1. */
+.inspector-narrative {
+  margin-top:10px;
+  padding:11px;
+  display:grid;
+  gap:8px;
+  border:var(--sc-hairline);
+  border-left:3px solid var(--sc-color-demand-peak);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-elevation-1);
+}
+.inspector-narrative[data-status='unavailable'] { border-left-color:var(--sc-color-border); }
+.inspector-narrative[data-at-reference='true'] { border-left-color:var(--sc-color-demand-reference); }
+.inspector-narrative > header { display:flex; align-items:center; gap:6px; flex-wrap:wrap; color:var(--text); }
+.inspector-narrative > header svg { color:var(--sc-color-demand-peak); }
+.inspector-narrative[data-status='unavailable'] > header svg { color:var(--subtle); }
+.inspector-narrative > header strong { font-size:13px; }
+.inspector-narrative-body {
+  margin:0;
+  color:var(--muted);
+  font-size:var(--sc-font-size-technical);
+  line-height:var(--sc-line-height-compact);
+}
+.inspector-narrative-values { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.inspector-narrative-values > div {
+  padding:5px 7px;
+  display:grid;
+  gap:1px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  min-width:0;
+}
+.inspector-narrative-values dt { color:var(--subtle); font-family:var(--sc-font-mono); font-size:var(--sc-font-size-caption); }
+.inspector-narrative-values dd {
+  margin:0;
+  font-family:var(--sc-font-mono);
+  font-size:11px;
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.inspector-narrative-basis,
+.elastic-demand-limit {
+  color:var(--subtle);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}

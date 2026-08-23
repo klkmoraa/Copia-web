@@ -1,0 +1,79 @@
+
+:root {
+  font-family: var(--sc-font-ui);
+  color: var(--sc-color-text-primary);
+  background: var(--sc-color-bg-app);
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: var(--sc-numeric-variant);
+  font-feature-settings: var(--sc-numeric-features);
+}
+
+:root[data-theme='dark'] {
+  color: var(--sc-color-text-primary);
+  background: var(--sc-color-bg-app);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+#root { height:100dvh; }
+button, input, select, textarea { font: inherit; color: inherit; font-size:var(--sc-font-size-control); line-height:var(--sc-line-height-control); }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .62; }
+:where(button, input, select, textarea, summary):focus-visible { outline: var(--sc-focus-ring-width) solid var(--focus); outline-offset: var(--sc-focus-ring-offset); }
+.sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+
+/* Superficie del sistema (`Surface`). La materia (fondo, filete, elevación por
+   nivel) vive en `design-system/material.css` desde el ciclo 2 — declarada
+   una vez, compartida con el resto del workspace. Aquí sólo queda lo que es
+   forma, no materia: el radio y la transición, que sí varían por componente.
+   CRI-112 retiró el marco RAISED único que subía este radio a
+   `--sc-radius-hero`; desde entonces nadie lo sobrescribe y `--sc-radius-xl`
+   es el radio real de toda superficie del sistema. */
+.sc-surface {
+  border-radius: var(--sc-radius-xl);
+  transition: var(--sc-transition-control);
+}
+
+.app-shell { height: 100%; height: 100dvh; background: var(--app-bg); color: var(--text); display: flex; flex-direction: column; }
+/* Pantalla de bienvenida · "Mesa de dibujo" (AG-015) ------------------------
+   El suelo es papel de delineante: retícula fina de 24px, retícula mayor de
+   96px encima, y sobre ambas dos auroras de marca que sólo existen en la
+   parte alta de la página. El resto de la pantalla es disciplina: superficie
+   sólida, canto de 1px y una sola pieza con voz propia (la figura del hero). */
+.welcome-screen {
+  --welcome-grid-fine: color-mix(in srgb, var(--border) 30%, transparent);
+  --welcome-grid-major: color-mix(in srgb, var(--border) 62%, transparent);
+  /* CRI-112 · En Noche el mismo porcentaje desaparece: el canto va contra un
+     suelo casi negro y el 30 % lo deja por debajo del umbral de percepción,
+     así que la mesa técnica se perdía justo donde más falta hace para que las
+     piezas se apoyen en algo. Se sube la mezcla, no el token: `--welcome-grid-*`
+     son variables locales de esta pantalla y siguen derivando de `--border`,
+     sin un solo HEX nuevo. */
+  height:100%; min-height:0;
+  overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch; touch-action:pan-y;
+  display:flex; flex-direction:column;
+  color:var(--text);
+  background-color:var(--app-bg);
+  /* Sin las dos auroras radiales que había aquí, construidas sobre `--accent` y
+     `--brand-secondary`. El sistema dice, con todas las letras, que no usa el
+     acento como luz: «sin halos, sin brillos, sin degradados construidos sobre
+     el color de acción» (`design-system/README.md`). Eran resto de la identidad
+     anterior; al lado del marco del lanzador no aportaban nada y contradecían la
+     única regla de color que el producto tiene. Queda la mesa de dibujo, que sí
+     deriva de `--border` y sí significa algo: el suelo sobre el que se apoya la
+     ventana. */
+  background-image:
+    linear-gradient(var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--welcome-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-fine) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+}
+[data-theme='dark'] .welcome-screen {
+  --welcome-grid-fine: color-mix(in srgb, var(--border) 62%, transparent);
+  --welcome-grid-major: color-mix(in srgb, var(--border) 100%, transparent);
+}

@@ -1,0 +1,143 @@
+/* Workspace: barras, navegación y chrome del lienzo --------------------- */
+.topbar,
+.toolbar,
+.inspector-panel {
+  background:var(--surface);
+  border-color:var(--border);
+  box-shadow:none;
+}
+/* Barra de herramientas unificada: UNA pieza de cristal a todo el ancho, con
+   los controles apoyados directamente encima. Los cuatro grupos eran cuatro
+   tarjetas blancas flotando sobre la barra —una barra dentro de otra barra— y
+   eso es exactamente lo que una barra del sistema no hace: lo que separa los
+   grupos es el espacio, no un marco. */
+.topbar [data-topbar-cluster] { min-height:var(--sc-control-height-md); padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.topbar [data-topbar-cluster='document'] { gap:var(--sc-space-2); }
+.topbar [data-topbar-cluster='context'] { gap:var(--sc-space-2); }
+.topbar [data-topbar-cluster='actions'] { gap:2px; }
+/* --- Grupos de la barra unificada ----------------------------------------
+   Seis iconos en fila con el mismo hueco entre todos no dicen nada del
+   parentesco entre ellos; agrupados con un filete de por medio, sí: superficies
+   (hoja de datos, Space 3D) · historial · exportación · resto. El clúster
+   reparte 2 px dentro de cada grupo y `--sc-space-2` entre grupos, que es la
+   diferencia entre «lo mismo» y «otra cosa». */
+.topbar-tool-group { display: flex; align-items: center; gap: 2px; }
+.topbar-tool-group + .topbar-tool-group {
+  margin-inline-start: var(--sc-space-2);
+  padding-inline-start: var(--sc-space-2);
+  border-inline-start: var(--sc-hairline);
+}
+/* El botón primario no es un grupo más: se separa de ellos y no lleva filete
+   —el relleno de acento ya lo distingue de todo lo demás de la barra. */
+.topbar-command-cluster > .analyze-button { margin-inline-start: var(--sc-space-3); }
+.topbar [data-topbar-cluster='status'] { gap:var(--sc-space-2); }
+.topbar [data-topbar-cluster] .autosave-state { border-left:0; }
+/* --- Ítem de contexto: UN pop-up button, no cuatro campos rotulados -------
+   La versión anterior apilaba etiqueta sobre selector cuatro veces y repartía
+   el ancho sobrante entre las cuatro (`flex:1 1 84px; max-width:132px`). A
+   1280 px eso daba 84 px por campo y las etiquetas se recortaban a «Caso o
+   com…», «Modo de cál…», «Orden del a…»: una etiqueta truncada no etiqueta.
+   Una barra unificada del sistema no rotula sus ítems — enseña el valor. */
+.topbar-context-button {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--sc-control-height-sm);
+  max-width: 220px;
+  padding: 0 8px;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-1);
+  color: var(--sc-color-text-secondary);
+  font: inherit;
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-medium);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+.topbar-context-button__value {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--sc-color-text-primary);
+}
+.topbar-context-button svg { flex: 0 0 auto; color: var(--sc-color-text-muted); }
+/* No se eleva bajo el puntero: se tiñe. */
+.topbar .topbar-context-button:hover { background: var(--sc-color-fill-quaternary); box-shadow: var(--sc-elevation-1); transform: none; }
+.topbar .topbar-context-button[aria-expanded='true'] { background: var(--sc-color-fill-tertiary); box-shadow: var(--sc-elevation-1); }
+/* El foco es un anillo y sólo un anillo (V-14). */
+.topbar .topbar-context-button:focus-visible { box-shadow: var(--sc-ring-focus); }
+
+.analysis-setup-wrap { position: relative; display: inline-flex; }
+.analysis-setup-popover {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-3);
+}
+/* El campo comparte definición con el desbordamiento móvil, donde 44 px es el
+   piso táctil correcto. En un popover de escritorio conducido por puntero fino
+   ese piso sobra: se baja al alto de control del sistema y vuelve a 44 en
+   cuanto el puntero es grueso. */
+.analysis-setup-popover .mobile-menu-field select { min-height: var(--sc-control-height-md); padding: 4px 8px; }
+@media (pointer: coarse) {
+  .analysis-setup-popover .mobile-menu-field select { min-height: var(--sc-control-height-touch); }
+}
+.analysis-setup-popover .pdelta-advanced-details { margin: 0; }
+/* Filas de formulario, no filas de menú: etiqueta encima y control debajo a
+   todo el ancho del popover — aquí sí hay sitio para rotular, que es la razón
+   por la que las etiquetas se mudaron aquí. */
+.topbar-context-field { display: grid; gap: 4px; }
+.topbar-context-field > span {
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-medium);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.tool-group + .tool-group { border-top-color:var(--border-soft); }
+/* La monoespaciada es la cara de los NÚMEROS —valores, unidades, fórmulas y
+   matrices—, y de nada más. Rotular con ella una pestaña, una insignia o el
+   nombre del proyecto era la voz del sistema anterior; en una app del sistema
+   esas cosas van en la misma cara que el resto de la interfaz, y la diferencia
+   la marcan el peso y el tamaño. */
+.tool-group-heading,
+.result-tab-family__label,
+.inspector-property-group__mode { font-family:var(--sc-font-ui); letter-spacing:0; }
+
+/* Campos y selectores: superficie propia con filete, como un control de texto
+   del sistema. La cavidad rehundida que llevaban era la materia anterior; lo
+   que dice "aquí se escribe" es el canto, no la profundidad. */
+.number-control,
+.select-field select,
+.inspector-numeric-field__control,
+.diagram-cursor-readout {
+  background:var(--sc-color-surface-input);
+  border:0.5px solid var(--sc-color-border);
+  box-shadow:none;
+}
+/* El nombre del proyecto es el título de la ventana, no un campo: no lleva
+   caja hasta que alguien lo toca para renombrarlo. */
+.topbar .project-name input {
+  background:transparent;
+  border:0.5px solid transparent;
+  box-shadow:none;
+}
+.topbar .project-name input:focus { background:var(--sc-color-surface-input); border-color:var(--sc-color-action-primary); }
+.topbar .project-name input:hover { background:var(--sc-color-fill-quaternary); }
+
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button,.welcome-header-icon) {
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled) { background:var(--sc-color-fill-quaternary); color:var(--text); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled) { background:var(--sc-color-fill-tertiary); transform:var(--sc-press-transform); }
+
+/* La geometría de la tecla es de esta pantalla; su relieve lo declara
+   `.sc-tool-button` en `ui.css`, que es el componente que la dibuja. */
+.tool-button { border-radius:var(--sc-radius-sm); }
+
+.canvas-mode-badge { border-radius:var(--sc-radius-control); }
+.canvas-navigator__controls .sc-icon-button { transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press); }
+.canvas-host { background-color:var(--canvas-bg); }

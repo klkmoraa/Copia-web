@@ -1,0 +1,291 @@
+/* Barra a sangre completa con el contenido alineado a la columna de lectura:
+   el vidrio necesita cruzar toda la ventana o el corte delata el truco. */
+.welcome-header {
+  position:sticky; top:0; z-index:var(--sc-z-sticky);
+  min-height:74px;
+  padding-inline:max(24px, calc((100% - var(--sc-layout-reading)) / 2));
+  display:flex; justify-content:space-between; align-items:center; gap:var(--sc-space-4);
+  border-bottom:1px solid color-mix(in srgb, var(--border) 58%, transparent);
+}
+.welcome-brand { display:flex; align-items:center; gap:11px; font-size:19px; letter-spacing:var(--sc-tracking-tight); color:var(--accent); }
+.welcome-brand svg { flex:0 0 auto; --brand-mark-ink:var(--accent-foreground); }
+/* Sin `gap`: el nombre es una sola palabra y el hueco entre el `span` y el
+   nodo de texto lo partía en "structure Co". */
+.welcome-brand strong { display:flex; align-items:center; font-family:var(--sc-font-display); font-weight:550; }
+.welcome-brand strong span { color:var(--text); font-weight:700; }
+.welcome-version-tag { font-size:11px; font-weight:590; padding:2px 9px; border-radius:var(--sc-radius-pill); color:var(--accent); background:color-mix(in srgb, var(--accent) 11%, var(--surface)); border:1px solid color-mix(in srgb, var(--accent) 24%, transparent); letter-spacing:0; }
+
+/* Tema e idioma, alcanzables desde el inicio: en escritorio, junto a la marca;
+   en móvil, dentro del drawer (ver `.welcome-header-menu` más abajo). Los dos
+   controles comparten el mismo tratamiento visual que el resto del sistema. */
+.welcome-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.welcome-header-desktop-only { display: flex; align-items: center; gap: var(--sc-space-2); }
+
+.welcome-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sc-size-target-touch);
+  min-height: var(--sc-size-target-touch);
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-1);
+  color: var(--sc-color-text-secondary);
+  transition: var(--sc-transition-control);
+}
+
+.welcome-header-icon:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-elevation-1); }
+.welcome-header-icon:active { box-shadow: none; transform: var(--sc-press-transform); }
+
+/* Misma especificidad que `.welcome-header-icon` (0,1,0): tiene que ganar por
+   orden de aparición, así que esta regla va *después* de ese bloque. Antes
+   estaba antes, y `display:inline-flex` de `.welcome-header-icon` ganaba por
+   ser la declaración más tardía — el botón se veía en escritorio pese al
+   `display:none` de aquí. La media query de abajo reafirma `inline-flex` en
+   móvil por el mismo motivo: misma especificidad, aparece después. Protegido
+   por `verifyWelcomeHeaderResponsive` en `qa.mjs` (probado en Chromium real:
+   invertir el orden reproduce el defecto y tira `welcomeHeaderMenuHiddenDesktop`). */
+.welcome-header-menu { display: none; }
+
+.welcome-menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  align-items: stretch;
+}
+/* `align-self: flex-start`, no `width`/`justify-content`/`gap`: ese trío estaba
+   escrito para un botón icono+texto que el JSX nunca tuvo (el botón sólo
+   lleva el icono; el texto vive en `aria-label`, no en el DOM visible), así
+   que estirarlo a `width:100%` dejaba un icono de 18px pegado al borde
+   izquierdo de una píldora vacía. Sin `align-self` heredaría `stretch` de
+   `.welcome-menu-body` igualmente; con él, vuelve a su tamaño natural de
+   44×44 y mantiene el icono centrado, igual que en la cabecera de escritorio. */
+.welcome-menu-body .welcome-header-icon { align-self: flex-start; }
+
+@media (max-width: 767px) {
+  .welcome-header-desktop-only { display: none; }
+  .welcome-header-menu { display: inline-flex; }
+}
+/* Pórtico de la bienvenida. El sombreado por cara llega como `--face-shade` (0 sombra,
+   1 luz) y se aplica con `brightness`, de modo que un solo token de material
+   produce sus tres caras y el tema no necesita duplicar valores.
+
+   La fórmula está calibrada contra los tres shades reales que emite
+   `isometricPortal.ts` para `DEFAULT_PORTAL` (cara superior 0.8345, lateral
+   izquierda 0.7027, lateral derecha 0.5840), no contra el rango teórico
+   completo [0.34, 1]: con una recta que pasa por (0.584 → 0.72) y
+   (0.8345 → 1.15) las tres caras quedan en 0.72 / 0.93 / 1.15 — separadas por
+   ~0.2 cada una, así que se leen como volumen. Una recta calibrada sobre
+   [0,1] completo (p.ej. 0.72 + 0.38·shade) comprime esas mismas tres caras en
+   0.94-1.04 y la figura se aplana. */
+.portal-hero {
+  width: 100%;
+  height: auto;
+  max-width: 440px;
+  overflow: visible;
+}
+
+.portal-hero__face {
+  filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283));
+  stroke: none;
+}
+
+.portal-hero__ground line {
+  /* border-strong, no border-soft: contra --sc-color-bg-app, border-soft da
+     1.06:1 (Día) / 1.27:1 (Noche) — invisible. border-strong casi dobla el
+     contraste en ambos temas (1.82:1 / 2.45:1) sin tocar el color del
+     pórtico. Sigue siendo decorativo (no hay texto que exija AA 4.5:1). */
+  stroke: var(--sc-color-border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.portal-hero__contact {
+  fill: var(--sc-color-border-strong);
+  opacity: 0.16;
+  filter: blur(14px);
+}
+.welcome-launcher-card {
+  --launcher-accent:var(--accent);
+  position:relative; overflow:hidden; width:100%;
+  display:grid; grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:"icon arrow" "info info";
+  align-items:start; gap:18px 12px;
+  padding:20px; border-radius:var(--sc-radius-xl); text-align:left; cursor:pointer;
+  background:var(--sc-color-surface-1); border:var(--sc-hairline);
+  box-shadow:var(--sc-elevation-1);
+  transition:var(--sc-transition-control);
+}
+.welcome-launcher-card::before { content:''; position:absolute; inset:0 0 auto; height:56%; background:var(--sc-gradient-sheen); pointer-events:none; }
+/* La elevación sube en hover y se hunde en press; el borde acompaña siempre a
+   la sombra para que el estado no dependa sólo de ella. El color de dominio
+   (marca / Aula / info) vive en el icono, no en el fondo de la tarjeta. */
+.welcome-launcher-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-elevation-2);
+}
+/* `:not(:disabled)` no cambia a qué botones aplica (ninguno de los tres se
+   deshabilita) — está para ganar en especificidad (0,3,0) a la regla global
+   `button:not(:disabled):active { transform:scale(.975) }` (0,2,1, en la
+   sección "Green Frame"), que si no se lleva el `transform` por delante y
+   deja a esta tarjeta encogiéndose en vez de hundirse. Mismo patrón que ya
+   usa `.analyze-button:not(:disabled):active` en este archivo. */
+.welcome-launcher-card:not(:disabled):active {
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+.welcome-launcher-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
+.welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
+.welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
+/* Space 3D es dominio estructural propio, no una vista previa: su acento es el
+   cian de trazo de la marca, la segunda dimensión del dibujo técnico. */
+.welcome-launcher-card--space3d { --launcher-accent:var(--sc-color-brand-secondary); }
+/* Contenedores de icono: aquí viven el azul y el lavanda de la referencia,
+   sobre un icono en el tono medido de cada dominio. */
+.welcome-launcher-icon {
+  grid-area:icon;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:52px; height:52px;
+  border-radius:var(--sc-radius-lg);
+  border:var(--sc-hairline);
+  box-shadow:var(--sc-elevation-1);
+  background:var(--sc-color-action-subtle);
+  color:var(--sc-color-action-ink);
+}
+.welcome-launcher-card--classroom .welcome-launcher-icon {
+  background:var(--sc-color-accent-violet-soft);
+  color:var(--sc-color-aula);
+}
+.welcome-launcher-card--recent .welcome-launcher-icon {
+  background:var(--sc-color-accent-blue-soft);
+  color:var(--sc-color-text-link);
+}
+.welcome-launcher-card--space3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-brand-secondary) 16%,var(--surface)); color:var(--sc-color-brand-secondary); }
+.welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
+.welcome-launcher-info small { color:var(--muted); font-size:12px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.welcome-launcher-info strong { font-size:16px; font-weight:590; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.welcome-pill-badge { font-size:10px; font-weight:590; padding:3px 9px; border-radius:var(--sc-radius-pill); background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); white-space:nowrap; }
+.welcome-pill-badge--experimental { background:color-mix(in srgb,var(--sc-color-state-warning) 15%,transparent); color:var(--sc-color-state-warning-foreground); }
+.welcome-project-stats { font-size:11px; font-weight:590; color:var(--muted); background:var(--surface-2); padding:2px 8px; border-radius:var(--sc-radius-xs); white-space:nowrap; font-variant-numeric:var(--sc-numeric-variant); }
+.welcome-launcher-arrow { grid-area:arrow; justify-self:end; align-self:center; color:var(--subtle); transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-launcher-card:hover .welcome-launcher-arrow { color:var(--launcher-accent); transform:translateX(4px); }
+.welcome-filter-tabs { display:inline-flex; gap:3px; padding:4px; border-radius:var(--sc-radius-lg); width:fit-content; }
+.welcome-filter-tab { border:0; padding:7px 14px; border-radius:var(--sc-radius-md); font-size:12px; font-weight:590; color:var(--muted); background:transparent; cursor:pointer; }
+.welcome-filter-tab:hover { color:var(--text); }
+.welcome-filter-tab.active { background:var(--sc-color-surface-inset); color:var(--accent); font-weight:590; box-shadow:none; }
+
+/* Zona de importación: sigue siendo de trazo discontinuo porque eso es lo que
+   dice "aquí se suelta un archivo"; lo que cambia es la materia, no el
+   trazo. El vidrio sale: un fondo opaco al 96% no deja pasar nada
+   que el desenfoque tenga sentido en mostrar. */
+.welcome-import-card {
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px;
+  padding:15px 18px; border-radius:var(--sc-radius-lg);
+  background:var(--sc-color-surface-1);
+  border:1.5px dashed color-mix(in srgb, var(--accent) 38%, var(--border));
+  box-shadow:var(--sc-elevation-1);
+  text-align:left; cursor:pointer; width:100%;
+  transition:var(--sc-transition-control);
+}
+/* `border-color:var(--accent)` a proposito, no `--sc-color-border-strong`
+   (el neutro que usan las otras dos tarjetas): esta es la unica de las tres
+   con un borde de color en reposo (discontinuo, acento diluido al 38%), y
+   apagarlo a gris en hover volvia la zona de soltar archivos MENOS enfatica
+   justo al apuntarla — al reves de lo que pide un target interactivo. Acento
+   a maxima intensidad en vez de diluido comunica "sueltalo aqui" con mas
+   fuerza, no menos. */
+.welcome-import-card:hover {
+  border-color:var(--accent);
+  box-shadow:var(--sc-elevation-2);
+}
+.welcome-import-card:not(:disabled):active {
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+.welcome-import-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
+.welcome-import-card:hover .welcome-launcher-arrow { color:var(--accent); transform:translateX(4px); }
+.welcome-import-icon { width:40px; height:40px; border-radius:var(--sc-radius-md); display:grid; place-items:center; background:color-mix(in srgb, var(--accent) 12%, var(--surface)); color:var(--accent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); }
+.welcome-import-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.welcome-import-text strong { font-size:14px; font-weight:590; color:var(--text); }
+.welcome-import-text small { font-size:11.5px; color:var(--muted); line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* CRI-112 · seis ejemplos en 232 px entraban de cinco en cinco y dejaban uno
+   huérfano en la segunda fila. Con una pista mínima mayor caben tres por fila
+   y las dos filas quedan completas, sin cambiar nada del contenido. */
+.welcome-templates-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 336px), 1fr)); gap:12px; }
+/* A diferencia de las otras dos tarjetas, ésta sigue siendo `m.button` con
+   `layout` (el reflow de `AnimatePresence` del filtro de plantillas, ver
+   `WelcomeScreen.tsx`): `motion` sigue escribiendo `transform` inline sobre
+   este nodo para el FLIP del filtro, y un estilo inline gana siempre sobre
+   cualquier regla de `:hover`/`:active` en CSS, tenga o no la especificidad
+   más alta — por eso usa la variante de transición sin `transform` (ver su
+   token) y por eso `:hover`/`:active`, más abajo, no incluyen desplazamiento:
+   escribirlo ahí sería una animación que Chromium real nunca reproduce
+   (comprobado en `qa.mjs`, `verifyWelcomeSurfaceMaterial`). El borde y la
+   sombra sí cambian con el estado, así que sigue sin depender sólo de la
+   sombra. */
+.welcome-template-card {
+  position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;
+  padding:16px; border-radius:var(--sc-radius-lg); text-align:left; gap:14px; cursor:pointer; min-height:142px;
+  background:var(--sc-color-surface-1); border:var(--sc-hairline);
+  box-shadow:var(--sc-elevation-1);
+  transition:var(--sc-transition-control-no-transform);
+}
+.welcome-template-card::before { content:''; position:absolute; inset:0 0 auto; height:50%; background:var(--sc-gradient-sheen); pointer-events:none; }
+.welcome-template-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-elevation-2);
+}
+/* Sin `transform` y sin depender sólo del `box-shadow`: con ratón, `:hover`
+   ya deja el borde en `--sc-color-border-strong`, así que si `:active` sólo
+   cambiara la sombra no habría ningún delta frente a "sigo encima, sin
+   pulsar" — y con teclado (Enter, sin `:hover`) el borde de reposo tampoco
+   se movería. Un tercer color de borde, distinto de ambos, garantiza que
+   pulsar cambie algo que `motion` no toca.
+
+   Medido en Chromium real (vite preview + Playwright, mousedown sostenido
+   sobre `.welcome-template-card`), no supuesto: con `layout` activo, `motion`
+   escribe `style="transform: none"` inline sobre este nodo de forma
+   permanente — en reposo, en `:hover` y en `:active` por igual — y ese
+   inline gana siempre sobre cualquier `transform` de CSS, incluido
+   `button:not(:disabled):active { transform:scale(.975) }` (styles.css más
+   abajo). `border-color` sí es libre: no lo toca `motion`, y el valor medido
+   en `:active` es `--sc-color-action-primary` tal cual se declara aquí. */
+.welcome-template-card:active {
+  box-shadow:none;
+  border-color:var(--sc-color-action-edge);
+}
+.welcome-template-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
+.welcome-template-top { display:flex; align-items:center; justify-content:space-between; }
+.welcome-category-badge { font-size:10px; font-weight:590; padding:3px 8px; border-radius:var(--sc-radius-xs); text-transform:none; letter-spacing:0; }
+.welcome-badge--academic { background:color-mix(in srgb, var(--sc-color-state-warning) 14%, transparent); color:var(--sc-color-state-warning-foreground); }
+.welcome-badge--truss { background:color-mix(in srgb, var(--sc-color-info) 14%, transparent); color:var(--sc-color-info); }
+.welcome-badge--beam { background:color-mix(in srgb, var(--sc-color-technical-distributed) 14%, transparent); color:var(--sc-color-technical-distributed); }
+.welcome-badge--frame { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); }
+.welcome-template-icon { color:var(--subtle); transition:color var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-template-card:hover .welcome-template-icon { color:var(--accent); }
+.welcome-template-body { display:flex; flex-direction:column; gap:5px; }
+.welcome-template-body strong { font-size:14px; font-weight:590; color:var(--text); line-height:1.3; letter-spacing:var(--sc-tracking-tight); }
+.welcome-template-body small { font-size:11.5px; color:var(--muted); line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.welcome-template-footer { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:590; color:var(--subtle); transition:color var(--sc-motion-control) var(--sc-ease-standard); border-top:1px solid var(--border-soft); padding-top:10px; margin-top:auto; }
+.welcome-template-card:hover .welcome-template-footer { color:var(--accent); }
+.welcome-template-card:hover .welcome-template-footer svg { transform:translateX(3px); }
+.welcome-template-footer svg { transition:transform var(--sc-motion-control) var(--sc-ease-standard); }
+
+.welcome-footer { margin-top:auto; min-height:40px; padding:9px 18px; display:flex; justify-content:center; align-items:center; gap:7px; color:var(--subtle); text-align:center; font-size:11px; }
+.welcome-footer svg { color:var(--accent); flex:0 0 auto; }

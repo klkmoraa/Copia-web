@@ -1,0 +1,160 @@
+/* Model Doctor vive en la zona `status`: nunca desaparece en Compact, ni
+   siquiera en el suelo protegido de la Cinta (D-14 · CRI-95). Antes de este
+   slice `.topbar-command-button` se ocultaba entero por debajo de 1023px y
+   sólo quedaba accesible desde «Más acciones» — exactamente la regresión que
+   el issue existe para cerrar. El icono ya viene forzado arriba; aquí no se
+   retira nada. */
+
+/* --- Paleta de comandos ------------------------------------------------ */
+.command-palette-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:var(--sc-z-modal);
+  display:grid;
+  justify-items:center;
+  align-items:start;
+  padding:max(64px,env(safe-area-inset-top)) 16px 16px;
+  background:var(--sc-color-overlay-soft);
+}
+.command-palette {
+  width:min(640px,100%);
+  max-height:min(70vh,560px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-modal);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-modal);
+}
+.command-palette-title {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+.command-palette-search {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border-soft);
+  color:var(--muted);
+}
+.command-palette-search input {
+  flex:1;
+  min-width:0;
+  min-height:var(--sc-control-height-md);
+  padding:0 12px;
+  border:0;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  color:var(--text);
+  font-size:var(--sc-font-size-body);
+}
+.command-palette-search input:focus-visible { outline:none; box-shadow:var(--sc-ring-focus); }
+.command-palette-search kbd {
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-list { flex:1; min-height:0; overflow-y:auto; padding:8px; }
+.command-palette-empty { margin:16px 8px; color:var(--muted); font-size:var(--sc-font-size-technical); }
+.command-palette-group + .command-palette-group { margin-top:8px; }
+.command-palette-group h3 {
+  margin:0 0 4px;
+  padding:0 8px;
+  color:var(--subtle);
+  font-size:var(--sc-font-size-label);
+  font-weight:var(--sc-font-weight-semibold);
+  letter-spacing:0;
+  text-transform:none;
+}
+.command-palette-item {
+  width:100%;
+  min-height:32px;
+  padding:6px 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-sm);
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+  transition:background var(--sc-motion-fast) var(--sc-ease-standard), box-shadow var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.command-palette-item svg { flex:0 0 auto; color:var(--muted); }
+.command-palette-item.is-active {
+  border-color:color-mix(in srgb,var(--accent) 24%,var(--border));
+  background:var(--sc-color-surface-inset);
+  box-shadow:none;
+}
+.command-palette-item.is-active svg { color:var(--accent); }
+.command-palette-item:disabled { opacity:.45; cursor:not-allowed; }
+.command-palette-label { flex:1; min-width:0; display:grid; gap:1px; }
+.command-palette-label strong { font-size:var(--sc-font-size-body); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-label small { color:var(--subtle); font-size:var(--sc-font-size-caption); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-item kbd {
+  flex:0 0 auto;
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 14px;
+  border-top:1px solid var(--border-soft);
+  color:var(--subtle);
+  font-size:var(--sc-font-size-caption);
+}
+@media (max-width:640px) {
+  .command-palette-backdrop { padding-top:max(24px,env(safe-area-inset-top)); }
+  .command-palette { max-height:82vh; }
+  .command-palette-footer { display:none; }
+}
+
+@media (max-width:1023px) {
+  /* En táctil el lienzo es el recurso escaso: el radar se retira y deja el
+     dibujo limpio bajo el dedo. El resto del navegador (escala, cámara,
+     coordenadas) se queda: ver la regla general más arriba. */
+  .canvas-minimap { display:none; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .tool-button,
+  .tool-button:hover:not(:disabled),
+  .tool-button.active,
+  .tool-button:active:not(:disabled),
+  .segmented-control button:hover:not(:disabled),
+  .segmented-control button.active,
+  .canvas-layer-preset:hover,
+  .canvas-layer-preset.active,
+  .canvas-minimap:hover,
+  .canvas-minimap:active,
+  .canvas-navigator__reveal,
+  .section-viewer-modes button:hover:not(:disabled),
+  .section-viewer-modes button.active,
+  .result-tabs button:hover:not(.active),
+  .result-tabs button.active,
+  .topbar-command-button:hover,
+  .topbar-command-button:active { transform:none; transition:none; }
+}

@@ -1,0 +1,428 @@
+/* ==========================================================================
+   Bienvenida · LANZADOR DE DOCUMENTO
+   --------------------------------------------------------------------------
+   Capa final: se declara después de las dos pasadas de materia para que la
+   composición de la bienvenida no dependa de ganar una carrera de
+   especificidad contra reglas escritas para versiones anteriores.
+
+   Lo que había aquí era un asistente de cuatro pasos repartido en tres
+   rejillas (`welcome-stage`, `welcome-work`, `welcome-steps`) más un carril de
+   puertas que repetía la tercera etapa. Medía media ventana vacía bajo el
+   pliegue porque la pantalla se estiraba a un contenido que no la llenaba.
+
+   Ahora es UNA ventana:
+
+     · El marco se acota (`min(1040px, …)`) y se centra con `margin:auto` — no
+       con `place-items`, que recorta por arriba cuando el contenido desborda.
+       Así el vacío desaparece por construcción, no por relleno.
+     · Dos columnas separadas por un filete: a la izquierda lo que se puede
+       crear, a la derecha lo que ya existe. Es el reparto de un lanzador del
+       sistema, y es también lo que elimina la duplicación: cada capacidad
+       tiene una fila y sólo una.
+     · La figura deja de ser una columna y pasa a ser la portada de la banda de
+       cabecera. Ocupa el hueco que le sobra a la marca en vez de reclamar uno.
+   ===================================================================== */
+
+/* --- Cabecera: wordmark y UNA línea. Nada más compite arriba ------------- */
+.welcome-brand-block { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.welcome-brand { margin:0; font-size:19px; }
+.welcome-brand-line {
+  margin:0;
+  color:var(--muted);
+  font-size:12.5px;
+  font-weight:550;
+  line-height:1.35;
+  text-wrap:pretty;
+}
+
+/* --- El marco ------------------------------------------------------------
+   `.welcome-base` era `display:contents` (el shell no componía nada, sólo
+   agrupaba para el `inert`). Ahora sí compone: es el suelo sobre el que se
+   apoya la ventana, y la centra. */
+.welcome-base {
+  display: flex;
+  min-height: 100%;
+  padding: clamp(16px, 4vh, 44px) clamp(16px, 4vw, 44px);
+}
+.welcome-launcher {
+  /* `margin:auto` y no `align-items:center`: con el centrado por alineación,
+     un contenido más alto que el hueco se recorta por arriba y deja de ser
+     alcanzable con el scroll. Con márgenes automáticos, no. */
+  margin: auto;
+  width: min(1040px, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-panel);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-2);
+}
+
+/* --- Banda de cabecera ---------------------------------------------------
+   Anula la cabecera pegajosa a sangre de la versión anterior: dentro de una
+   ventana acotada no hay nada de lo que despegarse. Misma especificidad que
+   la declaración de arriba, y gana por aparecer después. */
+.welcome-header {
+  position: relative;
+  z-index: 0;
+  min-height: 116px;
+  padding: clamp(18px, 2.4vh, 26px) clamp(18px, 2.4vw, 28px);
+  /* Rejilla de tres columnas, no una caja con la figura en posición absoluta:
+     la portada tiene su propia celda y por construcción no puede montarse
+     encima del conmutador de tema. Un solapamiento que sólo se evita con un
+     `inset` ajustado a ojo vuelve en cuanto cambia el ancho de los controles. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "brand art actions";
+  align-items: center;
+  gap: var(--sc-space-4);
+  border-bottom: var(--sc-hairline);
+  overflow: hidden;
+}
+.welcome-brand-block { grid-area: brand; }
+.welcome-header-actions { grid-area: actions; }
+
+/* --- Portada -------------------------------------------------------------
+   Decorativa: nunca se lleva un clic ni una parada del tabulador. La figura ya
+   se declara fuera del árbol accesible en `StructuralPortalHero`. */
+.welcome-launcher-art {
+  grid-area: art;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: .55;
+}
+/* Alto en píxeles y ancho libre, no `height:100%`: el `viewBox` lo calcula el
+   componente desde el bounding box real de la geometría, así que la figura es
+   apaisada o vertical según los datos, y un alto porcentual sobre una caja
+   absoluta no lo resolvía —la pieza conservaba su alto intrínseco (264 px
+   medidos) y se salía de la banda—. Con el alto fijo, el
+   `preserveAspectRatio="xMidYMid meet"` que declara el componente hace el
+   resto y el ancho sale solo. */
+.welcome-launcher-art .portal-hero { width: auto; max-width: 100%; height: 92px; }
+
+/* --- Cuerpo: crear a la izquierda, lo que existe a la derecha ------------ */
+.welcome-launcher-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  /* Alto mínimo reservado: la biblioteca se resuelve por IndexedDB DESPUÉS del
+     primer pintado, y como el marco se centra con `margin:auto`, crecer por la
+     derecha movía la ventana entera hacia arriba —un salto visible justo
+     mientras alguien apunta a una fila—. Con el hueco reservado, la biblioteca
+     lo rellena sin mover nada. */
+  min-block-size: 336px;
+}
+.welcome-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-width: 0;
+  padding: clamp(16px, 2.2vh, 22px) clamp(16px, 2.2vw, 24px);
+}
+/* El filete que separa las dos columnas: en la columna, no un elemento
+   propio, para que desaparezca solo cuando la rejilla se apile. */
+.welcome-column--recents { border-inline-start: var(--sc-hairline); }
+.welcome-column-title {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-medium);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.welcome-action-list { display: flex; flex-direction: column; gap: 2px; }
+
+/* --- Las filas -----------------------------------------------------------
+   Seis capacidades, seis filas iguales. Las dos de archivo conservan
+   `.welcome-import-card` porque su materia (y su contrato de QA) es propia;
+   lo que se iguala aquí es la métrica de fila, no el material. */
+.welcome-action-list .welcome-launcher-card,
+.welcome-action-list .welcome-import-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "icon info arrow";
+  align-items: center;
+  gap: var(--sc-space-3);
+  min-height: 56px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--sc-radius-card);
+  background: transparent;
+  box-shadow: none;
+}
+.welcome-action-list .welcome-launcher-icon,
+.welcome-action-list .welcome-import-icon {
+  grid-area: icon;
+  width: 32px; height: 32px;
+  border-radius: var(--sc-radius-control);
+}
+.welcome-action-list .welcome-import-text { grid-area: info; }
+.welcome-action-list .welcome-launcher-info strong,
+.welcome-action-list .welcome-import-text strong { font-size: 13px; font-weight: var(--sc-font-weight-medium); }
+.welcome-action-list .welcome-launcher-info small,
+.welcome-action-list .welcome-import-text small {
+  /* `display:block`, no el `-webkit-box` que hereda de la tarjeta grande: con
+     caja flexible de WebKit `text-overflow` no pinta los puntos suspensivos y
+     la frase se cortaba a media palabra, sin marca de que seguía. */
+  display: block;
+  font-size: 12px; line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.welcome-action-list .welcome-launcher-arrow { grid-area: arrow; align-self: center; justify-self: end; }
+.welcome-action-list .welcome-launcher-card--space3d .welcome-pill-badge { grid-area: arrow; align-self: center; justify-self: end; }
+.welcome-action-list .welcome-launcher-card--space3d .welcome-launcher-arrow { display: none; }
+/* Ningún control se eleva bajo el puntero: se tiñe (decisión 4 del sistema).
+   Sin `transform` aquí a propósito: esta regla tiene la misma especificidad
+   (0,3,0) que `.welcome-launcher-card:not(:disabled):active` y aparece después,
+   así que un `transform:none` puesto por prolijidad se comería el encogimiento
+   del pulsado — `:active` implica `:hover` cuando se pulsa con el puntero. */
+.welcome-action-list .welcome-launcher-card:hover,
+.welcome-action-list .welcome-import-card:hover {
+  background: var(--sc-color-fill-quaternary);
+  border-color: transparent;
+  box-shadow: none;
+}
+.welcome-action-list .welcome-launcher-card:active,
+.welcome-action-list .welcome-import-card:active {
+  background: var(--sc-color-fill-tertiary);
+  box-shadow: none;
+}
+/* La fila primaria es la única con relleno de acento en esta pantalla. */
+.welcome-action-list .welcome-new-card { box-shadow: none; }
+.welcome-action-list .welcome-new-card .welcome-launcher-icon {
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-on-primary);
+  box-shadow: none;
+}
+
+/* --- Iconografía monocroma ------------------------------------------------
+   Cada mosaico llevaba su propio matiz: azul de marca para el proyecto, magenta
+   de Aula para el ejercicio, el secundario para Space 3D, gris para archivo. Un
+   solo acento (decisión 2 del sistema) significa que el color identifica y
+   acciona, y ahí no identificaba nada — la fila ya lleva su nombre escrito al
+   lado, así que el matiz sólo era variedad. Ahora todos son glifo monocromo
+   sobre relleno gris, y el ÚNICO relleno de acento de la pantalla es el de la
+   primera fila, que es la acción que se propone.
+   La insignia «Experimental» de Space 3D conserva su color de advertencia: eso
+   sí significa algo, y `welcomeFlow.test.tsx` lo exige. */
+.welcome-action-list .welcome-launcher-icon,
+.welcome-action-list .welcome-import-icon,
+.welcome-action-list .welcome-launcher-card--classroom .welcome-launcher-icon,
+.welcome-action-list .welcome-launcher-card--space3d .welcome-launcher-icon {
+  background: var(--sc-color-fill-tertiary);
+  color: var(--sc-color-text-secondary);
+  box-shadow: none;
+}
+.welcome-action-list .welcome-launcher-card:hover .welcome-launcher-icon,
+.welcome-action-list .welcome-import-card:hover .welcome-import-icon { color: var(--sc-color-text-primary); }
+/* La fila primaria vuelve a ganar después de la regla monocroma de arriba: es
+   la única con relleno de acento y el orden de aparición es lo que lo decide. */
+.welcome-action-list .welcome-new-card .welcome-launcher-icon,
+.welcome-action-list .welcome-new-card:hover .welcome-launcher-icon {
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-on-primary);
+}
+
+/* La flecha de la fila deja de teñirse del color de dominio de cada tarjeta
+   (`--launcher-accent`, que era menta/magenta/secundario según la puerta) y
+   pasa a ser tinta: es un signo de dirección, no una identidad. */
+.welcome-action-list .welcome-launcher-card:hover .welcome-launcher-arrow,
+.welcome-action-list .welcome-import-card:hover .welcome-launcher-arrow {
+  color: var(--sc-color-text-secondary);
+}
+
+/* --- Continuar: la pieza dominante de la columna derecha ----------------- */
+.welcome-resume-card {
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  width: 100%; padding: var(--sc-space-4);
+  border: var(--sc-hairline); border-radius: var(--sc-radius-card);
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-1);
+  text-align: left; cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+.welcome-resume-card:hover { border-color: var(--accent); background: var(--sc-color-fill-quaternary); }
+.welcome-resume-card:active { box-shadow: none; transform: var(--sc-press-transform); }
+.welcome-resume-card:focus-visible {
+  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset: var(--sc-focus-ring-offset);
+}
+.welcome-resume-eyebrow {
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label); font-weight: var(--sc-font-weight-medium);
+  text-transform: none; letter-spacing: 0;
+}
+.welcome-resume-name {
+  font-family: var(--sc-font-display);
+  font-size: 1.25rem;
+  font-weight: var(--sc-font-weight-bold);
+  line-height: 1.18;
+  letter-spacing: var(--sc-tracking-tight);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.welcome-resume-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.welcome-resume-go { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; font-weight: 590; }
+.welcome-resume-card:hover .welcome-resume-go svg { transform: translateX(3px); }
+.welcome-resume-go svg { transition: transform var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-project-stats {
+  font-size: 11px; font-weight: 590; color: var(--muted);
+  background: var(--surface-2); padding: 3px 9px;
+  border-radius: var(--sc-radius-xs); white-space: nowrap;
+  font-variant-numeric: var(--sc-numeric-variant);
+}
+/* Rama vacía de la placa adaptativa: un modelo recién creado no tiene medida
+   que enseñar, y una fila de ceros en la pieza mayor no informa de nada. No es
+   un dato distinto — es la ausencia de dato, dicha. */
+.welcome-resume-invite { font-size: 12px; font-weight: 600; color: var(--muted); }
+.welcome-hub-loading { margin: 0; color: var(--muted); font-size: 12px; }
+
+/* --- Pie: una nota dentro del marco, no una banda de la ventana ---------- */
+.welcome-footer {
+  margin-top: 0;
+  border-top: var(--sc-hairline);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* --- Vitrina de plantillas (diálogo) ------------------------------------
+   `.sc-modal-surface.welcome-templates-dialog` y no la clase sola: `ui.css` se
+   importa DESPUÉS de esta hoja, así que a igualdad de especificidad su
+   `width:min(560px,…)` gana y la vitrina se quedaba en una columna. Una galería
+   de plantillas necesita ancho: es lo que permite comparar. */
+.sc-modal-surface.welcome-templates-dialog { width: min(860px, calc(100vw - var(--sc-space-8))); }
+.welcome-templates-dialog .welcome-filter-tabs { margin-bottom: var(--sc-space-4); }
+.welcome-templates-dialog .welcome-templates-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 244px), 1fr));
+}
+/* Fichas de galería: compactas. El relleno de 20 px venía de cuando la vitrina
+   era una etapa a pantalla completa y sólo cabían dos por fila. */
+.welcome-templates-dialog .welcome-template-card { gap: 10px; padding: 14px; }
+.welcome-templates-dialog .welcome-template-footer { padding-top: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-resume-card,
+  .welcome-resume-card:hover,
+  .welcome-resume-card:active { transition: none; transform: none; }
+  .welcome-resume-card:hover .welcome-resume-go svg { transform: none; }
+}
+
+/* --- Compact -------------------------------------------------------------
+   Una columna: crear arriba, lo que existe debajo. El filete vertical entre
+   columnas se convierte en horizontal, que es lo que separa dos bandas
+   apiladas. */
+@media (max-width: 899px) {
+  .welcome-base { padding: 14px; }
+  .welcome-launcher-body { grid-template-columns: minmax(0, 1fr); }
+  .welcome-column--recents {
+    border-inline-start: 0;
+    border-block-start: var(--sc-hairline);
+  }
+  /* En compacto la banda no tiene ancho para la portada: manda la marca. */
+  .welcome-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand actions";
+  }
+  .welcome-launcher-art { display: none; }
+}
+
+@media (max-width: 700px) {
+  .welcome-brand-line { font-size: 12px; }
+  .welcome-header { padding: 16px; }
+  .welcome-column { padding: 14px 16px; }
+  .welcome-resume-name { font-size: 1.15rem; }
+}
+
+/* Compact apaisado y bajo: 390 px de alto no dan para la portada, pero sí
+   sobra ancho — las dos columnas vuelven y la figura se retira. */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 600px) {
+  .welcome-launcher-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .welcome-column--recents { border-inline-start: var(--sc-hairline); border-block-start: 0; }
+  .welcome-launcher-art { display: none; }
+  .welcome-header { padding-block: 12px; }
+}
+
+@media (pointer: coarse) {
+  .welcome-action-list .welcome-launcher-card,
+  .welcome-action-list .welcome-import-card { min-height: var(--sc-size-target-touch); }
+}
+
+/* --- Acabado de la figura ilustrativa -----------------------------------
+   El filtro se engancha AQUÍ, no en el atributo `filter` del SVG, y ése es
+   todo el mecanismo de degradación: una media query lo apaga, y un navegador
+   sin filtros SVG vía CSS descarta la declaración. En los dos casos queda el
+   relleno plano por cara, con la misma caja y la misma composición.
+   El alcance es la pieza y nada más: ninguna superficie de interfaz recibe
+   este filtro ni ningún otro. */
+.portal-hero__body { filter: url(#sc-portal-finish); }
+.portal-hero__rim { flood-color: var(--sc-color-figure-neutral); flood-opacity: .5; }
+
+@media (prefers-reduced-motion:reduce), (prefers-reduced-transparency:reduce) {
+  .portal-hero__body { filter: none; }
+}
+@media (forced-colors:active) {
+  .portal-hero__body { filter: none; }
+}
+
+/* Superficie «Datos» -------------------------------------------------------
+   Un cromo para las tres pestañas. Sustituye al dock inferior de Resultados,
+   a la superficie `dense`, y a los cromos propios de la Hoja de datos y del
+   Model Doctor: cuatro superficies que el broker ya obligaba a excluirse. */
+.data-surface-tabs { display:flex; flex-wrap:wrap; gap:var(--sc-space-1); padding-bottom:var(--sc-space-3); }
+.data-surface-tabs button {
+  min-height:var(--sc-control-height-sm);
+  padding:0 var(--sc-space-3);
+  border:0;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font:inherit;
+  font-size:var(--sc-font-size-label);
+  font-weight:var(--sc-font-weight-medium);
+  cursor:pointer;
+}
+.data-surface-tabs button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
+.data-surface-tabs button.active { background:var(--sc-color-action-primary); color:var(--sc-color-action-foreground); font-weight:var(--sc-font-weight-semibold); }
+.data-surface-tabs button:focus-visible { outline:var(--sc-focus-ring-width) solid color-mix(in srgb,var(--focus) 45%,transparent); outline-offset:var(--sc-focus-ring-offset); }
+.data-surface-panel { min-width:0; display:grid; gap:var(--sc-space-3); container-type:inline-size; container-name:data-surface; }
+
+/* «Datos» es densa: reacciones, una rejilla del modelo entero y diagramas con
+   su columna de lectura. El cajón por defecto del sistema mide 420px y ahí la
+   lectura de un diagrama se parte. Se le da su propio ancho, acotado al
+   viewport. */
+.data-surface.sc-modal-surface--right { width:min(720px, 100vw); }
+
+/* Y aun con ese ancho, el contenido puede quedar estrecho: lo que manda no es
+   el viewport —que en X2 es ancho— sino el CONTENEDOR. Una `@media` no puede
+   ver esto; una `@container` sí, y es la misma solución que el panel anterior
+   ya usaba antes de entrar aquí. */
+/* La cabecera del diagrama se diseñó para el ancho de un dock a sangre. Dentro
+   del cajón se le acaba el renglón y parte «Diagrama de momento flector» en
+   tres líneas y la pista del cursor en cinco. Aquí reparte en dos renglones y
+   la pista, que es una ayuda y no un dato, cede el sitio. */
+@container data-surface (max-width: 760px) {
+  .diagram-chart-heading { flex-wrap:wrap; row-gap:4px; }
+  .diagram-chart-heading strong { flex:1 0 100%; order:-1; }
+  .diagram-chart-heading small { display:none; }
+}
+
+@container data-surface (max-width: 560px) {
+  .diagram-result-layout,
+  .deformation-result-layout { grid-template-columns:1fr; }
+  .diagram-guidance,
+  .deformation-guidance { display:none; }
+  .results-metric-cards { grid-template-columns:1fr; }
+  .result-tab-family__label { display:none; }
+}
+
+/* El cuerpo de Resultados dentro de la superficie. Sin alto propio: lo pone el
+   cajón, que es quien negocia con la pantalla. */
+.results-content { display:grid; gap:var(--sc-space-3); min-width:0; }
+.results-context { display:flex; align-items:baseline; gap:var(--sc-space-2); margin:0; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); }
+.results-context strong { overflow:hidden; color:var(--sc-color-text-primary); text-overflow:ellipsis; white-space:nowrap; }
+
+@media (pointer:coarse) {
+  .data-surface-tabs button { min-height:var(--sc-control-height-touch); }
+}

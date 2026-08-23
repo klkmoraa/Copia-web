@@ -1,0 +1,87 @@
+.brand-mark { color:var(--accent); }
+.project-name input {
+  font-family:var(--sc-font-ui);
+  font-size:var(--sc-font-size-body);
+}
+
+.theme-toggle,
+.topbar button:not(.analyze-button):not(.sc-button--primary) {
+  box-shadow:none;
+}
+
+/* --- TopBar: arcilla real, no una sombra suelta sobre fondo transparente ---
+   La regla de arriba sólo pone la sombra de reposo; sin una superficie
+   propia detrás (estos controles traían background:transparent, herencia
+   del diseño plano previo) la sombra flotaba sin nada que elevar. Aquí se
+   les da cuerpo y los tres estados de la materia: reposo elevado, hover más
+   elevado, pulsado/abierto rehundido — igual que el resto del sistema. */
+/* Los controles de la barra no tienen pieza en reposo: son el glifo o la
+   etiqueta, y el relleno gris aparece bajo el puntero. Una barra llena de
+   botones con superficie propia parece un teclado; ésta parece una barra. */
+.brand-home-button { background:transparent; transition:var(--sc-transition-control); }
+.brand-home-button:hover,
+.brand-home-button:focus-visible { background:var(--sc-color-fill-quaternary); box-shadow:none; transform:none; }
+.brand-home-button:active { background:var(--sc-color-fill-tertiary); box-shadow:none; transform:var(--sc-press-transform); }
+
+.project-menu-toggle { background:transparent; transition:var(--sc-transition-control); }
+.project-menu-toggle:hover,
+.project-menu-toggle:focus-visible { background:var(--sc-color-fill-quaternary); box-shadow:none; transform:none; }
+.project-menu-toggle:active,
+.project-menu-toggle[aria-expanded='true'] { background:var(--sc-color-fill-tertiary); box-shadow:none; transform:none; }
+
+.autosave-state { background:transparent; box-shadow:none; transition:var(--sc-transition-control); }
+.autosave-state:hover { background:var(--sc-color-fill-quaternary); box-shadow:none; }
+
+.topbar .sc-icon-button:not(:disabled):hover { background:var(--sc-color-fill-quaternary); box-shadow:none; }
+.topbar .sc-icon-button:not(:disabled):active,
+.topbar .sc-icon-button[aria-expanded='true']:not(:disabled) { background:var(--sc-color-fill-tertiary); box-shadow:none; }
+
+
+.number-control,
+.select-field select,
+.segmented-control,
+.compact-toggle-grid label,
+.learning-level,
+.response-selector,
+.diagram-cursor-readout {
+  background:var(--sc-color-surface-2);
+  border:0;
+  box-shadow:inset 6px 7px 14px color-mix(in srgb, var(--sc-color-text-primary) 14%, transparent), inset -6px -6px 13px color-mix(in srgb, var(--sc-color-surface-elevated) 86%, transparent);
+}
+
+.number-control,
+.select-field select { border-radius:var(--sc-radius-sm); }
+.number-control:focus-within,
+.select-field select:focus-visible { box-shadow:var(--sc-ring-focus); }
+
+.inspector-tabs button,
+.result-tabs button {
+  font-family:var(--sc-font-ui);
+  font-size:var(--sc-font-size-label);
+  letter-spacing:0;
+}
+.inspector-tabs button.active::after,
+.result-tabs button.active::after { height:2px; border-radius:var(--sc-radius-xs); }
+.inspector-summary,
+.selection-card,
+.inspector-note,
+.effect-card,
+.combination-card,
+.norm-source {
+  background:var(--sc-color-surface-2);
+  border:0;
+  border-radius:var(--sc-radius-sm);
+  box-shadow:inset 6px 7px 14px color-mix(in srgb, var(--sc-color-text-primary) 14%, transparent), inset -6px -6px 13px color-mix(in srgb, var(--sc-color-surface-elevated) 86%, transparent);
+}
+
+.popover,
+.import-center-dialog,
+.sc-toast-card,
+.mobile-tool-palette {
+  background:var(--sc-color-surface-1);
+  border:var(--sc-hairline);
+  box-shadow:var(--sc-elevation-2);
+}
+.popover button:hover,
+.popover button:focus-visible { background:var(--sc-color-surface-2); color:var(--accent); }
+.popover button:active { background:var(--sc-color-surface-2); box-shadow:none; transform:var(--sc-press-transform); }

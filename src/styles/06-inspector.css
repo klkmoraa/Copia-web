@@ -1,0 +1,159 @@
+/* Fila de inspector: etiqueta a la izquierda, control a la derecha. Es la
+   composición de un inspector de escritorio y la que hace que una columna de
+   quince propiedades se barra de un vistazo. */
+.field-row, .select-field, .toggle-row { display: grid; grid-template-columns: minmax(88px, .8fr) minmax(0, 1.2fr); align-items: center; gap: var(--sc-space-2); min-height: 30px; font-size: var(--sc-font-size-label); }
+/* …salvo cuando la etiqueta trae explicación. Un párrafo de tres líneas dentro
+   de una columna de 110px se parte en tiras y se come el control que tiene al
+   lado, así que esas filas se apilan: rótulo arriba, control abajo, a todo el
+   ancho del panel. */
+/* --- La ayuda del campo se revela, no se apila -----------------------------
+   Una fila con ayuda pasaba a UNA columna y apilaba etiqueta, párrafo y control
+   (`grid-template-columns: minmax(0,1fr)`), así que costaba el triple de alto
+   que una sin ayuda. Con «Aplica E, G y densidad del catálogo AISC/Eurocódigo/
+   ACI/NDS…» encima del selector y «El dominio valida X > 0 al analizar» repetido
+   bajo E, A e I, el panel de propiedades se leía como un formulario web, no como
+   un inspector.
+
+   Ahora la fila conserva SIEMPRE sus dos columnas —etiqueta a la izquierda,
+   control a la derecha, que es la fila de inspector del sistema— y la ayuda se
+   despliega como globo al apuntar la fila o al enfocar su control.
+
+   `opacity:0` y no `display:none` ni `visibility:hidden`: los dos últimos sacan
+   el texto del árbol de accesibilidad, y esa ayuda es parte del nombre accesible
+   del campo. Con opacidad cero sigue anunciándose; `pointer-events:none` impide
+   que un globo invisible intercepte un clic. Y al ser absoluto no empuja nada al
+   aparecer: revelar una ayuda no puede mover el campo que se está usando. */
+.field-row, .select-field { position: relative; }
+.field-row > span > small, .select-field > span > small {
+  position: absolute;
+  z-index: var(--sc-z-popover);
+  inset-block-start: calc(100% - 2px);
+  inset-inline-start: 0;
+  width: min(268px, 100%);
+  padding: 7px 9px;
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-elevation-3), var(--sc-ring-inset);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-regular);
+  line-height: 1.4;
+  text-align: start;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.field-row:hover > span > small,
+.field-row:focus-within > span > small,
+.select-field:hover > span > small,
+.select-field:focus-within > span > small { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .field-row > span > small, .select-field > span > small { transition: none; }
+}
+.number-control { display: grid; grid-template-columns: 1fr auto; border-radius:var(--sc-radius-control); overflow: hidden; }
+.number-control input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; padding: 8px 9px; font-variant-numeric: tabular-nums; }
+.number-control small { padding: 8px 8px; color: var(--muted); border-left: 1px solid var(--border-soft); white-space: nowrap; }
+.select-field select { outline: 0; }
+.select-field select { width: 100%; border-radius:var(--sc-radius-control); padding: 4px 8px; }
+
+/* --- Cromo unificado del desplegable --------------------------------------
+   Los 35 `<select>` del producto se pintaban con el cromo NATIVO del navegador,
+   así que su punta de flecha, su alto y su relieve los decidía Chromium y no el
+   sistema de diseño: dentro de un inspector cuyos demás controles sí lo siguen,
+   el desplegable era la única pieza que desentonaba.
+   Se les quita el cromo del navegador y se les dibuja el mismo galón que lleva
+   `Select` en `ui.css`. Con `::after` sobre la etiqueta y no con una imagen de
+   fondo: un galón dibujado con bordes hereda `currentColor`, así que sale
+   correcto en las dos apariencias sin un solo literal de color y sin duplicar
+   la regla por tema — que es lo que exigiría un `background-image` con SVG
+   embebido, donde las variables CSS no llegan.
+   `:has(select)` acota el galón a las filas que de verdad llevan desplegable:
+   `.mobile-menu-field` aloja también los campos numéricos de P-Δ. */
+.select-field:has(select),
+.mobile-menu-field:has(select) { position: relative; }
+.select-field select,
+.mobile-menu-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-inline-end: 26px;
+}
+.select-field:has(select)::after,
+.mobile-menu-field:has(select)::after {
+  content: '';
+  position: absolute;
+  inset-inline-end: 11px;
+  inset-block-start: 50%;
+  width: 6px;
+  height: 6px;
+  margin-block-start: -5px;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  color: var(--sc-color-text-muted);
+  pointer-events: none;
+}
+.load-editor-hint { margin:0 0 10px; color:var(--muted); font-size:10px; line-height:1.45; }
+.load-starter>p { margin:0 0 10px; color:var(--muted); font-size:11px; line-height:1.45; }.load-tool-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }.load-tool-grid button { --tool-color:var(--muted); min-height:76px; border-radius:var(--sc-radius-control); display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; padding:9px; text-align:left; color:var(--text); }.load-tool-grid button svg { color:var(--tool-color); }.load-tool-grid button:hover:not(:disabled) { border-color:color-mix(in srgb,var(--tool-color) 45%,var(--border)); background:color-mix(in srgb,var(--tool-color) 7%,var(--surface)); }.load-tool-grid button.active { border-color:color-mix(in srgb,var(--accent) 52%,var(--border)); background:var(--accent-soft); color:var(--accent-on-soft); }.load-tool-grid strong { font-size:11px; }.load-tool-grid small { color:var(--muted); font-size:11px; line-height:1.25; }
+.checkbox-grid { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; padding: 4px 0; }
+.checkbox-grid label { display: flex; gap: 6px; align-items: center; }
+.computed-list, .result-summary dl, .deformed-summary dl { margin: 0; display: grid; gap: 8px; }
+.computed-list div, .result-summary dl div, .deformed-summary dl div { display: flex; justify-content: space-between; gap: 12px; }
+dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+.inspector-note { margin: 12px 0; border-radius:var(--sc-radius-control); padding: 10px; color: var(--muted); display: flex; gap: 8px; font-size: 10px; line-height: 1.45; }
+.section-description { margin:-3px 0 10px; color:var(--muted); font-size:10px; line-height:1.45; }
+.compact-toggle-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.compact-toggle-grid label { min-height:34px; padding:7px 8px; border-radius:var(--sc-radius-control); display:flex; align-items:center; gap:7px; font-size:10px; }
+.field-help { display:block; margin:4px 0 6px; color:var(--sc-color-text-muted); font-size:var(--sc-font-size-caption); line-height:1.4; }
+.filter-chip-row { display:flex; flex-wrap:wrap; gap:6px; }
+.filter-chip-row button { min-height:32px; padding:0 10px; border:1px solid var(--border); border-radius:999px; background:var(--surface); color:var(--muted); font-size:10px; }
+.filter-chip-row button[aria-pressed='true'] { border-color:color-mix(in srgb,var(--accent) 42%,var(--border)); background:var(--accent-soft); color:var(--accent-on-soft); font-weight:700; }
+.segmented-control { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 3px; background: var(--surface-3); border-radius:var(--sc-radius-control); margin: 8px 0; }
+.segmented-control button { border: 0; background: transparent; border-radius:var(--sc-radius-control); padding: 7px; font-size: 11px; }
+.segmented-control button.active { background: var(--sc-color-surface-inset); box-shadow: none; }
+.danger-button { border: 1px solid color-mix(in srgb, var(--error) 35%, var(--border)); background: transparent; color: var(--error); border-radius:var(--sc-radius-control); padding: 8px 10px; display: flex; gap: 7px; align-items: center; justify-content: center; width: 100%; margin-top: 10px; }
+.effect-list { display: grid; gap: 9px; }
+.effect-card { display: grid; gap: 7px; padding: 10px; border-radius:var(--sc-radius-control); }
+.effect-card .field-row, .effect-card .select-field { margin: 0; }
+.icon-danger-button { min-height: 34px; border: 0; border-radius:var(--sc-radius-control); background: color-mix(in srgb, var(--error) 9%, transparent); color: var(--error); display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 10px; font-weight:590; }
+.icon-danger-button:hover { background: color-mix(in srgb, var(--error) 15%, transparent); }
+.classroom-mode-card { margin-top: 10px; border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border)); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border-radius:var(--sc-radius-control); padding: 11px; display: grid; gap: 5px; }
+.classroom-mode-card strong { color: var(--text); font-size: 11px; }
+.classroom-mode-card span { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.classroom-mode-card small { color: var(--warning); font-size:11px; line-height: 1.4; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; }
+.mini-button { border: 0; width: 28px; height: 28px; border-radius:var(--sc-radius-control); background: var(--surface-2); display: grid; place-items: center; }
+.load-case-list { display: grid; gap: 6px; }
+.load-case-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 7px; border-radius:var(--sc-radius-control); background: var(--surface-2); }
+.load-case-row div { min-width: 0; display: flex; flex-direction: column; }
+.load-case-row input[type='text'], .load-case-row div input { min-width: 0; border: 0; outline: 0; background: transparent; font-size: 11px; font-weight: 600; }
+.load-case-row input[type='text']:focus-visible, .load-case-row div input:focus-visible { outline:var(--sc-focus-ring-width) solid var(--focus); outline-offset:var(--sc-focus-ring-offset); border-radius:var(--sc-radius-xs); }
+.load-case-row small { color: var(--muted); font-size:11px; }
+.combination-card { margin-top: 8px; border-radius:var(--sc-radius-control); padding: 0 9px 9px; }
+.combination-card summary { cursor: pointer; padding: 10px 0; font-size: 11px; font-weight:590; }
+.norm-source { border-radius:var(--sc-radius-control); padding: 9px; display: flex; flex-direction: column; gap: 3px; font-size:11px; color: var(--muted); }
+.norm-source strong { color: var(--text); }
+.toggle-row { grid-template-columns: 1fr auto; }
+.toggle-row input { accent-color: var(--accent); }
+.legend-list { display: grid; gap: 9px; font-size: 11px; }
+.legend-list span { display: flex; align-items: center; gap: 8px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }.legend-dot.axial{background:var(--axial)}.legend-dot.shear{background:var(--shear)}.legend-dot.moment{background:var(--moment)}.legend-dot.force{background:var(--force)}.legend-dot.dimension{background:var(--dimension)}.legend-dot.axis{background:var(--axis)}
+/* The inspector's resize handle can narrow this panel independently of the
+   viewport (desktop, wide inspector open), which is exactly the case
+   viewport-width media queries can't see — a container query catches it. */
+.result-tabs { height: 38px; flex: 0 0 38px; border-bottom: 0.5px solid var(--sc-color-border); display: flex; align-items: stretch; padding: 0 14px; gap: 2px; overflow-x: auto; }
+.result-tabs,.toolbar { scrollbar-width:none; }
+.result-tabs::-webkit-scrollbar,.toolbar::-webkit-scrollbar { display:none; }
+.result-tabs button { height: 38px; padding: 0 10px; border: 0; background: transparent; color: var(--muted); position: relative; white-space: nowrap; font-size: var(--sc-font-size-label); }
+.result-tabs button.active { color: var(--text); font-weight:590; }
+.result-tabs button.active::after { content:''; position:absolute; left:8px; right:8px; bottom:0; height:2px; border-radius:2px 2px 0 0; background: var(--accent-ink); }
+.result-tabs button.active.axial::after{background:var(--axial)}.result-tabs button.active.shear::after{background:var(--shear)}.result-tabs button.active.moment::after{background:var(--moment)}
+.result-tabs button.active.influence::after{background:var(--deformed)}
+.issue-count { display: inline-grid; place-items:center; min-width:17px; height:17px; border-radius:var(--sc-radius-control); margin-left:6px; background:var(--error); color:white; font-size:11px; }
+.results-body { min-height: 0; flex: 1; overflow: auto; }
+.empty-results, .failed-results { min-height: 100%; display:flex; align-items:center; justify-content:center; gap:16px; padding:24px; color:var(--muted); }
+.empty-results div, .failed-results div { max-width: 480px; }
+.empty-results strong, .failed-results strong { color:var(--text); }.empty-results p,.failed-results p{margin:4px 0 0;font-size:11px;}
+.empty-results button,.failed-results button { border:0; background: var(--accent-fill); color:var(--accent-foreground); padding:9px 14px; border-radius:var(--sc-radius-control); box-shadow:var(--sc-elevation-1); transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
+.empty-results button:hover:not(:disabled),.failed-results button:hover:not(:disabled) { box-shadow:var(--sc-elevation-2); }
+.empty-results button:active:not(:disabled),.failed-results button:active:not(:disabled) { box-shadow:none; transform:var(--sc-press-transform); }
+.table-wrap { padding: 14px 18px; overflow: auto; }

@@ -1,0 +1,119 @@
+/* Documento y contexto comparten el espacio que queda tras las acciones.
+   Así sus pistas se contraen juntas antes de invadirse; las acciones conservan
+   su ancho intrínseco y todos los controles permanecen accesibles. */
+.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(0,max-content) minmax(0,1fr) max-content; align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom-width: 0; position: relative; z-index: var(--sc-z-topbar); }
+.topbar-zone,.brand-block,.top-actions,.history-controls { display:flex; align-items:center; min-width:0; }
+.brand-block { justify-self:start; gap: var(--sc-space-2); position: relative; max-width:100%; }
+/* `actions` es la única naturaleza «acción global»: aloja el contexto de
+   análisis (D-09, viaja junto a la acción que gobierna) y los comandos. El
+   contexto cede ancho primero; los comandos conservan el suyo (CRI-95). */
+.topbar-actions-zone { justify-self:stretch; min-width:0; gap:var(--sc-space-3); flex-wrap:nowrap; }
+.topbar-context-zone { display:flex; align-items:center; flex:0 0 auto; gap:var(--sc-space-2); min-width:0; }
+/* Los selectores ceden ancho antes de que nada se salga de su celda. */
+.topbar-command-cluster { display:flex; align-items:center; flex:0 0 auto; gap:var(--sc-space-1); min-width:max-content; margin-left:auto; }
+/* `status` es la tercera naturaleza: persistencia, Model Doctor y Estado del
+   análisis. Nunca cede su ancho — es la última en degradar (CRI-95). */
+.topbar-status-zone { justify-self:end; min-width:max-content; flex-wrap:nowrap; gap:var(--sc-space-2); }
+.brand-mark { width: 26px; height:26px; display:grid; place-items:center; color:var(--accent); text-align: center; }
+.brand-home-button { overflow:visible; border:0; padding:0; background:transparent; color:inherit; cursor:pointer; border-radius:var(--sc-radius-sm); }.brand-home-button:hover,.brand-home-button:focus-visible { background:transparent; transform:none; }
+.top-divider { width: 1px; height: 20px; background: var(--sc-color-divider); }
+.document-identity { display:grid; min-width:0; gap:1px; }
+.project-name { display: flex; align-items: center; gap: 2px; min-width: 0; border-radius: var(--sc-radius-sm); }
+.project-name:focus-within { background: var(--sc-color-fill-quaternary); }
+.project-name input { border: 0; background: transparent; width: min(260px, 22vw); min-width:72px; height:22px; padding:0 var(--sc-space-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--sc-font-size-body); font-weight:var(--sc-font-weight-semibold); letter-spacing:var(--sc-tracking-control); outline:0; }
+.project-menu-toggle { border: 0; color: inherit; background: transparent; display: grid; place-items: center; width: var(--sc-control-height-md); height: var(--sc-control-height-md); padding: 0; border-radius: var(--sc-radius-sm); cursor: pointer; }
+.project-menu-toggle:hover, .project-menu-toggle:focus-visible { background: var(--sc-color-fill-quaternary); }
+.brand-name { color:var(--sc-color-text-muted); font-size:var(--sc-font-size-caption); font-weight:var(--sc-font-weight-medium); line-height:1; letter-spacing:0; }
+.history-controls { gap: var(--sc-space-1); }
+.top-actions { gap: var(--sc-space-2); }
+.analysis-status-shell { display:flex; min-width:0; }
+.analysis-status {
+  --analysis-status-color:var(--accent);
+  height:var(--sc-control-height-md);
+  min-width:var(--sc-control-height-md);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:var(--sc-space-2);
+  padding:0 var(--sc-space-2);
+  border:0;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--analysis-status-color);
+  font-size:var(--sc-font-size-label);
+  font-weight:var(--sc-font-weight-medium);
+  line-height:var(--sc-line-height-control);
+  white-space:nowrap;
+}
+button.analysis-status { cursor:pointer; }
+button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
+.analysis-status.is-ready { --analysis-status-color:var(--accent); }
+.analysis-status.is-calculating { --analysis-status-color:var(--sc-color-state-info); }
+.analysis-status.is-resolved { --analysis-status-color:var(--success); }
+.analysis-status.is-stale,.analysis-status.is-warning { --analysis-status-color:var(--sc-color-state-warning-foreground); }
+.analysis-status.is-error { --analysis-status-color:var(--sc-color-state-error-foreground); }
+.analysis-status-label { display:none; }
+/* Fiabilidad es una línea propia junto al estado, nunca un color aplicado sobre
+   su valor (contrato protegido, CRI-100): texto y color propios, con la misma
+   degradación icon-only que `.analysis-status-label` bajo 1500px. */
+.analysis-reliability-line { --reliability-color:var(--muted); display:inline-flex; align-items:center; gap:4px; min-width:0; font-size:var(--sc-font-size-label); font-weight:590; white-space:nowrap; color:var(--reliability-color); }
+.analysis-reliability-line[data-analysis-reliability="reliable"] { --reliability-color:var(--success); }
+.analysis-reliability-line[data-analysis-reliability="limited"] { --reliability-color:var(--sc-color-state-warning-foreground); }
+.analysis-reliability-line[data-analysis-reliability="unreliable"],
+.analysis-reliability-line[data-analysis-reliability="failed"] { --reliability-color:var(--sc-color-state-error-foreground); }
+/* Bajo 1500px sólo queda el punto de color + el disparador de la causa
+   gobernante (icon-only, igual que `.analysis-status-label`): el texto sigue
+   presente para lectores de pantalla vía `aria-label` del grupo. */
+.analysis-reliability-dot { width:8px; height:8px; border-radius:999px; background:currentColor; flex:0 0 auto; }
+.analysis-reliability-label,
+.analysis-reliability-value { display:none; }
+.analysis-reliability-line button { display:inline-flex; color:inherit; background:transparent; border:0; padding:0; cursor:pointer; }
+.icon-button { width: var(--sc-control-height-md); height: var(--sc-control-height-md); border: 0; background: transparent; border-radius: var(--sc-radius-control); display: inline-grid; place-items: center; color:var(--muted); }
+.icon-button:hover:not(:disabled) { background:var(--sc-color-fill-quaternary); color:var(--text); }
+.autosave-state { position:relative; display: inline-flex; align-items: center; gap:var(--sc-space-1); flex:0 0 auto; min-height:var(--sc-control-height-md); padding:0 var(--sc-space-2); border-left:0; border-radius:var(--sc-radius-control); font-size:var(--sc-font-size-label); color:var(--sc-color-text-muted); }
+.autosave-state.has-issue { color:var(--warning); }
+.autosave-state:focus-visible { outline:var(--sc-focus-ring-width) solid var(--focus); outline-offset:var(--sc-focus-ring-offset); }
+.autosave-state__description { position:absolute; z-index:30; top:calc(100% + 7px); left:8px; width:min(280px,76vw); padding:8px 10px; border:1px solid var(--border); border-radius:var(--sc-radius-control); background:var(--surface); box-shadow:var(--sc-shadow-popover); color:var(--text); font-size:var(--sc-font-size-label); font-weight:500; line-height:1.45; opacity:0; visibility:hidden; transform:translateY(-3px); pointer-events:none; transition:opacity var(--motion-fast) var(--ease-native),transform var(--motion-fast) var(--ease-native),visibility var(--motion-fast) var(--ease-native); }
+.autosave-state:hover .autosave-state__description,.autosave-state:focus .autosave-state__description { opacity:1; visibility:visible; transform:translateY(0); }
+/* Los topes de ancho de estos tres desplegables existían para repartir los
+   ~430px que la barra le prestaba al contexto. Dentro del popover cada uno tiene
+   su fila entera, y un tope heredado sólo conseguía que el galón quedara
+   flotando a la derecha del control en vez de pegado a él. */
+.combination-select,
+.mode-select,
+.analysis-order-select,
+.units-select { width:100%; }
+.analyze-button { border: 0; color: var(--accent-foreground); background: var(--accent-fill); width:148px; min-width:148px; height: var(--sc-control-height-touch); padding: 0 var(--sc-space-5); border-radius: var(--sc-radius-md); display: flex; align-items: center; justify-content:center; gap:var(--sc-space-2); font-weight:700; }
+.analyze-button > .sc-button__label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.analyze-button:hover:not(:disabled) { background:var(--accent-hover); }
+.analyze-button:not(:disabled):active { transform:var(--sc-press-transform); transition-duration:var(--sc-motion-press); }
+.export-wrap { position: relative; }
+.popover { position:absolute; z-index:var(--sc-z-popover); top:calc(100% + var(--sc-space-2)); min-width:220px; padding:var(--sc-space-2); border-radius:var(--sc-radius-panel); transform-origin:top right; max-height:calc(100dvh - 80px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.project-menu { left: 46px; top: 48px; width: 310px; }
+.export-menu { right: 0; }
+.export-menu { width:min(280px,calc(100vw - 24px)); }
+.portable-export-error { padding:8px 10px; border-radius:var(--sc-radius-control); background:color-mix(in srgb,var(--error) 9%,var(--surface)); color:var(--error); font-size:11px; line-height:1.35; }
+.portable-export-error.desktop { position:absolute; z-index:45; right:18px; top:calc(100% + 6px); width:min(300px,calc(100vw - 24px)); border:1px solid color-mix(in srgb,var(--error) 30%,var(--border)); box-shadow:var(--shadow); }
+.popover button { width: 100%; min-height:var(--sc-control-height-touch); border: 0; background: transparent; text-align: left; padding: 10px; border-radius:var(--sc-radius-control); display: flex; gap: 10px; align-items: center; font-size:var(--sc-font-size-control); color:var(--text); font-weight:550; transition:background var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
+.popover button:hover, .popover button:focus-visible { background: var(--surface-2); color:var(--accent); outline:none; }
+.popover button:active { transform:var(--sc-press-transform); background:var(--surface-3); }
+.popover button svg { color:var(--muted); transition:color var(--sc-motion-fast) var(--sc-ease-standard); }
+.popover button:hover svg, .popover button:focus-visible svg { color:var(--accent); }
+.menu-copy { display: flex; flex-direction: column; gap: 2px; }
+.menu-copy small { color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.4; }
+
+.workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
+.toolbar { padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
+.desktop-tool-list { display:contents; }
+.mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop { display:none; }
+.tool-button { min-height: 56px; width: 100%; border: 0; background: transparent; border-radius:var(--sc-radius-control); display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 7px; text-align: left; padding: 0 11px; color: var(--text); }
+.tool-button svg { color: currentColor; }
+.tool-button span { font-size: 13px; }
+.tool-button kbd { font-size: var(--sc-font-size-label); color: var(--subtle); border: 0; background: transparent; }
+.tool-button:hover { background: var(--surface-2); }
+.tool-button.active { color: var(--accent-on-soft); background: var(--accent-soft); }
+:root[data-theme='dark'] .tool-button.active { color: var(--accent); }
+.toolbar-spacer { flex: 1; }
+.selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
+
+.center-stage { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--canvas-bg); position: relative; }

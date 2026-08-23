@@ -1,0 +1,30 @@
+.diagram-chart.deformation .chart-line{stroke:var(--accent);stroke-width:2}.deformation-guidance .step-badge.deformed{background: var(--accent-fill);color:var(--accent-foreground)}
+
+/* Numerical substitution (AG-014): the reader compares this block against the matrix
+   right below it, so the result column is the emphasised one and every number is
+   tabular — a column that reflows as digits change cannot be scanned. */
+.education-numerical-substitution{margin-top:10px;border-radius:var(--sc-radius-control);overflow:hidden}
+.education-substitution-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--surface-2)}
+.education-substitution-heading>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.education-substitution-heading strong{font-size:10px}
+.education-substitution-heading small{font-size:10px;color:var(--muted);line-height:1.35}
+.education-substitution-heading>span{flex:0 0 auto;font-family:var(--sc-font-mono);font-size:10px;font-weight:700;color:var(--accent)}
+.education-substitution-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:5px;padding:8px 10px 0}
+.education-substitution-inputs>div{display:flex;align-items:baseline;gap:5px;padding:5px 7px;border-radius:var(--sc-radius-control);background:var(--surface-2)}
+.education-substitution-inputs dt{font-family:var(--sc-font-mono);font-size:11px;font-weight:700;color:var(--accent)}
+.education-substitution-inputs dd{margin:0;font-variant-numeric:tabular-nums;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.education-substitution-inputs dd span{color:var(--muted);font-size:10px}
+.education-numerical-substitution .table-wrap{padding:8px 10px 0}
+.education-substitution-table{width:100%;border-collapse:collapse;font-size:11px}
+.education-substitution-table th,.education-substitution-table td{padding:5px 7px;border-bottom:1px solid var(--border-soft);text-align:left;vertical-align:baseline}
+.education-substitution-table thead th{color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0;white-space:nowrap}
+.education-substitution-table .substitution-group th{padding-top:8px;color:var(--accent);font-size:10px;font-weight:700;text-transform:none;letter-spacing:0}
+.education-substitution-table code{font-family:var(--sc-font-mono);font-size:11px;font-weight:700}
+.education-substitution-table .substitution-formula,.education-substitution-table .substitution-values{font-family:var(--sc-font-mono);color:var(--muted);white-space:nowrap}
+.education-substitution-table .substitution-values{font-variant-numeric:tabular-nums}
+.education-substitution-table .substitution-result{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.education-substitution-table .substitution-result strong{font-size:10px}
+.education-substitution-table .substitution-result span{color:var(--muted);font-size:10px}
+.education-numerical-substitution>small{display:block;padding:7px 10px 9px;color:var(--muted);font-size:10px;line-height:1.4}
+.educational-source{border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));background:color-mix(in srgb,var(--accent) 5%,var(--surface));border-radius:var(--sc-radius-control);padding:11px 13px}.educational-source>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.educational-source strong{font-size:11px}.educational-source span{font-size:11px;color:var(--accent);font-weight:700}.educational-source p{font-size:10px;color:var(--muted);margin:7px 0}.educational-source ul{display:flex;flex-wrap:wrap;gap:6px 18px;margin:7px 0;padding-left:18px}.educational-source li{font-size:10px}.educational-source a,.educational-source small{font-size:11px;color:var(--accent)}
+.learning-value-heading{display:block;margin-top:8px;color:var(--muted);font-size:11px;font-weight:700;text-transform:none;letter-spacing:0}.learning-values.inputs div{border-left:2px solid var(--accent)}

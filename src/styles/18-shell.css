@@ -1,0 +1,33 @@
+.sc-toast-container { position:fixed; z-index:var(--sc-z-toast); bottom:calc(24px + env(safe-area-inset-bottom)); right:calc(24px + env(safe-area-inset-right)); display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:calc(100vw - 32px); width:360px; }
+.sc-toast-card { pointer-events:auto; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--sc-radius-card); color:var(--sc-color-text-primary); font-size:13px; line-height:1.4; }
+.sc-toast-card--success .sc-toast-card__icon { color:var(--sc-color-action-primary); background:color-mix(in srgb, var(--sc-color-action-primary) 15%, transparent); }
+.sc-toast-card--info .sc-toast-card__icon { color:var(--sc-color-info); background:color-mix(in srgb, var(--sc-color-info) 15%, transparent); }
+.sc-toast-card--warning .sc-toast-card__icon { color:var(--sc-color-state-warning); background:color-mix(in srgb, var(--sc-color-state-warning) 15%, transparent); }
+.sc-toast-card--error .sc-toast-card__icon { color:var(--sc-color-state-error); background:color-mix(in srgb, var(--sc-color-state-error) 15%, transparent); }
+.sc-toast-card__icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--sc-radius-control); flex-shrink:0; }
+.sc-toast-card__content { flex:1; min-width:0; }
+.sc-toast-card__title { display:block; font-weight:600; font-size:13px; color:var(--sc-color-text-primary); }
+.sc-toast-card__desc { margin:2px 0 0; font-size:11px; color:var(--sc-color-text-secondary); }
+.sc-toast-card__close { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:none; border-radius:var(--sc-radius-control); background:transparent; color:var(--sc-color-text-muted); cursor:pointer; padding:0; margin:-10px -10px -10px 4px; transition:background-color var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
+.sc-toast-card__close:hover { background:var(--sc-color-surface-2); color:var(--sc-color-text-primary); }
+@media (max-width: 640px) {
+  .sc-toast-container { right:16px; left:16px; width:auto; bottom:calc(70px + env(safe-area-inset-bottom)); }
+}
+
+/* ========================================================================
+   AG-015 · Capa de materia
+   Lo que la bienvenida estrena, el espacio de trabajo lo hereda: canto de
+   1px y halo de marca sólo donde hay una acción. No introduce color nuevo
+   ni cambia una sola medida de layout — sube el acabado de superficies que
+   ya existían.
+   Lo que esta capa vestía de los componentes `.sc-*` (acción primaria,
+   segmentados, teclas del rail) se mudó a `design-system/components/ui.css`,
+   que es quien los posee: se cargaba después que `styles.css` y por eso hacía
+   falta la clase extra (`.sc-button.sc-button--primary`) para ganar la
+   cascada. Declarada en su sitio, la duplicación desaparece.
+   ===================================================================== */
+
+/* Analizando: el anillo de foco marca que la acción sigue en curso. Es el
+   único estado del botón primario que no describe el Design System, porque
+   `.analyzing` es de esta pantalla y no del componente. */
+.analyze-button.analyzing { box-shadow:var(--sc-ring-focus), var(--sc-ring-inset); }

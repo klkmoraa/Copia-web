@@ -1,0 +1,107 @@
+@media (pointer:coarse) {
+  /* Los filtros de la vitrina medían 29px y quedaban fuera del suelo táctil
+     que el resto de la app respeta. Sube el alto, no el tipo: la fila sigue
+     leyéndose como un control segmentado y no como tres botones. */
+  .welcome-filter-tab { min-height:var(--sc-size-target-touch); }
+}
+
+/* ========================================================================
+   IDENTIDAD DEL SISTEMA · brand/brandbook.html
+   La forma permanece técnica y compacta; la materia es la del sistema:
+   neutros acromáticos, un solo acento, material translúcido donde algo se
+   apoya sobre contenido, y filete de medio píxel donde algo se apoya sobre
+   otra superficie. Ninguna pieza trae luz propia.
+   ===================================================================== */
+
+.app-shell,
+.welcome-screen {
+  background:var(--app-bg);
+}
+
+.welcome-screen {
+  --welcome-grid-fine:color-mix(in srgb, var(--border) 30%, transparent);
+  --welcome-grid-major:color-mix(in srgb, var(--border) 56%, transparent);
+  background-image:
+    linear-gradient(var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--welcome-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--welcome-grid-fine) 1px, transparent 1px);
+  background-size:96px 96px,96px 96px,24px 24px,24px 24px;
+  background-repeat:repeat;
+}
+
+.welcome-header {
+  min-height:64px;
+  background:var(--app-bg);
+  border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow:0 1px 0 color-mix(in srgb, var(--sc-color-surface-elevated) 72%, transparent);
+}
+
+.welcome-brand,
+.welcome-brand strong { font-family:var(--sc-font-display); font-weight:700; }
+.welcome-brand { font-size:19px; }
+.welcome-brand strong span { font-weight:700; }
+.welcome-version-tag,
+.welcome-pill-badge,
+.welcome-category-badge,
+.welcome-project-stats,
+.welcome-filter-tab {
+  font-family:var(--sc-font-ui);
+  font-weight:var(--sc-font-weight-medium);
+  letter-spacing:0;
+}
+
+.welcome-launcher-card,
+.welcome-import-card,
+.welcome-template-card,
+.welcome-filter-tabs {
+  background:var(--sc-color-surface-1);
+  border:var(--sc-hairline);
+  box-shadow:var(--sc-elevation-1);
+}
+
+.welcome-launcher-card::before,
+.welcome-template-card::before { display:none; }
+
+.welcome-launcher-card,
+.welcome-template-card { border-radius:var(--sc-radius-md); }
+.welcome-import-card { border-radius:var(--sc-radius-md); }
+
+.welcome-launcher-card:hover,
+.welcome-import-card:hover,
+.welcome-template-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-elevation-1);
+}
+
+.welcome-launcher-card:not(:disabled):active,
+.welcome-import-card:not(:disabled):active,
+.welcome-template-card:active {
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+.welcome-template-card:active { border-color:var(--accent); }
+
+.welcome-launcher-icon,
+.welcome-import-icon {
+  border:0;
+  box-shadow:var(--sc-elevation-1);
+}
+
+.welcome-filter-tabs { padding:3px; border-radius:var(--sc-radius-sm); }
+.welcome-filter-tab { border-radius:var(--sc-radius-control); }
+.welcome-filter-tab.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+}
+
+.inspector-panel {
+  background:var(--sc-color-surface-1);
+  border-color:var(--sc-color-border);
+  box-shadow:none;
+}
+
+.toolbar { padding:8px 8px; }
+.inspector-panel { border-left:1px solid var(--sc-color-border); }

@@ -1,0 +1,92 @@
+@media (prefers-reduced-motion:reduce) {
+  .welcome-launcher-card,
+  .welcome-import-card,
+  .welcome-template-card,
+  .tool-button,
+  .analyze-button,
+  .sc-button.sc-button--primary { transition:none; }
+  .welcome-launcher-card:not(:disabled):active,
+  .welcome-import-card:not(:disabled):active,
+  .welcome-template-card:active { transform:none; }
+}
+
+/* ========================================================================
+   SEGUNDA PASADA CLAY · composición y comportamiento del sistema oficial
+   ------------------------------------------------------------------------
+   Esta capa sustituye los restos de "mesa modular" que sobrevivían a la
+   primera migración. Mantiene el lienzo plano y concentra la materia en los
+   controles, igual que las dos referencias oficiales.
+   ===================================================================== */
+
+/* Bienvenida ------------------------------------------------------------- */
+.welcome-screen {
+  background:var(--app-bg);
+  background-image:none;
+}
+
+.welcome-header {
+  min-height:64px;
+  background:color-mix(in srgb,var(--app-bg) 92%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--border) 65%,transparent);
+  box-shadow:none;
+}
+
+.welcome-launcher-card,
+.welcome-import-card,
+.welcome-template-card {
+  border:1px solid color-mix(in srgb,var(--border) 72%,white);
+  box-shadow:var(--sc-elevation-1);
+  transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), border-color var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard);
+}
+/* Fondo liso. Estas dos tarjetas se pintaban con un degradado diagonal teñido
+   de acento y de Aula —«esto es de marca» dicho con luz— que es exactamente lo
+   que el sistema prohíbe: el acento rellena, no modela. Sobrevivió al rediseño
+   de identidad porque el gate del acento sólo miraba los tokens, no los
+   consumidores; ahora `tokens.test.ts` mira los dos. */
+.welcome-launcher-card,
+.welcome-launcher-card--classroom,
+.welcome-launcher-card--recent { background:var(--surface); }
+.welcome-launcher-card::before,
+.welcome-template-card::before { display:none; }
+
+.welcome-launcher-card:hover,
+.welcome-import-card:hover,
+.welcome-template-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-elevation-1);
+}
+.welcome-launcher-card:active,
+.welcome-import-card:active,
+.welcome-template-card:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:none;
+  transform:var(--sc-press-transform);
+}
+.welcome-template-card:active { border-color:var(--sc-color-action-primary)!important; }
+.welcome-launcher-icon { background: var(--accent-fill); color:var(--accent-foreground); box-shadow:var(--sc-elevation-1); }
+.welcome-launcher-card--classroom .welcome-launcher-icon { background:var(--sc-color-aula-solid); color:var(--sc-color-aula-foreground); }
+.welcome-launcher-card--recent .welcome-launcher-icon { background:var(--axial); color:var(--sc-color-on-signal); }
+.welcome-launcher-card--space3d .welcome-launcher-icon { background:var(--sc-color-brand-secondary); color:var(--sc-color-on-signal); }
+.welcome-launcher-card:hover .welcome-launcher-arrow,
+.welcome-template-card:hover .welcome-template-footer svg { color:var(--accent); transform:translateX(4px); }
+
+.welcome-filter-tabs {
+  background:var(--sc-color-surface-2);
+  border:0;
+  border-radius:var(--sc-radius-pill);
+  box-shadow:none;
+}
+.welcome-filter-tab { border-radius:var(--sc-radius-pill); transition:background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-filter-tab.active { color:var(--accent); background:var(--surface); box-shadow:var(--sc-elevation-1); }
+
+.welcome-import-card {
+  background:var(--surface);
+  border:1.5px dashed var(--border);
+}
+.welcome-import-card .welcome-import-icon { background:var(--sc-color-surface-2); box-shadow:none; }
+
+.welcome-template-card { background:var(--surface); }
+.welcome-template-card:hover { border-color:var(--sc-color-border-strong); }
+.welcome-template-footer { color:var(--accent); }
+.welcome-template-footer svg { transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-footer { background:transparent; border:0; border-top:1px solid var(--border); box-shadow:none; }
