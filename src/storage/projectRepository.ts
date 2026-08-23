@@ -23,9 +23,20 @@ export interface StoredProjectRecord {
 export interface RecoveryRecord {
   id: string;
   projectId: string;
-  reason: 'conflict' | 'manual' | 'migration' | 'dxf-import';
+  /**
+   * `'version'` es una instantánea que el usuario pidió y nombró; el resto son
+   * redes que el producto tiende solo antes de una operación delicada.
+   *
+   * Una versión nombrada **es** una recuperación con etiqueta: mismo contenido,
+   * mismo almacén, misma restauración. Darle un almacén propio habría duplicado
+   * el esquema, la transacción y la ruta de restauración para no cambiar nada
+   * de lo que se guarda.
+   */
+  reason: 'conflict' | 'manual' | 'migration' | 'dxf-import' | 'version';
   createdAt: string;
   checksum: string;
+  /** Nombre que le dio el usuario. Sólo lo llevan las de `reason: 'version'`. */
+  label?: string;
   project: ProjectModel;
 }
 
@@ -35,7 +46,7 @@ export interface ProjectRepository {
   saveProject(project: ProjectModel, expectedRevision?: number): Promise<StoredProjectRecord>;
   renameProject(id: string, name: string): Promise<StoredProjectRecord>;
   duplicateProject(id: string, name: string): Promise<StoredProjectRecord>;
-  createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord>;
+  createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string): Promise<RecoveryRecord>;
   listRecoveries(projectId?: string): Promise<RecoveryRecord[]>;
   restoreRecovery(id: string): Promise<StoredProjectRecord>;
   getMeta(key: string): Promise<string | null>;
@@ -72,11 +83,16 @@ const projectRecord = async (project: ProjectModel, revision: number): Promise<S
   };
 };
 
-const recoveryRecord = async (project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord> => {
+const recoveryRecord = async (project: ProjectModel, reason: RecoveryRecord['reason'], label?: string): Promise<RecoveryRecord> => {
   const normalized = normalizeProject(project);
+  const trimmed = label?.trim();
   return {
     id: createId(), projectId: normalized.id, reason, createdAt: new Date().toISOString(),
-    checksum: await projectChecksum(normalized), project: normalized,
+    checksum: await projectChecksum(normalized),
+    // Una etiqueta vacía no es una etiqueta: se omite en vez de guardarse como
+    // cadena vacía, que luego habría que distinguir de «sin nombre» en cada lectura.
+    ...(trimmed ? { label: trimmed } : {}),
+    project: normalized,
   };
 };
 
@@ -111,8 +127,8 @@ export class InMemoryProjectRepository implements ProjectRepository {
     return this.saveProject({ ...structuredClone(record.project), id: createId(), name });
   }
 
-  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
-    const record = await recoveryRecord(project, reason);
+  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string) {
+    const record = await recoveryRecord(project, reason, label);
     this.recoveries.set(record.id, structuredClone(record));
     return structuredClone(record);
   }
@@ -221,8 +237,8 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     return this.saveProject({ ...structuredClone(record.project), id: createId(), name });
   }
 
-  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
-    const record = await recoveryRecord(project, reason);
+  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string) {
+    const record = await recoveryRecord(project, reason, label);
     const database = await this.database();
     const transaction = database.transaction(RECOVERIES_STORE, 'readwrite');
     const done = transactionDone(transaction);
