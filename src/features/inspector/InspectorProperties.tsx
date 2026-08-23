@@ -34,6 +34,7 @@ import type {
 import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorSelectionPreview } from './InspectorSelectionPreview';
+import { ModelOverview } from './ModelOverview';
 import { readExpandedSections, writeExpandedSections } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
@@ -462,6 +463,23 @@ export const InspectorProperties = () => {
     </>}
   </> : null;
 
+  /**
+   * Sin seleccion —o con una que ya no apunta a nada—, el panel enseña el
+   * Panorama del modelo.
+   *
+   * Antes gastaba sus 320 px en DOS tarjetas que dicen lo mismo: el resumen de
+   * seleccion en su estado vacio («Nada seleccionado» + una raya) y, debajo,
+   * una ayuda explicando el mecanismo que el usuario descubre al primer clic.
+   * Ninguna de las dos informa de nada, asi que las dos se retiran: un resumen
+   * de seleccion sin seleccion no es un resumen.
+   *
+   * Una seleccion colgada —un id de un objeto que ya se borro— entra por aqui
+   * tambien. Era el otro caso que caia en ese estado vacio, y tratarlo igual es
+   * lo honesto: no hay nada que inspeccionar.
+   */
+  const dangling = selection !== null && selection.kind !== 'multi' && !selectedId;
+  if (selection === null || dangling) return <div className="inspector-properties"><ModelOverview /></div>;
+
   return <div className="inspector-properties">
     <div className="inspector-selection-header">
       <InspectorSelectionSummary
@@ -470,19 +488,14 @@ export const InspectorProperties = () => {
         id={summaryId}
         description={summaryDescription}
         metrics={summaryMetrics}
-        empty={selection === null}
       />
-      {selection && selection.kind !== 'multi' ? <InspectorSelectionPreview
+      {selection.kind !== 'multi' ? <InspectorSelectionPreview
         project={project}
         selection={selection}
         label={t('inspector.selectionPreview')}
         caption={t('inspector.selectionPreviewCaption')}
       /> : null}
     </div>
-
-    {selection === null ? <div className="inspector-empty-state">
-      <InspectorHelper>{t('inspector.emptyPropertiesHelp')}</InspectorHelper>
-    </div> : null}
 
     {selection?.kind === 'multi' ? <>
       <InspectorPropertyGroup title={t('inspector.selectionSummary')} mode="derived" description={t('inspector.multipleSelectionDescription')}>

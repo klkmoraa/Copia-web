@@ -16,17 +16,17 @@ export const InspectorSelectionSummary = ({
   id,
   description,
   metrics = [],
-  empty = false,
 }: {
   icon: LucideIcon;
   type: string;
   id: string;
   description: string;
   metrics?: readonly InspectorSummaryMetric[];
-  empty?: boolean;
 }) => {
   const { t } = useI18n();
-  return <section className={`inspector-summary${empty ? ' is-empty' : ''}`} aria-label={t('inspector.selectionSummary')}>
+  /* Sin estado vacio: el panel ya no monta este resumen cuando no hay nada que
+     resumir — en ese caso enseña el Panorama del modelo. */
+  return <section className="inspector-summary" aria-label={t('inspector.selectionSummary')}>
     <div className="inspector-summary__identity">
       <span className="inspector-summary__preview" aria-hidden="true"><Icon size={20} /></span>
       <div>

@@ -183,10 +183,20 @@ describe('Inspector selection variants', () => {
     expect(screen.getByRole('tab', { name: 'Cargas' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Vista' })).toBeTruthy();
 
-    const summary = selectionSummary();
-    expect(within(summary).getByText('Nada seleccionado')).toBeTruthy();
-    expect(within(summary).getByText('—')).toBeTruthy();
-    expect(screen.getByText('Selecciona un objeto para ver sus propiedades, unidades y resultados derivados.')).toBeTruthy();
+    /**
+     * Sin seleccion el panel enseña el Panorama del modelo, no dos tarjetas
+     * que dicen lo mismo. Lo que se comprueba es que informa: el censo del
+     * modelo, que no enseña ninguna otra superficie del producto.
+     */
+    const overview = screen.getByRole('region', { name: 'Panorama del modelo' });
+    expect(within(overview).getByText('Nodos')).toBeTruthy();
+    expect(within(overview).getByText('Miembros')).toBeTruthy();
+    expect(within(overview).getByText('Apoyos')).toBeTruthy();
+
+    // Y que lo retirado se fue de verdad: un resumen de seleccion sin
+    // seleccion no es un resumen.
+    expect(screen.queryByRole('region', { name: 'Resumen de selección' })).toBeNull();
+    expect(screen.queryByText('Nada seleccionado')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Propiedades frecuentes' })).toBeNull();
   });
 
@@ -198,7 +208,7 @@ describe('Inspector selection variants', () => {
     renderInspector(project);
 
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Selection summary' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Model overview' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Loads' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'View' })).toBeTruthy();
 

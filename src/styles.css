@@ -2381,7 +2381,6 @@ button:not(:disabled):active,.selection-card:active {
   border-radius:0 3px 3px 0;
   background:var(--selection);
 }
-.inspector-summary.is-empty::before { background:var(--subtle); }
 .inspector-summary__identity { display:grid; grid-template-columns:38px minmax(0,1fr); align-items:center; gap:10px; min-width:0; }
 .inspector-summary__preview {
   width:38px;
@@ -2392,7 +2391,6 @@ button:not(:disabled):active,.selection-card:active {
   background:color-mix(in srgb,var(--selection) 11%,var(--surface));
   color:var(--selection);
 }
-.inspector-summary.is-empty .inspector-summary__preview { background:var(--surface-3); color:var(--muted); }
 .inspector-summary__identity>div { display:grid; min-width:0; gap:2px; }
 .inspector-summary__type { color:var(--muted); font-size:10px!important; font-weight:590; line-height:1.15!important; letter-spacing:0; text-transform:none; }
 .inspector-summary__identity strong { overflow:hidden; color:var(--text); font-size:15px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
@@ -2405,7 +2403,53 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-summary__metrics .is-shear dd { color:var(--shear); }
 .inspector-summary__metrics .is-moment dd { color:var(--moment); }
 
-.inspector-empty-state { padding:5px 0 13px; }
+/* Panorama del modelo -------------------------------------------------------
+   Lo que el panel derecho enseña sin seleccion. Sustituye a
+   `.inspector-empty-state`, que enmarcaba una ayuda que no informaba de nada.
+   Consume roles, nunca literales: mismo material y misma escala tipografica que
+   el resto del panel, para que no se lea como una superficie aparte. */
+.model-overview { display:grid; gap:var(--sc-space-4); padding:var(--sc-space-2) 0 var(--sc-space-4); }
+.model-overview h3 { margin:0; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-semibold); }
+.model-overview p { margin:0; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); line-height:1.45; }
+
+/* El censo: cuatro cifras iguales en peso, porque ninguna manda sobre las
+   otras. Rejilla de dos por dos para que quepan a 280 px de panel. */
+.model-overview__census { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--sc-space-2); margin:0; }
+.model-overview__census>div { min-width:0; padding:var(--sc-space-3); border-radius:var(--sc-radius-control); background:var(--sc-color-surface-2); }
+.model-overview__census dt { overflow:hidden; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); text-overflow:ellipsis; white-space:nowrap; }
+.model-overview__census dd { margin:2px 0 0; color:var(--sc-color-text-primary); font-size:var(--sc-font-size-subtitle); font-weight:var(--sc-font-weight-semibold); font-variant-numeric:tabular-nums; line-height:1.15; }
+
+/* Los hechos son renglones, no tarjetas: son texto, y una tarjeta por renglon
+   convertiria tres datos en tres objetos. */
+.model-overview__facts { display:grid; gap:var(--sc-space-2); margin:0; }
+.model-overview__facts>div { display:flex; align-items:baseline; justify-content:space-between; gap:var(--sc-space-3); min-width:0; }
+.model-overview__facts dt { flex:0 0 auto; color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); }
+.model-overview__facts dd { overflow:hidden; margin:0; color:var(--sc-color-text-primary); font-size:var(--sc-font-size-label); font-variant-numeric:tabular-nums; text-align:right; text-overflow:ellipsis; white-space:nowrap; }
+
+.model-overview__action {
+  display:flex; align-items:center; gap:var(--sc-space-3);
+  width:100%;
+  min-height:var(--sc-control-height-md);
+  padding:var(--sc-space-3);
+  border:var(--sc-hairline);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-2);
+  color:var(--sc-color-text-primary);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.model-overview__action:hover { background:var(--sc-color-fill-quaternary); }
+.model-overview__action span { display:grid; min-width:0; gap:1px; }
+.model-overview__action strong { overflow:hidden; font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-semibold); text-overflow:ellipsis; white-space:nowrap; }
+.model-overview__action small { color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-caption); line-height:1.35; }
+/* El aviso NO se pinta con el acento: el sistema lo reserva para lo que
+   acciona, y un hallazgo es un estado. */
+.model-overview__action.is-warning svg { color:var(--warning); }
+.model-overview__clean { display:flex; align-items:center; gap:var(--sc-space-2); color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-label); }
+@media (pointer:coarse) {
+  .model-overview__action { min-height:var(--sc-control-height-touch); }
+}
 .inspector-property-group { min-width:0; padding:12px 0; border-bottom:0.5px solid var(--sc-color-divider); }
 .inspector-property-group__header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:11px; }
 .inspector-property-group__header>div { min-width:0; }

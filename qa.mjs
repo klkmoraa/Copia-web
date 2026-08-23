@@ -469,6 +469,32 @@ async function verifyInspectorSummaryContract(page, state) {
   };
 }
 
+/**
+ * Materia del Panorama del modelo.
+ *
+ * Sustituye al contrato que medía `.inspector-summary` en su estado vacío. Ese
+ * estado ya no existe: sin selección el panel no monta un resumen de selección
+ * —no había nada que resumir—, monta el Panorama. El gate no se retira, se
+ * reapunta al consumidor nuevo, y con la misma física: agrupado, nunca elevado.
+ */
+async function verifyModelOverviewMaterial(page) {
+  const census = await readComposedMaterial(page, '.model-overview__census>div');
+  const expectedBorder = await readResolvedColorToken(page, '--sc-color-border');
+  const action = await page.locator('.model-overview__action').count() > 0
+    ? await readComposedMaterial(page, '.model-overview__action')
+    : null;
+  return {
+    // Las cifras del censo se agrupan con relleno, no se levantan con sombra.
+    modelOverviewCensusIsGroupedNotElevated:
+      census.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+      census.boxShadow === 'none' &&
+      census.backdropFilter === 'none',
+    // La acción lleva el filete de medio píxel del sistema, no un borde propio.
+    modelOverviewActionUsesSystemHairline: action === null
+      || (action.borderTopColor === expectedBorder && action.boxShadow === 'none'),
+  };
+}
+
 const inspectorFlatFamilies = [
   { key: 'SelectionCard', selector: '.selection-card', markup: '<div class="selection-card"></div>' },
   { key: 'NumberControl', selector: '.number-control', markup: '<div class="number-control"></div>' },
@@ -1108,19 +1134,19 @@ async function desktop() {
   Object.assign(out.checks, await verifyTopbarMaterial(page));
   Object.assign(out.checks, await verifyToolRailMaterial(page, 'Desktop'));
   Object.assign(out.checks, await verifyCanvasChromeMaterial(page));
-  await page.locator('.inspector-summary.is-empty').waitFor({ state: 'visible' });
+  // Sin selección el panel enseña el Panorama del modelo, no un resumen vacío.
+  await page.locator('.model-overview').waitFor({ state: 'visible' });
   const desktopPanel = await verifyInspectorPanelContract(page, {
     viewport: 'Desktop',
     geometryKey: 'inspectorDesktopPanelHasFourSidedGeometry',
     expectedWidths: '1px 1px 1px 1px',
   });
   Object.assign(out.checks, desktopPanel.checks);
-  Object.assign(out.checks, await verifyInspectorSummaryContract(page, 'Empty'));
+  Object.assign(out.checks, await verifyModelOverviewMaterial(page));
   await selectFirstInspectorMember(page);
-  await page.waitForFunction(() => {
-    const summary = document.querySelector('.inspector-summary');
-    return Boolean(summary && !summary.classList.contains('is-empty'));
-  });
+  // El resumen de selección SÓLO existe con selección: esperar a que aparezca
+  // es ahora la prueba de que el panel cambió de estado, sin clase intermedia.
+  await page.locator('.inspector-summary').waitFor({ state: 'visible' });
   Object.assign(out.checks, await verifyInspectorSummaryContract(page, 'Selected'));
   Object.assign(out.checks, await verifyInspectorHintReveal(page));
   const flatFamilies = await verifyInspectorFlatFamilies(page);
