@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
+import type { InspectorSegment } from '../inspector/inspectorSegments';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StructuralCanvas } from '../canvas/StructuralCanvas';
 import { ToolRail } from '../canvas/ToolRail';
@@ -9,7 +10,6 @@ import { ClassroomGuide } from '../classroom/ClassroomGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
-import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
 import { ShellCompositionProvider } from './ShellCompositionProvider';
@@ -47,15 +47,14 @@ const WorkspaceBrokerContent = ({
   const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const { t } = useI18n();
   const { project, analysis, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
-  const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
   const broker = useSurfacePresentation();
   const { openSurface, closeSurface, toggleSurface, markSurfaceReady, setSurfaceExtent } = broker;
   const detail = broker.stateFor('detail');
-  const analysisSetup = broker.stateFor('analysisSetup');
-  const view = broker.stateFor('view');
   const results = broker.stateFor('results');
+  /** Segmento visible del panel derecho; un comando puede apuntarlo. */
+  const [detailSegment, setDetailSegment] = useState<InspectorSegment>('detail');
   const dense = broker.stateFor('dense');
   const [denseView, setDenseView] = useState<DenseResultView>('reactions');
   const datasheet = broker.stateFor('datasheet');
@@ -89,6 +88,10 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-results', () => openSurface('results')),
+      onWorkspaceCommand('open-detail', (request) => {
+        if (request?.segment) setDetailSegment(request.segment);
+        openSurface('detail', request?.trigger);
+      }),
       /* `dense` es invocada: el lanzador viaja en el propio comando para que el
          broker sepa a dónde devolver el foco al cerrar.
          `influence` es además el único de los tres cuya lectura vive también
@@ -247,8 +250,6 @@ const WorkspaceBrokerContent = ({
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
             closeSurface('detail');
-            closeSurface('analysisSetup');
-            closeSurface('view');
             closeSurface('results');
           } else if (!layout.inspectorCollapsed) {
             // Results stays non-resident even leaving full-canvas (CRI-100);
@@ -259,11 +260,7 @@ const WorkspaceBrokerContent = ({
         },
       }}
     />}
-    toolRail={<ToolRail footerActions={<>
-      <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
-      <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
-      <button type="button" onClick={(event) => openSurface('results', event.currentTarget)} aria-label={t('results.outputs')}>{t('results.outputs')}</button>
-    </>} />}
+    toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
@@ -311,19 +308,25 @@ const WorkspaceBrokerContent = ({
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces">
-      {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={() => closeSurface('detail')} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
-      {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
-      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
+      {broker.isRetained('detail') ? <Inspector
+        className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''}
+        desktopWidth={layout.inspectorWidth}
+        presentation={detail.presentation as 'dock' | 'inset' | 'sheet'}
+        status={detail.status}
+        segment={detailSegment}
+        onSegmentChange={setDetailSegment}
+        onClose={() => closeSurface('detail')}
+        onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)}
+        mobileDetent={layout.inspectorDetent}
+        onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)}
+      /> : null}
     </div>}
     floatingActions={<div className="workspace-surface-launcher">
+      {/* Un destino, un lanzador. Antes habia tres botones aqui —Cargas, Vista
+          y Resultados— duplicando el pie del riel y los segmentos del propio
+          panel. Cargas y Vista son segmentos, no destinos; Resultados se pide
+          desde la barra superior y desde la paleta. */}
       <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
-      <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
-      <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
-      {/* Results ya no es residente en ninguna clase (CRI-100): estado y
-          fiabilidad viven siempre en el TopBar, N/V/M/deformada/mapa como capas
-          del lienzo; este lanzador abre el panel sólo para lo que sigue siendo
-          denso (resumen, reacciones, influencia, aprender). */}
-      <button type="button" onClick={(event) => openSurface('results', event.currentTarget)} aria-label={t('results.outputs')}>{t('results.outputs')}</button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;

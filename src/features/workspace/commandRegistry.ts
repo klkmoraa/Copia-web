@@ -139,6 +139,22 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     run: () => emitWorkspaceCommand('open-model-doctor'),
   },
   {
+    /**
+     * El unico lanzador de Resultados. Antes el panel se pedia desde dos
+     * botones sueltos —el pie del riel en X2/M1 y el lanzador flotante en
+     * K0— y desde ningun comando registrado: la superficie tenia dos puertas
+     * y ninguna definicion. Ahora tiene una definicion y una puerta, y la
+     * barra superior la proyecta como proyecta las demas.
+     */
+    id: 'tool:results',
+    category: 'results',
+    icon: ChartNoAxesCombined,
+    label: (ctx) => ctx.t('results.outputs'),
+    hint: (ctx) => ctx.t('palette.openResultsHint'),
+    deferredOpen: true,
+    run: () => emitWorkspaceCommand('open-results'),
+  },
+  {
     id: 'tool:datasheet',
     category: 'tools',
     icon: Sheet,
@@ -359,7 +375,7 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
  */
 const TOPBAR_COMMAND_IDS = [
   'analysis:run', 'analysis:undo', 'analysis:redo', 'analysis:model-doctor',
-  'tool:datasheet', 'view:theme',
+  'tool:results', 'tool:datasheet', 'view:theme',
   'export:json', 'export:svg', 'export:png', 'export:print',
 ] as const;
 

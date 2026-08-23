@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { INSPECTOR_SEGMENTS } from '../inspector/inspectorSegments';
 import {
   BROKER_SURFACE_IDS,
   SURFACE_ACTIVITY_CLASS,
@@ -17,14 +18,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
+  X2: { detail: 'dock', results: 'dock', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { detail: 'inset', results: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { detail: 'sheet', results: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
+    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'results', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -42,6 +43,41 @@ describe('surface presentation table', () => {
     expect(resolveSurfaceActivity('K0', state).detail).toMatchObject({ status: 'active', presentation: 'sheet' });
     expect(resolveSurfaceActivity('X2', state).detail).toMatchObject({ status: 'active', presentation: 'dock' });
     expect(state.surfaces.detail.open).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El panel derecho es UNA superficie. Sus segmentos no lo son.
+// ---------------------------------------------------------------------------
+describe('el panel derecho es una sola superficie', () => {
+  /**
+   * `analysisSetup` y `view` fueron ids del broker que montaban dos copias mas
+   * del mismo componente con su tablist apagado. La consecuencia real de
+   * tenerlos separados no era estetica: en Compact hay UNA ranura contextual
+   * (R-1), asi que los tres se desbancaban entre si, y abrir «Cargas» suspendia
+   * el detalle de lo que el usuario acababa de seleccionar.
+   *
+   * Este gate impide que vuelvan. Un segmento se conmuta dentro del panel; una
+   * superficie compite por sitio en la pantalla. No son la misma cosa y no
+   * pueden volver a declararse como si lo fueran.
+   */
+  it('no declara ninguna superficie para un segmento del panel', () => {
+    const ids: readonly string[] = BROKER_SURFACE_IDS;
+    for (const segment of INSPECTOR_SEGMENTS) {
+      // `detail` nombra al panel entero, que si es una superficie; los otros dos
+      // segmentos no pueden aparecer aqui bajo ningun nombre.
+      if (segment === 'detail') continue;
+      expect(ids).not.toContain(segment);
+    }
+    expect(ids).not.toContain('analysisSetup');
+    expect(ids).not.toContain('loads');
+  });
+
+  it('deja una sola capa contextual acoplada al borde derecho en cada clase', () => {
+    const docked = BROKER_SURFACE_IDS.filter((surface) => resolveSurfacePresentation('X2', surface) === 'dock');
+    // Resultados sigue siendo su propio dock hasta que la superficie densa se
+    // unifique; el panel derecho es el otro. Ninguna tercera.
+    expect(docked).toEqual(['detail', 'results']);
   });
 });
 
@@ -131,8 +167,6 @@ describe('activity classes', () => {
   it('declares one explicit activity class per broker surface', () => {
     const expected: Record<SurfaceId, SurfaceActivityClass> = {
       detail: 'layer',
-      analysisSetup: 'layer',
-      view: 'layer',
       results: 'layer',
       dense: 'tool',
       datasheet: 'tool',

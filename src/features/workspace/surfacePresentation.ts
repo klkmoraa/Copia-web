@@ -14,9 +14,15 @@ export const SURFACE_PRESENTATIONS = [
 export type SurfacePresentation = (typeof SURFACE_PRESENTATIONS)[number];
 
 export const BROKER_SURFACE_IDS = [
+  /**
+   * El panel derecho. Es **uno**: sus tres segmentos —detalle, cargas y
+   * vista— viven dentro de `Inspector`, no son tres superficies. Hasta aqui
+   * habia tres ids que montaban tres copias del mismo componente con su
+   * tablist apagado; la unica consecuencia real de tenerlos separados era que
+   * Compact los trataba como tres capas contextuales que se desbancaban entre
+   * si.
+   */
   'detail',
-  'analysisSetup',
-  'view',
   'results',
   /**
    * `dense` es la superficie invocada de los datos densos de Results
@@ -40,8 +46,6 @@ export type SurfaceStatus = 'closed' | 'active' | 'suspended';
 export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Record<SurfaceId, SurfacePresentation>>>> = {
   X2: {
     detail: 'dock',
-    analysisSetup: 'dock',
-    view: 'dock',
     results: 'dock',
     dense: 'drawer',
     datasheet: 'drawer',
@@ -52,8 +56,6 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
   },
   M1: {
     detail: 'inset',
-    analysisSetup: 'inset',
-    view: 'inset',
     results: 'inset',
     dense: 'drawer',
     datasheet: 'drawer',
@@ -64,8 +66,6 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
   },
   K0: {
     detail: 'sheet',
-    analysisSetup: 'sheet',
-    view: 'sheet',
     results: 'sheet',
     dense: 'fullscreen',
     datasheet: 'fullscreen',
@@ -103,8 +103,6 @@ export type SurfaceActivityClass = (typeof SURFACE_ACTIVITY_CLASSES)[number];
 
 export const SURFACE_ACTIVITY_CLASS: Readonly<Record<SurfaceId, SurfaceActivityClass>> = {
   detail: 'layer',
-  analysisSetup: 'layer',
-  view: 'layer',
   results: 'layer',
   dense: 'tool',
   datasheet: 'tool',

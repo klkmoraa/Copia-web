@@ -125,9 +125,9 @@ const renderInspector = (
 
 const storedNumber = (label: string) => Number(screen.getByLabelText(label).textContent);
 
-const SplitSurfaceHarness = ({ surface }: { surface: 'detail' | 'analysisSetup' | 'view' }) => {
+const SplitSurfaceHarness = () => {
   const [presentation, setPresentation] = useState<'dock' | 'inset' | 'sheet'>('dock');
-  const { selection, setSelection, activeTool, setActiveTool } = useWorkspaceUI();
+  const { selection, setSelection } = useWorkspaceUI();
   const { project } = useProjectModel();
   const member = project.members.find((item) => item.id === 'M1');
   const migrate = (next: 'dock' | 'inset' | 'sheet') => (event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -144,18 +144,13 @@ const SplitSurfaceHarness = ({ surface }: { surface: 'detail' | 'analysisSetup' 
     <button type="button" onMouseDown={migrate('dock')} onClick={migrate('dock')}>migrar X2</button>
     <output aria-label="selección dividida">{selection?.kind ?? 'none'}</output>
     <output aria-label="E dividida almacenada">{String(member?.E)}</output>
-    <Inspector
-      surface={surface}
-      presentation={presentation}
-      activeTool={activeTool}
-      onActiveToolChange={setActiveTool}
-    />
+    <Inspector presentation={presentation} />
   </ClassroomSessionProvider>;
 };
 
-const renderSplitSurface = (surface: 'detail' | 'analysisSetup' | 'view', project = createInspectorProject()) => {
+const renderSplitSurface = (project = createInspectorProject()) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
-  return render(<ProjectProvider><SplitSurfaceHarness surface={surface} /></ProjectProvider>);
+  return render(<ProjectProvider><SplitSurfaceHarness /></ProjectProvider>);
 };
 
 const expectDescribedUnit = (input: HTMLElement, expectedUnit: string) => {
@@ -235,7 +230,11 @@ describe('Inspector selection variants', () => {
     await user.click(screen.getByRole('button', { name: 'Seleccionar nodo N3' }));
     expect(screen.getAllByText('Editable').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Calculated').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Add a load')).toBeNull();
+    // El segmento visitado se conserva montado y oculto —asi sobrevive un
+    // borrador sin publicar—, asi que lo que se comprueba es que no esta
+    // EXPUESTO: una consulta por rol no ve lo que `hidden` saca del arbol de
+    // accesibilidad, que es exactamente la pregunta.
+    expect(screen.queryByRole('heading', { name: 'Add a load' })).toBeNull();
   });
 
   it('localizes representative Inspector property copy and presentational labels in English', async () => {
@@ -423,10 +422,10 @@ describe('Inspector selection variants', () => {
   });
 });
 
-describe('split Inspector surfaces', () => {
+describe('single Inspector panel', () => {
   it('keeps a focused numeric detail draft through X2, M1, K0, and back without publishing it', async () => {
     const user = userEvent.setup();
-    renderSplitSurface('detail');
+    renderSplitSurface();
     await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
     const field = screen.getByRole('textbox', { name: 'E' }) as HTMLInputElement;
     const original = screen.getByLabelText('E dividida almacenada').textContent;
@@ -449,22 +448,47 @@ describe('split Inspector surfaces', () => {
     expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
   });
 
-  it('keeps detail open while its selection authority changes, while analysis setup remains selection-independent', async () => {
+  it('keeps detail open while its selection authority changes', async () => {
     const user = userEvent.setup();
-    renderSplitSurface('detail');
+    renderSplitSurface();
     await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
     await user.click(screen.getByRole('button', { name: 'migrar K0' }));
     await user.click(screen.getByRole('button', { name: 'seleccionar nodo dividido' }));
     expect(screen.getByLabelText('selección dividida').textContent).toBe('node');
     expect(screen.getByRole('dialog', { name: 'Inspector' }).getAttribute('data-workspace-surface')).toBe('detail');
+  });
 
-    cleanup();
-    renderSplitSurface('analysisSetup');
-    const loadCase = screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement;
-    const before = loadCase.value;
+  /**
+   * El panel es UNO con tres segmentos, no tres superficies. Fundirlos pone en
+   * riesgo dos cosas que las tres copias daban gratis, y esta prueba las fija:
+   *
+   * 1. Un borrador numérico sin publicar en Cargas tiene que sobrevivir a ir a
+   *    otro segmento y volver — por eso un segmento visitado se oculta con
+   *    `hidden` en vez de desmontarse.
+   * 2. Seleccionar en el lienzo trae el panel al segmento de detalle, que es
+   *    lo que el tablist llevaba escrito desde el principio y nadie ejecutaba.
+   */
+  it('brings the panel back to detail on selection and keeps an unpublished loads draft across segments', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface();
+
+    const serviceCombination = () => screen
+      .getByText('Servicio', { selector: 'summary' })
+      .closest('details') as HTMLElement;
+
+    await user.click(screen.getByRole('tab', { name: 'Cargas' }));
+    await user.click(within(serviceCombination()).getByText('Servicio'));
+    const factor = within(serviceCombination()).getByRole('textbox', { name: 'Carga de servicio' }) as HTMLInputElement;
+    await user.clear(factor);
+    await user.type(factor, '1.75');
+    expect(factor.value).toBe('1.75');
+
     await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
-    expect(screen.getByRole('complementary', { name: 'Cargas' }).getAttribute('data-workspace-surface')).toBe('analysisSetup');
-    expect((screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement).value).toBe(before);
+    expect(screen.getByRole('tab', { name: 'Inspector' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Cargas' }).getAttribute('aria-selected')).toBe('false');
+
+    await user.click(screen.getByRole('tab', { name: 'Cargas' }));
+    expect((within(serviceCombination()).getByRole('textbox', { name: 'Carga de servicio' }) as HTMLInputElement).value).toBe('1.75');
   });
 });
 

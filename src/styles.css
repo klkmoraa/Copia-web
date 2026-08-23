@@ -487,16 +487,6 @@ button.analysis-status:hover { background:var(--sc-color-fill-quaternary); }
 :root[data-theme='dark'] .tool-button.active { color: var(--accent); }
 .toolbar-spacer { flex: 1; }
 .selection-tip { color: var(--subtle); font-size: var(--sc-font-size-label); line-height: 1.4; padding: 10px; display: flex; gap: 8px; align-items: flex-start; }
-/* Lanzadores de superficie (Cargas · Vista · Resultados) en X2/M1: pie del
-   riel, no chrome flotante del lienzo — ver `.workspace-surface-launcher`
-   en `phase1.css`, que es la misma capacidad para K0. */
-.tool-rail-footer-actions { display:flex; flex-direction:column; gap:2px; padding:6px 8px 2px; border-top:0.5px solid var(--sc-color-divider); }
-.tool-rail-footer-actions button { min-height:var(--sc-control-height-sm); padding:0 8px; border:0; border-radius:var(--sc-radius-control); background:transparent; color:var(--sc-color-text-secondary); font:inherit; font-size:var(--sc-font-size-label); font-weight:var(--sc-font-weight-medium); text-align:left; cursor:pointer; }
-.tool-rail-footer-actions button:hover { background:var(--sc-color-fill-quaternary); color:var(--sc-color-text-primary); }
-.tool-rail-footer-actions button:active { background:var(--sc-color-fill-tertiary); }
-@media (pointer:coarse) {
-  .tool-rail-footer-actions button { min-height:var(--sc-control-height-touch); }
-}
 
 .center-stage { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--canvas-bg); position: relative; }
 .classroom-journey { --classroom-color:var(--sc-color-aula); --classroom-solid:var(--sc-color-aula-solid); flex:0 0 auto; display:grid; gap:7px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--classroom-color) 30%,var(--border)); border-radius:var(--sc-radius-card); background:color-mix(in srgb,var(--classroom-color) 5%,var(--surface)); color:var(--text); }
@@ -1042,7 +1032,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border-radius:var(--sc-radius-card); flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; }
   .tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }
   .toolbar .tool-button svg { width:19px; height:19px; }
-  .toolbar-spacer,.selection-tip,.tool-rail-footer-actions { display:none; }
+  .toolbar-spacer,.selection-tip { display:none; }
   .center-stage { grid-column:1; grid-row:1 / span 2; }
   .inspector-panel { position:absolute; z-index:31; left:0; right:0; top:auto; bottom:0; width:100%; height:min(72vh,660px); --inspector-hairline-width:1px 1px 0; border-radius:var(--sc-radius-panel) 18px 0 0; display:none; padding-bottom:env(safe-area-inset-bottom); }
   .inspector-panel::before { content:''; width:42px; height:5px; border-radius:var(--sc-radius-xs); background:var(--border); position:absolute; left:50%; top:7px; transform:translateX(-50%); }
@@ -1103,14 +1093,17 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 /* Sub-umbral de teléfono dentro de Compact (PHONE_CEILING_PX, propiedad de
    este archivo — ver `shellComposition.ts`). Orden de degradación (CRI-95):
-   persistencia ya se fue a icono-only en K0; Datasheet es lo siguiente en
-   cederle sitio al nombre del proyecto y a la zona `status` protegida. Las
-   tres capacidades siguen enteras en «Más acciones», ninguna queda huérfana.
+   persistencia ya se fue a icono-only en K0; Resultados, Datasheet, Space 3D y
+   exportación son lo siguiente en cederle sitio al nombre del proyecto y a la
+   zona `status` protegida. Las cuatro capacidades siguen enteras en «Más
+   acciones», ninguna queda huérfana — y ninguna puede quedarse fuera de esta
+   lista: un icono más que no ceda aquí no se recorta, se SUPERPONE a la marca,
+   que es lo que pasó al añadir Resultados a la barra.
    Selector compuesto (0,2,0): `.sc-icon-button` vive en ui.css y su
    `display:inline-grid` (0,1,0) gana por orden de bundling si no se supera
    su especificidad, no sólo por orden de cascada. */
 @media (max-width: 700px) {
-  .topbar .datasheet-launcher,.topbar .space3d-open-button,.topbar .export-wrap { display:none; }
+  .topbar .results-launcher,.topbar .datasheet-launcher,.topbar .space3d-open-button,.topbar .export-wrap { display:none; }
 }
 
 @media (max-width: 460px) {
@@ -1518,7 +1511,7 @@ button,
     border-radius:0;
     overflow:visible;
   }
-  .desktop-tool-list,.toolbar-spacer,.selection-tip,.tool-rail-footer-actions { display:none; }
+  .desktop-tool-list,.toolbar-spacer,.selection-tip { display:none; }
   .mobile-tool-dock {
     display:grid;
     grid-template-columns:repeat(6,minmax(0,1fr));

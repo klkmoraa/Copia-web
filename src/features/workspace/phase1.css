@@ -34,12 +34,12 @@
 /* CRI-94: placement comes only from the broker's presentation attribute. */
 [data-workspace-surface][hidden] { display:none!important; }
 .workspace-surfaces { display:contents; }
-/* Los lanzadores de superficie flotan sobre el lienzo SÓLO en K0: en X2/M1
-   viven en el pie del riel (`.tool-rail-footer-actions`, `styles.css`), que
-   no comparte esquina con el navegador de cámara. Flotar encima del lienzo en
-   escritorio fue lo que los hizo colisionar con `.canvas-navigator` — dos
-   piezas ancladas a la misma esquina no se resuelven calculando la altura de
-   una contra la otra a mano, se resuelve dándole a cada una su sitio. */
+/* El lanzador flota sobre el lienzo SÓLO en K0, donde el panel derecho es una
+   hoja y no hay riel ancho desde el que pedirlo. En X2/M1 no existe: el panel
+   se abre desde la barra superior, que es donde vive el resto de destinos.
+   Llegó a tener tres botones —Cargas, Vista y Resultados— duplicando el pie
+   del riel; Cargas y Vista son segmentos del propio panel y Resultados tiene
+   su lanzador en la barra, así que aquí queda uno solo. */
 .workspace-surface-launcher {
   position:absolute; z-index:32; right:16px; bottom:16px;
   display:flex; gap:1px; align-items:center;

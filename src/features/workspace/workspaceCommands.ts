@@ -12,6 +12,7 @@
  * listening keeps working — but the name and the payload now have one definition each.
  */
 import type { Selection } from '../../types';
+import type { InspectorSegment } from '../inspector/inspectorSegments';
 import type { DenseResultView } from '../results/denseResults';
 
 /** A selection that names exactly one object; `multi` and `null` cannot be focused. */
@@ -29,6 +30,15 @@ export interface WorkspaceCommands {
   'fit-canvas': void;
   /** Request the Results surface; the presentation broker chooses its placement. */
   'open-results': void;
+  /**
+   * Abre el panel derecho, opcionalmente en un segmento concreto.
+   *
+   * Sustituye a las dos aperturas de superficie que habia —`analysisSetup` y
+   * `view`—: un segmento no es una superficie, asi que quien queria «cargas» o
+   * «vista» ya no pide otra superficie, pide este panel apuntando a donde iba.
+   * `trigger` viaja para que el broker devuelva el foco al cerrarse.
+   */
+  'open-detail': { segment?: InspectorSegment; trigger?: HTMLElement | null };
   /**
    * Invoke the dense results surface (reactions, influence, "Entender") on a
    * given view. It is never resident, so the launcher travels with the element

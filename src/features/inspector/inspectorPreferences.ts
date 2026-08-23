@@ -1,18 +1,28 @@
 /**
- * The original Inspector kept every accordion id in one tolerant array.  The
- * split keeps that exact storage key while giving each independent surface an
- * ownership boundary.  Unknown ids deliberately remain in storage: they may
- * belong to a newer surface or an older extension.
+ * Secciones desplegadas del panel de propiedades, persistidas.
+ *
+ * La clave de almacenamiento es la del Inspector original y no cambia: lo que
+ * un usuario tenia desplegado sigue desplegado tras esta reorganizacion.
+ *
+ * Los ids que no son de este panel se conservan intactos en el almacen. Pueden
+ * venir de una version anterior o de una superficie que aun no existe, y
+ * borrarlos al escribir seria decidir por ellas.
+ *
+ * Hubo un momento en que este modulo repartia la propiedad de las secciones
+ * entre tres duenos —`detail`, `analysisSetup` y `view`— porque el panel eran
+ * tres superficies. Solo `detail` llego a tener consumidor: los ids de los
+ * otros dos (`analysis-*`, `view-*`) nunca los escribio nadie. Con el panel
+ * unificado, el reparto se retira y queda lo que de verdad se usa.
  */
 export const INSPECTOR_EXPANDED_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
 
-export type InspectorSurfacePreferenceOwner = 'detail' | 'analysisSetup' | 'view';
-
-const OWNED_SECTION_IDS: Readonly<Record<InspectorSurfacePreferenceOwner, readonly string[]>> = {
-  detail: ['advanced-node', 'advanced-member', 'advanced-nodal-load', 'advanced-member-load'],
-  analysisSetup: ['analysis-load-cases', 'analysis-combinations', 'analysis-calculation-mode'],
-  view: ['view-cad', 'view-layers', 'view-results'],
-};
+/** Las cuatro secciones avanzadas que `InspectorProperties` puede desplegar. */
+const OWNED_SECTION_IDS: readonly string[] = [
+  'advanced-node',
+  'advanced-member',
+  'advanced-nodal-load',
+  'advanced-member-load',
+];
 
 const readAll = (storage: Storage | undefined): string[] => {
   if (!storage) return [];
@@ -24,21 +34,19 @@ const readAll = (storage: Storage | undefined): string[] => {
   }
 };
 
-export const readExpandedSectionsForSurface = (
-  owner: InspectorSurfacePreferenceOwner,
+export const readExpandedSections = (
   storage = typeof window === 'undefined' ? undefined : window.localStorage,
 ): string[] => {
-  const owned = new Set(OWNED_SECTION_IDS[owner]);
+  const owned = new Set(OWNED_SECTION_IDS);
   return readAll(storage).filter((id) => owned.has(id));
 };
 
-export const writeExpandedSectionsForSurface = (
-  owner: InspectorSurfacePreferenceOwner,
+export const writeExpandedSections = (
   next: readonly string[],
   storage = typeof window === 'undefined' ? undefined : window.localStorage,
 ): void => {
   if (!storage) return;
-  const owned = new Set(OWNED_SECTION_IDS[owner]);
+  const owned = new Set(OWNED_SECTION_IDS);
   const retained = readAll(storage).filter((id) => !owned.has(id));
   const ownNext = next.filter((id) => owned.has(id));
   try {

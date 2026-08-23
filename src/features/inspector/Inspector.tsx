@@ -1,16 +1,17 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
-import type { Selection, Tool } from '../../types';
+import type { Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
+import { INSPECTOR_SEGMENTS, INSPECTOR_SEGMENT_LABEL_KEY, type InspectorSegment } from './inspectorSegments';
 
 const NumberField = ({
   label,
@@ -59,20 +60,35 @@ type InspectorProps = {
   onDesktopWidthChange?: (width: number) => void;
   mobileDetent?: InspectorDetent;
   onMobileDetentChange?: (detent: InspectorDetent) => void;
-  /** In Workspace this makes the panel one independently brokered owner. */
-  surface?: 'detail' | 'analysisSetup' | 'view';
-  /** Injected by Workspace for a selection-independent analysis surface. */
-  activeTool?: Tool;
-  onActiveToolChange?: (tool: Tool) => void;
+  /**
+   * Segmento visible. Workspace lo gobierna para que un comando pueda abrir el
+   * panel directamente donde el usuario pidio; sin `segment` el panel se
+   * gobierna solo, que es como lo usan las pruebas y el laboratorio.
+   */
+  segment?: InspectorSegment;
+  onSegmentChange?: (segment: InspectorSegment) => void;
 };
 
-type InspectorContentProps = InspectorProps & {
-  selection: Selection;
-  activeTool: Tool;
-  setActiveTool: (tool: Tool) => void;
+/**
+ * Unico suscriptor de la seleccion dentro del panel. Renderiza `null`.
+ *
+ * Con tres superficies, la independencia de Cargas y Vista frente a la
+ * seleccion la daba montar dos copias memoizadas del panel
+ * (`SelectionIndependentInspector`). Con un solo panel esa suscripcion tiene
+ * que bajar hasta donde de verdad se usa: aqui, una hoja que no pinta nada y
+ * cuyo unico efecto es traer el foco al segmento de detalle. El cuerpo del
+ * panel no lee la seleccion —`InspectorProperties` la lee por su cuenta—, asi
+ * que seleccionar en el lienzo ya no re-renderiza Cargas ni Vista.
+ */
+const SelectionSegmentSync = ({ onSelected }: { onSelected: () => void }) => {
+  const { selection } = useWorkspaceUI();
+  useEffect(() => {
+    if (selection) onSelected();
+  }, [onSelected, selection]);
+  return null;
 };
 
-const InspectorContent = ({
+export const Inspector = ({
   className = '',
   desktopWidth = 320,
   presentation = 'dock',
@@ -81,23 +97,34 @@ const InspectorContent = ({
   onDesktopWidthChange,
   mobileDetent = 'medium',
   onMobileDetentChange,
-  surface,
-  selection,
-  activeTool,
-  setActiveTool,
-}: InspectorContentProps) => {
-  const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
+  segment,
+  onSegmentChange,
+}: InspectorProps) => {
   const { t } = useI18n();
-  const [tab, setTab] = useState<'inspector' | 'loads' | 'display'>('inspector');
+  const [ownSegment, setOwnSegment] = useState<InspectorSegment>('detail');
   const panelRef = useRef<HTMLElement>(null);
   const sheet = presentation === 'sheet';
   const [resizeOrigin, setResizeOrigin] = useState<{ clientX: number; width: number } | null>(null);
 
-  const forcedTab = surface === 'detail' ? 'inspector' : surface === 'analysisSetup' ? 'loads' : surface === 'view' ? 'display' : undefined;
-  const activeTab = forcedTab ?? tab;
+  const activeSegment = segment ?? ownSegment;
+  const setSegment = useCallback((next: InspectorSegment) => {
+    setOwnSegment(next);
+    onSegmentChange?.(next);
+  }, [onSegmentChange]);
+  const focusDetail = useCallback(() => setSegment('detail'), [setSegment]);
+
+  /**
+   * Un segmento visitado se queda montado y se oculta con `hidden`, no se
+   * desmonta. Cargas tiene borradores numericos sin publicar —los factores de
+   * una combinacion— y Vista no tiene ninguno, pero la regla es la misma para
+   * los tres: cambiar de segmento no puede tirar lo que el usuario estaba
+   * escribiendo. Montarlos los tres de entrada costaria render en cada apertura
+   * del panel; montar solo el visitado y conservarlo cuesta una vez.
+   */
+  const [visited, setVisited] = useState<ReadonlySet<InspectorSegment>>(() => new Set([activeSegment]));
   useEffect(() => {
-    if (!forcedTab && selection) setTab('inspector');
-  }, [forcedTab, selection]);
+    setVisited((current) => (current.has(activeSegment) ? current : new Set([...current, activeSegment])));
+  }, [activeSegment]);
 
   useEffect(() => {
     if (!sheet || status !== 'active') return undefined;
@@ -109,11 +136,6 @@ const InspectorContent = ({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose, sheet, status]);
-
-  const chooseLoadTool = (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => {
-    setActiveTool(tool);
-    onClose?.();
-  };
 
   const resizeFromPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!resizeOrigin || !onDesktopWidthChange) return;
@@ -137,34 +159,35 @@ const InspectorContent = ({
     }
   };
 
-  const inspectorTabs = ['inspector', 'loads', 'display'] as const;
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index;
-    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + inspectorTabs.length) % inspectorTabs.length;
-    else if (event.key === 'ArrowRight') nextIndex = (index + 1) % inspectorTabs.length;
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + INSPECTOR_SEGMENTS.length) % INSPECTOR_SEGMENTS.length;
+    else if (event.key === 'ArrowRight') nextIndex = (index + 1) % INSPECTOR_SEGMENTS.length;
     else if (event.key === 'Home') nextIndex = 0;
-    else if (event.key === 'End') nextIndex = inspectorTabs.length - 1;
+    else if (event.key === 'End') nextIndex = INSPECTOR_SEGMENTS.length - 1;
     else return;
     event.preventDefault();
-    const next = inspectorTabs[nextIndex];
-    setTab(next);
+    const next = INSPECTOR_SEGMENTS[nextIndex];
+    setSegment(next);
     panelRef.current?.querySelector<HTMLButtonElement>(`#inspector-tab-${next}`)?.focus();
   };
 
   return (
     <aside
       ref={panelRef}
-      id={surface ? `workspace-${surface}` : 'workspace-inspector'}
+      id="workspace-detail"
       className={`inspector-panel ${className}`.trim()}
       role={sheet ? 'dialog' : 'complementary'}
-      aria-label={surface === 'analysisSetup' ? t('inspector.loadsTab') : surface === 'view' ? t('inspector.viewTab') : t('inspector.tab')}
+      aria-label={t('inspector.tab')}
       tabIndex={sheet ? -1 : undefined}
-      data-workspace-surface={surface ?? 'detail'}
+      data-workspace-surface="detail"
+      data-inspector-segment={activeSegment}
       data-surface-presentation={presentation}
       data-surface-status={status}
       hidden={status !== 'active'}
       data-mobile-detent={sheet ? mobileDetent : undefined}
     >
+      <SelectionSegmentSync onSelected={focusDetail} />
       {presentation === 'dock' && onDesktopWidthChange ? <button
         type="button"
         className="inspector-resize-handle"
@@ -191,17 +214,34 @@ const InspectorContent = ({
           onClick={() => onMobileDetentChange(detent)}
         >{detent === 'compact' ? t('inspector.detentCompact') : detent === 'medium' ? t('inspector.detentMedium') : t('inspector.detentLarge')}</button>)}
       </div> : null}
-      {!surface ? <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
-        <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
-        <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>
-        <button id="inspector-tab-display" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'display'} tabIndex={tab === 'display' ? 0 : -1} className={tab === 'display' ? 'active' : ''} onClick={() => setTab('display')} onKeyDown={(event) => onTabKeyDown(event, 2)}>{t('inspector.viewTab')}</button>
-        <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button>
-      </div> : null}
+      <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
+        {INSPECTOR_SEGMENTS.map((id, index) => <button
+          key={id}
+          id={`inspector-tab-${id}`}
+          type="button"
+          role="tab"
+          aria-controls={`inspector-tabpanel-${id}`}
+          aria-selected={activeSegment === id}
+          tabIndex={activeSegment === id ? 0 : -1}
+          className={activeSegment === id ? 'active' : ''}
+          onClick={() => setSegment(id)}
+          onKeyDown={(event) => onTabKeyDown(event, index)}
+        >{t(INSPECTOR_SEGMENT_LABEL_KEY[id])}</button>)}
+        {onClose ? <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button> : null}
+      </div>
 
-      <div id={surface ? `${surface}-tabpanel` : 'inspector-tabpanel'} className="inspector-scroll" role={surface ? undefined : 'tabpanel'} aria-labelledby={surface ? undefined : `inspector-tab-${activeTab}`}>
-        {activeTab === 'inspector' ? <InspectorProperties /> : null}
-        {activeTab === 'loads' ? <AnalysisSetupPanel activeTool={activeTool} onChooseTool={chooseLoadTool} selectedCombinationId={selectedCombinationId} setSelectedCombinationId={setSelectedCombinationId} /> : null}
-        {activeTab === 'display' ? <DisplayPanel includeCalculationMode={false} /> : null}
+      <div className="inspector-scroll">
+        {INSPECTOR_SEGMENTS.map((id) => (visited.has(id) ? <div
+          key={id}
+          id={`inspector-tabpanel-${id}`}
+          role="tabpanel"
+          aria-labelledby={`inspector-tab-${id}`}
+          hidden={activeSegment !== id}
+        >
+          {id === 'detail' ? <InspectorProperties /> : null}
+          {id === 'loads' ? <AnalysisSetupPanel onToolChosen={sheet ? onClose : undefined} /> : null}
+          {id === 'view' ? <DisplayPanel includeCalculationMode={false} /> : null}
+        </div> : null))}
       </div>
     </aside>
   );
@@ -220,41 +260,20 @@ const AnalysisModePanel = () => {
   </section>;
 };
 
-const ConnectedInspector = (props: InspectorProps) => {
-  const { selection, activeTool, setActiveTool } = useWorkspaceUI();
-  return <InspectorContent {...props} selection={selection} activeTool={activeTool} setActiveTool={setActiveTool} />;
-};
-
-const SelectionIndependentInspector = memo(({
-  activeTool = 'select',
-  onActiveToolChange = () => undefined,
-  ...props
-}: InspectorProps) => <InspectorContent
-  {...props}
-  selection={null}
-  activeTool={activeTool}
-  setActiveTool={onActiveToolChange}
-/>);
-
 /**
- * Detail subscribes to selection authority. Analysis setup and View deliberately
- * do not: Workspace injects only the tool state analysis needs, allowing a
- * selection change to leave their retained surface and drafts untouched.
+ * Cargas es el unico segmento que necesita la herramienta activa, asi que la
+ * suscripcion a `useWorkspaceUI` vive aqui y no en el panel: el cuerpo del
+ * panel no puede suscribirse sin re-renderizarse entero con cada seleccion.
  */
-export const Inspector = (props: InspectorProps) => (
-  props.surface === 'analysisSetup' || props.surface === 'view'
-    ? <SelectionIndependentInspector {...props} />
-    : <ConnectedInspector {...props} />
-);
-
-const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelectedCombinationId }: {
-  activeTool: Tool;
-  onChooseTool: (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => void;
-  selectedCombinationId: string;
-  setSelectedCombinationId: (id: string) => void;
-}) => {
+const AnalysisSetupPanel = memo(({ onToolChosen }: { onToolChosen?: () => void }) => {
+  const { activeTool, setActiveTool } = useWorkspaceUI();
+  const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { project, updateProject } = useProjectModel();
   const { t } = useI18n();
+  const onChooseTool = (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => {
+    setActiveTool(tool);
+    onToolChosen?.();
+  };
   const loadToolOptions: Array<{ tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>; label: string; detail: string; icon: typeof MoveDown }> = [
     { tool: 'pointLoad', label: t('inspector.point'), detail: t('toolbar.pointLoadDetail'), icon: MoveDown },
     { tool: 'distributedLoad', label: t('inspector.distributed'), detail: t('toolbar.distributedLoadDetail'), icon: Sigma },
@@ -311,9 +330,9 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
     </section>
     <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.fullEffectsNote')}</div>
   </>;
-};
+});
 
-const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
+const DisplayPanel = memo(({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
   const { project, updateProjectView } = useProjectModel();
   const { t } = useI18n();
   const units = project.settings.units;
@@ -366,4 +385,4 @@ const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMod
     </section>
     <section className="inspector-section"><h3>{t('inspector.semanticColors')}</h3><div className="legend-list"><span><i className="legend-dot axial" /> {t('inspector.axialForce')}</span><span><i className="legend-dot shear" /> {t('inspector.shearForce')}</span><span><i className="legend-dot moment" /> {t('inspector.bendingMoment')}</span><span><i className="legend-dot force" /> {t('inspector.loadsTab')}</span><span><i className="legend-dot dimension" /> {t('inspector.dimensions')}</span><span><i className="legend-dot axis" /> {t('inspector.axesCuts')}</span></div></section>
   </>;
-};
+});

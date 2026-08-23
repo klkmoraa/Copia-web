@@ -154,10 +154,10 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
  * Pedirla es parte del contrato, no un rodeo de la prueba.
  */
 const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
-  // El lanzador vive dos veces en el marcado (pie del riel en X2/M1, chrome
-  // flotante en K0; CSS decide cuál se ve, jsdom no aplica esa CSS) — cualquiera
-  // de las dos copias abre la misma superficie.
-  await user.click(screen.getAllByRole('button', { name: 'Resultados' })[0]);
+  // Un destino, un lanzador. Hasta aqui el boton vivia DOS veces en el marcado
+  // —pie del riel en X2/M1 y chrome flotante en K0—, dos copias sin comando
+  // registrado detras; `getByRole` en singular es la prueba de que ya no.
+  await user.click(screen.getByRole('button', { name: 'Resultados' }));
   await waitFor(() => expect(document.querySelector('.results-panel')).toBeTruthy());
 };
 

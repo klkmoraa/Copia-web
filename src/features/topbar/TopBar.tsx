@@ -3,6 +3,7 @@ import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
   Box,
+  ChartNoAxesCombined,
   ChevronDown,
   CloudOff,
   Copy,
@@ -351,6 +352,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const undoCommand = command('analysis:undo');
   const redoCommand = command('analysis:redo');
   const datasheetCommand = command('tool:datasheet');
+  const resultsCommand = command('tool:results');
   const modelDoctorCommand = command('analysis:model-doctor');
   const themeCommand = command('view:theme');
   const ThemeIcon = themeCommand.icon;
@@ -454,6 +456,15 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             exportación · resto. El separador de medio píxel entre grupos lo pone
             el CSS, que es donde vive el reparto visual. */}
         <div className="topbar-tool-group" role="group" aria-label={t('menu.sectionViews')}>
+          {/* Resultados vive aqui y sólo aqui. El pie del riel y el lanzador
+              flotante lo abrian por su cuenta, sin comando registrado detras. */}
+          <IconButton
+            variant="secondary"
+            className="icon-button results-launcher"
+            label={resultsCommand.label}
+            title={resultsCommand.hint}
+            onClick={resultsCommand.run}
+          ><ChartNoAxesCombined size={18} /></IconButton>
           <IconButton
             variant="secondary"
             className="icon-button datasheet-launcher"
@@ -504,6 +515,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
                   {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
                       de tocar Estado/Doctor (orden de degradación · CRI-95). */}
+                  <button className="overflow-results" onClick={() => { resultsCommand.run(); setShowMobileMenu(false); }}><ChartNoAxesCombined size={16} /> {resultsCommand.label}</button>
                   <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
                   {/* Los mismos campos que el popover de la barra, no una
                       segunda copia: una sola definición consumida por las dos

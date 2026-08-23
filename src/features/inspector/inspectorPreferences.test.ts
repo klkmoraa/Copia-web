@@ -2,31 +2,32 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   INSPECTOR_EXPANDED_STORAGE_KEY,
-  readExpandedSectionsForSurface,
-  writeExpandedSectionsForSurface,
+  readExpandedSections,
+  writeExpandedSections,
 } from './inspectorPreferences';
 
 beforeEach(() => localStorage.clear());
 
-describe('legacy Inspector accordion preferences', () => {
-  it('routes known legacy sections to their new owners without resetting unknown ids', () => {
+describe('preferencias de secciones desplegadas del Inspector', () => {
+  it('lee solo lo suyo y no toca los ids ajenos al escribir', () => {
     localStorage.setItem(INSPECTOR_EXPANDED_STORAGE_KEY, JSON.stringify([
       'advanced-member', 'analysis-load-cases', 'view-layers', 'future-plugin-section',
     ]));
 
-    expect(readExpandedSectionsForSurface('detail')).toEqual(['advanced-member']);
-    expect(readExpandedSectionsForSurface('analysisSetup')).toEqual(['analysis-load-cases']);
-    expect(readExpandedSectionsForSurface('view')).toEqual(['view-layers']);
+    expect(readExpandedSections()).toEqual(['advanced-member']);
 
-    writeExpandedSectionsForSurface('detail', ['advanced-node']);
+    writeExpandedSections(['advanced-node']);
+    // Los tres ids ajenos siguen ahi: dos de un reparto por superficie que ya
+    // no existe y uno de nadie conocido. Borrarlos al escribir seria decidir
+    // por una version o una extension que este modulo no conoce.
     expect(JSON.parse(localStorage.getItem(INSPECTOR_EXPANDED_STORAGE_KEY) ?? '[]')).toEqual([
       'analysis-load-cases', 'view-layers', 'future-plugin-section', 'advanced-node',
     ]);
   });
 
-  it('ignores malformed legacy storage without overwriting it during a read', () => {
+  it('ignora un almacen malformado sin sobrescribirlo durante una lectura', () => {
     localStorage.setItem(INSPECTOR_EXPANDED_STORAGE_KEY, '{not json');
-    expect(readExpandedSectionsForSurface('detail')).toEqual([]);
+    expect(readExpandedSections()).toEqual([]);
     expect(localStorage.getItem(INSPECTOR_EXPANDED_STORAGE_KEY)).toBe('{not json');
   });
 });

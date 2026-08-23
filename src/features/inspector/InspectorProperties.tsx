@@ -34,7 +34,7 @@ import type {
 import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorSelectionPreview } from './InspectorSelectionPreview';
-import { readExpandedSectionsForSurface, writeExpandedSectionsForSurface } from './inspectorPreferences';
+import { readExpandedSections, writeExpandedSections } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
@@ -50,10 +50,10 @@ import {
 } from './InspectorPrimitives';
 
 const usePersistentInspectorSections = () => {
-  const [expanded, setExpanded] = useState<string[]>(() => readExpandedSectionsForSurface('detail'));
+  const [expanded, setExpanded] = useState<string[]>(() => readExpandedSections());
   const updateExpanded = useCallback((next: string[]) => {
     setExpanded(next);
-    writeExpandedSectionsForSurface('detail', next);
+    writeExpandedSections(next);
   }, []);
   return [expanded, updateExpanded] as const;
 };

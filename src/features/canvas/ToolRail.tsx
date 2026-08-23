@@ -219,17 +219,7 @@ const setAppShellMobileInert = (inert: boolean) => {
  * paleta táctil — sin booleano de compatibilidad que un llamador pueda pasar
  * por su cuenta.
  */
-export interface ToolRailProps {
-  /**
-   * Lanzadores de superficie (Cargas · Vista · Resultados) en X2/M1. En K0
-   * siguen flotando sobre el lienzo (`.workspace-surface-launcher`), que ahí
-   * no colisiona con nada — sólo en X2/M1 competían por la misma esquina que
-   * el navegador de cámara.
-   */
-  footerActions?: ReactNode;
-}
-
-export const ToolRail = ({ footerActions }: ToolRailProps = {}) => {
+export const ToolRail = () => {
   const { activeTool, setActiveTool } = useProject();
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -428,7 +418,6 @@ export const ToolRail = ({ footerActions }: ToolRailProps = {}) => {
 
         <div className="toolbar-spacer" />
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>
-        {footerActions ? <div className="tool-rail-footer-actions">{footerActions}</div> : null}
 
         <nav className="mobile-tool-dock" aria-label={t('toolbar.primary')}>
           {mobilePrimaryTools.map((definition) => <RegisteredToolButton
