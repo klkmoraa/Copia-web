@@ -360,8 +360,20 @@ button:not(:disabled):active,.selection-card:active {
   .inspector-panel.mobile-open { clip-path:inset(0 0 0 0 round 18px 0 0 18px); }
 }
 
+/* Último piso. Aquí la Cinta se queda sin ancho de verdad: sus tres zonas piden
+   110 px de dianas táctiles (marca 44 · nombre · galón 44, más el hueco) en una
+   celda de `document` de 89 px, y `actions` y `status` ya están en su suelo
+   protegido (D-14 · CRI-95). Medido a 320 px: el galón se pintaba encima de
+   «Más acciones».
+   Cede la marca, que es identidad, no capacidad — y su capacidad, «Ir al
+   inicio», reaparece como primera entrada del menú del proyecto, que cuelga del
+   galón que la sustituye (ver `.overflow-home` en `TopBar.tsx` y su regla de
+   apagado en 11-topbar). Es el mismo trato que el historial: un destino, un
+   lanzador a cada ancho, nunca cero y nunca dos. */
 @media (max-width:360px) {
   .brand-block { gap:5px; }
+  .topbar .brand-home-button { display:none; }
+  .project-menu .overflow-home { display:flex; }
   .project-name { min-width:0; padding-inline:2px; }
   /* El suelo de `min-width` ya es 0 desde el tramo Compact (11-topbar): aquí
      sólo se acorta lo visible. */

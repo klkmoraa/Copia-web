@@ -4,7 +4,7 @@
 .mobile-history-actions + .menu-section { padding-top:4px; }
 .menu-section:last-of-type { border-bottom:none; padding-bottom:4px; }
 .menu-section-title { font-size:10px; font-weight:700; color:var(--text); opacity:0.6; text-transform:none; letter-spacing:0; padding:8px 12px 6px; margin-bottom:2px; }
-.mobile-history-actions.overflow-history,.overflow-case,.overflow-mode { display:none; }
+.mobile-history-actions.overflow-history,.overflow-case,.overflow-mode,.project-menu .overflow-home { display:none; }
 .mobile-storage-state { display:flex; align-items:flex-start; gap:7px; margin:5px 4px 2px; padding:9px; border-radius:var(--sc-radius-control); background:var(--surface-2); color:var(--muted); font-size:var(--sc-font-size-label); line-height:1.4; }
 .mobile-storage-state.error { color:var(--error); }
 .mobile-storage-state>span { display:grid; gap:2px; }
@@ -12,7 +12,7 @@
 .mobile-storage-state small { color:var(--muted); font-size:var(--sc-font-size-label); }
 
 @media (max-width:1439px) {
-  .topbar { grid-template-columns:minmax(0,max-content) minmax(0,1fr) max-content; gap:var(--sc-space-3); }
+  .topbar { grid-template-columns:minmax(0,max-content) minmax(min-content,1fr) max-content; gap:var(--sc-space-3); }
   /* Aquí había `.export-wrap { display:none }`. Nunca apagó nada: `.topbar-tool-group
      { display:flex }` (22-topbar) tiene su misma especificidad (0,1,0) y se empaqueta
      después, así que ganaba por orden de cascada. Medido a 1440/1400/1360/…/701 px:
@@ -27,7 +27,7 @@
   .tool-button { grid-template-columns: 1fr; justify-items:center; min-height:52px; padding:5px; }
   .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd,.selection-tip span { display:none; }
   .selection-tip { justify-content:center; }
-  .topbar { grid-template-columns:minmax(0,max-content) minmax(0,1fr) max-content; gap:var(--sc-space-2); }
+  .topbar { grid-template-columns:minmax(0,max-content) minmax(min-content,1fr) max-content; gap:var(--sc-space-2); }
   .analyze-button { width:124px; min-width:124px; }
   /* Aquí vivía el par que mandaba el historial al desbordamiento por debajo de
      1280 px. La mitad que lo apagaba en la Cinta (`.history-controls`, 0,1,0)
@@ -169,7 +169,7 @@
   :root { --topbar-h:52px; }
   .project-name input { width:min(100px,26vw); font-size:var(--sc-font-size-label); }
   .autosave-state { display:none; }
-  .brand-mark { width:26px; font-size:25px; }.topbar { padding-left:8px; padding-right:8px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
+  .brand-mark { width:26px; font-size:25px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
   .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:var(--sc-radius-card); }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-navigator { right:8px; bottom:calc(80px + env(safe-area-inset-bottom)); }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
   .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}

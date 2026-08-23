@@ -650,13 +650,22 @@ async function verifyInspectorResponsiveViewports() {
  * queries, ni geometría. Sólo un navegador de verdad barriendo anchos.
  *
  * Lo que se afirma es el EFECTO, no la regla: que dos controles de zonas
- * distintas no compartan un solo píxel. El suelo del barrido son 360 px, el
- * teléfono más estrecho que el producto atiende; por debajo la Cinta se queda
- * sin ancho de verdad (a 320 px sus tres zonas piden 93 px de dianas táctiles
- * en una celda de 70) y arreglarlo pediría quitarle su casa a un control, no
- * mover un número.
+ * distintas no compartan un solo píxel. El barrido baja hasta 320 px, donde la
+ * Cinta se queda sin ancho de verdad y la marca —que es el botón de inicio—
+ * cede su sitio; 361 y 360 están los dos porque ahí está el umbral y un gate
+ * que sólo mira un lado de una frontera no la vigila.
+ *
+ * Se afirman dos grados del mismo defecto: que dos controles no se toquen, y —el
+ * paso anterior— que ninguno se salga de su celda. El segundo es el que ve la
+ * avería antes de que se note: «Analizar» desbordaba 50 px a 1024 px cayendo en
+ * el hueco entre columnas, sin tocar nada. Un hueco no es un margen de
+ * seguridad, es una coincidencia.
+ *
+ * Y el efecto complementario: una capacidad que cede su sitio tiene que
+ * aparecer en su desbordamiento, ni dos veces ni ninguna. Se comprueba abriendo
+ * el menú de verdad a cada lado del umbral, para el historial y para el inicio.
  */
-const TOPBAR_SWEEP_WIDTHS = [1536, 1440, 1360, 1280, 1200, 1024, 900, 768, 720, 701, 700, 600, 500, 460, 430, 390, 375, 360];
+const TOPBAR_SWEEP_WIDTHS = [1536, 1440, 1360, 1280, 1200, 1100, 1024, 900, 768, 720, 701, 700, 600, 500, 460, 430, 390, 375, 361, 360, 340, 320];
 
 const readTopBarGeometry = (page) => page.evaluate(() => {
   const topbar = document.querySelector('.topbar');
@@ -669,15 +678,17 @@ const readTopBarGeometry = (page) => page.evaluate(() => {
   };
   const zones = [...topbar.querySelectorAll(':scope > [data-topbar-zone]')];
   const controls = [];
+  const escapes = [];
   for (const zone of zones) {
+    const cell = zone.getBoundingClientRect();
     for (const element of zone.querySelectorAll('button,input,a,select')) {
       if (!visible(element)) continue;
       const rect = element.getBoundingClientRect();
-      controls.push({
-        zone: zone.dataset.topbarZone,
-        label: (element.getAttribute('aria-label') || element.value || element.textContent || '').trim().slice(0, 28),
-        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
-      });
+      const label = (element.getAttribute('aria-label') || element.value || element.textContent || '').trim().slice(0, 28);
+      controls.push({ zone: zone.dataset.topbarZone, label, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+      if (rect.left < cell.left - 0.5 || rect.right > cell.right + 0.5) {
+        escapes.push(`${zone.dataset.topbarZone}«${label}» ${Math.round(rect.left)}–${Math.round(rect.right)} fuera de ${Math.round(cell.left)}–${Math.round(cell.right)}`);
+      }
     }
   }
   const collisions = [];
@@ -692,11 +703,17 @@ const readTopBarGeometry = (page) => page.evaluate(() => {
       }
     }
   }
-  const historyInRibbon = (() => {
-    const element = document.querySelector('.topbar .history-controls');
+  const inRibbon = (selector) => {
+    const element = document.querySelector(selector);
     return Boolean(element && visible(element));
-  })();
-  return { collisions, historyInRibbon, controls: controls.length };
+  };
+  return {
+    collisions,
+    escapes,
+    historyInRibbon: inRibbon('.topbar .history-controls'),
+    homeInRibbon: inRibbon('.topbar .brand-home-button'),
+    controls: controls.length,
+  };
 });
 
 async function verifyTopBarNeverOverlapsItself() {
@@ -719,25 +736,72 @@ async function verifyTopBarNeverOverlapsItself() {
     }
     out.metrics.topbarSweep = sweep;
     checks.topbarControlsNeverOverlap = sweep.every((entry) => entry.collisions.length === 0);
+    // Y el paso anterior a la colisión: un control que se sale de su celda no
+    // choca todavía porque cae en el hueco entre columnas, pero es la misma
+    // avería una talla más pequeña. Afirmarlo aquí es lo que convierte
+    // «hoy no se tocan» en «no pueden tocarse».
+    checks.topbarControlsStayInTheirZone = sweep.every((entry) => entry.escapes.length === 0);
 
-    // Una sola casa para el historial a cada ancho: en la Cinta por encima del
-    // sub-umbral de teléfono, en «Más acciones» por debajo. Nunca en las dos.
-    const homes = {};
+    // Una sola casa a cada ancho para las dos capacidades que ceden su sitio:
+    // el historial en el sub-umbral de teléfono y «Ir al inicio» en el último
+    // piso. En la Cinta por encima del umbral, en su menú por debajo, nunca en
+    // los dos y nunca en ninguno.
+    // Abrir un menú deja el foco en su primer ítem. Que ese ítem esté PINTADO
+    // no es un detalle: estos menús son el desbordamiento de la Cinta y llevan
+    // dentro copias apagadas por CSS que `querySelector` sí encuentra. Se
+    // recoge aquí, en el mismo sitio donde se abren de verdad.
+    const focusLanded = {};
+    const openMenu = async (trigger, menu, key) => {
+      await page.getByLabel(trigger).first().click();
+      await page.locator(menu).waitFor({ state: 'visible' });
+      if (key) {
+        // Dentro del menú Y pintado. Sólo «pintado» no basta: `focus()` sobre
+        // un elemento con `display:none` no hace nada y el foco se queda en el
+        // disparador, que sí se ve — el defecto pasaría por bueno.
+        focusLanded[key] = await page.evaluate((menuSelector) => {
+          const active = document.activeElement;
+          if (!active || !active.closest(menuSelector)) return false;
+          return active.getClientRects().length > 0;
+        }, menu);
+      }
+    };
+    const closeMenu = async (menu) => {
+      await page.keyboard.press('Escape');
+      await page.locator(menu).waitFor({ state: 'hidden' });
+    };
+
+    const historyHomes = {};
     for (const width of [900, 390]) {
       await page.setViewportSize({ width, height: 844 });
       await page.waitForTimeout(260);
       const inRibbon = (await readTopBarGeometry(page)).historyInRibbon;
-      await page.getByLabel('Más acciones').first().click();
-      await page.locator('.mobile-actions-menu').waitFor({ state: 'visible' });
+      await openMenu('Más acciones', '.mobile-actions-menu', `utilidades@${width}`);
       const inOverflow = await page.locator('.mobile-history-actions.overflow-history').isVisible();
-      await page.keyboard.press('Escape');
-      await page.locator('.mobile-actions-menu').waitFor({ state: 'hidden' });
-      homes[width] = { inRibbon, inOverflow };
+      await closeMenu('.mobile-actions-menu');
+      historyHomes[width] = { inRibbon, inOverflow };
     }
-    out.metrics.topbarHistoryHomes = homes;
-    checks.topbarHistoryHasExactlyOneHome = Object.values(homes).every(({ inRibbon, inOverflow }) => inRibbon !== inOverflow);
-    checks.topbarHistoryLivesInRibbonOnWideScreens = homes[900].inRibbon;
-    checks.topbarHistoryLivesInOverflowOnPhones = homes[390].inOverflow;
+    out.metrics.topbarHistoryHomes = historyHomes;
+    checks.topbarHistoryHasExactlyOneHome = Object.values(historyHomes).every(({ inRibbon, inOverflow }) => inRibbon !== inOverflow);
+    checks.topbarHistoryLivesInRibbonOnWideScreens = historyHomes[900].inRibbon;
+    checks.topbarHistoryLivesInOverflowOnPhones = historyHomes[390].inOverflow;
+
+    const startHomes = {};
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(260);
+      const inRibbon = (await readTopBarGeometry(page)).homeInRibbon;
+      await openMenu('Abrir proyectos y ejemplos', '.project-menu', `proyecto@${width}`);
+      const inOverflow = await page.locator('.project-menu .overflow-home').isVisible();
+      await closeMenu('.project-menu');
+      startHomes[width] = { inRibbon, inOverflow };
+    }
+    out.metrics.topbarStartHomes = startHomes;
+    checks.topbarGoToStartHasExactlyOneHome = Object.values(startHomes).every(({ inRibbon, inOverflow }) => inRibbon !== inOverflow);
+    checks.topbarGoToStartLivesInBrandMarkOnPhones = startHomes[390].inRibbon;
+    checks.topbarGoToStartLivesInProjectMenuOnTheNarrowest = startHomes[320].inOverflow;
+
+    out.metrics.topbarMenuFocus = focusLanded;
+    checks.topbarMenusFocusAVisibleItem = Object.values(focusLanded).every(Boolean);
   } finally {
     await page.close();
   }

@@ -24,3 +24,19 @@ publicado (`3ac3885`), sin ningún otro cambio en el árbol.
 Barrido de 18 anchos entre 1536 y 360 px (`out.metrics.topbarSweep` en
 `qa-artifacts/qa-results.json`): **0 colisiones**. Antes del arreglo, colisiones
 reales a 500, 460, 430, 390, 375 y 360 px.
+
+---
+
+## Segunda ronda · lo que quedaba medido y sin arreglar
+
+Las dos condiciones que la primera ronda dejó anotadas ya no están.
+
+| Captura | Qué enseña |
+|---|---|
+| `a-cinta-320.png` | 320 px, el último piso. La marca cede su sitio —es identidad, no capacidad— y las tres zonas caben sin tocarse. |
+| `b-menu-320-ir-al-inicio.png` | Su capacidad no se pierde: «Ir al inicio» encabeza el menú del proyecto, que cuelga del galón que sustituye a la marca. Por encima de 360 px esta entrada no existe. |
+| `c-cinta-1024.png` | 1024 px. «Analizar» ya no se sale de su celda: cede el nombre del proyecto, que es el orden que CRI-95 declara. |
+| `d-cinta-1300.png` | 1300 px, el otro tramo donde desbordaba. |
+
+Barrido ampliado a **22 anchos** entre 1536 y 320 px, con 361 y 360 a los dos
+lados del umbral: **0 colisiones y 0 desbordes de celda**.

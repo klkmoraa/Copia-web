@@ -12,6 +12,7 @@ import {
   FileText,
   FilePlus2,
   FolderOpen,
+  Home,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -58,6 +59,29 @@ export interface TopBarLayoutActions {
   onToggleInspector: () => void;
   onToggleFullCanvas: () => void;
 }
+
+/**
+ * Un ítem apagado por CSS sigue estando en el DOM, y `querySelector` no lo sabe.
+ *
+ * Estos menús son también el desbordamiento de la Cinta: llevan dentro copias
+ * que sólo se encienden por debajo de su umbral —el historial, «Ir al inicio»—.
+ * La primera de ellas es, además, el primer `button` del popover, así que abrir
+ * el menú con el teclado mandaba el foco a un elemento con `display:none`: el
+ * `focus()` no hace nada y el foco se queda en ninguna parte. Lo mismo con las
+ * flechas, que contaban paradas invisibles.
+ *
+ * Se comprueba por la cadena de ancestros y con `getComputedStyle`, no con
+ * `offsetParent`: en jsdom —donde corren las pruebas y no hay ni una hoja de
+ * estilo cargada— `offsetParent` es siempre `null` y daría todo por invisible,
+ * mientras que `display` sin CSS nunca es `none`. Así la misma función dice la
+ * verdad en el navegador y en las pruebas.
+ */
+const isRendered = (element: HTMLElement): boolean => {
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    if (window.getComputedStyle(node).display === 'none') return false;
+  }
+  return true;
+};
 
 export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
   // Split across the three focused contexts (CRI-100): `project`/`analysis` come
@@ -159,7 +183,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   useEffect(() => {
     const selector = showProjectMenu ? '.project-menu button:not(:disabled)' : showExportMenu ? '.export-menu button:not(:disabled)' : showMobileMenu ? '.mobile-actions-menu button:not(:disabled)' : null;
     if (!selector) return undefined;
-    const handle = window.requestAnimationFrame(() => topbarRef.current?.querySelector<HTMLButtonElement>(selector)?.focus());
+    const handle = window.requestAnimationFrame(() => {
+      const items = topbarRef.current?.querySelectorAll<HTMLButtonElement>(selector);
+      Array.from(items ?? []).find(isRendered)?.focus();
+    });
     return () => window.cancelAnimationFrame(handle);
   }, [showExportMenu, showMobileMenu, showProjectMenu]);
 
@@ -173,7 +200,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)'));
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)')).filter(isRendered);
     if (!items.length) return;
     event.preventDefault();
     const current = Math.max(0, items.indexOf(document.activeElement as HTMLButtonElement));
@@ -402,6 +429,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         <AnimatePresence>
           {showProjectMenu ? (
             <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
+              {/* Ir al inicio, sólo por debajo de 360 px. Ahí la marca —que es
+                  el botón de inicio— cede su sitio: las tres zonas de la Cinta
+                  piden 110 px de dianas táctiles en una celda de 89 y algo tiene
+                  que salir. Sale la identidad, no la capacidad, y sale al menú
+                  que está justo debajo del galón que la sustituye. Por encima de
+                  360 px esta entrada no existe: el destino sigue teniendo un solo
+                  lanzador a cada ancho, igual que el historial. El gate que lo
+                  fija barre anchos en Chromium (`qa.mjs`); jsdom no ve `@media`. */}
+              <button role="menuitem" className="overflow-home" onClick={() => { setShowProjectMenu(false); onOpenHome?.(); }}>
+                <Home size={16} /> {t('navigation.home')}
+              </button>
               <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
                 <FilePlus2 size={16} /> {t('project.new')}
               </button>
