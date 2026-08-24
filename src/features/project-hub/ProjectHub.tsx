@@ -8,6 +8,7 @@ import {
   type RecoveryRecord,
   type StoredProjectRecord,
 } from '../../storage/projectRepository';
+import { ProjectVersions } from './ProjectVersions';
 import './projectHub.css';
 
 /**
@@ -52,7 +53,14 @@ export const ProjectHub = ({
     try {
       const [nextProjects, nextRecoveries] = await Promise.all([activeRepository.listProjects(), activeRepository.listRecoveries()]);
       setProjects(nextProjects);
-      setRecoveries(nextRecoveries);
+      /* Las versiones nombradas viven en el mismo almacén que las copias de
+         recuperación —comparten esquema y ruta de restauración a propósito—,
+         pero no son la misma cosa para quien mira: una la pidió el usuario y
+         tiene nombre, la otra la tendió el producto solo. Desde que cada
+         proyecto enseña las suyas, dejarlas también aquí las contaría dos veces
+         y llamaría «copia recuperable» a algo que se llama «Antes de subir las
+         cargas». */
+      setRecoveries(nextRecoveries.filter((recovery) => recovery.reason !== 'version'));
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('hub.unavailable'));
@@ -122,13 +130,18 @@ export const ProjectHub = ({
         <span>{t('hub.columnRevision')}</span>
         <span />
       </div>
-      {projects.map((record) => <article className="project-hub__row" key={record.id}>
+      {projects.map((record) => <div className="project-hub__entry" key={record.id}><article className="project-hub__row">
         <div className="project-hub__identity">
           {editing?.id === record.id ? <form onSubmit={(event) => { event.preventDefault(); void commitRename(); }}>
             <label><span className="sr-only">{t('hub.renameLabel')}</span><input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} autoFocus /></label>
             <button type="submit">{t('hub.saveName')}</button>
             <button type="button" onClick={() => setEditing(null)}>{t('hub.cancel')}</button>
-          </form> : <strong>{record.name}</strong>}
+          {/* El nombre se recorta con puntos suspensivos cuando la fila no da
+              más de sí —medido: 44 px de 436 en la biblioteca a 1440—, así que
+              el nombre completo viaja en `title` y deja de depender del ancho.
+              No sustituye a arreglar el reparto de la fila; lo hace legible
+              mientras tanto. */}
+          </form> : <strong title={record.name}>{record.name}</strong>}
         </div>
         <time className="project-hub__updated" dateTime={record.updatedAt}>{formatUpdated(record.updatedAt, language)}</time>
         <small className="project-hub__revision">{t('hub.revision', { revision: record.revision })}</small>
@@ -137,7 +150,16 @@ export const ProjectHub = ({
           <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => setEditing({ id: record.id, name: record.name })}><Pencil size={16} /></button>
           <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => void duplicate(record)}><Copy size={16} /></button>
         </div>
-      </article>)}
+      </article>
+      {activeRepository ? <ProjectVersions
+        repository={activeRepository}
+        record={record}
+        t={t}
+        formatDate={(iso) => formatUpdated(iso, language)}
+        onRestored={onOpen}
+        onChanged={() => { void refresh(); }}
+      /> : null}
+      </div>)}
     </div> : null}
     {/* CRI-104 · la recuperación se abre sola cuando hay algo que recuperar.
         `RecoveryRecord` es seguridad de datos: si existe una copia, verla no

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { InMemoryProjectRepository } from '../../storage/projectRepository';
+import { saveNamedVersion } from '../../storage/projectVersions';
 import { ProjectHub } from './ProjectHub';
 
 beforeEach(() => localStorage.clear());
@@ -32,5 +33,31 @@ describe('ProjectHub', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Duplicar Modelo base' }));
     await waitFor(() => expect(screen.getByText('Copia de Modelo base')).toBeTruthy());
     expect(screen.getByText('Modelo base')).toBeTruthy();
+  });
+
+  it('ofrece las versiones de cada proyecto sin salir de la biblioteca', async () => {
+    const repository = new InMemoryProjectRepository();
+    const project = { ...createDefaultProject(), name: 'Con historial' };
+    await repository.saveProject(project);
+    await saveNamedVersion(repository, project, 'Antes de subir las cargas');
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    expect(await screen.findByText('Con historial')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Versiones (1)')).toBeTruthy());
+    expect(screen.getByText('Antes de subir las cargas')).toBeTruthy();
+  });
+
+  it('no cuenta una versión nombrada como copia recuperable', async () => {
+    const repository = new InMemoryProjectRepository();
+    const project = { ...createDefaultProject(), name: 'Con historial' };
+    await repository.saveProject(project);
+    await saveNamedVersion(repository, project, 'Antes de subir las cargas');
+    await repository.createRecovery(project, 'manual');
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    /* Comparten almacén a propósito, pero no son la misma cosa para quien
+       mira: una la pidió el usuario y tiene nombre; la otra la tendió el
+       producto. Contarlas juntas diría dos donde hay una de cada. */
+    await waitFor(() => expect(screen.getByText('Copias recuperables (1)')).toBeTruthy());
   });
 });

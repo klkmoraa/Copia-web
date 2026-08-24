@@ -107,6 +107,161 @@
 }
 
 .project-hub__error { color: var(--sc-color-state-error-foreground); }
+
+/*
+ * Versiones y su diff.
+ *
+ * El panel cuelga de su propia fila y comparte con ella la caja: un `entry` es
+ * el proyecto y todo lo que se sabe de él, no dos elementos que casualmente
+ * están juntos. Plegado por defecto — la biblioteca sigue siendo una lista de
+ * proyectos, y el historial sólo aparece cuando se pide.
+ */
+.project-hub__entry { display: grid; gap: 0; }
+
+.project-hub__versions {
+  margin: 0 var(--sc-space-2);
+  padding: 0 var(--sc-space-3) var(--sc-space-2);
+  border: var(--sc-hairline);
+  border-top: 0;
+  border-radius: 0 0 var(--sc-radius-md) var(--sc-radius-md);
+  background: var(--sc-color-surface-inset);
+}
+
+.project-hub__versions > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  padding: var(--sc-space-2) 0;
+  cursor: pointer;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-bold);
+}
+
+.project-hub__versions-body { display: grid; gap: var(--sc-space-2); }
+
+.project-hub__version-form { display: flex; align-items: center; gap: var(--sc-space-2); flex-wrap: wrap; }
+.project-hub__version-form input {
+  min-width: 14rem;
+  min-height: var(--sc-control-height-sm);
+  padding: 0 10px;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-1);
+}
+.project-hub__version-form button {
+  min-height: var(--sc-control-height-sm);
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-1);
+}
+
+.project-hub__versions-note,
+.project-hub__versions-empty {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.5;
+}
+
+.project-hub__version-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sc-space-1); }
+.project-hub__version-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  padding: 4px;
+  border-radius: var(--sc-radius-control);
+}
+/* La seleccionada se marca con el fondo, no con el color del texto: el nombre
+   de una versión es dato del usuario y no debe cambiar de tono al elegirla. */
+.project-hub__version-list li.is-selected { background: var(--sc-color-surface-1); }
+
+.project-hub__version-pick {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.project-hub__version-pick strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-hub__version-pick time { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); }
+.project-hub__version-list button:not(.project-hub__version-pick) {
+  min-height: var(--sc-control-height-sm);
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-1);
+}
+
+.project-hub__diff {
+  display: grid;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-2);
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-1);
+}
+.project-hub__diff header { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-2); flex-wrap: wrap; }
+.project-hub__diff-target { display: inline-flex; align-items: center; gap: var(--sc-space-1); font-size: var(--sc-font-size-caption); }
+.project-hub__diff-target select {
+  min-height: var(--sc-control-height-sm);
+  padding: 0 8px;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-inset);
+}
+.project-hub__diff-direction {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+}
+.project-hub__diff-counts { margin: 0; font-weight: var(--sc-font-weight-bold); font-variant-numeric: tabular-nums; }
+.project-hub__diff-identical { margin: 0; color: var(--sc-color-text-secondary); }
+
+.project-hub__diff-group h4 { margin: 0 0 4px; font-size: var(--sc-font-size-caption); color: var(--sc-color-text-secondary); }
+.project-hub__diff-group ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.project-hub__diff-group li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sc-space-2);
+  flex-wrap: wrap;
+  font-size: var(--sc-font-size-caption);
+}
+.project-hub__diff-group code { font-family: var(--sc-font-mono); }
+/* Los tres estados se leen en la PALABRA, y sólo en la palabra.
+   Teñir alta y baja de verde y rojo era la opción evidente, y se descartó por
+   dos motivos que apuntan al mismo sitio: un diff que se distingue por tono
+   deja fuera a quien no separa esos tonos, y el rol verde del sistema
+   (`--sc-color-state-success`) mide 4,11:1, por debajo del mínimo para un texto
+   de 10 px. Inventar aquí un verde a medida sería un literal fuera del sistema,
+   que es exactamente lo que la identidad visual prohíbe. */
+.project-hub__diff-badge {
+  min-width: 5.5rem;
+  padding: 1px 6px;
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-fill-quaternary);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+  text-align: center;
+}
+.project-hub__diff-fields { min-width: 0; color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); }
+.project-hub__diff-more { margin: 4px 0 0; color: var(--sc-color-text-muted); font-size: var(--sc-font-size-caption); }
 .project-hub__empty { color: var(--sc-color-text-muted); }
 
 .project-hub__recoveries { margin-top: var(--sc-space-3); }
@@ -119,6 +274,8 @@
 
 @media (max-width: 680px) {
   .project-hub__row { align-items: stretch; flex-direction: column; }
+  .project-hub__version-list li { align-items: stretch; flex-direction: column; }
+  .project-hub__version-form input { min-width: 0; width: 100%; }
   .project-hub__actions { justify-content: flex-end; }
   .project-hub__identity input { min-width: 0; width: 100%; }
 }
