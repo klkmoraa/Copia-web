@@ -11,7 +11,7 @@ afterEach(cleanup);
 
 const camera = { scale: CANVAS_REFERENCE_SCALE, x: 260, y: 500 };
 
-const setup = () => {
+const useDispatchSetup = () => {
   const project = createDefaultProject();
   const nodeMap = new Map(project.nodes.map((node) => [node.id, node]));
   const memberMap = new Map(project.members.map((member) => [member.id, member]));
@@ -71,13 +71,13 @@ const setup = () => {
 
 describe('useCanvasToolDispatch', () => {
   it('performTargetAction sobre el fondo con la herramienta nodo crea un nodo', () => {
-    const { dispatch, addNode } = setup();
+    const { dispatch, addNode } = useDispatchSetup();
     dispatch.performTargetAction({ kind: 'background' }, 'node', { x: 10, y: 10 });
     expect(addNode).toHaveBeenCalledWith({ x: 1, y: 1 });
   });
 
   it('performTargetAction sobre el fondo con la herramienta seleccionar limpia la selección', () => {
-    const { dispatch, setSelection, setMemberStart, setCut } = setup();
+    const { dispatch, setSelection, setMemberStart, setCut } = useDispatchSetup();
     dispatch.performTargetAction({ kind: 'background' }, 'select', { x: 0, y: 0 });
     expect(setSelection).toHaveBeenCalledWith(null);
     expect(setMemberStart).toHaveBeenCalledWith(null);
@@ -85,21 +85,21 @@ describe('useCanvasToolDispatch', () => {
   });
 
   it('performTargetAction sobre un nodo con la herramienta borrar despacha deleteSelection', () => {
-    const { dispatch, project, deleteSelection } = setup();
+    const { dispatch, project, deleteSelection } = useDispatchSetup();
     const nodeId = project.nodes[0]!.id;
     dispatch.performTargetAction({ kind: 'node', id: nodeId }, 'delete', { x: 0, y: 0 });
     expect(deleteSelection).toHaveBeenCalledWith({ kind: 'node', id: nodeId });
   });
 
   it('performTargetAction sobre un nodo con la herramienta seleccionar fija la selección de ese nodo', () => {
-    const { dispatch, project, setSelection } = setup();
+    const { dispatch, project, setSelection } = useDispatchSetup();
     const nodeId = project.nodes[0]!.id;
     dispatch.performTargetAction({ kind: 'node', id: nodeId }, 'select', { x: 0, y: 0 });
     expect(setSelection).toHaveBeenCalledWith({ kind: 'node', id: nodeId });
   });
 
   it('performTargetAction sobre una barra con la herramienta corte pinea un corte', () => {
-    const { dispatch, project, setCut, setSelection } = setup();
+    const { dispatch, project, setCut, setSelection } = useDispatchSetup();
     const memberId = project.members[0]!.id;
     dispatch.performTargetAction({ kind: 'member', id: memberId }, 'cut', { x: 400, y: 400 });
     expect(setCut).toHaveBeenCalledWith(expect.objectContaining({ memberId, pinned: true }));
@@ -107,14 +107,14 @@ describe('useCanvasToolDispatch', () => {
   });
 
   it('performTargetAction sobre una barra con la herramienta miembro despacha member.split', () => {
-    const { dispatch, project, executeProjectCommand } = setup();
+    const { dispatch, project, executeProjectCommand } = useDispatchSetup();
     const memberId = project.members[0]!.id;
     dispatch.performTargetAction({ kind: 'member', id: memberId }, 'node', { x: 400, y: 400 });
     expect(executeProjectCommand).toHaveBeenCalledWith(expect.objectContaining({ kind: 'member.split', memberId }));
   });
 
   it('finishSelectionBox convierte la caja en selección múltiple', () => {
-    const { dispatch, project, setSelection } = setup();
+    const { dispatch, project, setSelection } = useDispatchSetup();
     const node = project.nodes[0]!;
     dispatch.finishSelectionBox({
       pointerId: 1,
