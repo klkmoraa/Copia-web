@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSection, propertiesOfRectangles, rectanglesOf, type BuiltSectionShape } from './sectionBuilder';
+import { buildSection, propertiesOfRectangles, rectanglesOf, shapeOfStandardSection, type BuiltSectionShape } from './sectionBuilder';
 import { standardSections, type StandardSection } from './standardSections';
 
 describe('núcleo geométrico', () => {
@@ -117,16 +117,11 @@ describe('núcleo geométrico', () => {
  * Ese material existe y esta descripción no lo tiene. En el rectángulo macizo,
  * donde no hay nada que idealizar, la tolerancia es cero absoluto.
  */
-const shapeOf = (section: StandardSection): BuiltSectionShape => {
-  switch (section.shapeType) {
-    case 'I': return { kind: 'i-shape', depth: section.depth, width: section.width, webThickness: section.webThickness, flangeThickness: section.flangeThickness };
-    case 'C': return { kind: 'channel', depth: section.depth, width: section.width, webThickness: section.webThickness, flangeThickness: section.flangeThickness };
-    case 'L': return { kind: 'angle', depth: section.depth, width: section.width, thickness: section.webThickness };
-    case 'HSS_RECT': return { kind: 'box', depth: section.depth, width: section.width, thickness: section.webThickness };
-    case 'HSS_ROUND': return { kind: 'tube', outerDiameter: section.depth, thickness: section.webThickness };
-    case 'RECT': return { kind: 'rectangle', depth: section.depth, width: section.width };
-  }
-};
+/* La traducción catálogo → forma vive en el módulo, no aquí: la comparte el
+   constructor de secciones de la interfaz, que arranca desde un perfil real.
+   Mientras estuvo duplicada en este archivo, el gate validaba una copia que
+   nadie más usaba. */
+const shapeOf = shapeOfStandardSection;
 
 /** Tolerancias medidas sobre el catálogo completo, por forma y propiedad (fracción). */
 const TOLERANCE: Record<StandardSection['shapeType'], Record<string, number>> = {

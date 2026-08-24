@@ -27,6 +27,8 @@
  * La diferencia es material real que la sección tiene y esta descripción no.
  */
 
+import type { StandardSection } from './standardSections';
+
 /** Rectángulo con signo: área positiva es material, negativa es hueco. */
 export interface SectionRectangle {
   width: number;
@@ -244,3 +246,26 @@ export const buildSection = (shape: BuiltSectionShape): SectionProperties =>
   shape.kind === 'tube'
     ? tubeProperties(shape.outerDiameter, shape.thickness)
     : propertiesOfRectangles(rectanglesOf(shape));
+
+/**
+ * Descripción constructiva equivalente a un perfil del catálogo.
+ *
+ * Traduce las cuatro dimensiones que el catálogo guarda —canto, ancho, espesor
+ * de alma y de ala— a la forma que este módulo sabe construir. No mira las
+ * propiedades almacenadas: si las mirara, la reconstrucción no probaría nada.
+ *
+ * Es la puerta por la que el catálogo valida las fórmulas *y* la puerta por la
+ * que el constructor de la interfaz arranca desde un perfil real. Que sea la
+ * misma función es deliberado: dos copias podrían divergir, y sólo una de ellas
+ * estaría bajo el gate del catálogo.
+ */
+export const shapeOfStandardSection = (section: StandardSection): BuiltSectionShape => {
+  switch (section.shapeType) {
+    case 'I': return { kind: 'i-shape', depth: section.depth, width: section.width, webThickness: section.webThickness, flangeThickness: section.flangeThickness };
+    case 'C': return { kind: 'channel', depth: section.depth, width: section.width, webThickness: section.webThickness, flangeThickness: section.flangeThickness };
+    case 'L': return { kind: 'angle', depth: section.depth, width: section.width, thickness: section.webThickness };
+    case 'HSS_RECT': return { kind: 'box', depth: section.depth, width: section.width, thickness: section.webThickness };
+    case 'HSS_ROUND': return { kind: 'tube', outerDiameter: section.depth, thickness: section.webThickness };
+    case 'RECT': return { kind: 'rectangle', depth: section.depth, width: section.width };
+  }
+};
