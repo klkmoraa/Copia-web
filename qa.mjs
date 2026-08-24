@@ -2040,6 +2040,169 @@ async function sectionBuilder() {
   await page.close();
 }
 
+/**
+ * Versiones nombradas y su diff, de punta a punta y con navegador de verdad.
+ *
+ * Lo que este recorrido vigila y ninguna prueba de jsdom puede: que la
+ * biblioteca real —con IndexedDB, no con un repositorio de memoria— guarda una
+ * versión, que **el estado que capturó sobrevive a que el modelo cambie**, y que
+ * el diff que enseña al volver nombra exactamente lo que se tocó en medio. Un
+ * panel de versiones que enseñara el estado de ahora en las dos columnas pasaría
+ * cualquier prueba de unidad y no serviría para nada.
+ */
+async function projectVersions() {
+  const page = await newQaPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
+  page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`versions ${msg.type()}: ${msg.text()}`); });
+  page.on('pageerror', err => out.pageErrors.push(`versions ${String(err)}`));
+
+  /**
+   * Vuelve a Inicio.
+   *
+   * El salto directo a la Mesa (CRI-104) se ofrece **una vez por sesión**: la
+   * primera vuelta a Inicio de quien ya tiene proyectos guardados la consume y
+   * rebota al espacio de trabajo. No es un fallo, es el contrato; se pide otra
+   * vez y entonces Inicio se queda.
+   */
+  const goHome = async () => {
+    const welcome = page.getByTestId('welcome-screen');
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await page.locator('.brand-home-button').click();
+      // Un rebote no es un fallo: es el salto directo consumiéndose. Se vuelve
+      // a pedir Inicio en vez de abortar el recorrido.
+      const landed = await welcome.waitFor({ state: 'visible', timeout: 8_000 }).then(() => true, () => false);
+      if (!landed) continue;
+      await page.waitForTimeout(700);
+      if (await welcome.isVisible().catch(() => false)) return;
+    }
+    throw new Error('Inicio rebotó a la Mesa más veces de las que el contrato permite.');
+  };
+
+  /*
+   * La biblioteca guarda MÁS de un proyecto: el vacío con el que arranca la
+   * aplicación y el ejemplo que se abre después. Leer «el primero» apuntaba al
+   * vacío, que no tiene M1, y devolvía nulo sin decir por qué. Se busca por el
+   * id del proyecto abierto, que es el único que identifica la fila que este
+   * recorrido está mirando.
+   */
+  const storedMember = (projectId) => page.evaluate((id) => new Promise((resolve, reject) => {
+    const request = indexedDB.open('structureCo.projects');
+    request.onerror = () => reject(new Error('IndexedDB no abrió.'));
+    request.onsuccess = () => {
+      const store = request.result.transaction('projects', 'readonly').objectStore('projects');
+      const all = store.getAll();
+      all.onsuccess = () => {
+        const record = all.result.find(candidate => candidate.id === id);
+        const member = record?.project?.members?.find(candidate => candidate.id === 'M1');
+        resolve(member ? { A: member.A, sectionId: member.sectionId ?? '' } : null);
+      };
+      all.onerror = () => reject(new Error('No se pudo leer la biblioteca.'));
+    };
+  }), projectId);
+
+  /*
+   * Espera a que la biblioteca llegue a un estado, sondeando desde aquí.
+   *
+   * `page.waitForFunction` con un predicado que devuelve una promesa NO la
+   * espera: una promesa siempre es un valor verdadero, así que la primera
+   * llamada la daba por cumplida y el recorrido seguía leyendo el estado
+   * anterior. Todo lo que se lee de IndexedDB es asíncrono, así que el sondeo
+   * vive en Node y la página sólo contesta lecturas.
+   */
+  const waitForStoredMember = async (projectId, predicate, expectation) => {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const member = await storedMember(projectId);
+      if (member && predicate(member)) return member;
+      await page.waitForTimeout(250);
+    }
+    throw new Error(`La biblioteca no llegó a ${expectation}.`);
+  };
+
+  await loadCleanApp(page);
+  await enterWorkspace(page, { example: true });
+  const open = await page.evaluate(() => {
+    const raw = localStorage.getItem('structureCo.project');
+    if (!raw) throw new Error('No hay proyecto abierto.');
+    const parsed = JSON.parse(raw);
+    return { id: parsed.id, name: parsed.name };
+  });
+  await goHome();
+
+  const hub = page.locator('.project-hub');
+  await hub.waitFor({ state: 'visible', timeout: 15_000 });
+  // La fila del proyecto abierto, por su nombre: la biblioteca tiene más de una.
+  const entry = hub.locator('.project-hub__entry', { hasText: open.name }).first();
+  const versions = entry.locator('.project-hub__versions');
+  await versions.waitFor({ state: 'visible', timeout: 15_000 });
+
+  // 1 · El historial está en la biblioteca, plegado, y arranca vacío diciéndolo.
+  out.checks.versionsLiveInsideTheLibrary = await versions.count() === 1;
+  await versions.locator('summary').click();
+  out.checks.versionsStartEmptyAndSayIt =
+    /aún no tiene versiones/i.test(await versions.innerText());
+
+  // 2 · Una versión exige nombre. Pedirla sin él no escribe nada.
+  await versions.getByRole('button', { name: 'Guardar versión', exact: true }).click();
+  await versions.locator('[role="alert"]').waitFor({ state: 'visible', timeout: 5_000 });
+  out.checks.versionRefusesToBeNameless =
+    /necesita un nombre/i.test(await versions.locator('[role="alert"]').innerText());
+
+  // 3 · Con nombre, se guarda y se compara consigo misma sin inventar cambios.
+  const nameField = versions.getByLabel('Nombre de la versión');
+  await nameField.click();
+  await nameField.fill('Antes de tocar M1');
+  await versions.getByRole('button', { name: 'Guardar versión', exact: true }).click();
+  await versions.locator('.project-hub__diff').waitFor({ state: 'visible', timeout: 10_000 });
+  out.checks.versionSavesAndSelectsItself = /Versiones \(1\)/.test(await versions.locator('summary').innerText());
+  out.checks.versionAgainstItselfHasNoDifference =
+    /No hay ninguna diferencia/i.test(await versions.locator('.project-hub__diff').innerText());
+
+  // 4 · Se cambia el modelo de verdad: M1 recibe un perfil del catálogo.
+  await entry.getByRole('button', { name: `Abrir ${open.name}`, exact: true }).click();
+  await page.locator('.app-shell').waitFor({ state: 'visible', timeout: 15_000 });
+  const memberM1 = page.locator('[data-structure-kind="member"][data-structure-id="M1"]').first();
+  await memberM1.focus();
+  await page.keyboard.press('Enter');
+  const inspector = page.locator('.inspector-panel');
+  await inspector.getByLabel('Perfil comercial').waitFor({ state: 'visible', timeout: 10_000 });
+  await inspector.getByLabel('Perfil comercial').selectOption('w12x26');
+  const changed = await waitForStoredMember(open.id, (member) => member.sectionId === 'w12x26', 'guardar el perfil en M1');
+
+  // 5 · Al volver, la versión sigue guardando el estado ANTERIOR y el diff lo
+  // dice: la barra que se tocó, con sus valores de antes y de después.
+  await goHome();
+  const versionsAgain = page.locator('.project-hub__entry', { hasText: open.name }).first().locator('.project-hub__versions');
+  await versionsAgain.locator('summary').click();
+  await versionsAgain.getByRole('button', { name: /^Antes de tocar M1/ }).click();
+  const diff = versionsAgain.locator('.project-hub__diff');
+  await diff.waitFor({ state: 'visible', timeout: 10_000 });
+  const diffText = await diff.innerText();
+  out.checks.versionKeepsTheStateItCaptured = /Modificaciones: 1/.test(diffText);
+  out.checks.diffNamesTheFamilyAndTheObject = /Barras/.test(diffText) && /M1/.test(diffText);
+  out.checks.diffShowsBeforeAndAfter = /A: .*→/.test(diffText);
+  await page.screenshot({ path: path.join(artifactsDir, 'project-versions.png'), fullPage: false });
+
+  // 6 · Una versión nombrada no se cuenta como copia recuperable: comparten
+  // almacén a propósito, pero no son la misma cosa para quien mira.
+  out.checks.namedVersionIsNotCountedAsARecovery =
+    /Versiones \(1\)/.test(await versionsAgain.locator('summary').innerText())
+    && await page.locator('.project-hub__recoveries').count() === 0;
+
+  // 7 · Restaurar devuelve el modelo al estado de la versión.
+  await versionsAgain.getByRole('button', { name: 'Restaurar la versión Antes de tocar M1', exact: true }).click();
+  await page.locator('.app-shell').waitFor({ state: 'visible', timeout: 15_000 });
+  const restored = await waitForStoredMember(open.id, (member) => member.sectionId === '', 'devolver M1 a su sección anterior');
+  out.checks.restoringAVersionReturnsTheModelToIt =
+    changed.sectionId === 'w12x26' && restored.sectionId === '' && restored.A !== changed.A;
+  out.metrics.projectVersions = { changed, restored };
+
+  // 8 · Y lo que había queda como copia recuperable: restaurar no es un camino
+  // de una sola dirección.
+  await goHome();
+  out.checks.restoringLeavesTheOverwrittenStateRecoverable =
+    /Copias recuperables/.test(await page.locator('.project-hub').innerText());
+  await page.close();
+}
+
 await verifyWelcomeReducedMotionActive();
 await desktop();
 Object.assign(out.checks, await verifyInspectorResponsiveViewports());
@@ -2050,6 +2213,7 @@ await mobile();
 await educationalExample();
 await stabilityStudies();
 await sectionBuilder();
+await projectVersions();
 await browser.close();
 await previewServer.close();
 const failedChecks = Object.entries(out.checks).filter(([, value]) => value === false);
