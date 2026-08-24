@@ -3,16 +3,7 @@
   "plugins": ["react", "typescript", "oxc"],
   "ignorePatterns": [
     "dist/**",
-    "output/**",
-    "structureCo/**",
-    "structureCo-backup-*/**",
-    "structureCo-worktrees/**",
-    "structureco-sites/**",
-    "structureco-sites-worktrees/**",
-    "structureco-design-review/**",
-    "structureco-palette-lab/**",
-    "structureCo-contexto-*/**",
-    "structureCo-documentacion-integral-*/**"
+    "output/**"
   ],
   "rules": {
     "react/rules-of-hooks": "error",

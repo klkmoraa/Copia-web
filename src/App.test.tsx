@@ -7,6 +7,7 @@ import { createDefaultProject } from './data/defaultProject';
 import { PROJECT_STORAGE_KEY } from './data/projectStorage';
 import { InMemoryProjectRepository } from './storage/projectRepository';
 import { readWelcomeEntry, shouldResumeDirectly } from './features/welcome/welcomeEntry';
+import { buildShareLink } from './utils/shareLink';
 
 // El visor real necesita WebGL, que jsdom no ofrece. Se sustituye el viewport
 // por un doble inerte para poder ejercitar la navegación y la superficie.
@@ -234,6 +235,20 @@ describe('structureCo app shell', () => {
     await user.click(await screen.findByRole('button', { name: 'Inicio' }));
     expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
   }, 40_000);
+
+  it('opens a project shared through the URL fragment and clears it from the address bar', async () => {
+    const shared = createDefaultProject();
+    shared.name = 'Puente compartido';
+    const link = buildShareLink(shared, 'http://localhost/');
+    if (!link.ok) throw new Error('El proyecto de la prueba no cupo en el enlace.');
+    window.location.hash = new URL(link.url).hash;
+
+    render(<App />);
+
+    expect(await screen.findByDisplayValue('Puente compartido', {}, { timeout: 10_000 })).toBeTruthy();
+    expect(screen.queryByTestId('welcome-screen')).toBeNull();
+    await waitFor(() => expect(window.location.hash).toBe(''));
+  }, 20_000);
 
   it('keeps the 2D project untouched while Space 3D stores its own model', async () => {
     const user = userEvent.setup();

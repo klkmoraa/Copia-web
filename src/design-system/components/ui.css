@@ -793,6 +793,9 @@
   .sc-tool-button { min-height: var(--sc-control-height-touch); }
 }
 
+.sc-error-boundary { min-height: 100dvh; display: grid; place-items: center; padding: var(--sc-space-6); background: var(--app-bg); color: var(--text); }
+.sc-error-boundary .sc-empty-state__copy { max-width: 30rem; }
+
 @keyframes sc-spin { to { transform: rotate(360deg); } }
 @keyframes sc-fade-in { from { opacity: 0; } to { opacity: 1; } }
 

@@ -143,10 +143,10 @@ export const ProjectHub = ({
               mientras tanto. */}
           </form> : <strong title={record.name}>{record.name}</strong>}
         </div>
-        <time className="project-hub__updated" dateTime={record.updatedAt}>{formatUpdated(record.updatedAt, language)}</time>
-        <small className="project-hub__revision">{t('hub.revision', { revision: record.revision })}</small>
+        <time className="project-hub__updated" dateTime={record.updatedAt} title={formatUpdated(record.updatedAt, language)}>{formatUpdated(record.updatedAt, language)}</time>
+        <small className="project-hub__revision" title={t('hub.revision', { revision: record.revision })}>{t('hub.revision', { revision: record.revision })}</small>
         <div className="project-hub__actions">
-          <button type="button" aria-label={t('hub.openLabel', { name: record.name })} onClick={() => onOpen(record)}><FolderOpen size={16} />{t('hub.open')}</button>
+          <button type="button" aria-label={t('hub.openLabel', { name: record.name })} title={t('hub.open')} onClick={() => onOpen(record)}><FolderOpen size={16} /></button>
           <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => setEditing({ id: record.id, name: record.name })}><Pencil size={16} /></button>
           <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => void duplicate(record)}><Copy size={16} /></button>
         </div>

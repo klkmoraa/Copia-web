@@ -1,0 +1,20 @@
+.proposal-intent { display: grid; gap: var(--sc-space-2); }
+.proposal-intent label { font-size: var(--sc-font-size-label); color: var(--sc-color-text-secondary); }
+.proposal-intent textarea {
+  min-height: 4.5rem;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-2);
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.proposal-notice { margin: 0; padding: var(--sc-space-2) var(--sc-space-3); border-radius: var(--sc-radius-sm); font-size: var(--sc-font-size-label); }
+.proposal-notice--info { background: var(--sc-color-fill-secondary); color: var(--sc-color-text-primary); }
+.proposal-notice--error { background: color-mix(in srgb, var(--error) 9%, var(--surface)); color: var(--error); }
+
+.proposal-review { display: grid; gap: var(--sc-space-2); }
+.proposal-review__title { margin: 0; font-weight: var(--sc-font-weight-bold); }
+.proposal-review__summary { margin: 0; color: var(--sc-color-text-secondary); }

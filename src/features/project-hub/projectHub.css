@@ -384,12 +384,22 @@
 
 .project-hub__updated,
 .project-hub__revision {
+  overflow: hidden;
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-caption);
   font-variant-numeric: var(--sc-numeric-variant);
   color: var(--sc-color-text-muted);
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
+/* CRI-112 (identidad legible) · `auto` sin límite dejaba que fecha y revisión
+   se quedaran con todo el ancho que pidieran, y el nombre —la única columna
+   que puede encogerse— pagaba la cuenta: medido, 44 de 436px en la
+   biblioteca a 1440. Un tope fijo aquí, más el botón "Abrir" sin etiqueta
+   (ver `.project-hub__actions`), le devuelve espacio real al nombre sin
+   perder el dato: la versión completa sigue en `title`. */
+.project-hub__updated { max-width: 108px; }
+.project-hub__revision { max-width: 78px; }
 
 /* En K0 la tabla no cabe en cuatro columnas: la fila se pliega en dos —
    identidad y acciones arriba, datos debajo— en vez de recortar campos. */

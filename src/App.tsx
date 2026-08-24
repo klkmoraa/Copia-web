@@ -7,6 +7,7 @@ import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
 import { rememberLanguage } from './i18n/languagePreference';
+import { decodeProjectFragment } from './utils/shareLink';
 import './styles.css';
 import './design-system/material.css';
 /* La biblioteca de componentes viaja en el chunk de ENTRADA, no sólo con la
@@ -43,8 +44,26 @@ const AppShell = () => {
    * nada — al recargar, la decisión vuelve a salir del repositorio.
    */
   const [directResumeAvailable, setDirectResumeAvailable] = useState(true);
-  const { project, analysis } = useProject();
-  const { t } = useI18n();
+  const { project, analysis, replaceProject } = useProject();
+  const { t, language } = useI18n();
+
+  useEffect(() => {
+    /* Enlace de «Compartir» (`buildShareLink`, en el menú de exportación): el
+       modelo viaja comprimido en el fragmento de la URL, nunca al servidor.
+       Se atiende una sola vez, al montar, y el fragmento se retira de la
+       barra de direcciones de inmediato — ni se reprocesa en un refresco ni
+       queda ahí sugiriendo que el enlace sigue «cargado». Un fragmento
+       ausente o ajeno (`reason: 'absent'`) no hace nada: el arranque normal
+       sigue siendo abrir el último proyecto local. */
+    const fragment = window.location.hash;
+    if (!fragment) return;
+    const decoded = decodeProjectFragment(fragment);
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (!decoded.ok) return;
+    replaceProject({ ...decoded.project, settings: { ...decoded.project.settings, language } });
+    setScreen('workspace');
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = project.settings.language;

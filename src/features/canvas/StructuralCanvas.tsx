@@ -7,7 +7,7 @@ import { buildLeftCutEquilibrium } from '../../engine/cut';
 import { resolveMemberLocalLoads } from '../../engine/solver';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
-import { formatFixed, formatScientific } from '../../utils/numberFormat';
+import { formatFixed } from '../../utils/numberFormat';
 import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
 import {
   buildIntersectionSnapCandidates,
@@ -21,9 +21,7 @@ import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import {
-  cameraForViewportResize,
   cameraForPinch,
-  canvasPointerProfile,
   LONG_PRESS_MS,
   LONG_PRESS_JITTER_PX,
   midpoint,
@@ -49,15 +47,12 @@ import {
   nextCanvasId as nextId,
   supportCycle,
   toolLabelKeys,
-  type Camera,
   type CanvasInteractionState as CanvasInteraction,
   type CutInfo,
   type SelectionBox,
-  type Size,
 } from './canvasVocabulary';
-import { toolFromShortcut } from './toolRegistry';
 import { countOf, selectionQueryById, toSelection } from './selectByProperty';
-import { CANVAS_REFERENCE_SCALE, cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
+import { CANVAS_REFERENCE_SCALE, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
@@ -68,7 +63,6 @@ import {
   flexibleRatioFromGross,
   grossRatioAtPoint,
   memberAxis,
-  modelBounds,
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer } from './CanvasResultLayer';
 import { buildCanvasLabelCandidates } from './canvasLabelSources';
@@ -120,6 +114,10 @@ import { StructuralEditOverlay } from './StructuralEditOverlay';
 import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
 import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
+import { useCanvasCamera } from './useCanvasCamera';
+import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
+import { CanvasCutInspector } from './CanvasCutInspector';
+import { CanvasGridLines } from './CanvasGridLines';
 
 /**
  * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
@@ -191,9 +189,21 @@ export const StructuralCanvas = ({
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
-  const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
-  const [canvasMeasured, setCanvasMeasured] = useState(false);
-  const [camera, setCamera] = useState<Camera>({ scale: CANVAS_REFERENCE_SCALE, x: 260, y: 500 });
+  const units = project.settings.units;
+  const lengthLabel = unitLabel(units, 'length');
+  const {
+    size,
+    canvasMeasured,
+    camera,
+    cameraRef,
+    updateCamera,
+    toScreen,
+    toModel,
+    localScreenPoint,
+    updateCoordinateReadout,
+    fitModel,
+    navigateMinimapTo,
+  } = useCanvasCamera({ hostRef, svgRef, coordinateReadoutRef, projectNodes: project.nodes, projectId: project.id, units, lengthLabel });
   const [memberStart, setMemberStart] = useState<string | null>(null);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
@@ -224,12 +234,10 @@ export const StructuralCanvas = ({
   const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
-  const cameraRef = useRef(camera);
   const activePointersRef = useRef(new Map<number, ScreenPoint>());
   const longPressTimerRef = useRef<number | null>(null);
   const clipboardRef = useRef<ModelClipboard | null>(null);
   const pasteCountRef = useRef(1);
-  const cameraFrameRef = useRef<number | null>(null);
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
@@ -238,8 +246,6 @@ export const StructuralCanvas = ({
   const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
   const structuralEditApplyingRef = useRef(false);
   const longPressMotionRef = useRef<{ pointerId: number; start: ScreenPoint; current: ScreenPoint } | null>(null);
-  const previousSizeRef = useRef<Size | null>(null);
-  const fittedProjectRef = useRef<string | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
   const [canvasFeedback, setCanvasFeedback] = useState('');
   // This carries no clipboard availability or selection data. It only asks
@@ -389,10 +395,8 @@ export const StructuralCanvas = ({
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
-  const units = project.settings.units;
   const selectionFilter = view.selectionFilter;
   const resultsAllowed = true;
-  const lengthLabel = unitLabel(units, 'length');
   const forceLabel = unitLabel(units, 'force');
   const momentLabel = unitLabel(units, 'moment');
   const distributedLabel = unitLabel(units, 'distributedForce');
@@ -483,16 +487,6 @@ export const StructuralCanvas = ({
     setInteractionState(next);
   }, []);
 
-  const updateCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
-    const resolved = typeof next === 'function' ? next(cameraRef.current) : next;
-    cameraRef.current = resolved;
-    if (cameraFrameRef.current !== null) return;
-    cameraFrameRef.current = window.requestAnimationFrame(() => {
-      cameraFrameRef.current = null;
-      setCamera(cameraRef.current);
-    });
-  }, []);
-
   const scheduleInteractionFrame = useCallback((next: CanvasInteraction) => {
     interactionRef.current = next;
     if (interactionFrameRef.current !== null) return;
@@ -571,12 +565,10 @@ export const StructuralCanvas = ({
   }, []);
 
   useEffect(() => () => {
-    if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
     if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    cameraFrameRef.current = null;
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
     structuralEditFrameRef.current = null;
@@ -592,65 +584,6 @@ export const StructuralCanvas = ({
     }
     longPressMotionRef.current = null;
   }, []);
-
-  const toScreen = useCallback((x: number, y: number) => ({ x: camera.x + x * camera.scale, y: camera.y - y * camera.scale }), [camera]);
-  const toModel = useCallback((screenX: number, screenY: number) => ({ x: (screenX - camera.x) / camera.scale, y: (camera.y - screenY) / camera.scale }), [camera]);
-  const localScreenPoint = useCallback((clientX: number, clientY: number): ScreenPoint => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
-  }, []);
-
-  const updateCoordinateReadout = useCallback((clientX: number, clientY: number, pointerType: string) => {
-    if (!canvasPointerProfile(pointerType).showsCoordinates || !coordinateReadoutRef.current) return;
-    const point = screenToModelPoint(localScreenPoint(clientX, clientY), cameraRef.current);
-    coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
-  }, [lengthLabel, localScreenPoint, units]);
-
-  const fitModel = useCallback(() => {
-    if (!project.nodes.length || !size.width || !size.height) return;
-    const viewport = { width: size.width, height: size.height };
-    updateCamera(cameraToFitBounds(
-      modelBounds(project.nodes),
-      viewport,
-      canvasSafeInsetsFor(viewport),
-    ));
-  }, [project.nodes, size, updateCamera]);
-
-  const navigateMinimapTo = useCallback((point: { x: number; y: number }) => {
-    updateCamera((current) => ({
-      scale: current.scale,
-      x: size.width / 2 - point.x * current.scale,
-      y: size.height / 2 + point.y * current.scale,
-    }));
-  }, [size.width, size.height, updateCamera]);
-
-  useEffect(() => {
-    if (!hostRef.current) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setSize((current) => current.width === width && current.height === height ? current : { width, height });
-      setCanvasMeasured(true);
-    });
-    observer.observe(hostRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!canvasMeasured || !size.width || !size.height) return;
-    const previousSize = previousSizeRef.current;
-    const currentSize = { width: size.width, height: size.height };
-    previousSizeRef.current = currentSize;
-
-    if (!project.nodes.length) return;
-    if (fittedProjectRef.current !== project.id) {
-      fittedProjectRef.current = project.id;
-      fitModel();
-      return;
-    }
-    if (previousSize && (previousSize.width !== currentSize.width || previousSize.height !== currentSize.height)) {
-      updateCamera((current) => cameraForViewportResize(current, previousSize, currentSize));
-    }
-  }, [canvasMeasured, fitModel, project.id, project.nodes.length, size.height, size.width, updateCamera]);
 
   useEffect(() => {
     const focusObject = (detail: FocusableSelection) => {
@@ -682,7 +615,7 @@ export const StructuralCanvas = ({
       window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
     };
     return onWorkspaceCommand('focus-object', focusObject);
-  }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
+  }, [cameraRef, memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
 
   useEffect(() => {
     const baseName = project.name.replace(/\s+/g, '-').toLowerCase();
@@ -737,7 +670,7 @@ export const StructuralCanvas = ({
   const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
     const local = localScreenPoint(clientX, clientY);
     return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
-  }, [localScreenPoint, snapPoint]);
+  }, [cameraRef, localScreenPoint, snapPoint]);
 
   const nodeDragPointFromClient = useCallback((
     clientX: number,
@@ -748,7 +681,7 @@ export const StructuralCanvas = ({
     const local = localScreenPoint(clientX, clientY);
     const pointerPoint = screenToModelPoint(local, cameraRef.current);
     return snapPoint({ x: pointerPoint.x + grabOffset.x, y: pointerPoint.y + grabOffset.y }, excludedNodeId);
-  }, [localScreenPoint, snapPoint]);
+  }, [cameraRef, localScreenPoint, snapPoint]);
 
   const deleteSelection = useCallback((target: Selection = selection) => {
     if (!target) return;
@@ -987,7 +920,7 @@ export const StructuralCanvas = ({
     transitionInteraction({
       kind: 'pan', pointerId, pointerType, start, camera: startCamera, moved, clearSelectionOnTap,
     });
-  }, [capturePointer, clearLongPressTimer, transitionInteraction]);
+  }, [cameraRef, capturePointer, clearLongPressTimer, transitionInteraction]);
 
   const startStructuralEditPointer = useCallback((event: ReactPointerEvent) => {
     const draft = structuralEditDraft;
@@ -1018,7 +951,7 @@ export const StructuralCanvas = ({
       }
     }
     return true;
-  }, [capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
+  }, [cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
 
   /**
    * Un solo clic entrega el origen de inserción y desarma el puntero.
@@ -1102,7 +1035,7 @@ export const StructuralCanvas = ({
         longPressTimerRef.current = null;
       }, LONG_PRESS_MS);
     }
-  }, [activeTool, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
+  }, [activeTool, cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
 
   const completeLoadPlacement = (label: string) => {
     setActiveTool('select');
@@ -1769,115 +1702,31 @@ export const StructuralCanvas = ({
     cancelStructuralEdit();
   }, [cancelStructuralEdit, selection, structuralEditDraft]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      const modalOpen = document.querySelector<HTMLElement>('[aria-modal="true"]');
-      const interactive = target?.closest('input, select, textarea, button, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="tablist"]');
-      if (event.key === 'Escape' && candidatePicker) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        closeCandidatePicker();
-        return;
-      }
-      if ((modalOpen && !target?.closest('[aria-modal="true"]')) || interactive) return;
-      if (event.code === 'Space') {
-        event.preventDefault();
-        if (!spacePressedRef.current) {
-          spacePressedRef.current = true;
-          setSpacePressed(true);
-        }
-        return;
-      }
-      const command = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-      if (event.key === 'Escape' && structuralEditDraft) {
-        event.preventDefault();
-        cancelStructuralEdit();
-        return;
-      }
-      if (structuralEditDraft) return;
-      // Letter-only shortcuts (no modifier) are scoped to the canvas element
-      // itself (CRI-103): anywhere else — including plain document/body focus,
-      // which is where a screen reader's quick-nav browse mode intercepts
-      // single letters — they must not fire, or they hijack that navigation.
-      const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
-      if (key === 'r' && !command && !event.altKey && canvasHasFocus) {
-        if (!repeatCandidate) return;
-        event.preventDefault();
-        activateRepeat();
-        return;
-      }
-      if (command && key === 'c') {
-        event.preventDefault();
-        void copyStructuralSelection();
-        return;
-      }
-      if (command && key === 'v') {
-        event.preventDefault();
-        void pasteStructuralSelection();
-        return;
-      }
-      if (command && key === 'd') {
-        event.preventDefault();
-        startDuplicate();
-        return;
-      }
-      const shortcutTool = toolFromShortcut(key);
-      if (shortcutTool && !command && !event.altKey && canvasHasFocus) {
-        event.preventDefault();
-        setActiveTool(shortcutTool);
-      }
-      if (event.key === 'Escape') {
-        if (duplicateDraft) {
-          setDuplicateDraft(null);
-          return;
-        }
-        cancelActiveInteraction();
-        setMemberStart(null);
-        setQuickEntry({ first: '', second: '' });
-        setQuickEntryError('');
-        setRepeatRecipe(null);
-        setSelection(null);
-        setCut(null);
-        setActiveTool('select');
-      }
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault();
-        deleteSelection();
-      }
-    };
-    const releaseSpace = (event?: KeyboardEvent) => {
-      if (event && event.code !== 'Space') return;
-      spacePressedRef.current = false;
-      setSpacePressed(false);
-    };
-    const onVisibility = () => { if (document.visibilityState === 'hidden') cancelActiveInteraction(); };
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', releaseSpace);
-    window.addEventListener('blur', cancelActiveInteraction);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', releaseSpace);
-      window.removeEventListener('blur', cancelActiveInteraction);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
-
-  useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const onWheel = (event: globalThis.WheelEvent) => {
-      event.preventDefault();
-      const local = localScreenPoint(event.clientX, event.clientY);
-      const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * size.height : event.deltaY;
-      const factor = Math.exp(-clamp(delta, -400, 400) * 0.0012);
-      updateCamera(zoomCameraAt(cameraRef.current, local, factor));
-    };
-    svg.addEventListener('wheel', onWheel, { passive: false });
-    return () => svg.removeEventListener('wheel', onWheel);
-  }, [localScreenPoint, size.height, updateCamera]);
+  useCanvasKeyboardShortcuts({
+    hostRef,
+    spacePressedRef,
+    setSpacePressed,
+    candidatePicker,
+    closeCandidatePicker,
+    structuralEditDraft,
+    cancelStructuralEdit,
+    repeatCandidate,
+    activateRepeat,
+    copyStructuralSelection,
+    pasteStructuralSelection,
+    startDuplicate,
+    setActiveTool,
+    duplicateDraft,
+    setDuplicateDraft,
+    cancelActiveInteraction,
+    setMemberStart,
+    setQuickEntry,
+    setQuickEntryError,
+    setRepeatRecipe,
+    setSelection,
+    setCut,
+    deleteSelection,
+  });
 
   const memberValueAt = (memberId: string, ratio: number): DiagramPoint | null => {
     const result = resultMap.get(memberId);
@@ -1914,18 +1763,6 @@ export const StructuralCanvas = ({
     for (const node of mechanismMap.values()) maximum = Math.max(maximum, Math.hypot(node.ux, node.uy));
     return maximum > 1e-14 ? 72 / maximum : 0;
   }, [mechanismMap]);
-  const grid = useMemo(() => {
-    if (!view.showGrid) return null;
-    const step = view.gridSize * camera.scale;
-    if (step < 8) return null;
-    const lines = [];
-    const startX = ((camera.x % step) + step) % step;
-    const startY = ((camera.y % step) + step) % step;
-    for (let x = startX; x < size.width; x += step) lines.push(<line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={size.height} />);
-    for (let y = startY; y < size.height; y += step) lines.push(<line key={`gy-${y}`} x1={0} y1={y} x2={size.width} y2={y} />);
-    return <g className="grid-lines">{lines}</g>;
-  }, [camera, size, view.gridSize, view.showGrid]);
-
   const handleObjectKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
@@ -2079,7 +1916,7 @@ export const StructuralCanvas = ({
             render de la estructura que podría desincronizarse de éste. El
             grupo no lleva transform — sus coordenadas son las del lienzo. */}
         <g id={CANVAS_SCENE_ID}>
-        {grid}
+        <CanvasGridLines camera={camera} size={size} showGrid={view.showGrid} gridSize={view.gridSize} />
         <CanvasInteractionLayer
           slot="preview"
           snapPreview={snapPreview}
@@ -2437,61 +2274,18 @@ export const StructuralCanvas = ({
           labelForCandidate={(candidate) => `${candidate.kind === 'node' ? t('inspector.node') : candidate.kind === 'member' ? t('inspector.member') : candidate.kind === 'nodalLoad' ? t('canvas.overlapNodalLoad') : t('inspector.memberLoad')} ${candidate.id}`}
         />
       </div> : null}
-      {cut?.point ? (
-        <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
-          <div className="cut-title-row">
-            <strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong>
-            {cutDemand ? <span
-              className="cut-demand-badge"
-              data-status={cutDemand.status}
-              data-at-reference={cutDemand.status === 'available' && cutDemand.atReference ? 'true' : undefined}
-              title={t(cutDemand.status === 'available' ? 'canvas.cutDemandHint' : 'canvas.cutDemandUnavailableHint')}
-            >{cutDemand.status === 'available'
-              ? `η ${formatFixed(cutDemand.ratio, 2)}`
-              : t('canvas.cutDemandUnavailable')}</span> : null}
-            <span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span>
-          </div>
-          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small className="cut-station">({formatFixed(cut.ratio * 100, 1)}% s/L)</small></span>
-          <div className="cut-values">
-            <span className="axial-text">N = {formatFixed(toDisplay(cut.point.axial, units, 'force'), 3)} {forceLabel}</span>
-            <span className="shear-text">V = {formatFixed(toDisplay(cut.point.shear, units, 'force'), 3)} {forceLabel}</span>
-            <span className="moment-text">M = {formatFixed(toDisplay(cut.point.moment, units, 'moment'), 3)} {momentLabel}</span>
-          </div>
-          {cutEquilibrium ? (
-            <div className="cut-equilibrium">
-              <b>{t('canvas.leftSideFbd')}</b>
-              <svg className="cut-fbd" viewBox="0 0 280 82" role="img" aria-label={t('canvas.fbdAria', { member: cut.memberId, x: formatFixed(cut.point.x, 3) })}>
-                <line className="cut-fbd-member" x1="24" y1="43" x2="232" y2="43" />
-                <line className="cut-fbd-section" x1="232" y1="17" x2="232" y2="68" />
-                <line className="cut-fbd-axis" x1="24" y1="70" x2="65" y2="70" />
-                <line className="cut-fbd-axis" x1="24" y1="70" x2="24" y2="54" />
-                <text x="68" y="74">+x</text><text x="8" y="55">+y</text>
-                <text x="20" y="35">N₀, V₀, M₀</text>
-                <text x="238" y="29" className="axial-text">N</text>
-                <text x="238" y="45" className="shear-text">V</text>
-                <text x="238" y="61" className="moment-text">M</text>
-                {cutEquilibrium.resultants.filter((load) => load.kind !== 'moment').map((load, index) => {
-                  const px = 24 + (cutEquilibrium.x > 1e-12 ? Math.max(0, Math.min(1, load.sourceX / cutEquilibrium.x)) : 0) * 198;
-                  return <g key={`${load.kind}-${load.sourceX}-${index}`} className="cut-fbd-load"><line x1={px} y1="12" x2={px} y2="38" /><path d={`M ${px - 4} 33 L ${px} 40 L ${px + 4} 33 Z`} /><text x={px} y="10" textAnchor="middle">{load.kind === 'distributed' ? 'Rᵥ' : 'P'}</text></g>;
-                })}
-                <text x="140" y="80" textAnchor="middle">x = {formatFixed(toDisplay(cutEquilibrium.x, units, 'length'), 3)} {lengthLabel}</text>
-              </svg>
-              {cutEquilibrium.resultants.length ? <div className="cut-resultants"><small>{t('canvas.externalResultants')}</small>{cutEquilibrium.resultants.map((load, index) => <span key={`${load.kind}-${load.sourceX}-${index}`}><b>{t(load.kind === 'distributed' ? 'canvas.distributedKind' : load.kind === 'point' ? 'canvas.pointKind' : 'canvas.momentKind')}</b> x={formatFixed(toDisplay(load.sourceX, units, 'length'), 3)} {lengthLabel} · Fx={formatFixed(toDisplay(load.forceX, units, 'force'), 3)} {forceLabel} · Fy={formatFixed(toDisplay(load.forceY, units, 'force'), 3)} {forceLabel}{Math.abs(load.appliedMoment) > 1e-12 ? ` · M=${formatFixed(toDisplay(load.appliedMoment, units, 'moment'), 3)} ${momentLabel}` : ''}</span>)}</div> : <small className="cut-no-loads">{t('canvas.noExternalLoads')}</small>}
-              {cutEquilibrium.symbolicEquations.map((equation) => <code key={equation}>{equation}</code>)}
-              <div className="cut-substitution">
-                <code>ΣFₓ = {formatFixed(toDisplay(-cutEquilibrium.start.axial, units, 'force'), 3)} + {formatFixed(toDisplay(cutEquilibrium.totals.forceX, units, 'force'), 3)} + {formatFixed(toDisplay(cut.point.axial, units, 'force'), 3)} = {formatScientific(toDisplay(cutEquilibrium.residuals.forceX, units, 'force'), 1)} {forceLabel}</code>
-                <code>ΣFᵧ = {formatFixed(toDisplay(cutEquilibrium.start.shear, units, 'force'), 3)} + {formatFixed(toDisplay(cutEquilibrium.totals.forceY, units, 'force'), 3)} − {formatFixed(toDisplay(cut.point.shear, units, 'force'), 3)} = {formatScientific(toDisplay(cutEquilibrium.residuals.forceY, units, 'force'), 1)} {forceLabel}</code>
-                <code>ΣM = {formatFixed(toDisplay(-cutEquilibrium.start.moment, units, 'moment'), 3)} − ({formatFixed(toDisplay(cutEquilibrium.start.shear, units, 'force'), 3)})({formatFixed(toDisplay(cutEquilibrium.x, units, 'length'), 3)}) + {formatFixed(toDisplay(cutEquilibrium.totals.momentAboutCut, units, 'moment'), 3)} + {formatFixed(toDisplay(cut.point.moment, units, 'moment'), 3)} = {formatScientific(toDisplay(cutEquilibrium.residuals.moment, units, 'moment'), 1)} {momentLabel}</code>
-              </div>
-              <div className="cut-residuals">
-                <span>rₓ = {formatScientific(toDisplay(cutEquilibrium.residuals.forceX, units, 'force'), 1)} {forceLabel}</span>
-                <span>rᵧ = {formatScientific(toDisplay(cutEquilibrium.residuals.forceY, units, 'force'), 1)} {forceLabel}</span>
-                <span>rₘ = {formatScientific(toDisplay(cutEquilibrium.residuals.moment, units, 'moment'), 1)} {momentLabel}</span>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <CanvasCutInspector
+        cut={cut}
+        cutDemand={cutDemand}
+        cutEquilibrium={cutEquilibrium}
+        hostRef={hostRef}
+        size={size}
+        units={units}
+        lengthLabel={lengthLabel}
+        forceLabel={forceLabel}
+        momentLabel={momentLabel}
+        t={t}
+      />
     </div>
   );
 };

@@ -37,6 +37,7 @@ código + pruebas + gates ejecutables
 | [Sistema de diseño](../src/design-system/README.md) | Las cuatro decisiones del sistema visual, las nueve capas de tokens, la materia y los gates que lo sostienen. |
 | [Identidad visual oficial](../brand/README.md) | Assets protegidos, manifiesto y reglas de marca. |
 | [Validación de Space 3D](../validation/space3d/README.md) | Procedimiento y artefactos de oráculos; sus resultados deben revalidarse con los gates actuales. |
+| [Prototipo iOS](../prototypes/ios-app/README.md) | Prototipo visual aislado (proyecto Vite propio, sin solver ni backend); no forma parte del build, el CI ni el límite protegido de la app principal. |
 
 ## Documentos históricos
 

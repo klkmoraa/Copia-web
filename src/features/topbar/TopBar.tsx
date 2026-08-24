@@ -12,6 +12,7 @@ import {
   FileText,
   FilePlus2,
   FolderOpen,
+  HardDriveDownload,
   Home,
   Maximize2,
   Minimize2,
@@ -21,8 +22,10 @@ import {
   Play,
   Redo2,
   Save,
+  Share2,
   Sheet,
   SlidersHorizontal,
+  Sparkles,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -31,8 +34,10 @@ import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useProjectAnalysis, useProjectModel } from '../../store/ProjectContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
-import { exportProjectJson } from '../../utils/export';
+import { exportProjectJson, safeProjectFilename } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
+import { saveBytes, type SaveOutcome } from '../../platform/fileSystem';
+import { buildShareLink } from '../../utils/shareLink';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
@@ -46,6 +51,7 @@ import type { TranslationKey } from '../../i18n/catalogs';
 import type { PDeltaConfig } from '../../types';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
+const ProposalAssistant = lazy(() => import('../ai/ProposalAssistant').then((module) => ({ default: module.ProposalAssistant })));
 
 /**
  * La compacidad del riel salió de aquí en CRI-89: la decide la clase de
@@ -128,8 +134,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showAnalysisSetup, setShowAnalysisSetup] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
+  const [proposalAssistantOpen, setProposalAssistantOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  /* Manejador de un guardado nativo previo (File System Access API). Vive en
+     el componente, no en `saveBytes` —que documenta explícitamente que
+     retenerlo ahí lo compartiría entre proyectos— ni en `commandRegistry`,
+     cuyos comandos son funciones puras de `ctx` sin estado propio. */
+  const [saveHandle, setSaveHandle] = useState<unknown>(null);
   const [projectNameDraft, setProjectNameDraft] = useState(project.name);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
   const topbarRef = useRef<HTMLElement>(null);
@@ -375,6 +387,60 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowMobileMenu(false);
   };
 
+  /* «Guardar en el disco» (File System Access API): elige el archivo una vez
+     y las siguientes veces escribe encima sin volver a preguntar. Donde el
+     navegador no la ofrece, `saveBytes` ya cae sola a la descarga de
+     siempre — la rama `cancelled` no hace nada porque el usuario cerró el
+     selector a propósito. */
+  const handleSaveToDisk = async () => {
+    const normalized = normalizeProject(project);
+    const filename = `${safeProjectFilename(normalized.name)}.structureco.json`;
+    const outcome: SaveOutcome = await saveBytes({
+      bytes: new TextEncoder().encode(JSON.stringify(normalized, null, 2)),
+      filename,
+      mimeType: 'application/json',
+      extension: '.json',
+      description: t('export.saveToDisk'),
+      handle: saveHandle,
+    });
+    if (outcome.status === 'written') {
+      setSaveHandle(outcome.handle);
+      emitWorkspaceCommand('show-toast', { message: t('export.savedToFile', { filename: outcome.filename }), description: project.name, tone: 'success' });
+    } else if (outcome.status === 'downloaded') {
+      emitWorkspaceCommand('show-toast', { message: t('export.savedDownload', { filename: outcome.filename }), description: project.name, tone: 'info' });
+    } else {
+      return;
+    }
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
+  };
+
+  /* Enlace para compartir: el modelo va comprimido en el fragmento (nunca al
+     servidor); `App.tsx` lo lee al arrancar. Un modelo demasiado grande no
+     falla en silencio: `buildShareLink` lo dice y el menú se queda abierto
+     mostrando el porqué, igual que hace `exportPortable` con sus errores. */
+  const handleShare = async () => {
+    const result = buildShareLink(project, window.location.href);
+    if (!result.ok) {
+      setExportError(t('export.shareTooLarge', { characters: result.characters, limit: result.limit }));
+      return;
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(result.url);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+    } catch {
+      setExportError(t('export.shareFailed'));
+      return;
+    }
+    setExportError(null);
+    emitWorkspaceCommand('show-toast', { message: t('export.shareLinkCopied'), description: project.name, tone: 'success' });
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
+  };
+
   const analyzeCommand = command('analysis:run');
   const undoCommand = command('analysis:undo');
   const redoCommand = command('analysis:redo');
@@ -533,7 +599,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
                 <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                <button role="menuitem" onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
                 <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                <button role="menuitem" onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
                 <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
@@ -556,6 +624,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
                   <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
+                  <button onClick={() => { setShowMobileMenu(false); setProposalAssistantOpen(true); }}><Sparkles size={16} /> {phase2T('proposal.menuLabel')}</button>
                   {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
                       de tocar Estado/Doctor (orden de degradación · CRI-95). */}
                   <button className="overflow-results" onClick={() => { resultsCommand.run(); setShowMobileMenu(false); }}><ChartNoAxesCombined size={16} /> {resultsCommand.label}</button>
@@ -590,7 +659,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionExport')}</div>
                   <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                  <button onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
                   <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                  <button onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
                   <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
@@ -675,6 +746,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis);
           closeImportCenter();
         }}
+      /></Suspense> : null}
+      {proposalAssistantOpen ? <Suspense fallback={null}><ProposalAssistant
+        open
+        onClose={() => setProposalAssistantOpen(false)}
       /></Suspense> : null}
     </header>
   );
