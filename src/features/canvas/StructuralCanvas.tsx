@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -109,6 +109,8 @@ import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import { CutInspector } from './CutInspector';
 import { useCanvasDerivedGeometry } from './useCanvasDerivedGeometry';
 import { useCanvasCoordinates } from './useCanvasCoordinates';
+import { useCanvasInteractionLoop } from './useCanvasInteractionLoop';
+import { useStableCanvasEvent } from './useStableCanvasEvent';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 
 /**
@@ -119,19 +121,6 @@ const LazyStructureGeneratorSurface = lazy(() =>
   import('../structure-generator/StructureGeneratorSurface')
     .then((module) => ({ default: module.StructureGeneratorSurface })));
 import './phase2.css';
-
-/**
- * Canvas geometry is memoised and must keep its event props stable while the
- * transient edit ghost advances every animation frame. The ref is synchronised
- * before paint, so events always dispatch to the latest canvas state without
- * making both heavyweight geometry layers render for a preview-only update.
- */
-const useStableCanvasEvent = <Args extends unknown[], Result>(callback: (...args: Args) => Result) => {
-  const callbackRef = useRef(callback);
-  useLayoutEffect(() => { callbackRef.current = callback; }, [callback]);
-  return useCallback((...args: Args) => callbackRef.current(...args), []);
-};
-
 
 export const StructuralCanvas = ({
   onRequestInspector,
@@ -385,120 +374,38 @@ export const StructuralCanvas = ({
     t,
   });
 
-  const transitionInteraction = useCallback((next: CanvasInteraction) => {
-    interactionRef.current = next;
-    setInteractionState(next);
-  }, []);
-
-  const updateCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
-    const resolved = typeof next === 'function' ? next(cameraRef.current) : next;
-    cameraRef.current = resolved;
-    if (cameraFrameRef.current !== null) return;
-    cameraFrameRef.current = window.requestAnimationFrame(() => {
-      cameraFrameRef.current = null;
-      setCamera(cameraRef.current);
-    });
-  }, []);
-
-  const scheduleInteractionFrame = useCallback((next: CanvasInteraction) => {
-    interactionRef.current = next;
-    if (interactionFrameRef.current !== null) return;
-    interactionFrameRef.current = window.requestAnimationFrame(() => {
-      interactionFrameRef.current = null;
-      setInteractionState(interactionRef.current);
-    });
-  }, []);
-
-  const flushNodeMove = useCallback(() => {
-    if (nodeMoveFrameRef.current !== null) {
-      window.cancelAnimationFrame(nodeMoveFrameRef.current);
-      nodeMoveFrameRef.current = null;
-    }
-    const pending = pendingNodeMoveRef.current;
-    pendingNodeMoveRef.current = null;
-    if (pending) moveNodeTransient(pending.nodeId, pending.point);
-  }, [moveNodeTransient]);
-
-  const scheduleNodeMove = useCallback((nodeId: string, point: { x: number; y: number }) => {
-    pendingNodeMoveRef.current = { nodeId, point };
-    if (nodeMoveFrameRef.current !== null) return;
-    nodeMoveFrameRef.current = window.requestAnimationFrame(() => {
-      nodeMoveFrameRef.current = null;
-      const pending = pendingNodeMoveRef.current;
-      pendingNodeMoveRef.current = null;
-      if (pending) moveNodeTransient(pending.nodeId, pending.point);
-    });
-  }, [moveNodeTransient]);
-
-  const flushStructuralEditDraft = useCallback(() => {
-    if (structuralEditFrameRef.current !== null) {
-      window.cancelAnimationFrame(structuralEditFrameRef.current);
-      structuralEditFrameRef.current = null;
-    }
-    const pending = pendingStructuralEditDraftRef.current ?? structuralEditLiveDraftRef.current;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
-    if (pending) setStructuralEditDraft(pending);
-    setStructuralEditLiveDraft(null);
-  }, []);
-
-  const scheduleStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
-    pendingStructuralEditDraftRef.current = draft;
-    if (structuralEditFrameRef.current !== null) return;
-    structuralEditFrameRef.current = window.requestAnimationFrame(() => {
-      structuralEditFrameRef.current = null;
-      const pending = pendingStructuralEditDraftRef.current;
-      pendingStructuralEditDraftRef.current = null;
-      if (pending) {
-        structuralEditLiveDraftRef.current = pending;
-        setStructuralEditLiveDraft(pending);
-      }
-    });
-  }, []);
-
-  const cancelNodeDragTransaction = useCallback(() => {
-    pendingNodeMoveRef.current = null;
-    if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
-    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-    nodeMoveFrameRef.current = null;
-    structuralEditFrameRef.current = null;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-    cancelProjectTransaction();
-  }, [cancelProjectTransaction]);
-
-  const showCanvasFeedback = useCallback((message: string) => {
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    setCanvasFeedback(message);
-    feedbackTimerRef.current = window.setTimeout(() => {
-      setCanvasFeedback('');
-      feedbackTimerRef.current = null;
-    }, 2400);
-  }, []);
-
-  useEffect(() => () => {
-    if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
-    if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
-    if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
-    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    cameraFrameRef.current = null;
-    interactionFrameRef.current = null;
-    nodeMoveFrameRef.current = null;
-    structuralEditFrameRef.current = null;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
-    feedbackTimerRef.current = null;
-  }, []);
-
-  const clearLongPressTimer = useCallback(() => {
-    if (longPressTimerRef.current !== null) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    longPressMotionRef.current = null;
-  }, []);
+  const {
+    transitionInteraction,
+    updateCamera,
+    scheduleInteractionFrame,
+    flushNodeMove,
+    scheduleNodeMove,
+    flushStructuralEditDraft,
+    scheduleStructuralEditDraft,
+    cancelNodeDragTransaction,
+    showCanvasFeedback,
+    clearLongPressTimer,
+  } = useCanvasInteractionLoop({
+    interactionRef,
+    setInteractionState,
+    cameraRef,
+    setCamera,
+    cameraFrameRef,
+    interactionFrameRef,
+    nodeMoveFrameRef,
+    pendingNodeMoveRef,
+    structuralEditFrameRef,
+    pendingStructuralEditDraftRef,
+    structuralEditLiveDraftRef,
+    setStructuralEditDraft,
+    setStructuralEditLiveDraft,
+    feedbackTimerRef,
+    setCanvasFeedback,
+    longPressTimerRef,
+    longPressMotionRef,
+    moveNodeTransient,
+    cancelProjectTransaction,
+  });
 
   const { toScreen, toModel, localScreenPoint, updateCoordinateReadout, fitModel, navigateMinimapTo } = useCanvasCoordinates({
     camera,
