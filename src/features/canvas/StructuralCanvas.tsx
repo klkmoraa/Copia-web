@@ -14,7 +14,6 @@ import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import {
   cameraForViewportResize,
   cameraForPinch,
-  canvasPointerProfile,
   LONG_PRESS_MS,
   LONG_PRESS_JITTER_PX,
   midpoint,
@@ -46,7 +45,7 @@ import {
 } from './canvasVocabulary';
 import { toolFromShortcut } from './toolRegistry';
 import { countOf, selectionQueryById, toSelection } from './selectByProperty';
-import { CANVAS_REFERENCE_SCALE, cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
+import { CANVAS_REFERENCE_SCALE, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
@@ -57,7 +56,6 @@ import {
   flexibleRatioFromGross,
   grossRatioAtPoint,
   memberAxis,
-  modelBounds,
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer } from './CanvasResultLayer';
 import { buildCanvasLabelCandidates } from './canvasLabelSources';
@@ -110,6 +108,7 @@ import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewL
 import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import { CutInspector } from './CutInspector';
 import { useCanvasDerivedGeometry } from './useCanvasDerivedGeometry';
+import { useCanvasCoordinates } from './useCanvasCoordinates';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 
 /**
@@ -501,36 +500,17 @@ export const StructuralCanvas = ({
     longPressMotionRef.current = null;
   }, []);
 
-  const toScreen = useCallback((x: number, y: number) => ({ x: camera.x + x * camera.scale, y: camera.y - y * camera.scale }), [camera]);
-  const toModel = useCallback((screenX: number, screenY: number) => ({ x: (screenX - camera.x) / camera.scale, y: (camera.y - screenY) / camera.scale }), [camera]);
-  const localScreenPoint = useCallback((clientX: number, clientY: number): ScreenPoint => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
-  }, []);
-
-  const updateCoordinateReadout = useCallback((clientX: number, clientY: number, pointerType: string) => {
-    if (!canvasPointerProfile(pointerType).showsCoordinates || !coordinateReadoutRef.current) return;
-    const point = screenToModelPoint(localScreenPoint(clientX, clientY), cameraRef.current);
-    coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
-  }, [lengthLabel, localScreenPoint, units]);
-
-  const fitModel = useCallback(() => {
-    if (!project.nodes.length || !size.width || !size.height) return;
-    const viewport = { width: size.width, height: size.height };
-    updateCamera(cameraToFitBounds(
-      modelBounds(project.nodes),
-      viewport,
-      canvasSafeInsetsFor(viewport),
-    ));
-  }, [project.nodes, size, updateCamera]);
-
-  const navigateMinimapTo = useCallback((point: { x: number; y: number }) => {
-    updateCamera((current) => ({
-      scale: current.scale,
-      x: size.width / 2 - point.x * current.scale,
-      y: size.height / 2 + point.y * current.scale,
-    }));
-  }, [size.width, size.height, updateCamera]);
+  const { toScreen, toModel, localScreenPoint, updateCoordinateReadout, fitModel, navigateMinimapTo } = useCanvasCoordinates({
+    camera,
+    cameraRef,
+    svgRef,
+    coordinateReadoutRef,
+    size,
+    nodes: project.nodes,
+    units,
+    lengthLabel,
+    updateCamera,
+  });
 
   useEffect(() => {
     if (!hostRef.current) return;
