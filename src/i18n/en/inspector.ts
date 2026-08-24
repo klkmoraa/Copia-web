@@ -23,6 +23,7 @@ export const inspector = {
   'inspector.calculated': 'Calculated',
   'inspector.advancedProperties': 'Advanced properties',
   'inspector.nonNegativeValidation': 'Must be greater than or equal to 0.',
+  'inspector.positiveValidation': 'Must be greater than 0.',
   'inspector.normalizedPositionValidation': 'Use a value between 0 and 1.',
   'inspector.objectValidationRegion': 'Object validations',
   'inspector.analysisValidationHeading': 'Analysis validation',
@@ -501,4 +502,11 @@ export const inspector = {
   'bulk.option.node.support.type.roller': 'Oriented roller',
   'bulk.option.node.support.type.fixed': 'Fixed',
   'bulk.option.node.support.type.custom': 'Custom',
+
+  'inspector.designKMajor': 'K major axis',
+  'inspector.designKMinor': 'K minor axis',
+  'inspector.designUnbracedMinor': 'Unbraced length (minor axis)',
+  'inspector.designUnbracedLtb': 'Unbraced length (Lb, lateral-torsional buckling)',
+  'inspector.designFieldDefaultK': 'Not declared, K = 1',
+  'inspector.designFieldDefaultLength': 'Not declared, full member length',
 } as const;

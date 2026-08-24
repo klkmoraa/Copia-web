@@ -28,6 +28,7 @@ código + pruebas + gates ejecutables
 | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) | Contrato, evidencia y límites actuales del dominio 3D experimental. |
 | [Datasheet estructural](architecture/structureco-datasheet.md) | Contrato del datasheet: rejilla propia, editabilidad, ruta de escritura y qué no repara. |
 | [Índice elástico estimado](architecture/structureco-elastic-index.md) | Contrato de η: qué significa, cuándo se publica, por qué no es una verificación normativa. |
+| [Verificación AISC 360 (LRFD)](architecture/structureco-aisc360-design-check.md) | Contrato de la primera verificación por norma real (CRI-45): alcance, gaps declarados y qué queda fuera de esta fase. |
 
 ## Documentos de referencia
 

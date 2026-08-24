@@ -181,7 +181,10 @@ pasa desapercibido: se marca como no evaluado y se cuenta en la cobertura.
 ## Qué falta
 
 Una comprobación por norma real —con criterio, código y estado «no evaluado»
-cuando el check no puede ejecutarse— es CRI-45 y **no pertenece a este módulo**.
+cuando el check no puede ejecutarse— es CRI-45 y **no pertenece a este
+módulo**. Su primera fase, AISC 360 LRFD sobre perfiles I compactos de
+catálogo, ya está implementada por separado: ver
+[Verificación AISC 360 (LRFD)](structureco-aisc360-design-check.md).
 
 ## Verificación
 

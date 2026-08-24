@@ -98,6 +98,23 @@ export interface MemberModel {
   /** Rigid end-zone lengths measured along local +x from nodes i and j. */
   rigidOffsetI?: number;
   rigidOffsetJ?: number;
+  /**
+   * Metadatos de pandeo para una verificación por norma explícita (p.ej.
+   * `src/features/results/aisc360Design.ts`). El Analysis Engine no los lee:
+   * no alteran la rigidez, la matriz ni ningún resultado del solver.
+   *
+   * `designEffectiveLengthFactorMajor/Minor` son los factores K en el plano del
+   * pórtico y fuera de él; ausentes equivalen a K = 1. `designUnbracedLengthMinor`
+   * es la longitud no arriostrada fuera del plano (pandeo por flexión del eje
+   * débil) y `designUnbracedLengthLateralTorsional` es Lb, la longitud no
+   * arriostrada de la aleta comprimida para pandeo lateral-torsional; ausentes
+   * equivalen a la longitud geométrica del miembro, la lectura conservadora de
+   * «sin arriostramiento intermedio».
+   */
+  designEffectiveLengthFactorMajor?: number;
+  designEffectiveLengthFactorMinor?: number;
+  designUnbracedLengthMinor?: number; // m
+  designUnbracedLengthLateralTorsional?: number; // m
   label?: string;
 }
 

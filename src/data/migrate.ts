@@ -223,6 +223,10 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
     const rigidOffsetJ = optionalFiniteAt(raw.rigidOffsetJ, `${path}.rigidOffsetJ`);
     const rotationalSpringI = optionalFiniteAt(raw.rotationalSpringI, `${path}.rotationalSpringI`);
     const rotationalSpringJ = optionalFiniteAt(raw.rotationalSpringJ, `${path}.rotationalSpringJ`);
+    const designEffectiveLengthFactorMajor = optionalFiniteAt(raw.designEffectiveLengthFactorMajor, `${path}.designEffectiveLengthFactorMajor`);
+    const designEffectiveLengthFactorMinor = optionalFiniteAt(raw.designEffectiveLengthFactorMinor, `${path}.designEffectiveLengthFactorMinor`);
+    const designUnbracedLengthMinor = optionalFiniteAt(raw.designUnbracedLengthMinor, `${path}.designUnbracedLengthMinor`);
+    const designUnbracedLengthLateralTorsional = optionalFiniteAt(raw.designUnbracedLengthLateralTorsional, `${path}.designUnbracedLengthLateralTorsional`);
     const materialId = optionalStringAt(raw.materialId, `${path}.materialId`);
     const sectionId = optionalStringAt(raw.sectionId, `${path}.sectionId`);
     const materialOrigin = enumAt(
@@ -247,6 +251,10 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
     if (rigidOffsetJ !== undefined && rigidOffsetJ < 0) fail(`${path}.rigidOffsetJ`, 'no puede ser negativo.');
     if (rotationalSpringI !== undefined && rotationalSpringI < 0) fail(`${path}.rotationalSpringI`, 'no puede ser negativo.');
     if (rotationalSpringJ !== undefined && rotationalSpringJ < 0) fail(`${path}.rotationalSpringJ`, 'no puede ser negativo.');
+    if (designEffectiveLengthFactorMajor !== undefined && designEffectiveLengthFactorMajor <= 0) fail(`${path}.designEffectiveLengthFactorMajor`, 'debe ser positivo.');
+    if (designEffectiveLengthFactorMinor !== undefined && designEffectiveLengthFactorMinor <= 0) fail(`${path}.designEffectiveLengthFactorMinor`, 'debe ser positivo.');
+    if (designUnbracedLengthMinor !== undefined && designUnbracedLengthMinor <= 0) fail(`${path}.designUnbracedLengthMinor`, 'debe ser positivo.');
+    if (designUnbracedLengthLateralTorsional !== undefined && designUnbracedLengthLateralTorsional <= 0) fail(`${path}.designUnbracedLengthLateralTorsional`, 'debe ser positivo.');
     return {
       id,
       i,
@@ -271,6 +279,10 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
       rotationalSpringJ,
       rigidOffsetI,
       rigidOffsetJ,
+      designEffectiveLengthFactorMajor,
+      designEffectiveLengthFactorMinor,
+      designUnbracedLengthMinor,
+      designUnbracedLengthLateralTorsional,
       label: optionalStringAt(raw.label, `${path}.label`),
     };
   });

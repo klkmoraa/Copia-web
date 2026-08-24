@@ -10,6 +10,7 @@ La autoridad del repositorio sigue este orden: código, pruebas y gates ejecutab
 |---|---|---|
 | Modelado y análisis 2D | Vigente | Nodos, barras, apoyos, cargas, casos y combinaciones; marcos, vigas y armaduras; análisis lineal, P-Delta, líneas de influencia, diagramas y deformada. |
 | Resultados | Vigente | Desplazamientos, reacciones, acciones internas, extremos, confiabilidad numérica, auditorías y explicaciones trazables. |
+| Verificación AISC 360 (LRFD) | Vigente, primera fase | Axil (E3/D2-a), flexión mayor compacta (F2), cortante de alma compacta (G2.1) e interacción P-M (H1) sobre perfiles I de catálogo; declara `gap` en vez de fabricar un ratio cuando falta un dato. |
 | Aula | Vigente | Ejercicios, recorrido guiado, predicciones, niveles pedagógicos y progreso local por proyecto. |
 | Project Hub y persistencia | Vigente | Proyectos en IndexedDB, migración desde almacenamiento heredado y recuperaciones antes de operaciones sensibles. |
 | Importación y exportación | Vigente con límites declarados | JSON, expediente `.structureco`, SVG, PNG, CSV y PDF portable; importación DXF ASCII de un subconjunto experimental. |

@@ -23,6 +23,7 @@ export const inspector = {
   'inspector.calculated': 'Calculado',
   'inspector.advancedProperties': 'Propiedades avanzadas',
   'inspector.nonNegativeValidation': 'Debe ser mayor o igual que 0.',
+  'inspector.positiveValidation': 'Debe ser mayor que 0.',
   'inspector.normalizedPositionValidation': 'Usa un valor entre 0 y 1.',
   'inspector.objectValidationRegion': 'Validaciones del objeto',
   'inspector.analysisValidationHeading': 'Validación del análisis',
@@ -501,4 +502,11 @@ export const inspector = {
   'bulk.option.node.support.type.roller': 'Rodillo orientable',
   'bulk.option.node.support.type.fixed': 'Empotramiento',
   'bulk.option.node.support.type.custom': 'Personalizado',
+
+  'inspector.designKMajor': 'K eje mayor',
+  'inspector.designKMinor': 'K eje menor',
+  'inspector.designUnbracedMinor': 'Longitud no arriostrada (eje menor)',
+  'inspector.designUnbracedLtb': 'Longitud no arriostrada (Lb, pandeo lateral-torsional)',
+  'inspector.designFieldDefaultK': 'Sin declarar, K = 1',
+  'inspector.designFieldDefaultLength': 'Sin declarar, toda la longitud del miembro',
 } as const;

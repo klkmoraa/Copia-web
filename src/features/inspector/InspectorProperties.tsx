@@ -32,6 +32,7 @@ import type {
   UnitSystemId,
   ValidationIssue,
 } from '../../types';
+import { Aisc360DesignCard } from './Aisc360DesignCard';
 import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorSelectionPreview } from './InspectorSelectionPreview';
@@ -113,6 +114,10 @@ export const InspectorProperties = () => {
     (value: number) => value >= 0 ? undefined : t('inspector.nonNegativeValidation'),
     [t],
   );
+  const positive = useCallback(
+    (value: number) => value > 0 ? undefined : t('inspector.positiveValidation'),
+    [t],
+  );
   const normalizedPosition = useCallback(
     (value: number) => value >= 0 && value <= 1 ? undefined : t('inspector.normalizedPositionValidation'),
     [t],
@@ -180,7 +185,12 @@ export const InspectorProperties = () => {
     const member = structuredClone(selectedMember);
     if (key === 'type') member.type = value as typeof member.type;
     else if (key === 'E') member.E = Number(value);
-    else if (key === 'A' || key === 'I' || key === 'density' || key === 'G' || key === 'shearArea' || key === 'rotationalSpringI' || key === 'rotationalSpringJ') member[key] = Number(value);
+    else if (
+      key === 'A' || key === 'I' || key === 'density' || key === 'G' || key === 'shearArea'
+      || key === 'rotationalSpringI' || key === 'rotationalSpringJ'
+      || key === 'designEffectiveLengthFactorMajor' || key === 'designEffectiveLengthFactorMinor'
+      || key === 'designUnbracedLengthMinor' || key === 'designUnbracedLengthLateralTorsional'
+    ) member[key] = Number(value);
     else if (key === 'beamTheory') member.beamTheory = value as 'euler-bernoulli' | 'timoshenko';
     else if (key === 'axialBehavior') {
       /* `'both'` es la ausencia de restricción, no un valor a guardar: dejarlo
@@ -467,6 +477,33 @@ export const InspectorProperties = () => {
           <InspectorHelper>{t('inspector.flexibleLengthHelp')}</InspectorHelper>
         </> : <InspectorLockedState title={t('inspector.semirigidityLocked')}>{t('inspector.semirigidityLockedBody')}</InspectorLockedState>}
       </InspectorPropertyGroup> : null}
+
+      {!classroomMode ? <InspectorPropertyGroup title={t('aisc.designFieldsTitle')} description={t('aisc.designFieldsDescription')}>
+        <InspectorNumericField
+          label={t('inspector.designKMajor')} value={selectedMember.designEffectiveLengthFactorMajor ?? 1} unit="" language={language}
+          resetKey={`${selectionKey}:design-k-major`} validate={positive}
+          hint={selectedMember.designEffectiveLengthFactorMajor === undefined ? t('inspector.designFieldDefaultK') : undefined}
+          onCommit={(value) => updateMember('designEffectiveLengthFactorMajor', value)}
+        />
+        <InspectorNumericField
+          label={t('inspector.designKMinor')} value={selectedMember.designEffectiveLengthFactorMinor ?? 1} unit="" language={language}
+          resetKey={`${selectionKey}:design-k-minor`} validate={positive}
+          hint={selectedMember.designEffectiveLengthFactorMinor === undefined ? t('inspector.designFieldDefaultK') : undefined}
+          onCommit={(value) => updateMember('designEffectiveLengthFactorMinor', value)}
+        />
+        <PhysicalNumberField
+          label={t('inspector.designUnbracedMinor')} value={selectedMember.designUnbracedLengthMinor ?? length} units={units} quantity="length"
+          resetKey={`${selectionKey}:design-lb-minor`} validate={positive}
+          hint={selectedMember.designUnbracedLengthMinor === undefined ? t('inspector.designFieldDefaultLength') : undefined}
+          onCommit={(value) => updateMember('designUnbracedLengthMinor', value)}
+        />
+        {selectedMember.type === 'frame' ? <PhysicalNumberField
+          label={t('inspector.designUnbracedLtb')} value={selectedMember.designUnbracedLengthLateralTorsional ?? length} units={units} quantity="length"
+          resetKey={`${selectionKey}:design-lb-ltb`} validate={positive}
+          hint={selectedMember.designUnbracedLengthLateralTorsional === undefined ? t('inspector.designFieldDefaultLength') : undefined}
+          onCommit={(value) => updateMember('designUnbracedLengthLateralTorsional', value)}
+        /> : null}
+      </InspectorPropertyGroup> : null}
     </>}
   </> : null;
 
@@ -602,6 +639,12 @@ export const InspectorProperties = () => {
           bendingMoment={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxMoment : 0}
         /> : null}
         {memberResult && (!classroomMode || resultsVisible) ? <InspectorNarrativeCard
+          member={selectedMember}
+          result={memberResult}
+          analysis={analysis}
+          units={units}
+        /> : null}
+        {memberResult && !classroomMode ? <Aisc360DesignCard
           member={selectedMember}
           result={memberResult}
           analysis={analysis}
