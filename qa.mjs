@@ -1876,6 +1876,170 @@ async function stabilityStudies() {
   await page.close();
 }
 
+/**
+ * El constructor de secciones, de punta a punta y con navegador de verdad.
+ *
+ * Lo que este recorrido vigila y ninguna prueba de jsdom puede: que el panel es
+ * **alcanzable desde el Inspector real** —dentro de su plegable, con la sección
+ * del miembro ya elegida arriba—, que el dibujo de la sección descrita se pinta
+ * antes de aplicar nada, y sobre todo que lo aplicado llega al **proyecto
+ * persistido** y el modelo sigue resolviéndose con ello. Aplicar y que el
+ * análisis reviente sería exactamente el fallo que un panel bonito esconde.
+ */
+async function sectionBuilder() {
+  const page = await newQaPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`section-builder ${msg.type()}: ${msg.text()}`); });
+  page.on('pageerror', err => out.pageErrors.push(`section-builder ${String(err)}`));
+  await loadCleanApp(page);
+  await enterWorkspace(page, { example: true });
+
+  const storedMember = () => page.evaluate(() => {
+    const raw = localStorage.getItem('structureCo.project');
+    if (!raw) throw new Error('No hay proyecto persistido.');
+    const member = JSON.parse(raw).members.find(candidate => candidate.id === 'M1');
+    if (!member) throw new Error('El pórtico de ejemplo no tiene M1.');
+    return { A: member.A, I: member.I, sectionId: member.sectionId ?? '', sectionOrigin: member.sectionOrigin ?? '' };
+  });
+
+  /* El miembro es un `<g>` del SVG: Playwright no lo considera «visible» para
+     un clic aunque esté pintado y sea alcanzable. Lleva `role="button"` y
+     `tabindex`, así que se selecciona por teclado, que además es el camino que
+     una persona con teclado recorre de verdad. */
+  /**
+   * Escribe una cota en un campo del Inspector.
+   *
+   * El clic va primero **a propósito**: al recibir el foco, el campo numérico
+   * reescribe su texto con la precisión completa del valor guardado. Un `fill`
+   * directo enfoca y rellena en el mismo paso, y esa reescritura cae encima del
+   * texto ya puesto: pidiendo «200» sobre un ala de 9,652 mm quedaba
+   * «9.652000000000001200». Enfocar antes deja el campo quieto, y el `fill`
+   * posterior —sobre un elemento que ya tiene el foco— reemplaza de verdad.
+   */
+  const writeDimension = async (field, value) => {
+    await field.click();
+    await field.fill(value);
+    await field.press('Enter');
+  };
+
+  const memberM1 = page.locator('[data-structure-kind="member"][data-structure-id="M1"]').first();
+  await memberM1.focus();
+  await page.keyboard.press('Enter');
+  const candidatePicker = page.locator('[data-candidate-picker]');
+  if (await candidatePicker.isVisible().catch(() => false)) {
+    await candidatePicker.locator('#candidate-option-member-M1').click();
+    await candidatePicker.getByRole('listbox').press('Enter');
+    await candidatePicker.waitFor({ state: 'hidden' });
+  }
+  const inspector = page.locator('.inspector-panel');
+  await inspector.getByLabel('Perfil comercial').waitFor({ state: 'visible', timeout: 10_000 });
+  await inspector.getByLabel('Perfil comercial').selectOption('w12x26');
+  /* El proyecto se persiste después de pintar, así que leer el almacén en el
+     tick siguiente al `selectOption` devuelve el estado anterior. Se espera a
+     que la identidad esté escrita, no a que haya pasado un rato. */
+  await page.waitForFunction(() => {
+    const raw = localStorage.getItem('structureCo.project');
+    if (!raw) return false;
+    const member = JSON.parse(raw).members.find(candidate => candidate.id === 'M1');
+    return member?.sectionOrigin === 'catalog' && member?.sectionId === 'w12x26';
+  }, undefined, { timeout: 10_000 });
+  const withCatalog = await storedMember();
+  out.checks.sectionBuilderStartsFromACatalogIdentity = withCatalog.sectionOrigin === 'catalog';
+
+  // 1 · El panel vive dentro del Inspector, en su plegable, no en una
+  // superficie aparte a la que haya que viajar.
+  await inspector.getByRole('button', { name: 'Construir sección', exact: true }).click();
+  const builder = inspector.locator('.section-builder');
+  await builder.waitFor({ state: 'visible' });
+  out.checks.sectionBuilderLivesInsideTheInspector = await builder.count() === 1;
+  // Y publica UNA sola región con ese nombre: la del plegable. El panel no
+  // repite la etiqueta de su propio contenedor.
+  out.checks.sectionBuilderPublishesOneRegionNotTwo =
+    await page.getByRole('region', { name: 'Construir sección', exact: true }).count() === 1;
+
+  // 2 · Arranca del perfil elegido arriba, y en milímetros: el canto de un
+  // W12x26 son 309,88 mm. En metros se teclearía 0,30988.
+  const depth = builder.getByRole('textbox', { name: 'Canto', exact: true });
+  const seededDepth = Number(await depth.inputValue());
+  out.checks.sectionBuilderSeedsFromTheChosenProfileInMillimetres =
+    Math.abs(seededDepth - 309.88) < 0.02;
+  out.metrics.sectionBuilderSeededDepth = seededDepth;
+
+  // 3 · El contorno de la forma descrita se dibuja ANTES de aplicar. Una doble
+  // T es un `path`; un tubo, un círculo. El visor del miembro, en cambio, sigue
+  // en la rectangular equivalente hasta que haya identidad.
+  const preview = builder.locator('.section-builder__preview svg');
+  out.checks.sectionBuilderDrawsTheDescribedShape =
+    await preview.locator('path').count() > 0 && await preview.getAttribute('data-shape') === 'I';
+  await builder.getByLabel('Forma').selectOption('tube');
+  out.checks.sectionBuilderRedrawsWhenTheShapeChanges = await preview.locator('circle').count() > 0;
+  await builder.getByLabel('Forma').selectOption('i-shape');
+
+  // 4 · Una descripción imposible dice cuál es el problema y cierra la puerta.
+  const flange = builder.getByRole('textbox', { name: 'Espesor del ala', exact: true });
+  const apply = builder.getByRole('button', { name: 'Aplicar A e I al miembro', exact: true });
+  const issueLine = builder.locator('.section-builder__issue');
+  /* Cada cota se da por escrita cuando su consecuencia aparece, no cuando el
+     `press` vuelve: el campo confirma al perder el foco y el repintado es
+     posterior. Leer justo después del `press` medía el panel anterior. */
+  await writeDimension(flange, '200');
+  await issueLine.waitFor({ state: 'visible', timeout: 10_000 });
+  out.checks.sectionBuilderNamesWhyAGeometryDoesNotClose =
+    /consumen todo el canto/.test(await issueLine.innerText()) && await apply.isDisabled();
+
+  // 5 · Y vuelve a abrirla en cuanto la descripción cierra otra vez.
+  await writeDimension(flange, '20');
+  await issueLine.waitFor({ state: 'detached', timeout: 10_000 });
+  await writeDimension(depth, '400');
+  // La cota del pie de la vista previa es la descripción ya asentada.
+  await builder.locator('.section-builder__preview figcaption:has-text("400 mm ×")')
+    .waitFor({ state: 'visible', timeout: 10_000 });
+  out.checks.sectionBuilderReopensOnceTheGeometryCloses = !await apply.isDisabled();
+
+  // 6 · Lo aplicado llega al proyecto persistido, y la identidad de catálogo
+  // cae a «personalizada»: una sección descrita a mano no es un perfil.
+  await apply.click();
+  await page.waitForFunction(previous => {
+    const raw = localStorage.getItem('structureCo.project');
+    if (!raw) return false;
+    const member = JSON.parse(raw).members.find(candidate => candidate.id === 'M1');
+    return Boolean(member) && member.A !== previous;
+  }, withCatalog.A, { timeout: 10_000 });
+  const built = await storedMember();
+  out.checks.sectionBuilderWritesAreaAndInertiaToTheModel = built.A > 0 && built.I > 0 && built.I !== withCatalog.I;
+  out.checks.sectionBuilderDegradesTheIdentityToCustom =
+    built.sectionOrigin === 'custom' && built.sectionId === '';
+  out.metrics.sectionBuilderApplied = { area: built.A, inertia: built.I };
+
+  // 6 bis · Y una vez aplicada, el panel deja de ofrecer aplicarla: lo descrito
+  // y lo que el miembro tiene son ya la misma cosa. Esto además comprueba que
+  // el número que viajó al modelo es **exactamente** el que se calculó, sin
+  // redondeo por el camino: si se hubiera perdido un dígito, no coincidirían.
+  await page.waitForFunction(() => {
+    const button = [...document.querySelectorAll('.section-builder button')]
+      .find(candidate => candidate.textContent?.includes('Aplicar A e I'));
+    return Boolean(button?.disabled);
+  }, undefined, { timeout: 10_000 });
+  out.checks.sectionBuilderStopsOfferingWhatIsAlreadyApplied =
+    /ya tiene esta sección/.test(await builder.locator('.section-builder__delta').innerText());
+
+  // 7 · El modelo sigue resolviéndose con la sección construida. Un panel que
+  // escribe números que el solver no puede usar es peor que no tenerlo.
+  await page.getByRole('button', { name: 'Analizar', exact: true }).click();
+  await page.locator('[data-analysis-status="resolved"]').waitFor({ state: 'visible', timeout: 20_000 });
+  out.checks.sectionBuilderLeavesTheModelSolvable = true;
+
+  // 8 · El panel cabe en el Inspector sin desbordarlo a lo ancho.
+  const overflow = await page.evaluate(() => {
+    const panel = document.querySelector('.section-builder');
+    const host = document.querySelector('.inspector-panel');
+    if (!panel || !host) return null;
+    return { panel: panel.scrollWidth, host: host.clientWidth };
+  });
+  out.checks.sectionBuilderFitsTheInspectorWidth = Boolean(overflow) && overflow.panel <= overflow.host + 1;
+  await page.screenshot({ path: path.join(artifactsDir, 'section-builder.png'), fullPage: false });
+  await page.close();
+}
+
 await verifyWelcomeReducedMotionActive();
 await desktop();
 Object.assign(out.checks, await verifyInspectorResponsiveViewports());
@@ -1885,6 +2049,7 @@ await influenceWorkflow();
 await mobile();
 await educationalExample();
 await stabilityStudies();
+await sectionBuilder();
 await browser.close();
 await previewServer.close();
 const failedChecks = Object.entries(out.checks).filter(([, value]) => value === false);
