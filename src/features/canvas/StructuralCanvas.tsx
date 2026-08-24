@@ -1,14 +1,13 @@
 import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
-import type { DiagramPoint, MemberModel, NodeModel, Selection, Tool } from '../../types';
+import type { DiagramPoint, MemberModel, Selection } from '../../types';
 import { evaluateDiagramAt } from '../../engine/diagram';
-import { fromDisplay, toDisplay } from '../../engine/units';
+import { toDisplay } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed } from '../../utils/numberFormat';
-import { copyModelSelection, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
+import { copyModelSelection, structuralSelectionFromIds, type ModelClipboard } from '../../data/modelOperations';
 import { type SnapKind } from '../../utils/snapping';
-import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import {
@@ -33,13 +32,10 @@ import {
   IDLE_INTERACTION,
   clamp,
   contextualActionLabelKeys,
-  nextCanvasId as nextId,
-  supportCycle,
   toolLabelKeys,
   type Camera,
   type CanvasInteractionState as CanvasInteraction,
   type CutInfo,
-  type SelectionBox,
   type Size,
 } from './canvasVocabulary';
 import { toolFromShortcut } from './toolRegistry';
@@ -52,7 +48,6 @@ import { selectionEnvelopeForPoints } from './selectionVisuals';
 import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
-  flexibleRatioFromGross,
   grossRatioAtPoint,
   memberAxis,
 } from '../../graphics/structureGeometry';
@@ -103,6 +98,7 @@ import { useCanvasCoordinates } from './useCanvasCoordinates';
 import { useCanvasInteractionLoop } from './useCanvasInteractionLoop';
 import { useStableCanvasEvent } from './useStableCanvasEvent';
 import { useCanvasModelActions } from './useCanvasModelActions';
+import { useCanvasToolDispatch } from './useCanvasToolDispatch';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 
 /**
@@ -693,228 +689,45 @@ export const StructuralCanvas = ({
     }
   }, [activeTool, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
 
-  const completeLoadPlacement = (label: string) => {
-    setActiveTool('select');
-    showCanvasFeedback(t('canvas.loadAdded', { load: label }));
-    // Open after the click sequence so the newly mounted backdrop cannot receive
-    // the matching pointerup/click.
-    window.requestAnimationFrame(() => onRequestInspector?.());
+  const memberValueAt = (memberId: string, ratio: number): DiagramPoint | null => {
+    const result = resultMap.get(memberId);
+    if (!result?.diagramSegments.length) return null;
+    const grossLength = result.totalLength ?? result.length;
+    const localX = clamp(ratio * grossLength - (result.startOffset ?? 0), 0, result.length);
+    return evaluateDiagramAt(result.diagramSegments, result.diagramJumps, localX, 'right');
   };
 
-  const finishSelectionBox = useCallback((box: SelectionBox) => {
-    const result = selectGeometryByBox(box.start, box.current, project.nodes, project.members, selectionFilter);
-    const nodeIds = new Set(result.nodeIds);
-    const memberIds = new Set(result.memberIds);
-    if (box.additive) {
-      if (selection?.kind === 'node') nodeIds.add(selection.id);
-      else if (selection?.kind === 'member') memberIds.add(selection.id);
-      else if (selection?.kind === 'multi') {
-        selection.nodeIds.forEach((id) => nodeIds.add(id));
-        selection.memberIds.forEach((id) => memberIds.add(id));
-      }
-    }
-    setSelection(structuralSelectionFromIds(nodeIds, memberIds));
-  }, [project.members, project.nodes, selection, selectionFilter, setSelection]);
-
-  const performNodeAction = (node: NodeModel, tool: Tool, shiftKey = false) => {
-    if (tool === 'member') {
-      if (!memberStart) { setMemberStart(node.id); setSelection({ kind: 'node', id: node.id }); return; }
-      if (memberStart === node.id) { setMemberStart(null); return; }
-      const id = nextId('M', project.members.map((member) => member.id));
-      const template = repeatRecipe?.kind === 'member'
-        ? repeatRecipe.template
-        : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
-      void executeProjectCommand({
-        kind: 'member.create',
-        description: `Crear miembro ${id}`,
-        nodes: [],
-        member: { id, i: memberStart, j: node.id, ...template },
-      });
-      setMemberStart(null);
-      setRepeatRecipe(null);
-      setSelection({ kind: 'member', id });
-      return;
-    }
-    if (tool === 'support') {
-      updateProject((draft) => {
-        const target = draft.nodes.find((item) => item.id === node.id);
-        if (target) {
-          const current = supportCycle.indexOf(target.support.type as typeof supportCycle[number]);
-          const type = supportCycle[(current + 1 + supportCycle.length) % supportCycle.length];
-          target.support = type === 'roller' ? { type, angleDeg: 90 } : { type };
-        }
-        return draft;
-      });
-      setSelection({ kind: 'node', id: node.id });
-      return;
-    }
-    if (tool === 'pointLoad') {
-      const id = nextId('NL', project.nodalLoads.map((load) => load.id));
-      const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'pointLoad'
-          ? repeatRecipe.template
-          : { caseId, fx: 0, fy: -fromDisplay(10, units, 'force'), mz: 0 };
-        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
-        return draft;
-      });
-      setSelection({ kind: 'nodalLoad', id });
-      setRepeatRecipe(null);
-      completeLoadPlacement(t('toolbar.pointLoad'));
-      return;
-    }
-    if (tool === 'moment') {
-      const id = nextId('NL', project.nodalLoads.map((load) => load.id));
-      const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'moment'
-          ? repeatRecipe.template
-          : { caseId, fx: 0, fy: 0, mz: fromDisplay(10, units, 'moment') };
-        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
-        return draft;
-      });
-      setSelection({ kind: 'nodalLoad', id });
-      setRepeatRecipe(null);
-      completeLoadPlacement(t('toolbar.moment'));
-      return;
-    }
-    if (tool === 'distributedLoad') {
-      showCanvasFeedback(t('canvas.placeDistributedLoad'));
-      return;
-    }
-    if (tool === 'delete') { deleteSelection({ kind: 'node', id: node.id }); return; }
-    if (tool === 'select' && shiftKey) {
-      setSelection(toggleStructuralSelection(selection, { kind: 'node', id: node.id }));
-      return;
-    }
-    setSelection({ kind: 'node', id: node.id });
-  };
-
-  const performMemberAction = (member: MemberModel, tool: Tool, client: ScreenPoint, shiftKey = false) => {
-    if (tool === 'split' || tool === 'node' || tool === 'support') {
-      const point = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
-      const ni = nodeMap.get(member.i)!;
-      const nj = nodeMap.get(member.j)!;
-      const dx = nj.x - ni.x;
-      const dy = nj.y - ni.y;
-      const ratio = clamp(((point.x - ni.x) * dx + (point.y - ni.y) * dy) / Math.max(dx * dx + dy * dy, 1e-18), 1e-6, 1 - 1e-6);
-      void executeProjectCommand({
-        kind: 'member.split',
-        description: `Dividir miembro ${member.id}`,
-        memberId: member.id,
-        ratio,
-        nodeSupport: tool === 'support' ? { type: 'pin' } : undefined,
-      }).then((result) => {
-        if (result?.kind === 'member.split') setSelection({ kind: 'node', id: result.nodeId });
-      });
-      return;
-    }
-    if (tool === 'distributedLoad') {
-      const id = nextId('ML', project.memberLoads.map((load) => load.id));
-      const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'distributedLoad'
-          ? repeatRecipe.template
-          : { caseId, type: 'distributed' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, qxStart: 0, qxEnd: 0, qyStart: -fromDisplay(10, units, 'distributedForce'), qyEnd: -fromDisplay(10, units, 'distributedForce') };
-        draft.memberLoads.push({ id, memberId: member.id, ...template });
-        return draft;
-      });
-      setSelection({ kind: 'memberLoad', id });
-      setRepeatRecipe(null);
-      completeLoadPlacement(t('toolbar.distributedLoad'));
-      return;
-    }
-    if (tool === 'pointLoad') {
-      const p = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
-      const ni = nodeMap.get(member.i)!;
-      const nj = nodeMap.get(member.j)!;
-      const axis = memberAxis(member, ni, nj);
-      const ratio = flexibleRatioFromGross(axis, grossRatioAtPoint(axis, p));
-      const id = nextId('ML', project.memberLoads.map((load) => load.id));
-      const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'pointLoad'
-          ? repeatRecipe.template
-          : { caseId, type: 'point' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, px: 0, py: -fromDisplay(10, units, 'force') };
-        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
-        return draft;
-      });
-      setSelection({ kind: 'memberLoad', id });
-      setRepeatRecipe(null);
-      completeLoadPlacement(t('toolbar.pointLoad'));
-      return;
-    }
-    if (tool === 'moment') {
-      const p = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
-      const ni = nodeMap.get(member.i)!;
-      const nj = nodeMap.get(member.j)!;
-      const axis = memberAxis(member, ni, nj);
-      const ratio = flexibleRatioFromGross(axis, grossRatioAtPoint(axis, p));
-      const id = nextId('ML', project.memberLoads.map((load) => load.id));
-      const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'moment'
-          ? repeatRecipe.template
-          : { caseId, type: 'moment' as const, coordinateSystem: 'local' as const, lengthBasis: 'real' as const, start: 0, end: 1, moment: fromDisplay(10, units, 'moment') };
-        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
-        return draft;
-      });
-      setSelection({ kind: 'memberLoad', id });
-      setRepeatRecipe(null);
-      completeLoadPlacement(t('toolbar.moment'));
-      return;
-    }
-    if (tool === 'cut') {
-      const modelPoint = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
-      const ni = nodeMap.get(member.i)!;
-      const nj = nodeMap.get(member.j)!;
-      const dx = nj.x - ni.x;
-      const dy = nj.y - ni.y;
-      const ratio = clamp(((modelPoint.x - ni.x) * dx + (modelPoint.y - ni.y) * dy) / Math.max(dx * dx + dy * dy, 1e-18), 0, 1);
-      setCut({ memberId: member.id, ratio, point: memberValueAt(member.id, ratio), clientX: client.x, clientY: client.y, pinned: true });
-      setSelection({ kind: 'member', id: member.id });
-      return;
-    }
-    if (tool === 'delete') { deleteSelection({ kind: 'member', id: member.id }); return; }
-    if (tool === 'select' && shiftKey) {
-      setSelection(toggleStructuralSelection(selection, { kind: 'member', id: member.id }));
-      return;
-    }
-    setSelection({ kind: 'member', id: member.id });
-  };
-
-  const performTargetAction = (target: StructuralTarget, tool: Tool, client: ScreenPoint, shiftKey = false) => {
-    if (target.kind === 'background') {
-      if (tool === 'node') addNode(modelPointFromClient(client.x, client.y));
-      else if (tool === 'member') void createMemberEndpoint(modelPointFromClient(client.x, client.y));
-      else if (tool === 'pointLoad' || tool === 'distributedLoad' || tool === 'moment') {
-        showCanvasFeedback(tool === 'distributedLoad'
-          ? t('canvas.placeDistributedLoad')
-          : tool === 'moment'
-            ? t('canvas.placeMoment')
-            : t('canvas.placePointLoad'));
-      }
-      else {
-        setSelection(null);
-        setMemberStart(null);
-        setCut(null);
-      }
-      return;
-    }
-    if (target.kind === 'node') {
-      const node = nodeMap.get(target.id);
-      if (node) performNodeAction(node, tool, shiftKey);
-      return;
-    }
-    if (target.kind === 'member') {
-      const member = memberMap.get(target.id);
-      if (member) performMemberAction(member, tool, client, shiftKey);
-      return;
-    }
-    const selectedTarget: Selection = { kind: target.kind, id: target.id };
-    if (tool === 'delete') deleteSelection(selectedTarget);
-    else setSelection(selectedTarget);
-  };
+  const {
+    finishSelectionBox,
+    performTargetAction,
+  } = useCanvasToolDispatch({
+    project,
+    units,
+    selectionFilter,
+    selection,
+    setSelection,
+    activeTool,
+    setActiveTool,
+    memberStart,
+    setMemberStart,
+    repeatRecipe,
+    setRepeatRecipe,
+    executeProjectCommand,
+    updateProject,
+    nodeMap,
+    memberMap,
+    localScreenPoint,
+    cameraRef,
+    setCut,
+    memberValueAt,
+    deleteSelection,
+    addNode,
+    createMemberEndpoint,
+    modelPointFromClient,
+    showCanvasFeedback,
+    onRequestInspector,
+    t,
+  });
 
   const shouldStartPan = useCallback((event: ReactPointerEvent) =>
     event.button === 1 || (event.button === 0 && (activeTool === 'pan' || spacePressedRef.current)), [activeTool]);
@@ -1467,14 +1280,6 @@ export const StructuralCanvas = ({
     svg.addEventListener('wheel', onWheel, { passive: false });
     return () => svg.removeEventListener('wheel', onWheel);
   }, [localScreenPoint, size.height, updateCamera]);
-
-  const memberValueAt = (memberId: string, ratio: number): DiagramPoint | null => {
-    const result = resultMap.get(memberId);
-    if (!result?.diagramSegments.length) return null;
-    const grossLength = result.totalLength ?? result.length;
-    const localX = clamp(ratio * grossLength - (result.startOffset ?? 0), 0, result.length);
-    return evaluateDiagramAt(result.diagramSegments, result.diagramJumps, localX, 'right');
-  };
 
   const showCut = useStableCanvasEvent((event: ReactPointerEvent, member: MemberModel) => {
     if (!resultsAllowed || !analysis?.success || cut?.pinned) return;
