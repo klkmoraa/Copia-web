@@ -6,8 +6,8 @@ import { evaluateDiagramAt } from '../../engine/diagram';
 import { fromDisplay, toDisplay } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed } from '../../utils/numberFormat';
-import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
-import { resolveSnap, type SnapKind } from '../../utils/snapping';
+import { copyModelSelection, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
+import { type SnapKind } from '../../utils/snapping';
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
@@ -25,7 +25,6 @@ import {
   shouldArmLongPress,
   shouldTriggerLongPress,
   zoomCameraAt,
-  type ModelPoint,
   type ScreenPoint,
 } from './canvasInteraction';
 import {
@@ -65,8 +64,6 @@ import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
   activeCandidate,
-  candidateToSelection,
-  createCandidatePickerState,
   cycleCandidatePicker,
   type CandidatePickerState,
   type CandidateTarget,
@@ -74,17 +71,11 @@ import {
 import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { ELASTIC_SATURATION_RATIO } from '../results/elasticDemand';
-import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
 import { prepareDuplicatePreview } from './duplicatePreview';
 import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
-import {
-  decodeStructuralClipboard,
-  encodeStructuralClipboard,
-  readClipboardText,
-  supportsClipboardReadText,
-} from './structuralClipboard';
+import { supportsClipboardReadText } from './structuralClipboard';
 import {
   createStructuralEditGeometryPreview,
   prepareStructuralEdit,
@@ -111,6 +102,7 @@ import { useCanvasDerivedGeometry } from './useCanvasDerivedGeometry';
 import { useCanvasCoordinates } from './useCanvasCoordinates';
 import { useCanvasInteractionLoop } from './useCanvasInteractionLoop';
 import { useStableCanvasEvent } from './useStableCanvasEvent';
+import { useCanvasModelActions } from './useCanvasModelActions';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 
 /**
@@ -501,183 +493,65 @@ export const StructuralCanvas = ({
     return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [project.name, showCanvasFeedback, t]);
 
-  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeIds?: string | ReadonlySet<string>) => {
-    // Reuse the memoised arrays untouched whenever nothing has to be merged or
-    // excluded: a pointer move should not copy the whole candidate list.
-    const merged = perpendicularSnapCandidates.length
-      ? [...baseSnapCandidates, ...perpendicularSnapCandidates]
-      : baseSnapCandidates;
-    const excluded = typeof excludedNodeIds === 'string' ? new Set([excludedNodeIds]) : excludedNodeIds;
-    const candidates = excluded?.size
-      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.some((id) => excluded.has(id))))
-      : merged;
-    const result = resolveSnap(point, {
-      enabled: view.snap,
-      gridSize: view.gridSize,
-      pixelsPerUnit: camera.scale,
-      candidates,
-      modes: {
-        grid: view.snapTargets.grid,
-        node: view.snapTargets.nodes,
-        midpoint: view.snapTargets.midpoints,
-        intersection: view.snapTargets.intersections,
-        perpendicular: Boolean(drawingOrigin) && view.snapTargets.perpendicular,
-      },
-    });
-    const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
-    setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
-    return result.point;
-  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, view]);
-
-  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
-    const local = localScreenPoint(clientX, clientY);
-    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
-  }, [localScreenPoint, snapPoint]);
-
-  const nodeDragPointFromClient = useCallback((
-    clientX: number,
-    clientY: number,
-    excludedNodeId: string,
-    grabOffset: ModelPoint,
-  ) => {
-    const local = localScreenPoint(clientX, clientY);
-    const pointerPoint = screenToModelPoint(local, cameraRef.current);
-    return snapPoint({ x: pointerPoint.x + grabOffset.x, y: pointerPoint.y + grabOffset.y }, excludedNodeId);
-  }, [localScreenPoint, snapPoint]);
-
-  const deleteSelection = useCallback((target: Selection = selection) => {
-    if (!target) return;
-    if (target.kind === 'member') void executeProjectCommand({ kind: 'member.delete', description: `Eliminar miembro ${target.id}`, memberId: target.id });
-    else if (target.kind === 'node') void executeProjectCommand({ kind: 'node.delete', description: 'Editar proyecto', nodeId: target.id });
-    else if (target.kind === 'multi') void executeProjectCommand({ kind: 'selection.delete', description: 'Editar proyecto', selection: target });
-    else if (target.kind === 'nodalLoad') updateProject((draft) => ({ ...draft, nodalLoads: draft.nodalLoads.filter((load) => load.id !== target.id) }));
-    else updateProject((draft) => ({ ...draft, memberLoads: draft.memberLoads.filter((load) => load.id !== target.id) }));
-    setSelection(null);
-  }, [executeProjectCommand, selection, setSelection, updateProject]);
-
-  const addNode = (point: { x: number; y: number }) => {
-    let id = '';
-    updateProject((draft) => {
-      id = ensureNodeAtPoint(draft, point).nodeId;
-      return draft;
-    });
-    if (id) setSelection({ kind: 'node', id });
-    if (activeTool === 'node') setRepeatRecipe(null);
-    return id;
-  };
-
-  const createMemberEndpoint = async (point: { x: number; y: number }) => {
-    if (!memberStart) {
-      const id = addNode(point);
-      setMemberStart(id);
-      return;
-    }
-    const startNode = nodeMap.get(memberStart);
-    if (!startNode || Math.hypot(point.x - startNode.x, point.y - startNode.y) <= 1e-10) {
-      setQuickEntryError(t('canvas.endpointSeparated'));
-      return;
-    }
-    let memberId = '';
-    const template = repeatRecipe?.kind === 'member'
-      ? repeatRecipe.template
-      : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
-    const result = await executeProjectCommand({
-      kind: 'member.createAtPoint',
-      description: 'Crear miembro',
-      startNodeId: memberStart,
-      point,
-      template,
-    });
-    if (result?.kind === 'member.createAtPoint') memberId = result.memberId;
-    setMemberStart(null);
-    if (memberId) setSelection({ kind: 'member', id: memberId });
-    setQuickEntry({ first: '', second: '' });
-    setQuickEntryError('');
-    setRepeatRecipe(null);
-  };
-
-  const submitQuickEntry = () => {
-    const parsed = parseQuickEntryPair(quickEntry.first, quickEntry.second);
-    if (!parsed.ok) {
-      setQuickEntryError(t('canvas.twoValidNumbers'));
-      return;
-    }
-    const { first, second } = parsed.value;
-    if (activeTool === 'node') {
-      addNode({ x: fromDisplay(first, units, 'length'), y: fromDisplay(second, units, 'length') });
-      setQuickEntry({ first: '', second: '' });
-      setQuickEntryError('');
-      return;
-    }
-    const startNode = memberStart ? nodeMap.get(memberStart) : null;
-    if (!startNode) return;
-    if (quickEntryMode === 'delta') {
-      void createMemberEndpoint({ x: startNode.x + fromDisplay(first, units, 'length'), y: startNode.y + fromDisplay(second, units, 'length') });
-    } else {
-      const length = fromDisplay(first, units, 'length');
-      const radians = second * Math.PI / 180;
-      void createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
-    }
-  };
-
-  const cancelQuickEntry = () => {
-    setQuickEntry({ first: '', second: '' });
-    setQuickEntryError('');
-    if (activeTool === 'member') setMemberStart(null);
-  };
-
-  const activateRepeat = useCallback(() => {
-    const recipe = resolveRepeatRecipe(project, selection);
-    if (!recipe) return;
-    setRepeatRecipe(recipe);
-    setMemberStart(null);
-    setActiveTool(recipe.tool);
-    showCanvasFeedback(t('canvas.repeatWaiting', { tool: t(toolLabelKeys[recipe.tool]) }));
-    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
-  }, [project, selection, setActiveTool, showCanvasFeedback, t]);
-
-  const copyStructuralSelection = useCallback(async () => {
-    const copied = copyModelSelection(project, selection);
-    if (!copied) return;
-    clipboardRef.current = copied;
-    pasteCountRef.current = 1;
-    refreshClipboardAvailability((revision) => revision + 1);
-    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
-    if (typeof browserClipboard?.writeText === 'function') {
-      try {
-        await browserClipboard.writeText(encodeStructuralClipboard(copied));
-      } catch {
-        // The existing in-app clipboard remains a valid touch fallback.
-      }
-    }
-    showCanvasFeedback(t('contextualActions.copyReady'));
-  }, [project, selection, showCanvasFeedback, t]);
-
-  const pasteStructuralSelection = useCallback(async () => {
-    const read = await readClipboardText();
-    const systemClipboard = read.status === 'read' ? decodeStructuralClipboard(read.text) : null;
-    const clipboard = systemClipboard ?? clipboardRef.current;
-    if (!clipboard) {
-      showCanvasFeedback(t('contextualActions.pasteUnavailable'));
-      return;
-    }
-    clipboardRef.current = clipboard;
-    const step = Math.max(project.settings.gridSize || 1, 0.25) * pasteCountRef.current;
-    const next = structuredClone(project);
-    const pasted = pasteModelClipboard(next, clipboard, { x: step, y: step });
-    replaceProject(next);
-    pasteCountRef.current += 1;
-    setSelection(pasted);
-    showCanvasFeedback(systemClipboard
-      ? t('contextualActions.pasteReady')
-      : t('contextualActions.pasteFallback'));
-  }, [project, replaceProject, setSelection, showCanvasFeedback, t]);
-
-  const startDuplicate = useCallback(() => {
-    if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
-    const step = Math.max(project.settings.gridSize || 1, 0.25);
-    setDuplicateDraft({ selection: structuredClone(selection), x: String(step), y: String(step) });
-  }, [project.settings.gridSize, selection]);
+  const {
+    snapPoint,
+    modelPointFromClient,
+    nodeDragPointFromClient,
+    deleteSelection,
+    addNode,
+    createMemberEndpoint,
+    submitQuickEntry,
+    cancelQuickEntry,
+    activateRepeat,
+    copyStructuralSelection,
+    pasteStructuralSelection,
+    startDuplicate,
+    selectStructuralTarget,
+    candidateTargetsAtPoint,
+    closeCandidatePicker,
+    openCandidatePicker,
+    confirmCandidatePicker,
+    setCandidatePickerIndex,
+  } = useCanvasModelActions({
+    project,
+    selection,
+    setSelection,
+    activeTool,
+    setActiveTool,
+    executeProjectCommand,
+    updateProject,
+    replaceProject,
+    nodeMap,
+    memberStart,
+    setMemberStart,
+    repeatRecipe,
+    setRepeatRecipe,
+    quickEntry,
+    setQuickEntry,
+    quickEntryMode,
+    setQuickEntryError,
+    units,
+    view,
+    camera,
+    cameraRef,
+    size,
+    drawingOrigin,
+    baseSnapCandidates,
+    perpendicularSnapCandidates,
+    setSnapPreview,
+    localScreenPoint,
+    selectionFilter,
+    clipboardRef,
+    pasteCountRef,
+    refreshClipboardAvailability,
+    setDuplicateDraft,
+    showCanvasFeedback,
+    svgRef,
+    candidatePicker,
+    setCandidatePicker,
+    surfaceBroker,
+    t,
+  });
 
   const capturePointer = useCallback((pointerId: number) => {
     try { svgRef.current?.setPointerCapture(pointerId); } catch { /* Pointer may already be cancelled. */ }
@@ -687,86 +561,6 @@ export const StructuralCanvas = ({
     try {
       if (svgRef.current?.hasPointerCapture(pointerId)) svgRef.current.releasePointerCapture(pointerId);
     } catch { /* The browser already released it. */ }
-  }, []);
-
-  const selectStructuralTarget = useCallback((target: StructuralTarget) => {
-    if (target.kind === 'background') setSelection(null);
-    else setSelection({ kind: target.kind, id: target.id });
-  }, [setSelection]);
-
-  const candidateTargetsAtPoint = useCallback((
-    clientX: number,
-    clientY: number,
-    fallback: StructuralTarget,
-  ): CandidateTarget[] => {
-    const candidates: CandidateTarget[] = [];
-    const seen = new Set<string>();
-    const elements = document.elementsFromPoint?.(clientX, clientY) ?? [];
-    const append = (kind: string | undefined, id: string | undefined) => {
-      if (!id || !kind || !['node', 'member', 'nodalLoad', 'memberLoad'].includes(kind)) return;
-      if (kind === 'node' && !selectionFilter.nodes) return;
-      if (kind === 'member' && !selectionFilter.members) return;
-      if ((kind === 'nodalLoad' || kind === 'memberLoad') && !selectionFilter.loads) return;
-      const key = `${kind}:${id}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      candidates.push({ kind: kind as CandidateTarget['kind'], id });
-    };
-    for (const element of elements) {
-      const object = element.closest<SVGElement>('[data-structure-kind][data-structure-id]');
-      append(object?.dataset.structureKind, object?.dataset.structureId);
-    }
-    if (fallback.kind !== 'background') append(fallback.kind, fallback.id);
-    // SVG hit-testing does not consistently report a member exactly at one of
-    // its endpoint nodes. The model already owns that exact incidence through
-    // IDs, so complete the node stack from topology rather than tolerances or
-    // coordinate comparisons. A shared node can therefore offer its node,
-    // attached members, and its nodal loads as one precise candidate set.
-    if (fallback.kind === 'node') {
-      for (const member of project.members) {
-        if (member.i === fallback.id || member.j === fallback.id) append('member', member.id);
-      }
-      for (const load of project.nodalLoads) {
-        if (load.nodeId === fallback.id) append('nodalLoad', load.id);
-      }
-    }
-    return candidates;
-  }, [project.members, project.nodalLoads, selectionFilter.loads, selectionFilter.members, selectionFilter.nodes]);
-
-  const closeCandidatePicker = useCallback(() => {
-    setCandidatePicker(null);
-    surfaceBroker?.closeSurface('candidatePicker');
-    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
-  }, [surfaceBroker]);
-
-  const openCandidatePicker = useCallback((candidates: CandidateTarget[], anchor: ScreenPoint, additive = false): boolean => {
-    const picker = createCandidatePickerState(candidates, selection, {
-      x: clamp(anchor.x + 12, 8, Math.max(8, size.width - 260)),
-      y: clamp(anchor.y + 12, 8, Math.max(8, size.height - 260)),
-    }, 0, additive);
-    if (!picker) return false;
-    setCandidatePicker(picker);
-    surfaceBroker?.openSurface('candidatePicker');
-    return true;
-  }, [selection, size.height, size.width, surfaceBroker]);
-
-  const confirmCandidatePicker = useCallback(() => {
-    if (!candidatePicker) return;
-    const candidate = activeCandidate(candidatePicker);
-    if (candidatePicker.additive && (candidate.kind === 'node' || candidate.kind === 'member')) {
-      setSelection(toggleStructuralSelection(candidatePicker.previousSelection, { kind: candidate.kind, id: candidate.id }));
-    } else {
-      setSelection(candidateToSelection(candidate));
-    }
-    closeCandidatePicker();
-  }, [candidatePicker, closeCandidatePicker, setSelection]);
-
-  const setCandidatePickerIndex = useCallback((index: number) => {
-    setCandidatePicker((current) => {
-      if (!current) return null;
-      const activeIndex = clamp(index, 0, current.candidates.length - 1);
-      return activeIndex === current.activeIndex ? current : { ...current, activeIndex };
-    });
   }, []);
 
   const startPan = useCallback((
