@@ -25,6 +25,11 @@ describe('preferencias de secciones desplegadas del Inspector', () => {
     ]);
   });
 
+  it('persiste el constructor de secciones, que no es una seccion avanzada pero si es suya', () => {
+    writeExpandedSections(['section-builder']);
+    expect(readExpandedSections()).toEqual(['section-builder']);
+  });
+
   it('ignora un almacen malformado sin sobrescribirlo durante una lectura', () => {
     localStorage.setItem(INSPECTOR_EXPANDED_STORAGE_KEY, '{not json');
     expect(readExpandedSections()).toEqual([]);

@@ -16,8 +16,8 @@ import {
 import { BulkEditInspectorPanel } from '../bulk-edit/BulkEditInspectorPanel';
 import { repairProjectTopology } from '../../data/modelOperations';
 import type { StandardMaterial } from '../../data/standardMaterials';
-import type { StandardSection } from '../../data/standardSections';
-import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
+import { findStandardSection, type StandardSection } from '../../data/standardSections';
+import { toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
@@ -39,15 +39,18 @@ import { ModelOverview } from './ModelOverview';
 import { readExpandedSections, writeExpandedSections } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
+import { SectionBuilderPanel } from './SectionBuilderPanel';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
+  InspectorDisclosure,
   InspectorHelper,
   InspectorLockedState,
   InspectorPropertyGroup,
   InspectorSelectionSummary,
+  PhysicalNumberField,
   type InspectorSummaryMetric,
 } from './InspectorPrimitives';
 
@@ -80,46 +83,6 @@ const SelectField = ({
     <select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{children}</select>
   </label>
 );
-
-const PhysicalNumberField = ({
-  label,
-  value,
-  units,
-  quantity,
-  resetKey,
-  onCommit,
-  hint,
-  validate,
-  disabled,
-  lockedReason,
-}: {
-  label: string;
-  value: number;
-  units: UnitSystemId;
-  quantity: UnitQuantity;
-  resetKey: string;
-  onCommit: (value: number) => void;
-  hint?: string;
-  validate?: (value: number) => string | undefined;
-  disabled?: boolean;
-  lockedReason?: string;
-}) => {
-  const { language } = useI18n();
-  return (
-    <InspectorNumericField
-      label={label}
-      value={toDisplay(value, units, quantity)}
-      unit={unitLabel(units, quantity)}
-      resetKey={`${resetKey}:${units}`}
-      hint={hint}
-      validate={validate}
-      disabled={disabled}
-      lockedReason={lockedReason}
-      language={language}
-      onCommit={(displayValue) => onCommit(fromDisplay(displayValue, units, quantity))}
-    />
-  );
-};
 
 const formatPhysical = (value: number, units: UnitSystemId, quantity: UnitQuantity) => (
   formatInspectorValue(toDisplay(value, units, quantity), unitLabel(units, quantity))
@@ -266,6 +229,24 @@ export const InspectorProperties = () => {
       memberId: selectedMember.id,
       sectionId: section.id,
       properties: { A: section.area, I: section.inertiaX },
+    });
+  };
+
+  /**
+   * Aplica una sección construida por su geometría.
+   *
+   * Va por `member.update`, la misma puerta que un valor tecleado, y por eso
+   * degrada la identidad a «personalizada» sin ningún trato especial: una
+   * sección descrita a mano no es un perfil del catálogo. Escribir aquí un
+   * `sectionId` sería inventar una identidad que ningún catálogo respalda.
+   */
+  const applyBuiltSection = (properties: { A: number; I: number }) => {
+    if (!selectedMember) return;
+    void executeProjectCommand({
+      kind: 'member.update',
+      description: `Construir sección de ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      changes: properties,
     });
   };
 
@@ -580,6 +561,26 @@ export const InspectorProperties = () => {
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
             <MaterialPresetSelector units={units} selectedId={selectedMember.materialId} origin={selectedMember.materialOrigin} onSelect={applyMaterialPreset} />
             <SectionPresetSelector units={units} selectedId={selectedMember.sectionId} origin={selectedMember.sectionOrigin} onSelect={applySectionPreset} />
+            <InspectorDisclosure
+              id="section-builder"
+              title={t('inspector.sectionBuilder')}
+              expanded={expandedSections}
+              onExpandedChange={setExpandedSections}
+            >
+              <SectionBuilderPanel
+                /* La clave rearranca el constructor al cambiar de miembro: la
+                   descripción es de la sección que se está mirando, no del
+                   panel. */
+                key={selectedMember.id}
+                units={units}
+                seedSection={selectedMember.sectionOrigin === 'catalog' && selectedMember.sectionId
+                  ? findStandardSection(selectedMember.sectionId)
+                  : undefined}
+                currentArea={selectedMember.A}
+                currentInertia={selectedMember.I}
+                onApply={applyBuiltSection}
+              />
+            </InspectorDisclosure>
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />

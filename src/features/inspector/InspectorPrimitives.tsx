@@ -1,8 +1,63 @@
 import type { LucideIcon } from 'lucide-react';
 import { CircleHelp, LockKeyhole, PencilLine } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
+import type { UnitSystemId } from '../../types';
 import { Accordion } from '../../design-system/components/disclosure';
+import { InspectorNumericField } from './InspectorNumericField';
+
+/**
+ * Campo numérico de una magnitud física, en las unidades del usuario.
+ *
+ * Vive aquí y no en `InspectorProperties` porque tiene dos consumidores: las
+ * propiedades del objeto seleccionado y el constructor de secciones. Es el único
+ * sitio donde se decide que un valor entra y sale en unidades de presentación y
+ * se guarda en unidades base; una segunda copia sería un segundo sitio donde
+ * equivocarse de dirección en la conversión.
+ *
+ * `resetKey` incluye el sistema de unidades: cambiarlo reescribe el texto del
+ * campo, que si no seguiría enseñando el número del sistema anterior.
+ */
+export const PhysicalNumberField = ({
+  label,
+  value,
+  units,
+  quantity,
+  resetKey,
+  onCommit,
+  hint,
+  validate,
+  disabled,
+  lockedReason,
+}: {
+  label: string;
+  value: number;
+  units: UnitSystemId;
+  quantity: UnitQuantity;
+  resetKey: string;
+  onCommit: (value: number) => void;
+  hint?: string;
+  validate?: (value: number) => string | undefined;
+  disabled?: boolean;
+  lockedReason?: string;
+}) => {
+  const { language } = useI18n();
+  return (
+    <InspectorNumericField
+      label={label}
+      value={toDisplay(value, units, quantity)}
+      unit={unitLabel(units, quantity)}
+      resetKey={`${resetKey}:${units}`}
+      hint={hint}
+      validate={validate}
+      disabled={disabled}
+      lockedReason={lockedReason}
+      language={language}
+      onCommit={(displayValue) => onCommit(fromDisplay(displayValue, units, quantity))}
+    />
+  );
+};
 
 export interface InspectorSummaryMetric {
   label: string;
@@ -100,6 +155,39 @@ export const InspectorHelper = ({ children, tone = 'info' }: { children: ReactNo
     <CircleHelp size={16} aria-hidden="true" />
     <span>{children}</span>
   </div>
+);
+
+/**
+ * Una sección plegable del panel, con su estado persistido por el mismo almacén
+ * que las propiedades avanzadas.
+ *
+ * Existe porque el constructor de secciones necesita exactamente el mismo
+ * plegado que «Propiedades avanzadas» y ninguna de sus dos particularidades: ni
+ * su título fijo ni su envoltorio. Lo que comparten —el acordeón, la lista de
+ * desplegados, la persistencia— queda en un sitio.
+ */
+export const InspectorDisclosure = ({
+  id,
+  title,
+  expanded,
+  onExpandedChange,
+  className = 'inspector-advanced',
+  children,
+}: {
+  id: string;
+  title: string;
+  expanded: readonly string[];
+  onExpandedChange: (expanded: string[]) => void;
+  className?: string;
+  children: ReactNode;
+}) => (
+  <Accordion
+    multiple
+    className={className}
+    expanded={expanded}
+    onExpandedChange={onExpandedChange}
+    items={[{ id, title, content: children }]}
+  />
 );
 
 export const InspectorAdvancedProperties = ({

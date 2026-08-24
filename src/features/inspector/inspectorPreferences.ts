@@ -16,12 +16,19 @@
  */
 export const INSPECTOR_EXPANDED_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
 
-/** Las cuatro secciones avanzadas que `InspectorProperties` puede desplegar. */
+/**
+ * Las secciones plegables que `InspectorProperties` puede desplegar.
+ *
+ * `section-builder` no es «avanzada»: es una herramienta que se abre cuando se
+ * necesita y se cierra cuando no. Se persiste igual que las otras porque quien
+ * está describiendo secciones a mano suele describir varias seguidas.
+ */
 const OWNED_SECTION_IDS: readonly string[] = [
   'advanced-node',
   'advanced-member',
   'advanced-nodal-load',
   'advanced-member-load',
+  'section-builder',
 ];
 
 const readAll = (storage: Storage | undefined): string[] => {

@@ -5,6 +5,7 @@ import { useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
+import { buildSection } from '../../data/sectionBuilder';
 import { findStandardSection } from '../../data/standardSections';
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
@@ -615,6 +616,44 @@ describe('Inspector preset selectors and load-case guidance', () => {
     expect(sectionSelect().value).toBe('');
     expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
     expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+  });
+
+  it('builds a section from its geometry and writes it as a custom identity', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(sectionSelect(), 'w12x26');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
+
+    await user.click(screen.getByRole('button', { name: 'Construir sección' }));
+    // El constructor arranca del perfil elegido arriba: 309,88 mm de canto.
+    const depth = screen.getByRole('textbox', { name: 'Canto' });
+    expect(Number((depth as HTMLInputElement).value)).toBeCloseTo(309.88, 2);
+
+    await user.clear(depth);
+    await user.type(depth, '400');
+    await user.keyboard('{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Aplicar A e I al miembro' }));
+
+    const section = findStandardSection('w12x26')!;
+    const expected = buildSection({
+      kind: 'i-shape',
+      depth: 0.4,
+      width: section.width,
+      webThickness: section.webThickness,
+      flangeThickness: section.flangeThickness,
+    });
+    expect(storedNumber('M1 A almacenada')).toBeCloseTo(expected.area, 12);
+    /* Una sección descrita a mano no es un perfil del catálogo, y el panel lo
+       dice antes de aplicar: la identidad cae a «personalizada» por la misma
+       puerta que un valor tecleado, sin trato especial. */
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+
+    await user.click(screen.getByRole('button', { name: 'Deshacer fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
+    expect(storedNumber('M1 A almacenada')).toBe(section.area);
   });
 
   it('lists compact preset labels translated to the project language', async () => {

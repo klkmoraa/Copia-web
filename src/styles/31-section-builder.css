@@ -1,0 +1,61 @@
+/* Tramo 31 · Constructor de secciones del Inspector.
+ *
+ * Va detrás del tramo 30 por el mismo motivo que aquél: sus clases son nuevas y
+ * nadie declara sobre ellas antes, así que su posición no cambia el ganador de
+ * ninguna regla anterior. El manifiesto fija el orden y `stylesManifest.test.ts`
+ * lo vigila.
+ *
+ * El contorno de la vista previa reutiliza `.section-shape`, que el visor de
+ * sección ya define en el tramo 26 para el mismo dibujo. Aquí sólo se le da
+ * ámbito: la forma se pinta igual dentro del constructor que dentro del visor,
+ * porque es el mismo componente y debe leerse como la misma cosa. */
+
+.section-builder { display: flex; flex-direction: column; gap: var(--sc-space-2); padding: 6px 0 2px; }
+
+.section-builder__intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--sc-font-size-label);
+  line-height: 1.45;
+}
+
+/* Cotas y dibujo, uno al lado del otro mientras quepan: mover un espesor y ver
+   la forma moverse es el motivo de que la vista previa exista. Por debajo del
+   ancho en que el dibujo deja de leerse, la columna gana y el dibujo baja. */
+.section-builder__body { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--sc-space-2); }
+.section-builder__fields { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.section-builder__preview { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.section-builder__preview svg { display: block; max-width: 100%; height: auto; }
+.section-builder__preview figcaption {
+  color: var(--subtle);
+  font-size: var(--sc-font-size-label);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.section-builder .section-shape { fill: var(--surface-2); stroke: var(--accent); stroke-width: 2; }
+.section-builder .section-shape-void { fill: var(--canvas-bg); stroke: var(--border); stroke-width: 1.2; }
+
+.section-builder__issue {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--sc-radius-control);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: var(--sc-font-size-label);
+  line-height: 1.45;
+}
+
+.section-builder__delta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--sc-font-size-label);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+
+@media (max-width: 420px) {
+  .section-builder__body { grid-template-columns: minmax(0, 1fr); }
+  .section-builder__preview { justify-self: center; }
+}
