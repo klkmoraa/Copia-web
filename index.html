@@ -2,6 +2,69 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      /*
+       * Red para el fallo mudo.
+       *
+       * Si el navegador sirve un `index.html` de una publicación anterior, sus
+       * referencias apuntan a hashes que ya no existen: el módulo da 404, React
+       * nunca monta y queda una página EN BLANCO, sin un solo mensaje. Está
+       * reproducido —0 hijos en `#root`, dos 404 y nada más—, y desde fuera es
+       * indistinguible de una aplicación rota.
+       *
+       * Esto no lo arregla el paquete: el paquete es justo lo que no llegó. Por
+       * eso vive aquí, en línea, antes que nada, y por eso lleva colores
+       * literales en vez de tokens — la hoja que define los tokens es una de las
+       * cosas que pueden haber fallado. Es la única excepción del proyecto, y lo
+       * es porque un rescate no puede depender de aquello de lo que rescata.
+       *
+       * Dos disparadores. El fallo de carga de un `script` o un `link` es
+       * definitivo y se atiende en cuanto ocurre. El temporizador es la red de
+       * la red: cubre el caso en el que nada falla ruidosamente y aun así no se
+       * pinta nada. Ninguno de los dos hace nada si la aplicación ya montó.
+       */
+      (function () {
+        var broken = false;
+        var painted = false;
+        function paint() {
+          if (painted || !broken) return;
+          var root = document.getElementById('root');
+          if (!root || root.childElementCount > 0) return;
+          painted = true;
+          root.innerHTML = [
+            '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;',
+            'font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1d1d1f;background:#f5f5f7">',
+            '<div style="max-width:34rem;text-align:center">',
+            '<h1 style="margin:0 0 12px;font-size:20px">No se pudo cargar structureCo</h1>',
+            '<p style="margin:0 0 4px;font-size:14px;line-height:1.5;color:#4a4a4f">',
+            'Es probable que el navegador tenga guardada una versión anterior de la página. ',
+            'Recarga para pedir la última.</p>',
+            '<p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#7a7a80">',
+            'Your browser is probably holding an older version of this page. Reload to fetch the latest.</p>',
+            '<button id="structureco-reload" type="button" style="min-height:40px;padding:0 20px;border:0;',
+            'border-radius:10px;background:#0071eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer">',
+            'Recargar · Reload</button>',
+            '</div></div>',
+          ].join('');
+          var button = document.getElementById('structureco-reload');
+          if (button) button.addEventListener('click', function () {
+            /* Una recarga normal puede volver a servir el mismo HTML guardado.
+               La consulta cambia la dirección y obliga a pedirlo de nuevo. */
+            window.location.replace(window.location.pathname + '?recarga=' + Date.now());
+          });
+        }
+        window.addEventListener('error', function (event) {
+          var target = event.target;
+          if (!target || (target.tagName !== 'SCRIPT' && target.tagName !== 'LINK')) return;
+          broken = true;
+          paint();
+        }, true);
+        document.addEventListener('DOMContentLoaded', function () {
+          paint();
+          window.setTimeout(function () { broken = true; paint(); }, 12000);
+        });
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./favicon.svg" />
     <link rel="manifest" href="./site.webmanifest" />
