@@ -6,7 +6,7 @@ import { evaluateDiagramAt } from '../../engine/diagram';
 import { toDisplay } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed } from '../../utils/numberFormat';
-import { copyModelSelection, structuralSelectionFromIds, type ModelClipboard } from '../../data/modelOperations';
+import { copyModelSelection, type ModelClipboard } from '../../data/modelOperations';
 import { type SnapKind } from '../../utils/snapping';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
@@ -81,13 +81,10 @@ import {
 } from '../../data/structuralEditing';
 import {
   buildStructuralEditRequest,
-  changeStructuralEditKind,
-  createStructuralEditDraft,
   structuralEditCapabilities,
   structuralEditSelectionAnchor,
   updateDraftFromPointer,
   type StructuralEditDraft,
-  type StructuralEditKind,
 } from './structuralEditUi';
 import { StructuralEditOverlay } from './StructuralEditOverlay';
 import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
@@ -99,6 +96,7 @@ import { useCanvasInteractionLoop } from './useCanvasInteractionLoop';
 import { useStableCanvasEvent } from './useStableCanvasEvent';
 import { useCanvasModelActions } from './useCanvasModelActions';
 import { useCanvasToolDispatch } from './useCanvasToolDispatch';
+import { useCanvasStructuralEdit } from './useCanvasStructuralEdit';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 
 /**
@@ -1067,35 +1065,37 @@ export const StructuralCanvas = ({
     transitionInteraction(IDLE_INTERACTION);
   }, [cancelNodeDragTransaction, clearLongPressTimer, releasePointer, transitionInteraction]);
 
-  const cancelStructuralEdit = useCallback(() => {
-    cancelActiveInteraction();
-    setStructuralEditDraft(null);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-    setStructuralEditPointerArmed(false);
-    setStructuralEditCommitError('');
-    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
-  }, [cancelActiveInteraction]);
-
-  const startStructuralEdit = useCallback((kind: StructuralEditKind) => {
-    if (!selection || !editCapabilities.structural) return;
-    cancelActiveInteraction();
-    setDuplicateDraft(null);
-    setRepeatRecipe(null);
-    setMemberStart(null);
-    setCut(null);
-    closeCandidatePicker();
-    setActiveTool('select');
-    setStructuralEditPointerArmed(false);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-    setStructuralEditCommitError('');
-    try {
-      setStructuralEditDraft(createStructuralEditDraft(project, selection, kind));
-    } catch (error) {
-      showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
-    }
-  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+  const {
+    cancelStructuralEdit,
+    startStructuralEdit,
+    changeStructuralEditOperation,
+    updateStructuralEditDraft,
+    confirmStructuralEdit,
+  } = useCanvasStructuralEdit({
+    project,
+    selection,
+    setSelection,
+    structuralEditingCapable: editCapabilities.structural,
+    setActiveTool,
+    cancelActiveInteraction,
+    closeCandidatePicker,
+    setDuplicateDraft,
+    setRepeatRecipe,
+    setMemberStart,
+    setCut,
+    structuralEditDraft,
+    setStructuralEditDraft,
+    structuralEditLiveDraftRef,
+    setStructuralEditLiveDraft,
+    setStructuralEditPointerArmed,
+    setStructuralEditCommitError,
+    structuralEditApplyingRef,
+    structuralEditPreviewPrepared: structuralEditPreview.prepared,
+    executePreparedStructuralEdit,
+    svgRef,
+    showCanvasFeedback,
+    t,
+  });
 
   const invokeContextualAction = useCallback((action: ContextualActionId) => {
     switch (action) {
@@ -1126,50 +1126,7 @@ export const StructuralCanvas = ({
     }
   }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, project, selection, setSelection, startDuplicate]);
 
-  useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
   useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
-
-  const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
-    setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-    setStructuralEditPointerArmed(false);
-    setStructuralEditCommitError('');
-  }, [project]);
-
-  const updateStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
-    setStructuralEditDraft(draft);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-    setStructuralEditCommitError('');
-  }, []);
-
-  const confirmStructuralEdit = useCallback(async () => {
-    const prepared = structuralEditPreview.prepared;
-    if (!prepared?.hasChanges || structuralEditApplyingRef.current) return;
-    structuralEditApplyingRef.current = true;
-    try {
-      await executePreparedStructuralEdit(prepared);
-      if (prepared.createdNodeIds.length || prepared.createdMemberIds.length) {
-        setSelection(structuralSelectionFromIds(prepared.createdNodeIds, prepared.createdMemberIds));
-      }
-      setStructuralEditDraft(null);
-      structuralEditLiveDraftRef.current = null;
-      setStructuralEditLiveDraft(null);
-      setStructuralEditPointerArmed(false);
-      setStructuralEditCommitError('');
-      window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
-    } catch (error) {
-      setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
-    } finally {
-      structuralEditApplyingRef.current = false;
-    }
-  }, [executePreparedStructuralEdit, setSelection, structuralEditPreview.prepared, t]);
-
-  useEffect(() => {
-    if (!structuralEditDraft || JSON.stringify(structuralEditDraft.selection) === JSON.stringify(selection)) return;
-    cancelStructuralEdit();
-  }, [cancelStructuralEdit, selection, structuralEditDraft]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
