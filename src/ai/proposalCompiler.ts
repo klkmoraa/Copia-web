@@ -35,6 +35,7 @@ import { diffProjects, type ProjectDiff } from '../data/projectDiff';
 import { applyProjectPatch, compileProjectCommand, type ProjectCommand } from '../commands/projectCommand';
 import { ProposalUnitError, toBaseUnits } from './proposalUnits';
 import type { CommandProposalV1, ProposedOperation } from './commandProposal';
+import { translatePhase2, type Phase2TranslationKey } from '../i18n/phase2Catalogs';
 
 export interface PreparedProposal {
   proposalId: string;
@@ -50,21 +51,28 @@ export interface PreparationRejected {
   /** `stale` distingue «el modelo cambió» de «la propuesta no vale». */
   code: 'stale-snapshot' | 'unknown-id' | 'bad-units' | 'no-effect' | 'not-ready';
   reason: string;
+  /** Clave de catálogo del mensaje, para que la UI lo traduzca al idioma activo. */
+  key: Phase2TranslationKey;
+  params?: Record<string, string | number>;
 }
 export type PreparationOutcome = { ok: true; prepared: PreparedProposal } | PreparationRejected;
 
-const reject = (code: PreparationRejected['code'], reason: string): PreparationRejected => ({ ok: false, code, reason });
+const reject = (
+  code: PreparationRejected['code'],
+  key: Phase2TranslationKey,
+  params?: Record<string, string | number>,
+): PreparationRejected => ({ ok: false, code, reason: translatePhase2('es', key, params), key, params });
 
 const clone = (project: ProjectModel): ProjectModel => JSON.parse(JSON.stringify(project)) as ProjectModel;
 
 /** Traduce la operación de la allowlist a un `ProjectCommand`, o dice por qué no puede. */
 const toCommand = (project: ProjectModel, operation: ProposedOperation): ProjectCommand | PreparationRejected => {
   const member = project.members.find((candidate) => candidate.id === operation.memberId);
-  if (!member) return reject('unknown-id', `La barra ${operation.memberId} no existe en este modelo.`);
+  if (!member) return reject('unknown-id', 'proposal.error.unknownMember', { memberId: operation.memberId });
 
   if (operation.kind === 'member.section.apply') {
     const section = standardSections.find((candidate) => candidate.id === operation.sectionId);
-    if (!section) return reject('unknown-id', `La sección ${operation.sectionId} no está en el catálogo.`);
+    if (!section) return reject('unknown-id', 'proposal.error.unknownSection', { sectionId: operation.sectionId });
     return {
       description: `Aplicar la sección ${section.name} a ${member.id}`,
       kind: 'member.section.apply',
@@ -78,7 +86,7 @@ const toCommand = (project: ProjectModel, operation: ProposedOperation): Project
 
   if (operation.kind === 'member.material.apply') {
     const material = standardMaterials.find((candidate) => candidate.id === operation.materialId);
-    if (!material) return reject('unknown-id', `El material ${operation.materialId} no está en el catálogo.`);
+    if (!material) return reject('unknown-id', 'proposal.error.unknownMaterial', { materialId: operation.materialId });
     return {
       description: `Aplicar el material ${material.name} a ${member.id}`,
       kind: 'member.material.apply',
@@ -95,7 +103,7 @@ const toCommand = (project: ProjectModel, operation: ProposedOperation): Project
     if (operation.changes.I) changes.I = toBaseUnits(operation.changes.I, 'inertia');
     if (operation.changes.density) changes.density = toBaseUnits(operation.changes.density, 'density');
   } catch (error) {
-    if (error instanceof ProposalUnitError) return reject('bad-units', error.message);
+    if (error instanceof ProposalUnitError) return reject('bad-units', error.key, error.params);
     throw error;
   }
   if (operation.changes.label !== undefined) changes.label = operation.changes.label;
@@ -104,7 +112,7 @@ const toCommand = (project: ProjectModel, operation: ProposedOperation): Project
   // cambio: es un modelo roto que además pasaría el esquema.
   for (const [field, value] of Object.entries(changes)) {
     if (typeof value === 'number' && !(value > 0)) {
-      return reject('bad-units', `El valor propuesto para ${field} no es positivo.`);
+      return reject('bad-units', 'proposal.error.notPositive', { field });
     }
   }
 
@@ -129,12 +137,12 @@ export const prepareProposal = (
   proposal: CommandProposalV1,
 ): PreparationOutcome => {
   if (proposal.status !== 'ready') {
-    return reject('not-ready', proposal.status === 'needs-clarification'
-      ? `La propuesta pide una aclaración: ${proposal.question}`
-      : `La propuesta se rechazó a sí misma: ${proposal.reason}`);
+    return proposal.status === 'needs-clarification'
+      ? reject('not-ready', 'proposal.error.needsClarification', { question: proposal.question })
+      : reject('not-ready', 'proposal.error.selfRejected', { reason: proposal.reason });
   }
   if (proposal.snapshotHash !== currentSnapshotHash) {
-    return reject('stale-snapshot', 'La propuesta se razonó sobre un estado del proyecto que ya no es el actual.');
+    return reject('stale-snapshot', 'proposal.error.staleSnapshot');
   }
 
   const command = toCommand(project, proposal.operation);
@@ -146,7 +154,7 @@ export const prepareProposal = (
   const after = applyProjectPatch(draft, compiled.forward);
   const diff = diffProjects(project, after);
   if (diff.identical) {
-    return reject('no-effect', 'La propuesta no cambiaría nada del modelo actual.');
+    return reject('no-effect', 'proposal.error.noEffect');
   }
 
   return {
@@ -168,7 +176,10 @@ export interface Confirmation {
 
 export type ConfirmationOutcome =
   | { ok: true; command: ProjectCommand }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; key: Phase2TranslationKey; params?: Record<string, string | number> };
+
+const rejectConfirmation = (key: Phase2TranslationKey): ConfirmationOutcome =>
+  ({ ok: false, reason: translatePhase2('es', key), key });
 
 /**
  * Devuelve el comando **sólo** si la confirmación nombra exactamente la
@@ -185,13 +196,13 @@ export const confirmProposal = (
   currentSnapshotHash: string,
 ): ConfirmationOutcome => {
   if (confirmation.proposalId !== prepared.proposalId) {
-    return { ok: false, reason: 'La confirmación no corresponde a esta propuesta.' };
+    return rejectConfirmation('proposal.error.mismatchedProposal');
   }
   if (confirmation.snapshotHash !== prepared.snapshotHash) {
-    return { ok: false, reason: 'La confirmación nombra un estado distinto del que se revisó.' };
+    return rejectConfirmation('proposal.error.mismatchedSnapshot');
   }
   if (currentSnapshotHash !== prepared.snapshotHash) {
-    return { ok: false, reason: 'El proyecto cambió mientras se revisaba la propuesta; vuelve a pedirla.' };
+    return rejectConfirmation('proposal.error.projectChanged');
   }
   return { ok: true, command: prepared.command };
 };
