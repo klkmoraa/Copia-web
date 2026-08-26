@@ -55,6 +55,9 @@ import { countOf, selectionQueryById, toSelection } from './selectByProperty';
 import { CANVAS_REFERENCE_SCALE, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
+import { CanvasEvidenceBar } from './CanvasEvidenceBar';
+import { CanvasDiagramStack } from './CanvasDiagramStack';
+import { resolveStackMemberId, STACK_QUANTITIES, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
@@ -63,6 +66,7 @@ import {
   flexibleRatioFromGross,
   grossRatioAtPoint,
   memberAxis,
+  modelBounds,
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer } from './CanvasResultLayer';
 import { buildCanvasLabelCandidates } from './canvasLabelSources';
@@ -205,6 +209,14 @@ export const StructuralCanvas = ({
     navigateMinimapTo,
   } = useCanvasCamera({ hostRef, svgRef, coordinateReadoutRef, projectNodes: project.nodes, projectId: project.id, units, lengthLabel });
   const [memberStart, setMemberStart] = useState<string | null>(null);
+  /**
+   * ACM: presentación pura y efímera del lienzo. No entra en `project.settings`
+   * —ni en el modelo, ni en el historial— porque desplegar tres carriles bajo
+   * el dibujo no es un dato del proyecto, y no toca `resultTab`: el despliegue
+   * convive con la evidencia que haya encendida sobre la barra.
+   */
+  const [stackActive, setStackActive] = useState(false);
+  const [stackQuantities, setStackQuantities] = useState<readonly StackQuantity[]>(STACK_QUANTITIES);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -1758,6 +1770,26 @@ export const StructuralCanvas = ({
     return maximum;
   }, [analysis, resultTab]);
 
+  const stackMemberId = useMemo(
+    () => (stackActive ? resolveStackMemberId(project, selection, resultMap) : null),
+    [project, resultMap, selection, stackActive],
+  );
+  const stackResult = stackMemberId ? resultMap.get(stackMemberId) ?? null : null;
+  /** Huella del modelo en pantalla: de su borde inferior cuelgan los carriles del ACM. */
+  const stackAnchor = useMemo(() => {
+    if (!stackResult || !project.nodes.length) return null;
+    const bounds = modelBounds(project.nodes);
+    const left = toScreen(bounds.minX, bounds.minY);
+    const right = toScreen(bounds.maxX, bounds.minY);
+    return { minX: left.x, maxX: right.x, maxY: Math.max(left.y, right.y) };
+  }, [project.nodes, stackResult, toScreen]);
+  const toggleStack = useCallback(() => {
+    // Encender el ACM sin la capa de resultados dejaría el botón pulsado y el
+    // lienzo vacío: el despliegue es evidencia, y la evidencia se apaga con su capa.
+    if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
+    setStackActive(!stackActive);
+  }, [dispatchLayers, layers.results, stackActive]);
+
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
     for (const node of mechanismMap.values()) maximum = Math.max(maximum, Math.hypot(node.ux, node.uy));
@@ -2046,6 +2078,15 @@ export const StructuralCanvas = ({
           t={t}
         />
 
+        {stackActive && stackResult && stackAnchor && layers.results && resultsAllowed && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
+          memberId={stackResult.memberId}
+          result={stackResult}
+          quantities={stackQuantities}
+          modelScreenBounds={stackAnchor}
+          units={units}
+          t={t}
+        /> : null}
+
         <CanvasGeometryLayer
           slot="objects"
           project={project}
@@ -2175,6 +2216,16 @@ export const StructuralCanvas = ({
         onSnapChange={(snap) => setView({ snap })}
         onGridChange={(showGrid) => setView({ showGrid })}
         onCancelPlacement={() => setActiveTool('select')}
+      />
+      <CanvasEvidenceBar
+        layers={layers}
+        dispatchLayers={dispatchLayers}
+        resultTab={resultTab}
+        setResultTab={setResultTab}
+        stackActive={stackActive}
+        stackQuantities={stackQuantities}
+        onStackToggle={toggleStack}
+        onStackQuantityToggle={(quantity) => setStackQuantities((current) => toggleStackQuantity(current, quantity))}
       />
       <CanvasNavigator
         nodes={project.nodes}

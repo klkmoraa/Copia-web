@@ -392,3 +392,119 @@
   .contextual-actions,
   .contextual-actions__overflow { animation: none; transition: none; }
 }
+
+/* Acceso rápido a la evidencia · las cuatro capas del popover, sacadas al
+   lienzo, más el ACM. Los mismos nombres de clase que usa el popover de capas
+   (`.canvas-evidence-layer`): una sola declaración viste las dos superficies. */
+.canvas-evidence-bar {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-1);
+}
+
+.canvas-evidence-layer {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  background: transparent;
+  color: var(--muted, #665d72);
+  font: inherit;
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.canvas-evidence-layer:hover { color: var(--text, #231f2f); background: var(--surface-2); }
+.canvas-evidence-layer[aria-pressed='true'] { color: var(--accent-foreground); background: var(--accent-fill); }
+.canvas-evidence-layer--axial[aria-pressed='true'] { background: var(--axial); }
+.canvas-evidence-layer--shear[aria-pressed='true'] { background: var(--shear); }
+.canvas-evidence-layer--moment[aria-pressed='true'] { background: var(--moment); }
+
+.canvas-evidence-acm {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.canvas-evidence-acm__chooser {
+  width: 24px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--sc-radius-control);
+  background: transparent;
+  color: var(--muted, #665d72);
+}
+
+.canvas-evidence-acm__chooser:hover { color: var(--text, #231f2f); background: var(--surface-2); }
+
+.canvas-evidence-acm__menu {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  top: calc(100% + 6px);
+  width: max-content;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-card);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-elevation-2);
+}
+
+.canvas-evidence-acm__title {
+  color: var(--subtle, #7d7489);
+  font-size: var(--sc-font-size-label);
+}
+
+.canvas-evidence-acm__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text, #231f2f);
+  font-size: var(--sc-font-size-label);
+}
+
+/* Despliegue ACM: un carril por cantidad, bajo el modelo y en sus coordenadas
+   —se mueve y escala con el dibujo, porque es parte del dibujo. */
+.diagram-stack-layer { pointer-events: none; }
+.diagram-stack-title { fill: var(--muted, #665d72); font-size: 12px; font-weight: 600; }
+.diagram-stack-baseline { stroke: var(--border, #d8d2e2); stroke-width: 1; }
+.diagram-stack-caption { font-size: 12px; font-weight: 700; }
+.diagram-stack-line { fill: none; stroke-width: 2; }
+.diagram-stack-fill { stroke: none; opacity: 0.22; }
+.diagram-stack-extreme { stroke: none; }
+
+.diagram-stack-lane.axial .diagram-stack-line,
+.diagram-stack-lane.axial .diagram-stack-extreme { stroke: var(--axial); fill: var(--axial); }
+.diagram-stack-lane.axial .diagram-stack-fill,
+.diagram-stack-lane.axial .diagram-stack-caption { fill: var(--axial); }
+.diagram-stack-lane.shear .diagram-stack-line,
+.diagram-stack-lane.shear .diagram-stack-extreme { stroke: var(--shear); fill: var(--shear); }
+.diagram-stack-lane.shear .diagram-stack-fill,
+.diagram-stack-lane.shear .diagram-stack-caption { fill: var(--shear); }
+.diagram-stack-lane.moment .diagram-stack-line,
+.diagram-stack-lane.moment .diagram-stack-extreme { stroke: var(--moment); fill: var(--moment); }
+.diagram-stack-lane.moment .diagram-stack-fill,
+.diagram-stack-lane.moment .diagram-stack-caption { fill: var(--moment); }
+
+@media (max-width: 640px) {
+  .canvas-evidence-bar { gap: 2px; padding: 3px; }
+  .canvas-evidence-layer { padding: 0 7px; }
+}
