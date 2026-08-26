@@ -107,6 +107,28 @@ export const resolveStackMemberId = (
   return best?.id ?? null;
 };
 
+/**
+ * Cuánto mide el despliegue en pantalla, para el lienzo que hay.
+ *
+ * Era fijo —88 px por carril y 104 de aire—, y en un teléfono eso son 392 px de
+ * franja bajo un lienzo de 558: el momento caía fuera de la pantalla y el ACM
+ * parecía no hacer nada. Aquí los carriles ceden alto hasta un mínimo legible
+ * antes que salirse, y quien encuadra sabe cuánto sitio reservar.
+ */
+export const stackMetricsFor = (
+  viewportHeight: number,
+  laneCount: number,
+): { offset: number; laneGap: number; laneHeight: number; total: number } => {
+  const lanes = Math.max(1, laneCount);
+  const laneGap = 8;
+  // El aire bajo el modelo existe para dejar pasar flechas y rótulos de
+  // reacción; en un lienzo corto vale más apretarlo que perder un carril.
+  const offset = viewportHeight < 640 ? 88 : 104;
+  const budget = Math.max(150, viewportHeight * 0.56) - offset - laneGap * (lanes - 1);
+  const laneHeight = Math.min(88, Math.max(46, budget / lanes));
+  return { offset, laneGap, laneHeight, total: offset + lanes * laneHeight + laneGap * (lanes - 1) };
+};
+
 export interface DiagramStackRect {
   /** Borde izquierdo del despliegue, en píxeles de pantalla. */
   x: number;

@@ -69,14 +69,13 @@ export const CanvasEvidenceBar = ({
   const { t } = useI18n();
   const [chooserOpen, setChooserOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
-  const acmRef = useRef<HTMLDivElement>(null);
   const chooserButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!chooserOpen) return undefined;
     const onPointerDown = (event: PointerEvent) => {
-      if (!acmRef.current?.contains(event.target as Node)) setChooserOpen(false);
+      if (!barRef.current?.contains(event.target as Node)) setChooserOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
@@ -135,7 +134,7 @@ export const CanvasEvidenceBar = ({
       <span className="canvas-evidence-layer__name" aria-hidden="true">{t(labelKey)}</span>
       <span className="canvas-evidence-layer__symbol" aria-hidden="true">{symbol}</span>
     </button>)}
-    <div className="canvas-evidence-acm" ref={acmRef}>
+    <div className="canvas-evidence-acm">
       <button
         type="button"
         className="canvas-evidence-layer canvas-evidence-layer--acm"
@@ -154,29 +153,32 @@ export const CanvasEvidenceBar = ({
         ref={chooserButtonRef}
         onClick={() => (chooserOpen ? closeChooser() : setChooserOpen(true))}
       ><ChevronDown size={14} aria-hidden="true" /></button>
-      {chooserOpen ? <div
-        className="canvas-evidence-acm__menu"
-        role="group"
-        aria-label={t('canvas.evidenceStackChoose')}
-        ref={menuRef}
-      >
-        <span className="canvas-evidence-acm__title">{t('canvas.evidenceStackDescription')}</span>
-        {STACK_QUANTITIES.map((quantity) => {
-          const checked = stackQuantities.includes(quantity);
-          return <label key={quantity} className="canvas-evidence-acm__option">
-            <input
-              type="checkbox"
-              checked={checked}
-              data-evidence-stack-quantity={quantity}
-              // El último carril encendido no se puede apagar: el ACM sin
-              // carriles sería un botón activo que no dibuja nada.
-              disabled={checked && stackQuantities.length === 1}
-              onChange={() => onStackQuantityToggle(quantity)}
-            />
-            <span>{STACK_SYMBOLS[quantity]} · {t(stackLabelKeys[quantity])}</span>
-          </label>;
-        })}
-      </div> : null}
     </div>
+    {/* El selector es una FILA de la barra, no un panel flotante. Colgado del
+        grupo ACM se salía 54 px por la izquierda de un lienzo de teléfono:
+        anclado a un elemento que vive cerca del borde, cualquier panel más
+        ancho que él acaba fuera. Dentro de la barra no puede salirse. */}
+    {chooserOpen ? <div
+      className="canvas-evidence-acm__row"
+      role="group"
+      aria-label={t('canvas.evidenceStackChoose')}
+      ref={menuRef}
+    >
+      {STACK_QUANTITIES.map((quantity) => {
+        const checked = stackQuantities.includes(quantity);
+        return <label key={quantity} className="canvas-evidence-acm__option">
+          <input
+            type="checkbox"
+            checked={checked}
+            data-evidence-stack-quantity={quantity}
+            // El último carril encendido no se puede apagar: el ACM sin
+            // carriles sería un botón activo que no dibuja nada.
+            disabled={checked && stackQuantities.length === 1}
+            onChange={() => onStackQuantityToggle(quantity)}
+          />
+          <span>{STACK_SYMBOLS[quantity]} · {t(stackLabelKeys[quantity])}</span>
+        </label>;
+      })}
+    </div> : null}
   </div>;
 };

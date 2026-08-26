@@ -10,6 +10,7 @@ import {
   snapStation,
   stationFromScreenX,
   stationReadings,
+  stackMetricsFor,
   type StackQuantity,
 } from './diagramStack';
 
@@ -22,6 +23,8 @@ export interface CanvasDiagramStackProps {
   quantities: readonly StackQuantity[];
   /** Recuadro del modelo en pantalla: el despliegue cuelga de su borde inferior. */
   modelScreenBounds: { minX: number; maxX: number; maxY: number };
+  /** Alto del lienzo: de él salen el alto de carril y el aire bajo el modelo. */
+  viewportHeight: number;
   /** Estación leída, en coordenadas del miembro. `null` cuando no hay lectura. */
   cursorX: number | null;
   onCursorChange: (x: number | null) => void;
@@ -32,14 +35,6 @@ export interface CanvasDiagramStackProps {
 
 /** Ancho mínimo del despliegue: una estructura vertical no deja huella horizontal de la que colgar los carriles. */
 const MIN_WIDTH = 180;
-const LANE_HEIGHT = 88;
-const LANE_GAP = 12;
-/**
- * Aire entre el borde inferior del modelo y el primer carril. Tiene que dejar
- * pasar lo que ya cuelga de los apoyos —flechas y rótulos de reacción— o el
- * primer carril nace encima de ellos.
- */
-const STACK_OFFSET = 104;
 /** Holgura para que la lectura no salga cortada por el borde derecho del carril. */
 const READING_FLIP_MARGIN = 96;
 
@@ -50,20 +45,21 @@ const nameKeyFor: Readonly<Record<StackQuantity, TranslationKey>> = {
 };
 
 const CanvasDiagramStackImpl = ({
-  memberId, result, quantities, modelScreenBounds, cursorX, onCursorChange, units, lengthLabel, t,
+  memberId, result, quantities, modelScreenBounds, viewportHeight, cursorX, onCursorChange, units, lengthLabel, t,
 }: CanvasDiagramStackProps) => {
   const rect = useMemo(() => {
+    const metrics = stackMetricsFor(viewportHeight, quantities.length);
     const span = modelScreenBounds.maxX - modelScreenBounds.minX;
     const width = Math.max(MIN_WIDTH, span);
     const center = (modelScreenBounds.minX + modelScreenBounds.maxX) / 2;
     return {
       x: center - width / 2,
-      y: modelScreenBounds.maxY + STACK_OFFSET,
+      y: modelScreenBounds.maxY + metrics.offset,
       width,
-      laneHeight: LANE_HEIGHT,
-      laneGap: LANE_GAP,
+      laneHeight: metrics.laneHeight,
+      laneGap: metrics.laneGap,
     };
-  }, [modelScreenBounds]);
+  }, [modelScreenBounds, quantities.length, viewportHeight]);
 
   const lanes = useMemo(() => buildDiagramStack(result, quantities, rect), [result, quantities, rect]);
   const readings = useMemo(

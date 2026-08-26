@@ -13,6 +13,7 @@ import {
   resolveStackMemberId,
   snapStation,
   STACK_QUANTITIES,
+  stackMetricsFor,
   stationFromScreenX,
   stationReadings,
   toggleStackQuantity,
@@ -197,5 +198,41 @@ describe('remembering the chosen lanes', () => {
 
   it('ignores what it does not know and restores the canonical order', () => {
     expect(parseStackQuantities('["moment","torsion","axial"]')).toEqual(['axial', 'moment']);
+  });
+});
+
+/**
+ * El defecto que motiva esto: con carriles de alto fijo, en un teléfono la
+ * franja medía 392 px bajo un lienzo de 558 y el momento caía fuera de la
+ * pantalla. El ACM parecía no hacer nada.
+ */
+describe('sizing the stack for the canvas it has', () => {
+  it('keeps the full lane height when there is room', () => {
+    const metrics = stackMetricsFor(900, 3);
+    expect(metrics.laneHeight).toBe(88);
+    expect(metrics.offset).toBe(104);
+  });
+
+  it('gives up lane height before falling off a short canvas', () => {
+    const phone = stackMetricsFor(558, 3);
+    expect(phone.laneHeight).toBeLessThan(88);
+    // Cede aire respecto al lienzo holgado, pero sin dejar de librar las
+    // flechas y los rótulos de reacción que cuelgan de los apoyos.
+    expect(phone.offset).toBeLessThan(stackMetricsFor(900, 3).offset);
+    expect(phone.offset).toBeGreaterThanOrEqual(80);
+    // Lo que importa: la franja cabe en el lienzo con sitio para el modelo.
+    expect(phone.total).toBeLessThan(558 * 0.6);
+  });
+
+  it('never shrinks a lane below what can be read', () => {
+    expect(stackMetricsFor(200, 3).laneHeight).toBeGreaterThanOrEqual(46);
+    expect(stackMetricsFor(0, 3).laneHeight).toBeGreaterThanOrEqual(46);
+  });
+
+  it('counts only the lanes actually deployed', () => {
+    const one = stackMetricsFor(558, 1);
+    const three = stackMetricsFor(558, 3);
+    expect(one.total).toBeLessThan(three.total);
+    expect(one.total).toBe(one.offset + one.laneHeight);
   });
 });

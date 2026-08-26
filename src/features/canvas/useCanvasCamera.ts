@@ -77,13 +77,16 @@ export const useCanvasCamera = ({
     coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
   }, [coordinateReadoutRef, lengthLabel, localScreenPoint, units]);
 
-  const fitModel = useCallback(() => {
+  const fitModel = useCallback((reservedBottom = 0) => {
     if (!projectNodes.length || !size.width || !size.height) return;
     const viewport = { width: size.width, height: size.height };
     updateCamera(cameraToFitBounds(
       modelBounds(projectNodes),
       viewport,
       canvasSafeInsetsFor(viewport),
+      undefined,
+      undefined,
+      reservedBottom,
     ));
   }, [projectNodes, size, updateCamera]);
 

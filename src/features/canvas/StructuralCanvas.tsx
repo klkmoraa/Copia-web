@@ -57,7 +57,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasEvidenceBar } from './CanvasEvidenceBar';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
-import { persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, toggleStackQuantity, type StackQuantity } from './diagramStack';
+import { persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, stackMetricsFor, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
@@ -1805,16 +1805,25 @@ export const StructuralCanvas = ({
   }, [resultCursor?.memberId, resultCursor?.pinned, resultCursor?.x, setResultCursor, stackMemberId]);
   const stackCursorX = stackMemberId && resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
 
+  /** Franja que el despliegue ocupa bajo el modelo, en píxeles de pantalla. */
+  const stackReserve = stackActive ? stackMetricsFor(size.height, stackQuantities.length).total : 0;
   const toggleStack = useCallback(() => {
     // Encender el ACM sin la capa de resultados dejaría el botón pulsado y el
     // lienzo vacío: el despliegue es evidencia, y la evidencia se apaga con su capa.
     if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
+    // Desplegar sin reencuadrar dejaba los carriles fuera de la pantalla —en un
+    // teléfono, 136 px por debajo del lienzo— y el botón parecía no hacer nada.
+    // Encuadrar reservando su franja es lo que hace visible lo que se despliega.
+    if (!stackActive) {
+      const reserve = stackMetricsFor(size.height, stackQuantities.length).total;
+      window.requestAnimationFrame(() => fitModel(reserve));
+    }
     // Al plegarlo se retira la lectura que dejó sobre el modelo: si no, la marca
     // se queda sobre la barra sin nada que la explique. Una lectura fijada a
     // mano desde Resultados no es del despliegue y no se toca.
     if (stackActive && !resultCursor?.pinned && resultCursor?.memberId === stackMemberId) setResultCursor(null);
     setStackActive(!stackActive);
-  }, [dispatchLayers, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, stackActive, stackMemberId]);
+  }, [dispatchLayers, fitModel, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, size.height, stackActive, stackMemberId, stackQuantities.length]);
   // La paleta pide el ACM por el mismo bus que el resto de intenciones del
   // taller: es la única evidencia sin otra puerta de teclado.
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
@@ -2117,6 +2126,7 @@ export const StructuralCanvas = ({
           result={stackResult}
           quantities={stackQuantities}
           modelScreenBounds={stackAnchor}
+          viewportHeight={size.height}
           cursorX={stackCursorX}
           onCursorChange={readStackStation}
           units={units}
@@ -2279,7 +2289,7 @@ export const StructuralCanvas = ({
         zoomInLabel={t('canvas.zoomIn')}
         zoomOutLabel={t('canvas.zoomOut')}
         fitLabel={t('canvas.fit')}
-        onFit={fitModel}
+        onFit={() => fitModel(stackReserve)}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onNavigate={navigateMinimapTo}

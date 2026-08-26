@@ -55,15 +55,23 @@ export const cameraToFitBounds = (
   insets: CanvasSafeInsets = canvasSafeInsetsFor(viewport),
   minScale = 24,
   maxScale = 150,
+  /**
+   * Franja de píxeles que hay que dejar libre BAJO el modelo. La pide el
+   * despliegue ACM, que cuelga del borde inferior del dibujo y mide siempre lo
+   * mismo en pantalla: sin reservarla, encuadrar deja el modelo centrado y los
+   * carriles fuera de la vista.
+   */
+  reservedBottom = 0,
 ): CanvasCamera => {
   const safe = canvasSafeRect(viewport, insets);
+  const usableHeight = Math.max(1, safe.height - Math.max(0, reservedBottom));
   const spanX = Math.max(2, bounds.maxX - bounds.minX);
   const spanY = Math.max(2, bounds.maxY - bounds.minY);
-  const scale = clamp(Math.min(safe.width / spanX, safe.height / spanY), minScale, maxScale);
+  const scale = clamp(Math.min(safe.width / spanX, usableHeight / spanY), minScale, maxScale);
   const modelCenterX = (bounds.minX + bounds.maxX) / 2;
   const modelCenterY = (bounds.minY + bounds.maxY) / 2;
   const screenCenterX = safe.x + safe.width / 2;
-  const screenCenterY = safe.y + safe.height / 2;
+  const screenCenterY = safe.y + usableHeight / 2;
   return {
     scale,
     x: screenCenterX - modelCenterX * scale,

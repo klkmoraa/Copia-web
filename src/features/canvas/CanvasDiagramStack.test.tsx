@@ -63,6 +63,7 @@ const renderStack = (
   result={beamResult}
   quantities={STACK_QUANTITIES}
   modelScreenBounds={{ minX: 100, maxX: 500, maxY: 300 }}
+  viewportHeight={900}
   cursorX={cursorX}
   onCursorChange={onCursorChange}
   units="kN-m"

@@ -399,9 +399,15 @@
 .canvas-evidence-bar {
   position: absolute;
   z-index: 12;
-  left: 50%;
+  /* Centrada con márgenes automáticos, NO con `left:50%`. Una caja absoluta
+     con sólo `left` se ajusta al contenido dentro del espacio que le queda a su
+     derecha: a 390 px de lienzo eran 195, y la barra partía en dos renglones
+     por falta de sitio, no por ancho de contenido. */
+  left: 0;
+  right: 0;
   top: 8px;
-  transform: translateX(-50%);
+  width: max-content;
+  margin-inline: auto;
   max-width: calc(100% - 24px);
   display: flex;
   flex-wrap: wrap;
@@ -429,7 +435,10 @@
 }
 
 .canvas-evidence-layer__symbol { display: none; }
-.canvas-evidence-layer:hover:not(:disabled) { color: var(--text, #231f2f); background: var(--surface-2); }
+/* El hover NO puede pisar al pulsado. `:hover:not(:disabled)` pesa más que
+   `[aria-pressed='true']`, y en táctil el hover se queda pegado tras el toque:
+   el ACM encendido se pintaba gris de reposo con el despliegue en pantalla. */
+.canvas-evidence-layer:hover:not(:disabled):not([aria-pressed='true']) { color: var(--text, #231f2f); background: var(--surface-2); }
 .canvas-evidence-layer:disabled { opacity: 0.45; }
 .canvas-evidence-bar button:focus-visible,
 .canvas-evidence-acm__option:focus-within { outline: none; box-shadow: var(--sc-ring-focus); border-radius: var(--sc-radius-control); }
@@ -457,32 +466,26 @@
 
 .canvas-evidence-acm__chooser:hover { color: var(--text, #231f2f); background: var(--surface-2); }
 
-.canvas-evidence-acm__menu {
-  position: absolute;
-  z-index: 1;
-  right: 0;
-  top: calc(100% + 6px);
-  width: max-content;
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: var(--sc-hairline);
-  border-radius: var(--sc-radius-card);
-  background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-elevation-2);
-}
-
-.canvas-evidence-acm__title {
-  color: var(--subtle, #7d7489);
-  font-size: var(--sc-font-size-label);
+/* Fila propia dentro de la barra: `flex-basis:100%` la baja a un renglón
+   nuevo sin sacarla de la caja, así que no hay nada que se pueda salir. */
+.canvas-evidence-acm__row {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
 }
 
 .canvas-evidence-acm__option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--text, #231f2f);
   font-size: var(--sc-font-size-label);
+  white-space: nowrap;
 }
 
 /* Despliegue ACM: un carril por cantidad, bajo el modelo y en sus coordenadas

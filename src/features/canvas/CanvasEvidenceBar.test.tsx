@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useReducer, useState } from 'react';
@@ -104,5 +106,27 @@ describe('CanvasEvidenceBar', () => {
     const moment = screen.getByRole('checkbox', { name: /momento/i }) as HTMLInputElement;
     expect(moment.checked).toBe(true);
     expect(moment.disabled).toBe(true);
+  });
+});
+
+/**
+ * Guarda de cascada, no de estilo.
+ *
+ * `:hover:not(:disabled)` pesa más que `[aria-pressed='true']`, así que una
+ * regla de hover sin excluir el pulsado lo pisa. En un ratón se nota poco; en
+ * táctil el hover se queda pegado tras el toque y el botón encendido se pinta
+ * de reposo — que es como el ACM aparecía apagado con su despliegue en
+ * pantalla. jsdom no simula `:hover`, así que lo que se vigila es la regla.
+ */
+describe('the pressed state of an evidence button', () => {
+  it('is never overridden by a hover rule', () => {
+    const css = readFileSync(path.join(process.cwd(), 'src/features/canvas/phase2.css'), 'utf8');
+    const hoverRules = css
+      .split('}')
+      .map((block) => block.split('{')[0].trim())
+      .filter((selector) => selector.includes('.canvas-evidence-layer') && selector.includes(':hover'));
+
+    expect(hoverRules.length).toBeGreaterThan(0);
+    for (const selector of hoverRules) expect(selector).toContain(":not([aria-pressed='true'])");
   });
 });
