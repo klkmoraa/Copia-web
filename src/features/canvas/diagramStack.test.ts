@@ -1,7 +1,12 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { MemberResult, ProjectModel } from '../../types';
 import {
   buildDiagramStack,
+  DIAGRAM_STACK_STORAGE_KEY,
+  parseStackQuantities,
+  persistStackQuantities,
+  readStoredStackQuantities,
   laneScreenX,
   laneScreenY,
   notableStations,
@@ -167,5 +172,30 @@ describe('reading a station', () => {
     const shear = stationReadings(jumped, 4).find((reading) => reading.quantity === 'shear');
     expect(shear?.jump).toEqual({ left: 40, right: -40 });
     expect(stationReadings(jumped, 4).find((reading) => reading.quantity === 'moment')?.jump).toBeNull();
+  });
+});
+
+/**
+ * La elección de carriles sobrevive a la sesión, y una lectura corrupta nunca
+ * deja el ACM sin nada que dibujar.
+ */
+describe('remembering the chosen lanes', () => {
+  it('round-trips through storage', () => {
+    persistStackQuantities(['shear', 'moment']);
+    expect(localStorage.getItem(DIAGRAM_STACK_STORAGE_KEY)).toBe('["shear","moment"]');
+    expect(readStoredStackQuantities()).toEqual(['shear', 'moment']);
+    localStorage.clear();
+  });
+
+  it('falls back to the whole stack rather than to nothing', () => {
+    expect(parseStackQuantities(null)).toEqual(['axial', 'shear', 'moment']);
+    expect(parseStackQuantities('[]')).toEqual(['axial', 'shear', 'moment']);
+    expect(parseStackQuantities('no es json')).toEqual(['axial', 'shear', 'moment']);
+    expect(parseStackQuantities('{"axial":true}')).toEqual(['axial', 'shear', 'moment']);
+    expect(parseStackQuantities('["torsion"]')).toEqual(['axial', 'shear', 'moment']);
+  });
+
+  it('ignores what it does not know and restores the canonical order', () => {
+    expect(parseStackQuantities('["moment","torsion","axial"]')).toEqual(['axial', 'moment']);
   });
 });

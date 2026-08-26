@@ -37,6 +37,50 @@ export const toggleStackQuantity = (
 };
 
 /**
+ * Qué carriles quiere ver el usuario es una preferencia de vista, no un dato
+ * del proyecto: vive donde ya viven las capas del editor —`localStorage`, con
+ * clave versionada y una lectura que tolera basura—, no en `project.settings`.
+ * Un modelo compartido no debería llegar diciéndole al otro qué mirar.
+ *
+ * Lo que NO se guarda es si el despliegue está abierto: eso es estado de lo que
+ * estás haciendo ahora, y restaurarlo dejaría el botón encendido sobre un
+ * proyecto todavía sin analizar.
+ */
+export const DIAGRAM_STACK_STORAGE_KEY = 'structureco:diagram-stack:v1';
+
+export const parseStackQuantities = (raw: string | null): StackQuantity[] => {
+  if (!raw) return [...STACK_QUANTITIES];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...STACK_QUANTITIES];
+    const chosen = STACK_QUANTITIES.filter((quantity) => parsed.includes(quantity));
+    // Ni vacío ni desordenado: un ACM sin carriles no dibuja nada, y el orden
+    // canónico es el del despliegue, no el de lo que hubiera guardado.
+    return chosen.length ? chosen : [...STACK_QUANTITIES];
+  } catch {
+    return [...STACK_QUANTITIES];
+  }
+};
+
+export const readStoredStackQuantities = (): StackQuantity[] => {
+  if (typeof window === 'undefined') return [...STACK_QUANTITIES];
+  try {
+    return parseStackQuantities(window.localStorage.getItem(DIAGRAM_STACK_STORAGE_KEY));
+  } catch {
+    return [...STACK_QUANTITIES];
+  }
+};
+
+export const persistStackQuantities = (quantities: readonly StackQuantity[]): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DIAGRAM_STACK_STORAGE_KEY, JSON.stringify(quantities));
+  } catch {
+    // Elegir carriles es presentación opcional: no puede bloquear la edición.
+  }
+};
+
+/**
  * De qué barra habla el despliegue. La selección manda —es lo que el usuario
  * está mirando—; sin selección se toma la barra más larga con resultado, que
  * en el caso de una sola viga es la viga, y en un pórtico es una elección

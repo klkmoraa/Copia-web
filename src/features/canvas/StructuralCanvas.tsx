@@ -57,7 +57,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { CanvasEvidenceBar } from './CanvasEvidenceBar';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
-import { resolveStackMemberId, STACK_QUANTITIES, toggleStackQuantity, type StackQuantity } from './diagramStack';
+import { persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { layoutSmartLabels, smartLabelDetailForScale } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
@@ -217,7 +217,7 @@ export const StructuralCanvas = ({
    * convive con la evidencia que haya encendida sobre la barra.
    */
   const [stackActive, setStackActive] = useState(false);
-  const [stackQuantities, setStackQuantities] = useState<readonly StackQuantity[]>(STACK_QUANTITIES);
+  const [stackQuantities, setStackQuantities] = useState<readonly StackQuantity[]>(readStoredStackQuantities);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -1818,6 +1818,11 @@ export const StructuralCanvas = ({
   // La paleta pide el ACM por el mismo bus que el resto de intenciones del
   // taller: es la única evidencia sin otra puerta de teclado.
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
+  const chooseStackQuantity = useCallback((quantity: StackQuantity) => {
+    const next = toggleStackQuantity(stackQuantities, quantity);
+    setStackQuantities(next);
+    persistStackQuantities(next);
+  }, [stackQuantities]);
 
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
@@ -2258,7 +2263,7 @@ export const StructuralCanvas = ({
         stackAvailable={stackAvailable}
         stackQuantities={stackQuantities}
         onStackToggle={toggleStack}
-        onStackQuantityToggle={(quantity) => setStackQuantities((current) => toggleStackQuantity(current, quantity))}
+        onStackQuantityToggle={chooseStackQuantity}
       />
       <CanvasNavigator
         nodes={project.nodes}
