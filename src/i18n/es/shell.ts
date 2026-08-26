@@ -92,4 +92,5 @@ export const shell = {
   'palette.layerPreset': 'Capas: {preset}',
   'palette.openResultTab': 'Resultados: {tab}',
   'palette.toggleEvidenceLayer': 'Evidencia: {layer}',
+  'palette.toggleDiagramStack': 'Evidencia: ACM · axial, cortante y momento',
 } as const;

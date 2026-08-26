@@ -320,6 +320,20 @@ const evidenceLayerCommands = (ctx: CommandContext): CommandListItem[] => EVIDEN
   run: () => activateEvidenceLayer(evidence.id, { setResultTab: ctx.setResultTab, dispatchLayers: ctx.dispatchLayers }),
 }));
 
+/**
+ * El ACM también se alcanza desde la paleta, no sólo desde su botón: es la
+ * única evidencia que no se puede encender con el teclado de otra forma.
+ */
+const diagramStackCommand = (ctx: CommandContext): CommandListItem => ({
+  id: 'evidence:acm',
+  category: 'results',
+  icon: ChartNoAxesCombined,
+  label: ctx.t('palette.toggleDiagramStack'),
+  hint: ctx.t('canvas.evidenceStackDescription'),
+  disabled: !ctx.hasAnalysis,
+  run: () => emitWorkspaceCommand('toggle-diagram-stack'),
+});
+
 const toolCommands = (ctx: CommandContext): CommandListItem[] => TOOL_REGISTRY
   .map((tool): CommandListItem => ({
     id: `tool:${tool.id}`,
@@ -412,6 +426,7 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
   ...layerPresetCommands(ctx),
   ...resultTabCommands(ctx),
   ...evidenceLayerCommands(ctx),
+  diagramStackCommand(ctx),
   ...selectionQueryCommands(ctx),
   ...nodeCommands(ctx),
   ...memberCommands(ctx),

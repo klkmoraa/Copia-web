@@ -56,6 +56,12 @@ export interface WorkspaceCommands {
   'export-png': void;
   /** Raise the command palette; emitted from the ToolRail trigger or keyboard shortcut. */
   'open-command-palette': void;
+  /**
+   * Pliega o despliega el ACM del lienzo — axial, cortante y momento a la vez,
+   * bajo el modelo. Es una intención, no estado: quién lo dibuja y con qué
+   * carriles vive en el lienzo, y la paleta sólo pide el cambio.
+   */
+  'toggle-diagram-stack': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
   /**

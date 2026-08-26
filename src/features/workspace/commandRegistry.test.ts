@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { isOwnHistoryScope } from './commandRegistry';
+import { buildCommands, isOwnHistoryScope, type CommandContext } from './commandRegistry';
+import { onWorkspaceCommand } from './workspaceCommands';
+import { createDefaultProject } from '../../data/defaultProject';
 
 /**
  * CRI-103 / G-01: the global Ctrl+Z / Ctrl+Y binding must stay silent inside
@@ -48,5 +50,50 @@ describe('isOwnHistoryScope', () => {
     expect(isOwnHistoryScope(svg)).toBe(false);
     expect(isOwnHistoryScope(document.body)).toBe(false);
     expect(isOwnHistoryScope(null)).toBe(false);
+  });
+});
+
+/**
+ * El ACM se enciende con el ratón desde su botón del lienzo; la paleta es la
+ * puerta que le queda a quien no lo usa. Si el comando desaparece de la lista,
+ * esa puerta se cierra en silencio.
+ */
+describe('the ACM command', () => {
+  const contextWith = (hasAnalysis: boolean) => ({
+    t: (key: string) => key,
+    project: createDefaultProject(),
+    hasAnalysis,
+    isAnalyzing: false,
+    canUndo: false,
+    canRedo: false,
+    classroomMode: false,
+    theme: 'light',
+    selection: null,
+    setActiveTool: () => undefined,
+    setSelection: () => undefined,
+    setResultTab: () => undefined,
+    setTheme: () => undefined,
+    updateProjectView: () => undefined,
+    dispatchLayers: () => undefined,
+    analyze: () => undefined,
+    undo: () => undefined,
+    redo: () => undefined,
+  } as unknown as CommandContext);
+
+  it('is offered next to the other evidence layers, and asks the canvas through the bus', () => {
+    const command = buildCommands(contextWith(true)).find((item) => item.id === 'evidence:acm');
+    expect(command).toBeTruthy();
+    expect(command?.category).toBe('results');
+    expect(command?.disabled).toBe(false);
+
+    const seen: string[] = [];
+    const stop = onWorkspaceCommand('toggle-diagram-stack', () => seen.push('asked'));
+    command?.run();
+    stop();
+    expect(seen).toEqual(['asked']);
+  });
+
+  it('is offered but disabled while there is no analysis to deploy', () => {
+    expect(buildCommands(contextWith(false)).find((item) => item.id === 'evidence:acm')?.disabled).toBe(true);
   });
 });

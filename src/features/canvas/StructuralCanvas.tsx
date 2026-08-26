@@ -1796,8 +1796,13 @@ export const StructuralCanvas = ({
   const readStackStation = useCallback((x: number | null) => {
     if (!stackMemberId) return;
     if (resultCursor?.pinned) return;
+    // Dentro de una misma zona de imantado el puntero recorre píxeles sin
+    // cambiar la estación: escribirla otra vez repintaría el lienzo, la marca
+    // sobre la barra y el panel de resultados con el mismo número.
+    const current = resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
+    if (current === x) return;
     setResultCursor(x === null ? null : { memberId: stackMemberId, x, pinned: false });
-  }, [resultCursor?.pinned, setResultCursor, stackMemberId]);
+  }, [resultCursor?.memberId, resultCursor?.pinned, resultCursor?.x, setResultCursor, stackMemberId]);
   const stackCursorX = stackMemberId && resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
 
   const toggleStack = useCallback(() => {
@@ -1810,6 +1815,9 @@ export const StructuralCanvas = ({
     if (stackActive && !resultCursor?.pinned && resultCursor?.memberId === stackMemberId) setResultCursor(null);
     setStackActive(!stackActive);
   }, [dispatchLayers, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, stackActive, stackMemberId]);
+  // La paleta pide el ACM por el mismo bus que el resto de intenciones del
+  // taller: es la única evidencia sin otra puerta de teclado.
+  useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
 
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
