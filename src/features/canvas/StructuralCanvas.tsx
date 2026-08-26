@@ -175,6 +175,7 @@ export const StructuralCanvas = ({
     cancelProjectTransaction,
     learningFocus,
     resultCursor,
+    setResultCursor,
     influenceCanvasState,
     modeShapeState,
   } = useProject();
@@ -1783,12 +1784,32 @@ export const StructuralCanvas = ({
     const right = toScreen(bounds.maxX, bounds.minY);
     return { minX: left.x, maxX: right.x, maxY: Math.max(left.y, right.y) };
   }, [project.nodes, stackResult, toScreen]);
+  /** Hay algo que desplegar cuando el análisis resolvió al menos una barra con diagrama. */
+  const stackAvailable = Boolean(
+    resultsAllowed && analysis?.success && resolveStackMemberId(project, selection, resultMap),
+  );
+  /**
+   * El despliegue no estrena cursor: publica en el mismo `resultCursor` que ya
+   * mueve la marca sobre la barra y la lectura del panel de resultados. Un solo
+   * cursor, tres carriles y el modelo — no tres lecturas que pueden discrepar.
+   */
+  const readStackStation = useCallback((x: number | null) => {
+    if (!stackMemberId) return;
+    if (resultCursor?.pinned) return;
+    setResultCursor(x === null ? null : { memberId: stackMemberId, x, pinned: false });
+  }, [resultCursor?.pinned, setResultCursor, stackMemberId]);
+  const stackCursorX = stackMemberId && resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
+
   const toggleStack = useCallback(() => {
     // Encender el ACM sin la capa de resultados dejaría el botón pulsado y el
     // lienzo vacío: el despliegue es evidencia, y la evidencia se apaga con su capa.
     if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
+    // Al plegarlo se retira la lectura que dejó sobre el modelo: si no, la marca
+    // se queda sobre la barra sin nada que la explique. Una lectura fijada a
+    // mano desde Resultados no es del despliegue y no se toca.
+    if (stackActive && !resultCursor?.pinned && resultCursor?.memberId === stackMemberId) setResultCursor(null);
     setStackActive(!stackActive);
-  }, [dispatchLayers, layers.results, stackActive]);
+  }, [dispatchLayers, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, stackActive, stackMemberId]);
 
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
@@ -2083,7 +2104,10 @@ export const StructuralCanvas = ({
           result={stackResult}
           quantities={stackQuantities}
           modelScreenBounds={stackAnchor}
+          cursorX={stackCursorX}
+          onCursorChange={readStackStation}
           units={units}
+          lengthLabel={lengthLabel}
           t={t}
         /> : null}
 
@@ -2223,6 +2247,7 @@ export const StructuralCanvas = ({
         resultTab={resultTab}
         setResultTab={setResultTab}
         stackActive={stackActive}
+        stackAvailable={stackAvailable}
         stackQuantities={stackQuantities}
         onStackToggle={toggleStack}
         onStackQuantityToggle={(quantity) => setStackQuantities((current) => toggleStackQuantity(current, quantity))}

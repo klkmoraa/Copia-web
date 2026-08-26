@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { MemberResult, ProjectModel } from '../../types';
 import {
   buildDiagramStack,
+  laneScreenX,
+  laneScreenY,
+  notableStations,
   resolveStackMemberId,
+  snapStation,
   STACK_QUANTITIES,
+  stationFromScreenX,
+  stationReadings,
   toggleStackQuantity,
 } from './diagramStack';
 
@@ -110,5 +116,56 @@ describe('buildDiagramStack', () => {
     const [shear] = buildDiagramStack(beamResult('M1'), ['shear'], rect);
     expect(shear.extremes.map((extreme) => extreme.kind)).toEqual(['max', 'min']);
     expect(buildDiagramStack({ ...beamResult('M1'), diagramSegments: [] }, STACK_QUANTITIES, rect)).toEqual([]);
+  });
+});
+
+describe('reading a station', () => {
+  const result = beamResult('M1');
+  const [lane] = buildDiagramStack(result, ['moment'], rect);
+
+  it('maps screen x back to a station, clamped to the member', () => {
+    expect(stationFromScreenX(lane, 8, 100)).toBe(0);
+    expect(stationFromScreenX(lane, 8, 300)).toBe(4);
+    expect(stationFromScreenX(lane, 8, 900)).toBe(8);
+    expect(stationFromScreenX(lane, 8, -50)).toBe(0);
+  });
+
+  it('round-trips a station and a value through the lane scales', () => {
+    expect(laneScreenX(lane, 4)).toBe(300);
+    expect(laneScreenY(lane, 0)).toBe(lane.baselineY);
+    expect(laneScreenY(lane, lane.maxAbs)).toBeCloseTo(lane.baselineY - lane.amplitude);
+  });
+
+  it('lists the stations the engine actually solved, sorted and deduplicated', () => {
+    expect(notableStations(result)).toEqual([0, 4, 8]);
+  });
+
+  it('snaps to a notable station, and leaves the rest of the span alone', () => {
+    expect(snapStation(result, 4.04)).toBe(4);
+    expect(snapStation(result, 7.97)).toBe(8);
+    // Fuera de la tolerancia (1,2 % de 8 m ≈ 0,096 m) la lectura es la que pidió el puntero.
+    expect(snapStation(result, 4.5)).toBe(4.5);
+  });
+
+  it('reads the three quantities of one section in a single pass', () => {
+    const readings = stationReadings(result, 4);
+    expect(readings.map((reading) => reading.quantity)).toEqual(['axial', 'shear', 'moment']);
+    expect(readings[1].value).toBeCloseTo(0);
+    expect(readings[2].value).toBeCloseTo(80);
+    expect(readings.every((reading) => reading.jump === null)).toBe(true);
+  });
+
+  it('reports both lateral limits where the diagram jumps', () => {
+    const jumped: MemberResult = {
+      ...result,
+      diagramSegments: [
+        { x0: 0, x1: 4, axial: [0, 0, 0], shear: [40, 0, 0], moment: [0, 40, 0, 0], distributedAxial: [0, 0], distributedTransverse: [0, 0] },
+        { x0: 4, x1: 8, axial: [0, 0, 0], shear: [-40, 0, 0], moment: [160, -40, 0, 0], distributedAxial: [0, 0], distributedTransverse: [0, 0] },
+      ],
+      diagramJumps: [{ x: 4, axialDelta: 0, shearDelta: -80, momentDelta: 0 }],
+    };
+    const shear = stationReadings(jumped, 4).find((reading) => reading.quantity === 'shear');
+    expect(shear?.jump).toEqual({ left: 40, right: -40 });
+    expect(stationReadings(jumped, 4).find((reading) => reading.quantity === 'moment')?.jump).toBeNull();
   });
 });

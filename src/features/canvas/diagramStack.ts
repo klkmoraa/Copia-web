@@ -1,4 +1,4 @@
-import { segmentBezierControls } from '../../engine/diagram';
+import { evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import type { DiagramCriticalPoint, MemberResult, ProjectModel, Selection } from '../../types';
 
 /**
@@ -92,8 +92,89 @@ export interface DiagramStackLane {
   linePath: string;
   /** Máximo absoluto del carril: el divisor de su escala propia. */
   maxAbs: number;
+  /** Píxeles que separan la línea base del máximo del carril. */
+  amplitude: number;
+  /** Píxeles por unidad de longitud del miembro. */
+  pixelsPerLength: number;
+  /** Píxeles por unidad de la magnitud dibujada. */
+  pixelsPerValue: number;
   extremes: DiagramStackExtreme[];
 }
+
+/** Estación del miembro → x de pantalla dentro del carril. */
+export const laneScreenX = (lane: Pick<DiagramStackLane, 'left' | 'pixelsPerLength'>, x: number): number =>
+  lane.left + x * lane.pixelsPerLength;
+
+/** Valor de la magnitud → y de pantalla dentro del carril. */
+export const laneScreenY = (lane: Pick<DiagramStackLane, 'baselineY' | 'pixelsPerValue'>, value: number): number =>
+  lane.baselineY - value * lane.pixelsPerValue;
+
+/** x de pantalla → estación del miembro, acotada a la barra. */
+export const stationFromScreenX = (
+  lane: Pick<DiagramStackLane, 'left' | 'pixelsPerLength'>,
+  length: number,
+  screenX: number,
+): number => {
+  if (lane.pixelsPerLength <= 0) return 0;
+  return Math.min(length, Math.max(0, (screenX - lane.left) / lane.pixelsPerLength));
+};
+
+/**
+ * Las estaciones que de verdad importan: extremos, bordes de tramo y saltos.
+ * Son los números que el motor ya calculó exactos; el resto del dominio es
+ * interpolación.
+ */
+export const notableStations = (result: MemberResult): number[] => Array.from(new Set([
+  0,
+  result.length,
+  ...result.diagramSegments.flatMap((segment) => [segment.x0, segment.x1]),
+  ...result.diagramJumps.map((jump) => jump.x),
+  ...result.criticalPoints.map((point) => point.x),
+])).sort((a, b) => a - b);
+
+/**
+ * Imanta la lectura a la estación notable más cercana.
+ *
+ * Sin esto, cazar el Mmáx con el puntero es un juego de puntería que termina
+ * mostrando 118,17 donde el modelo dice 118,18. La tolerancia es la misma que
+ * usa el cursor de los diagramas del panel de resultados: 1,2 % de la barra.
+ */
+export const snapStation = (result: MemberResult, x: number): number => {
+  const stations = notableStations(result);
+  if (!stations.length) return x;
+  const nearest = stations.reduce((best, station) => (Math.abs(station - x) < Math.abs(best - x) ? station : best), stations[0]);
+  return Math.abs(nearest - x) <= Math.max(result.length * 0.012, 1e-8) ? nearest : x;
+};
+
+export interface StationReading {
+  quantity: StackQuantity;
+  value: number;
+  /** Límites laterales cuando la estación cae en un salto; `null` si la curva es continua ahí. */
+  jump: { left: number; right: number } | null;
+}
+
+/**
+ * Las tres lecturas de una misma estación, de una sola evaluación por lado.
+ *
+ * En un salto los dos límites laterales son números distintos, así que se piden
+ * ambos y se informan los dos en vez de elegir uno en silencio.
+ */
+export const stationReadings = (result: MemberResult, x: number): StationReading[] => {
+  const left = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'left');
+  const right = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'right');
+  if (!right && !left) return [];
+  return STACK_QUANTITIES.map((quantity) => {
+    const leftValue = left?.[quantity] ?? right?.[quantity] ?? 0;
+    const rightValue = right?.[quantity] ?? leftValue;
+    const scale = Math.max(Math.abs(leftValue), Math.abs(rightValue), 1e-12);
+    const discontinuous = Math.abs(rightValue - leftValue) > scale * 1e-9;
+    return {
+      quantity,
+      value: rightValue,
+      jump: discontinuous ? { left: leftValue, right: rightValue } : null,
+    };
+  });
+};
 
 /** Aire entre la línea del diagrama y el borde del carril. */
 const LANE_PADDING = 14;
@@ -172,6 +253,9 @@ export const buildDiagramStack = (
       fillPath: fillCommands.join(' '),
       linePath: lineCommands.join(' '),
       maxAbs,
+      amplitude,
+      pixelsPerLength: rect.width / length,
+      pixelsPerValue: amplitude / maxAbs,
       extremes: extremesOf(result.criticalPoints, quantity).map((extreme) => ({
         ...extreme,
         screen: { x: sx(extreme.x), y: sy(extreme.value) },

@@ -428,7 +428,11 @@
   white-space: nowrap;
 }
 
-.canvas-evidence-layer:hover { color: var(--text, #231f2f); background: var(--surface-2); }
+.canvas-evidence-layer__symbol { display: none; }
+.canvas-evidence-layer:hover:not(:disabled) { color: var(--text, #231f2f); background: var(--surface-2); }
+.canvas-evidence-layer:disabled { opacity: 0.45; }
+.canvas-evidence-bar button:focus-visible,
+.canvas-evidence-acm__option:focus-within { outline: none; box-shadow: var(--sc-ring-focus); border-radius: var(--sc-radius-control); }
 .canvas-evidence-layer[aria-pressed='true'] { color: var(--accent-foreground); background: var(--accent-fill); }
 .canvas-evidence-layer--axial[aria-pressed='true'] { background: var(--axial); }
 .canvas-evidence-layer--shear[aria-pressed='true'] { background: var(--shear); }
@@ -483,13 +487,42 @@
 
 /* Despliegue ACM: un carril por cantidad, bajo el modelo y en sus coordenadas
    —se mueve y escala con el dibujo, porque es parte del dibujo. */
-.diagram-stack-layer { pointer-events: none; }
 .diagram-stack-title { fill: var(--muted, #665d72); font-size: 12px; font-weight: 600; }
+.diagram-stack-title__span { fill: var(--subtle, #7d7489); font-weight: 400; }
 .diagram-stack-baseline { stroke: var(--border, #d8d2e2); stroke-width: 1; }
-.diagram-stack-caption { font-size: 12px; font-weight: 700; }
+.diagram-stack-caption { font-size: 13px; font-weight: 700; }
+.diagram-stack-caption__unit { fill: var(--subtle, #7d7489); font-size: 10px; font-weight: 400; }
 .diagram-stack-line { fill: none; stroke-width: 2; }
 .diagram-stack-fill { stroke: none; opacity: 0.18; }
 .diagram-stack-extreme { stroke: none; }
+
+/* Un número sobre una curva se lee mal contra su propio relleno: el mismo
+   `paint-order` con el que el producto sella los extremos de los diagramas del
+   panel le da un halo del color del lienzo sin recuadro ni fondo opaco. */
+.diagram-stack-extreme-label,
+.diagram-stack-reading text,
+.diagram-stack-cursor__station {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--canvas-bg);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+/* La lectura activa manda sobre el extremo ya sellado, sin hacerlo desaparecer:
+   el usuario sigue viendo dónde estaba el pico mientras recorre la barra. */
+.diagram-stack-extremes { transition: opacity var(--sc-motion-fast) var(--sc-ease-standard); }
+.diagram-stack-extremes.is-dimmed { opacity: 0.3; }
+
+.diagram-stack-cursor line { stroke: var(--text, #231f2f); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.55; }
+.diagram-stack-cursor__station { fill: var(--text, #231f2f); }
+.diagram-stack-reading circle { stroke: var(--canvas-bg); stroke-width: 1.5; }
+
+/* Superficie de lectura: transparente y sin trazo. Escucha el movimiento del
+   puntero, pero no captura el `pointerdown`, que sigue llegando al lienzo. */
+.diagram-stack-surface { fill: transparent; stroke: none; cursor: crosshair; }
 
 /* El color del carril se reparte por propiedad, nunca en bloque: la línea es
    sólo trazo. Pintarla también de relleno cierra la curva contra su cuerda y
@@ -498,17 +531,36 @@
 .diagram-stack-lane.axial .diagram-stack-line { stroke: var(--axial); }
 .diagram-stack-lane.axial .diagram-stack-fill,
 .diagram-stack-lane.axial .diagram-stack-extreme,
+.diagram-stack-lane.axial .diagram-stack-extreme-label,
+.diagram-stack-lane.axial .diagram-stack-reading circle,
+.diagram-stack-lane.axial .diagram-stack-reading text,
 .diagram-stack-lane.axial .diagram-stack-caption { fill: var(--axial); }
 .diagram-stack-lane.shear .diagram-stack-line { stroke: var(--shear); }
 .diagram-stack-lane.shear .diagram-stack-fill,
 .diagram-stack-lane.shear .diagram-stack-extreme,
+.diagram-stack-lane.shear .diagram-stack-extreme-label,
+.diagram-stack-lane.shear .diagram-stack-reading circle,
+.diagram-stack-lane.shear .diagram-stack-reading text,
 .diagram-stack-lane.shear .diagram-stack-caption { fill: var(--shear); }
 .diagram-stack-lane.moment .diagram-stack-line { stroke: var(--moment); }
 .diagram-stack-lane.moment .diagram-stack-fill,
 .diagram-stack-lane.moment .diagram-stack-extreme,
+.diagram-stack-lane.moment .diagram-stack-extreme-label,
+.diagram-stack-lane.moment .diagram-stack-reading circle,
+.diagram-stack-lane.moment .diagram-stack-reading text,
 .diagram-stack-lane.moment .diagram-stack-caption { fill: var(--moment); }
 
-@media (max-width: 640px) {
+/* Por debajo de este ancho los cinco nombres no caben sin empujar la barra
+   contra el badge de modo: se cambian por su símbolo, que es como se llaman
+   estas magnitudes en un diagrama. El nombre accesible no cambia. */
+@media (max-width: 720px) {
+  /* La barra está centrada en el mismo recuadro en el que el badge de modo
+     empieza a 12px, así que el ancho que le queda al badge es exactamente
+     medio lienzo menos la mitad de la barra. Sin esto, la pista de gestos se
+     mete por debajo de la barra en cuanto el lienzo se estrecha. */
+  .canvas-host:has(.canvas-evidence-bar) .canvas-mode-badge { max-width: calc(50% - 124px); }
   .canvas-evidence-bar { gap: 2px; padding: 3px; }
-  .canvas-evidence-layer { padding: 0 7px; }
+  .canvas-evidence-layer { min-width: 34px; padding: 0 8px; text-align: center; }
+  .canvas-evidence-layer__name { display: none; }
+  .canvas-evidence-layer__symbol { display: inline; }
 }

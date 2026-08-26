@@ -182,6 +182,8 @@ export const canvas = {
   'canvas.evidenceStackDescription': 'Axial, cortante y momento a la vez, bajo el modelo',
   'canvas.evidenceStackChoose': 'Elegir los diagramas del ACM',
   'canvas.evidenceStackMember': 'ACM · miembro {member}',
+  'canvas.evidenceStackSpan': 'L {length}',
+  'canvas.evidenceStackUnavailable': 'Analiza la estructura para desplegar el ACM',
   'canvas.layerModel': 'Modelo',
   'canvas.layerModelDetail': 'Geometría, barras, nodos y apoyos; siempre visible',
   'canvas.layerLoads': 'Cargas',

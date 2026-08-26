@@ -182,6 +182,8 @@ export const canvas = {
   'canvas.evidenceStackDescription': 'Axial, shear, and moment at once, below the model',
   'canvas.evidenceStackChoose': 'Choose the ACM diagrams',
   'canvas.evidenceStackMember': 'ACM · member {member}',
+  'canvas.evidenceStackSpan': 'L {length}',
+  'canvas.evidenceStackUnavailable': 'Analyse the structure to deploy the ACM',
   'canvas.layerModel': 'Model',
   'canvas.layerModelDetail': 'Geometry, members, nodes, and supports; always visible',
   'canvas.layerLoads': 'Loads',
