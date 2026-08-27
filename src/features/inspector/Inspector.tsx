@@ -12,6 +12,7 @@ import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasVi
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { INSPECTOR_SEGMENTS, INSPECTOR_SEGMENT_LABEL_KEY, type InspectorSegment } from './inspectorSegments';
+import { ViewFavoritesPanel } from '../library/ViewFavoritesPanel';
 
 const NumberField = ({
   label,
@@ -334,7 +335,8 @@ const AnalysisSetupPanel = memo(({ onToolChosen }: { onToolChosen?: () => void }
 
 const DisplayPanel = memo(({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
   const { project, updateProjectView } = useProjectModel();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const { theme, setTheme } = useWorkspaceUI();
   const units = project.settings.units;
   const view = readCanvasViewSettings(project);
   const display = (value: number, quantity: UnitQuantity) => toDisplay(value, units, quantity);
@@ -348,6 +350,16 @@ const DisplayPanel = memo(({ includeCalculationMode = true }: { includeCalculati
         ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
         : <div className="inspector-note"><CircleHelp size={16} /> {t('inspector.completeModeDescription')}</div>}
     </section> : null}
+    <ViewFavoritesPanel
+      language={language}
+      units={units}
+      theme={theme}
+      view={view}
+      onApply={(favorite) => {
+        setTheme(favorite.theme);
+        updateProjectView((draft) => withCanvasViewSettings(draft, favorite.view));
+      }}
+    />
     <section className="inspector-section">
       <h3>{t('inspector.canvas')}</h3>
       <NumberField label={t('inspector.spacing')} value={display(view.gridSize, 'length')} unit={unitLabel(units, 'length')} resetKey={`grid-size:${units}`} onChange={(value) => setView({ gridSize: Math.max(1e-6, base(value, 'length')) })} />

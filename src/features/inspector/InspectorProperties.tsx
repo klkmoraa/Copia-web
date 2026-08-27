@@ -42,6 +42,7 @@ import { formatInspectorValue } from './numericFormatting';
 import { SectionBuilderPanel } from './SectionBuilderPanel';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
+import { MemberFavoritesPanel } from '../library/MemberFavoritesPanel';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -561,6 +562,7 @@ export const InspectorProperties = () => {
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
             <MaterialPresetSelector units={units} selectedId={selectedMember.materialId} origin={selectedMember.materialOrigin} onSelect={applyMaterialPreset} />
             <SectionPresetSelector units={units} selectedId={selectedMember.sectionId} origin={selectedMember.sectionOrigin} onSelect={applySectionPreset} />
+            <MemberFavoritesPanel project={project} member={selectedMember} language={language} units={units} executeProjectCommand={executeProjectCommand} />
             <InspectorDisclosure
               id="section-builder"
               title={t('inspector.sectionBuilder')}

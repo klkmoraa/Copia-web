@@ -133,4 +133,6 @@ export const welcome = {
   'newExercise.mechanicalNote': 'Mechanical properties are assigned internally. You can focus on equilibrium, reactions, and N–V–M diagrams.',
   'newExercise.create': 'Create exercise',
   'welcome.space3DDescription': 'Create and solve a space frame with six degrees of freedom per node, separate from the 2D editor.',
+  'welcome.personalLibrary': 'Personal library',
+  'welcome.personalLibraryDescription': 'Saved sections, materials, and views to reuse across projects.',
 } as const;

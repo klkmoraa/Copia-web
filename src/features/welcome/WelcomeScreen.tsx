@@ -5,6 +5,7 @@ import {
   GraduationCap,
   LayoutTemplate,
   Layers,
+  LibraryBig,
   GitCommitHorizontal,
   Menu,
   Moon,
@@ -28,10 +29,12 @@ import { shouldResumeDirectly, useWelcomeEntry } from './welcomeEntry';
 import { Dialog, Drawer } from '../../design-system/components/overlays';
 import { SegmentedControl } from '../../design-system/components/controls';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 const Phase2ProjectHub = lazy(() => import('./Phase2ProjectHub').then((module) => ({ default: module.Phase2ProjectHub })));
 const Phase2DxfAction = lazy(() => import('./Phase2DxfAction').then((module) => ({ default: module.Phase2DxfAction })));
+const PersonalLibraryView = lazy(() => import('../library/PersonalLibraryView').then((module) => ({ default: module.PersonalLibraryView })));
 
 interface WelcomeScreenProps {
   onOpenWorkspace: () => void;
@@ -107,6 +110,7 @@ export const WelcomeScreen = ({
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>('all');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const entry = useWelcomeEntry();
 
   /* Salto directo a la Mesa. La condición sale entera del repositorio real
@@ -178,7 +182,7 @@ export const WelcomeScreen = ({
   /* Un proyecto recién creado no tiene medida que enseñar. La placa de
      Continuar se adapta a eso; el botón no cambia de función. */
   const hasModel = nodeCount > 0 || memberCount > 0;
-  const overlayOpen = exerciseDialogOpen || importCenterOpen || dxfImportOpen || templatesOpen || menuOpen;
+  const overlayOpen = exerciseDialogOpen || importCenterOpen || dxfImportOpen || templatesOpen || menuOpen || libraryOpen;
 
   const templateMotion = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
@@ -255,6 +259,19 @@ export const WelcomeScreen = ({
                   <span className="welcome-launcher-info">
                     <strong>{t('welcome.fromTemplate')}</strong>
                     <small>{t('welcome.fromTemplateDescription')}</small>
+                  </span>
+                  <ArrowRight size={16} className="welcome-launcher-arrow" />
+                </button>
+
+                {/* Biblioteca personal: secciones paramétricas, materiales y
+                    vistas guardadas por quien usa la app, para reutilizar
+                    entre proyectos. Es aditiva — no sustituye al Section
+                    Builder del Inspector, que edita un miembro puntual. */}
+                <button type="button" className="welcome-launcher-card welcome-library-launcher" onClick={() => setLibraryOpen(true)}>
+                  <span className="welcome-launcher-icon"><LibraryBig size={20} /></span>
+                  <span className="welcome-launcher-info">
+                    <strong>{t('welcome.personalLibrary')}</strong>
+                    <small>{t('welcome.personalLibraryDescription')}</small>
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
@@ -398,6 +415,21 @@ export const WelcomeScreen = ({
         }}
       /></Suspense> : null}
       <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
+      <Drawer
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        title={t('welcome.personalLibrary')}
+        closeLabel={t('toolbar.close')}
+        side="right"
+        className="welcome-library-drawer"
+      >
+        {libraryOpen ? <Suspense fallback={null}><PersonalLibraryView
+          language={language}
+          units={project.settings.units}
+          theme={theme}
+          view={readCanvasViewSettings(project)}
+        /></Suspense> : null}
+      </Drawer>
       <Drawer
         open={menuOpen}
         onOpenChange={setMenuOpen}

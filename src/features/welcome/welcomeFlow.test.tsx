@@ -64,14 +64,15 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
 };
 
 describe('WelcomeScreen · el lanzador', () => {
-  it('reúne las seis puertas en una sola lista, sin etapas que recorrer', async () => {
+  it('reúne las siete puertas en una sola lista, sin etapas que recorrer', async () => {
     const { container } = renderWelcome();
     // El DXF llega en su propio chunk perezoso y se une a la misma lista.
-    await waitFor(() => expect(actionRows(container)).toHaveLength(6));
+    await waitFor(() => expect(actionRows(container)).toHaveLength(7));
 
     expect(actionList(container).getByRole('button', { name: /Nuevo proyecto/ })).toBeTruthy();
     expect(actionList(container).getByRole('button', { name: /Nuevo ejercicio/ })).toBeTruthy();
     expect(actionList(container).getByRole('button', { name: /Desde plantilla/ })).toBeTruthy();
+    expect(actionList(container).getByRole('button', { name: /Biblioteca personal/ })).toBeTruthy();
     expect(actionList(container).getByRole('button', { name: /Importar archivo/ })).toBeTruthy();
     expect(actionList(container).getByRole('button', { name: /DXF/ })).toBeTruthy();
     expect(actionList(container).getByRole('button', { name: /space 3d/i })).toBeTruthy();
@@ -87,7 +88,7 @@ describe('WelcomeScreen · el lanzador', () => {
     renderWelcome();
     await waitFor(() => expect(screen.getByRole('button', { name: /DXF/ })).toBeTruthy());
 
-    for (const name of [/Nuevo proyecto/, /Nuevo ejercicio/, /Desde plantilla/, /Importar archivo/, /space 3d/i]) {
+    for (const name of [/Nuevo proyecto/, /Nuevo ejercicio/, /Desde plantilla/, /Biblioteca personal/, /Importar archivo/, /space 3d/i]) {
       expect(screen.getAllByRole('button', { name }), String(name)).toHaveLength(1);
     }
   });
@@ -123,6 +124,17 @@ describe('WelcomeScreen · el lanzador', () => {
     expect(onOpenWorkspace).toHaveBeenCalledOnce();
     // Elegir cierra: la vitrina es una decisión, no un lugar donde se está.
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Plantillas/ })).toBeNull());
+  });
+
+  it('abre la biblioteca personal en un drawer, sin sustituir al lanzador', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWelcome();
+
+    expect(screen.queryByRole('button', { name: 'Crear favorito' })).toBeNull();
+    await user.click(actionList(container).getByRole('button', { name: /Biblioteca personal/ }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Biblioteca personal' });
+    expect(await within(drawer).findByRole('button', { name: 'Crear favorito' })).toBeTruthy();
   });
 
   it('marca Space 3D como experimental, no como una superficie más', () => {

@@ -133,4 +133,6 @@ export const welcome = {
   'newExercise.mechanicalNote': 'Las propiedades mecánicas se asignan internamente. Puedes concentrarte en equilibrio, reacciones y diagramas N–V–M.',
   'newExercise.create': 'Crear ejercicio',
   'welcome.space3DDescription': 'Crea y resuelve un marco espacial con seis grados de libertad por nudo, aparte del editor 2D.',
+  'welcome.personalLibrary': 'Biblioteca personal',
+  'welcome.personalLibraryDescription': 'Secciones, materiales y vistas guardadas para reutilizar entre proyectos.',
 } as const;
