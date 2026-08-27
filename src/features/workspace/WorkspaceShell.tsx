@@ -301,6 +301,14 @@ const WorkspaceSurface = (props: WorkspaceShellProps) => {
   // opens on request now — it no longer starts open by default.
   const initialOpen = useMemo<SurfaceId[]>(() => {
     if (layoutController.preferences.fullCanvas) return [];
+    // En K0 el detalle no es un dock: es una hoja que ocupa 58dvh desde el
+    // borde inferior, así que nacer abierta tapa el lienzo Y la bandeja de
+    // herramientas entera — la sesión empieza sin nada con lo que dibujar.
+    // `inspectorCollapsed` es además una preferencia de la mesa ancha (viaja
+    // con `inspectorWidth`), no una decisión que el teléfono haya tomado. Aquí
+    // vale lo mismo que para «Datos» y «Resultados» (CRI-100/CRI-101): se pide
+    // —desde el lanzador flotante que existe sólo en K0—, no se hereda abierta.
+    if (shellClass === 'K0') return [];
     const surfaces: SurfaceId[] = [];
     if (!layoutController.preferences.inspectorCollapsed) surfaces.push('detail');
     return surfaces;

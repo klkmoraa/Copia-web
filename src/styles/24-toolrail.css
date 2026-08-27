@@ -1,128 +1,174 @@
-/* Rail compacto: el estado contraído conserva la geometría de la referencia
-   (iconos centrados y grupos respirados), pero usa las recetas físicas del
-   brandbook. Sólo el color semántico del icono comunica la herramienta; la
-   bandeja es `INSET` (heredada de `.toolbar` en `material.css`), cada
-   herramienta se apoya `RAISED` encima, y la activa baja a la misma cavidad
-   de la bandeja — nunca sube, nunca gana sombra exterior (CRI-98). */
-.tool-rail.is-compact {
-  border-right:1px solid var(--sc-color-border-soft);
-  padding:8px 7px;
-  gap:3px;
-  overflow-x:hidden;
-}
-.tool-rail.is-compact .desktop-tool-list {
-  display:flex;
-  gap:4px;
-  min-width:0;
-}
-.tool-rail.is-compact .tool-group {
-  gap:3px;
-  min-width:0;
-}
-.tool-rail.is-compact .tool-group + .tool-group {
-  padding-top:6px;
-  border-top:1px solid var(--sc-color-border-soft);
-}
-.tool-rail.is-compact .tool-group-heading {
-  position:absolute;
-  width:1px;
-  height:1px;
-  padding:0;
-  margin:-1px;
-  overflow:hidden;
-  clip:rect(0,0,0,0);
-  white-space:nowrap;
-  border:0;
-}
-.tool-rail.is-compact .tool-group-actions {
-  display:grid;
-  justify-items:center;
-  gap:2px;
-  min-width:0;
-}
-.tool-rail.is-compact .tool-button {
-  width:48px;
-  min-width:48px;
-  height:48px;
-  min-height:48px;
-  padding:4px;
-  display:grid;
-  grid-template-columns:1fr;
-  justify-items:center;
-  align-content:center;
-  border:1px solid color-mix(in srgb,var(--sc-color-border) 58%,var(--sc-color-surface-elevated));
-  border-radius:var(--sc-radius-md);
-  background:var(--sc-color-surface-1);
-  color:var(--tool-color,var(--sc-color-text-muted));
-  box-shadow:var(--sc-elevation-1);
-  transform:none;
-}
-.tool-rail.is-compact .tool-button .sc-tool-button__icon {
-  width:24px;
-  height:24px;
-  display:grid;
-  place-items:center;
-}
-.tool-rail.is-compact .tool-button .sc-tool-button__icon svg {
-  width:21px;
-  height:21px;
-  color:currentColor;
-  stroke-width:1.8;
-}
-.tool-rail.is-compact .tool-button > span:not(.sc-tool-button__icon),
-.tool-rail.is-compact .tool-button kbd {
-  position:absolute;
-  width:1px;
-  height:1px;
-  overflow:hidden;
-  clip:rect(0,0,0,0);
-  white-space:nowrap;
-}
-.tool-rail.is-compact .tool-button:hover:not(:disabled) {
-  background:var(--sc-color-surface-elevated);
-  border-color:var(--sc-color-border-soft);
-  color:var(--tool-color,var(--sc-color-text-primary));
-  box-shadow:var(--sc-elevation-1);
-}
-/* Elegida = hundida en la misma cavidad que la bandeja, nunca rellena de
-   color ni elevada — ni en reposo ni al pasar el cursor por encima. */
-.tool-rail.is-compact .tool-button.active,
-.tool-rail.is-compact .tool-button.is-active,
-.tool-rail.is-compact .tool-button.active:hover:not(:disabled),
-.tool-rail.is-compact .tool-button.is-active:hover:not(:disabled) {
-  background:var(--sc-color-surface-inset);
-  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 26%,var(--sc-color-border));
-  color:var(--tool-color,var(--accent));
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
-.tool-rail.is-compact .tool-button:active:not(:disabled) {
-  background:var(--sc-color-surface-pressed);
-  border-color:var(--sc-color-border-soft);
-  box-shadow:none;
-  transform:var(--sc-press-transform);
-}
-.tool-rail.is-compact .tool-button.destructive {
-  --tool-color:var(--sc-color-tool-destructive);
-}
-.tool-rail.is-compact .toolbar-spacer { min-height:10px; }
-.tool-rail.is-compact .selection-tip {
-  width:48px;
-  min-height:32px;
-  padding:5px 0;
-  justify-content:center;
-  align-items:center;
-  color:var(--sc-color-text-muted);
-}
-.tool-rail.is-compact .selection-tip span { display:none; }
-.tool-rail.is-compact .selection-tip svg { width:17px; height:17px; }
+/* Riel compacto — SÓLO donde existe un riel lateral que comprimir.
+   `ToolRail` marca `is-compact` en cuanto la clase de composición no es `X2`,
+   así que `K0` (≤1023px) también lo lleva. Pero en `K0` el riel no es un riel:
+   es la bandeja inferior —o la columna de 60px en apaisado— cuya lista visible
+   es `.mobile-tool-dock`, no `.desktop-tool-list`.
 
-@media (prefers-reduced-motion:reduce) {
+   Sin esta puerta, cada regla de aquí gana por especificidad a la del móvil y
+   se cuela en la bandeja. Medido a 390×844 antes de ponerla:
+     · `.tool-rail.is-compact .desktop-tool-list{display:flex}` (0,3,0) revivía
+       la lista de escritorio que `@media (max-width:1023px)` (0,1,0) apagaba:
+       doce botones reales apilados desde y=794 hasta y≈1210 —fuera de la
+       pantalla pero en el DOM y enfocables— y 45 px robados por la izquierda a
+       la bandeja, que empezaba en x=52 en vez de x=7.
+     · `.tool-rail.is-compact .tool-button{width:48px;height:48px;display:grid}`
+       pisaba `.mobile-tool-dock .tool-button` (0,2,0): botones de 48 px dentro
+       de celdas de 53.3, desbordando 6 px por debajo de una bandeja de 42, con
+       filete y relieve de escritorio.
+     · `.tool-rail.is-compact .tool-button>span:not(.sc-tool-button__icon)`
+       recortaba a 1×1 px la etiqueta de cada tecla: «Nodo», «Miembro»,
+       «Cargas» y «Más» existían pero no se veían.
+     · `.tool-rail.is-compact{padding:8px 7px}` (0,2,0) sustituía el
+       `padding-bottom:calc(3px + env(safe-area-inset-bottom))` de `.toolbar`
+       (0,1,0): la bandeja quedaba bajo el indicador de inicio del teléfono.
+
+   1024px no es un número elegido aquí: es `COMPACT_CEILING_PX + 1`
+   (`shellComposition.ts`), el techo exacto de `K0`.
+
+   Dentro, el estado contraído conserva la geometría de la referencia (iconos
+   centrados y grupos respirados) con las recetas físicas del brandbook. Sólo el
+   color semántico del icono comunica la herramienta; la bandeja es `INSET`
+   (heredada de `.toolbar` en `material.css`), cada herramienta se apoya
+   `RAISED` encima, y la activa baja a la misma cavidad de la bandeja — nunca
+   sube, nunca gana sombra exterior (CRI-98). */
+@media (min-width:1024px) {
+  .tool-rail.is-compact {
+    border-right:1px solid var(--sc-color-border-soft);
+    padding:8px 7px;
+    gap:3px;
+    overflow-x:hidden;
+  }
+  .tool-rail.is-compact .desktop-tool-list {
+    display:flex;
+    gap:4px;
+    min-width:0;
+  }
+  .tool-rail.is-compact .tool-group {
+    gap:3px;
+    min-width:0;
+  }
+  .tool-rail.is-compact .tool-group + .tool-group {
+    padding-top:6px;
+    border-top:1px solid var(--sc-color-border-soft);
+  }
+  .tool-rail.is-compact .tool-group-heading {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .tool-rail.is-compact .tool-group-actions {
+    display:grid;
+    justify-items:center;
+    gap:2px;
+    min-width:0;
+  }
+  .tool-rail.is-compact .tool-button {
+    width:48px;
+    min-width:48px;
+    height:48px;
+    min-height:48px;
+    padding:4px;
+    display:grid;
+    grid-template-columns:1fr;
+    justify-items:center;
+    align-content:center;
+    border:1px solid color-mix(in srgb,var(--sc-color-border) 58%,var(--sc-color-surface-elevated));
+    border-radius:var(--sc-radius-md);
+    background:var(--sc-color-surface-1);
+    color:var(--tool-color,var(--sc-color-text-muted));
+    box-shadow:var(--sc-elevation-1);
+    transform:none;
+  }
+  .tool-rail.is-compact .tool-button .sc-tool-button__icon {
+    width:24px;
+    height:24px;
+    display:grid;
+    place-items:center;
+  }
+  .tool-rail.is-compact .tool-button .sc-tool-button__icon svg {
+    width:21px;
+    height:21px;
+    color:currentColor;
+    stroke-width:1.8;
+  }
+  .tool-rail.is-compact .tool-button > span:not(.sc-tool-button__icon),
+  .tool-rail.is-compact .tool-button kbd {
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+  }
+  .tool-rail.is-compact .tool-button:hover:not(:disabled) {
+    background:var(--sc-color-surface-elevated);
+    border-color:var(--sc-color-border-soft);
+    color:var(--tool-color,var(--sc-color-text-primary));
+    box-shadow:var(--sc-elevation-1);
+  }
+  /* Elegida = hundida en la misma cavidad que la bandeja, nunca rellena de
+     color ni elevada — ni en reposo ni al pasar el cursor por encima. */
+  .tool-rail.is-compact .tool-button.active,
+  .tool-rail.is-compact .tool-button.is-active,
+  .tool-rail.is-compact .tool-button.active:hover:not(:disabled),
+  .tool-rail.is-compact .tool-button.is-active:hover:not(:disabled) {
+    background:var(--sc-color-surface-inset);
+    border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 26%,var(--sc-color-border));
+    color:var(--tool-color,var(--accent));
+    box-shadow:none;
+    transform:var(--sc-press-transform);
+  }
+  .tool-rail.is-compact .tool-button:active:not(:disabled) {
+    background:var(--sc-color-surface-pressed);
+    border-color:var(--sc-color-border-soft);
+    box-shadow:none;
+    transform:var(--sc-press-transform);
+  }
+  .tool-rail.is-compact .tool-button.destructive {
+    --tool-color:var(--sc-color-tool-destructive);
+  }
+  .tool-rail.is-compact .toolbar-spacer { min-height:10px; }
+  .tool-rail.is-compact .selection-tip {
+    width:48px;
+    min-height:32px;
+    padding:5px 0;
+    justify-content:center;
+    align-items:center;
+    color:var(--sc-color-text-muted);
+  }
+  .tool-rail.is-compact .selection-tip span { display:none; }
+  .tool-rail.is-compact .selection-tip svg { width:17px; height:17px; }
+}
+
+@media (min-width:1024px) and (prefers-reduced-motion:reduce) {
   .tool-rail.is-compact .tool-button,
   .tool-rail.is-compact .tool-button:hover:not(:disabled),
   .tool-rail.is-compact .tool-button:active:not(:disabled) { transform:none; transition:none; }
 }
 
+/* La bandeja no elige rellenando de acento: hunde la tecla en la cavidad
+   (`.mobile-tool-dock .tool-button.active` → `--sc-color-surface-inset`). El
+   Design System, en cambio, sí rellena (`.sc-tool-button.is-active`) y por eso
+   manda su glifo a la tinta del relleno —blanco— en dos reglas que ganan por
+   especificidad a la de la bandeja: `ui.css` (0,2,0) y, sobre todo,
+   `.tool-rail .sc-tool-button.is-active .sc-tool-button__icon svg` de
+   `15-canvas.css` (0,4,1). Resultado medido a 390×844: el icono de la
+   herramienta elegida quedaba en `rgb(255,255,255)` sobre `rgb(245,245,247)`
+   —1.05:1, invisible—, justo el único de los seis que el usuario necesita ver.
+
+   Aquí la cavidad no lleva relleno, así que la tinta correcta es la misma que
+   ya usa su etiqueta: el acento. Va en esta hoja, no junto al resto de reglas
+   de la bandeja, porque tiene que caer DESPUÉS de `15-canvas.css` para
+   desempatar. */
+.mobile-tool-dock .tool-button.active .sc-tool-button__icon,
+.mobile-tool-dock .tool-button.active .sc-tool-button__icon svg,
+.mobile-tool-dock .tool-button.active .sc-tool-button__copy strong { color:var(--accent); }
 
 /* ========================================================================
    MATERIA DE FEATURE · piezas propias del lienzo, el inspector, los

@@ -461,9 +461,14 @@ async function selectFirstInspectorMember(page) {
 async function openInspectorFromSelection(page) {
   await selectFirstInspectorMember(page);
   const panel = page.locator('.inspector-panel');
-  if (!(await panel.evaluate((element) => element.classList.contains('mobile-open')))) {
-    await page.getByLabel('Abrir inspector').click();
-  }
+  // En K0 el detalle ya no nace abierto, así que el panel puede no estar ni
+  // montado: el broker sólo lo retiene mientras se le pide. «Montado pero
+  // cerrado» y «todavía no montado» piden exactamente lo mismo —pulsar su
+  // lanzador—, y preguntarle la clase a un nodo que no existe era esperar 30 s
+  // a que apareciera solo.
+  const alreadyOpen = await panel.count() > 0
+    && await panel.first().evaluate((element) => element.classList.contains('mobile-open'));
+  if (!alreadyOpen) await page.getByLabel('Abrir inspector').click();
   await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
 }
 

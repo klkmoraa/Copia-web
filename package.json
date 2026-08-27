@@ -21,6 +21,7 @@
     "verify": "npm run lint && npm run verify:docs && npm run verify:protected && npm test && npm run build && npm run verify:perf && npm run verify:entry",
     "qa": "npm run build && node qa.mjs",
     "qa:topbar": "npm run build && node scripts/qa-topbar.mjs",
+    "qa:dock": "npm run build && node scripts/qa-dock.mjs",
     "qa:model-doctor": "npm run build && node scripts/qa-model-doctor.mjs",
     "qa:model-doctor-peek": "npm run build && node scripts/qa-model-doctor-peek.mjs",
     "qa:datasheet-k0": "npm run build && node scripts/qa-datasheet-k0.mjs",

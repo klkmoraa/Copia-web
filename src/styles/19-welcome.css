@@ -103,5 +103,12 @@
   box-shadow:none;
 }
 
-.toolbar { padding:8px 8px; }
+/* Sólo donde el riel es lateral. Sin puerta, esta línea suelta ganaba —misma
+   especificidad, hoja posterior— al padding que `14-results.css` declara para
+   ≤1023px: `3px … calc(3px + env(safe-area-inset-bottom))`. En un teléfono eso
+   dejaba la bandeja bajo el indicador de inicio y le daba 42 px de alto de
+   contenido para teclas de 50, que desbordaban 8 px por abajo. */
+@media (min-width:1024px) {
+  .toolbar { padding:8px 8px; }
+}
 .inspector-panel { border-left:1px solid var(--sc-color-border); }

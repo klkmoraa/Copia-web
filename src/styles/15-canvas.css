@@ -337,6 +337,25 @@
 .canvas-layer-row .sc-layer-toggle__copy small { font-size:10px; line-height:1.28; }
 .canvas-layer-row.sc-layer-toggle.is-checked .sc-layer-toggle__icon { color:var(--accent-on-soft); background:var(--accent-soft); }
 
+/* La columna del riel la manda la clase de composición, no el ancho.
+   `data-tool-rail-compact` ya lo dice (`isToolRailCompact`, CRI-89) y las dos
+   reglas de rejilla de abajo lo respetan… pero sólo a partir de 1440px, y `M1`
+   nunca llega ahí: su frontera con `X2` está entre 1042 y 1130 según la altura
+   (`expandedBoundaryWidth`). Así que el contrato estaba escrito donde no
+   ocurre, y en la banda donde `M1` sí vive —1024px arriba— mandaba
+   `:root{--toolbar-w:var(--sc-layout-rail)}` de `23-inspector.css`: una
+   columna de 200px para teclas de 48. Medido a 1024×768: 200px de riel con
+   132 vacíos, sobre un lienzo visible de 397.
+
+   Se corrige en la raíz del valor, no en cada rejilla: `--toolbar-w` en el
+   propio shell (0,2,0) gana al `:root` (0,1,0) sin depender del orden de las
+   hojas, y lo leen las tres rejillas que existen —la base, la del inspector
+   contraído y la del inspector `inset` de `phase1.css`—. El techo de `K0`
+   sigue fuera: allí el riel no es columna. */
+@media (min-width:1024px) {
+  .app-shell[data-tool-rail-compact='true'] { --toolbar-w:var(--sc-layout-rail-compact); }
+}
+
 @media (min-width:1440px) {
   .app-shell[data-tool-rail-compact='true']:not([data-full-canvas='true']) .workspace {
     grid-template-columns:var(--sc-layout-rail-compact) minmax(0,1fr) var(--inspector-w);
