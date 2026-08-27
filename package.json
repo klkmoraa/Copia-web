@@ -27,6 +27,8 @@
     "qa:model-doctor": "npm run build && node scripts/qa-model-doctor.mjs",
     "qa:model-doctor-peek": "npm run build && node scripts/qa-model-doctor-peek.mjs",
     "qa:datasheet-k0": "npm run build && node scripts/qa-datasheet-k0.mjs",
+    "qa:personal-library": "npm run build && node scripts/qa-personal-library.mjs",
+    "qa:structural-bom": "npm run build && node scripts/qa-structural-bom.mjs",
     "qa:bulk-edit": "npm run build && node scripts/qa-bulk-edit.mjs",
     "qa:bulk-edit:webkit": "npm run build && node scripts/qa-bulk-edit.mjs --webkit",
     "qa:structural-edits": "npm run build && node scripts/qa-structural-edits.mjs",
