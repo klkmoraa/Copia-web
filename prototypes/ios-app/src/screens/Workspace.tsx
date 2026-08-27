@@ -15,7 +15,8 @@ import {
   Share, Spline, Table2, Trash2, TrendingUp, Waves, Weight, Zap,
 } from 'lucide-react'
 import { Sheet, type Detent } from '../components/Sheet'
-import { StructureView, viewBoxOf, type Selection } from '../components/Structure'
+import { StructureView, type Selection } from '../components/Structure'
+import { viewBoxOf } from '../components/structureGeometry'
 import { ActionSheet, type ActionItem } from '../components/Chrome'
 import {
   analyse, DIAGRAM_META, fmt, STATUS_COLOR, STATUS_LABEL,

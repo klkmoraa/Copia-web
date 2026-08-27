@@ -3,12 +3,12 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Selection } from '../../types';
+import { ContextualActions } from './ContextualActions';
 import {
-  ContextualActions,
   resolveContextualActionModel,
   type ContextualActionAvailability,
   type ContextualActionId,
-} from './ContextualActions';
+} from './contextualActionsModel';
 
 afterEach(cleanup);
 

@@ -122,7 +122,7 @@ for (const label of allRoleLabels) {
   }
 
   const results = {};
-  for (const [bgLabel, bgVar] of Object.entries(BACKGROUNDS)) {
+  for (const [bgLabel, _bgVar] of Object.entries(BACKGROUNDS)) {
     results[`dia_${bgLabel}`] = r2(ratio(dayVal, day.backgrounds[bgLabel]));
     results[`noche_${bgLabel}`] = r2(ratio(nightVal, night.backgrounds[bgLabel]));
   }

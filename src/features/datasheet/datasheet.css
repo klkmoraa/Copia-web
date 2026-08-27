@@ -130,6 +130,28 @@
   box-shadow: var(--sc-ring-focus);
 }
 
+.datasheet-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.datasheet-action-chip {
+  cursor: pointer;
+  background: var(--sc-color-surface-2);
+}
+
+.datasheet-action-chip:hover {
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-primary);
+}
+
+.datasheet-action-chip.active {
+  background: var(--sc-color-action-primary);
+  color: var(--sc-color-action-foreground);
+  border-color: transparent;
+}
+
 .datasheet-count {
   margin: 0;
   margin-left: auto;

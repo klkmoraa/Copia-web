@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Check, Copy, Download, Search } from 'lucide-react';
+import { formatDatasheetAsCsv, formatDatasheetAsTsv, copyTextToClipboard, downloadTextFile } from './datasheetExport';
 import { useI18n } from '../../i18n/useI18n';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
@@ -145,6 +146,7 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
   const [draftSource, setDraftSource] = useRetainedState<'grid' | 'panel' | null>('datasheet.draftSource', null);
   /** Ancla del rango con `Mayús`; es estado de interacción, no del modelo. */
   const rangeAnchorRef = useRef<string | null>(null);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
 
   const units = project.settings.units;
   const columns = datasheetColumns(entity);
@@ -199,7 +201,7 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
     setDraftSource(null);
     setSelectionOnly(false);
     rangeAnchorRef.current = null;
-  }, [entity]);
+  }, [entity, setDraft, setDraftSource]);
 
   // Buscar o filtrar puede dejar el foco fuera de la tabla; se reencaja para que
   // la rejilla nunca se quede sin su única parada de tabulación.
@@ -292,14 +294,14 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
     setDraft(EMPTY_DATASHEET_DRAFT);
     setPaste(null);
     setDraftSource(null);
-  }, [updateProject]);
+  }, [setDraft, setDraftSource, updateProject]);
 
   const onCancelDraft = useCallback(() => {
     setDraft(EMPTY_DATASHEET_DRAFT);
     setEditing(null);
     setPaste(null);
     setDraftSource(null);
-  }, []);
+  }, [setDraft, setDraftSource]);
 
   const onCommitEdit = useCallback((rowId: string, fieldId: DatasheetFieldId, raw: string) => {
     setEditing(null);
@@ -314,7 +316,7 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
     }
     setDraft(next);
     setDraftSource('grid');
-  }, [applyPlan, draft, project, units]);
+  }, [applyPlan, draft, project, setDraft, setDraftSource, units]);
 
   const onPasteBlock = useCallback((text: string, anchor: GridPosition) => {
     const result = mapPasteToEdits({ block: parseClipboardGrid(text), rows, columns, entity, anchor });
@@ -327,7 +329,7 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
     // que un pegado entró entero, no sólo cuándo se descartó algo.
     setPaste({ droppedOutside: result.droppedOutside, droppedReadOnly: result.droppedReadOnly });
     setDraftSource('grid');
-  }, [columns, entity, rows]);
+  }, [columns, entity, rows, setDraft, setDraftSource]);
 
   const draftText = useCallback((row: DatasheetRow, column: DatasheetColumn): string | undefined => {
     const fieldId = datasheetRowField(entity, column.id, row.kind);
@@ -363,7 +365,7 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
     if (!target) return;
     setDraft((current) => stageDatasheetEdit(current, target.id, fieldId, raw));
     setDraftSource('panel');
-  }, [target]);
+  }, [setDraft, setDraftSource, target]);
 
   const panelDraftText = useCallback(
     (fieldId: DatasheetFieldId) => (target ? draft[draftKey(target.id, fieldId)] : undefined),
@@ -403,6 +405,23 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
       return { ...current, [columnId]: active };
     });
   }, []);
+
+  const handleCopyTable = useCallback(async () => {
+    const tsv = formatDatasheetAsTsv(columns, rows, units, (key) => t(key));
+    const ok = await copyTextToClipboard(tsv);
+    if (ok) {
+      setCopiedFeedback(true);
+      setAnnouncement(t('datasheet.tableCopied'));
+      setTimeout(() => setCopiedFeedback(false), 2000);
+    }
+  }, [columns, rows, units, t]);
+
+  const handleDownloadCsv = useCallback(() => {
+    const csv = formatDatasheetAsCsv(columns, rows, units, (key) => t(key));
+    const cleanProjectName = project.name ? project.name.replace(/\s+/g, '_') : 'Estructura';
+    const filename = `${cleanProjectName}_${entity}_${units}.csv`;
+    downloadTextFile(filename, csv);
+  }, [columns, rows, units, project.name, entity, t]);
 
   return <>
     <div className="datasheet-layout">
@@ -447,6 +466,27 @@ export const DatasheetContent = ({ onPeek }: DatasheetContentProps) => {
             disabled={selectedIds.size === 0 && !selectionOnly}
             onClick={() => setSelectionOnly((current) => !current)}
           >{t('datasheet.selectionOnly')}</button>
+
+          <div className="datasheet-toolbar-actions" role="group" aria-label={t('datasheet.copyTable')}>
+            <button
+              type="button"
+              className={`datasheet-chip datasheet-action-chip${copiedFeedback ? ' active' : ''}`}
+              onClick={handleCopyTable}
+              title={t('datasheet.copyTable')}
+            >
+              {copiedFeedback ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+              <span>{copiedFeedback ? t('datasheet.tableCopied') : t('datasheet.copyTable')}</span>
+            </button>
+            <button
+              type="button"
+              className="datasheet-chip datasheet-action-chip"
+              onClick={handleDownloadCsv}
+              title={t('datasheet.downloadCsv')}
+            >
+              <Download size={14} aria-hidden="true" />
+              <span>{t('datasheet.downloadCsv')}</span>
+            </button>
+          </div>
 
           <p className="datasheet-count" role="status">
             {t('datasheet.rowCount', { visible: rows.length, total: allRows.length })}

@@ -224,7 +224,9 @@
 [data-level='raised'] .results-table caption,
 [data-level='raised'] .results-table thead th,
 [data-level='raised'] .results-table tbody th,
-[data-level='raised'] .results-table tbody td {
+[data-level='raised'] .results-table tbody td,
+[data-level='raised'] .results-table tfoot th,
+[data-level='raised'] .results-table tfoot td {
   background-image: none;
   border-radius: var(--sc-radius-data);
   box-shadow: none;

@@ -99,7 +99,7 @@ const WorkspaceBrokerContent = ({
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [openSurface]);
+  }, [openSurface, setResultTab]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());

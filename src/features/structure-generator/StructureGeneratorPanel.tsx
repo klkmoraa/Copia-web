@@ -14,6 +14,7 @@ import type { UnitSystemId } from '../../types';
 import { createStructureGeneratorTranslator } from './structureGeneratorCopy';
 import {
   GENERATOR_FAMILIES,
+  GENERATOR_PRESETS,
   GENERATOR_SPACING_FIELDS,
   GENERATOR_SUPPORT_CHOICES,
   GRID_MEMBER_MODES,
@@ -411,6 +412,14 @@ export const StructureGeneratorPanel = ({
       <div>
         <strong>{t('title')}</strong>
         <span>{reviewing ? t('review.description') : t('description')}</span>
+        {summary ? (
+          <span className="structure-generator__census-badge" data-testid="generator-predictive-census">
+            {t('predictiveCensus', {
+              nodes: summary.nodeCount,
+              members: summary.memberCount,
+            })}
+          </span>
+        ) : null}
       </div>
       <IconButton label={t('close')} size="touch" onClick={onCancel}><X size={18} /></IconButton>
     </header>
@@ -433,6 +442,22 @@ export const StructureGeneratorPanel = ({
         options={GENERATOR_FAMILIES.map((family) => ({ value: family, label: t(`family.${family}`) }))}
         onValueChange={(value) => patch({ family: value as GeneratorFormState['family'] })}
       />
+
+      <div className="structure-generator__presets" role="group" aria-label={t('presetsLabel')}>
+        <span className="structure-generator__presets-label">{t('presetsLabel')}</span>
+        <div className="structure-generator__presets-chips">
+          {GENERATOR_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className="structure-generator__preset-chip"
+              onClick={() => patch(preset.form)}
+            >
+              {t(preset.labelKey)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {geometryFields}
 

@@ -31,7 +31,6 @@ import {
   calibrate,
   evaluate,
   expandedBoundary as cri9Boundary,
-  resolveComposition as cri9Resolve,
   VIEWPORTS,
 } from '../2026-08-15-cri-9-adaptive-architecture/canvas-budget-model.mjs';
 

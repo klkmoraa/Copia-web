@@ -2327,7 +2327,29 @@ export const StructuralCanvas = ({
         cancelLabel={t('canvas.cancelPlacement')}
         onCancel={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}
       />
-      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(view.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
+      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend">
+        <strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong>
+        <span><i /> {t('canvas.exactCurveScale', { scale: t(view.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span>
+        <small>{t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '+y' : '−y' })}</small>
+        <div className="canvas-result-legend-actions">
+          <button
+            type="button"
+            className="canvas-legend-btn"
+            onClick={() => setView({ diagramSide: view.diagramSide === 'positive' ? 'negative' : 'positive' })}
+            title={t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '−y' : '+y' })}
+          >
+            {view.diagramSide === 'positive' ? '+y' : '−y'}
+          </button>
+          <button
+            type="button"
+            className="canvas-legend-btn"
+            onClick={() => setView({ diagramScaleMode: view.diagramScaleMode === 'individual' ? 'common' : 'individual' })}
+            title={t(view.diagramScaleMode === 'individual' ? 'canvas.scaleCommon' : 'canvas.scaleByMember')}
+          >
+            {view.diagramScaleMode === 'individual' ? '1:1' : '∑'}
+          </button>
+        </div>
+      </div> : null}
       {demandLegend ? <div className="canvas-demand-legend" aria-label={t('canvas.demandLegendTitle')} data-canvas-chrome="demand-legend" data-testid="canvas-demand-legend">
         <strong>{t('canvas.demandLegendTitle')}</strong>
         {/* La rampa se declara con sus dos extremos y la referencia: sin esto el

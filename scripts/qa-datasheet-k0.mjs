@@ -30,10 +30,9 @@ const previewServer = await preview({
   logLevel: 'error',
 });
 const baseURL = 'http://127.0.0.1:4196/';
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium',
-});
+const browser = await chromium.launch(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+  : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 
 const report = { checks: [], failures: [], measurements: {}, shots: [] };
 const check = (name, ok, detail) => {

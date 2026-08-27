@@ -427,7 +427,7 @@ const ENTITY_TAB_INDEX = { nodes: 0, members: 1, loads: 2 };
 /** Columna numérica editable en línea de cada pestaña (ver `datasheetModel.ts`). */
 const EDIT_COLUMN = { nodes: 1, members: 7 };
 
-const armed = async (page, kind, name, arg, timeout = 30000) => {
+const _armed = async (page, kind, name, arg, timeout = 30000) => {
   await page.evaluate((k) => window.__cri93.armGesture(k), kind);
   return page.evaluate(
     ([conditionName, conditionArg, timeoutMs]) => window.__cri93.awaitCondition(conditionName, conditionArg, timeoutMs),

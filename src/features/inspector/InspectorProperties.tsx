@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   Anchor,
+  ArrowLeftRight,
   CircleDot,
   CircleHelp,
   Layers3,
@@ -11,6 +12,7 @@ import {
   Plus,
   RotateCcw,
   Sigma,
+  Split,
   Trash2,
 } from 'lucide-react';
 import { BulkEditInspectorPanel } from '../bulk-edit/BulkEditInspectorPanel';
@@ -247,6 +249,42 @@ export const InspectorProperties = () => {
       description: `Construir sección de ${selectedMember.id}`,
       memberId: selectedMember.id,
       changes: properties,
+    });
+  };
+
+  const splitSelectedMember = () => {
+    if (!selectedMember) return;
+    void executeProjectCommand({
+      kind: 'member.split',
+      description: `Subdividir ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      ratio: 0.5,
+    });
+  };
+
+  const flipSelectedMember = () => {
+    if (!selectedMember) return;
+    const nextI = selectedMember.j;
+    const nextJ = selectedMember.i;
+    const nextReleases = selectedMember.releases
+      ? { iMoment: selectedMember.releases.jMoment, jMoment: selectedMember.releases.iMoment }
+      : undefined;
+    void executeProjectCommand({
+      kind: 'member.update',
+      description: `Invertir sentido de ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      changes: { i: nextI, j: nextJ, releases: nextReleases },
+    });
+  };
+
+  const articulateSelectedMember = () => {
+    if (!selectedMember) return;
+    const releases = { ...(selectedMember.releases ?? {}), iMoment: true, jMoment: true };
+    void executeProjectCommand({
+      kind: 'member.update',
+      description: `Articular extremos de ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      changes: { releases },
     });
   };
 
@@ -522,6 +560,25 @@ export const InspectorProperties = () => {
         <SelectField label={t('inspector.support')} value={selectedNode.support.type} onChange={(value) => updateNode('supportType', value)}>
           <option value="none">{t('inspector.free')}</option><option value="pin">{t('inspector.pin')}</option><option value="roller">{t('inspector.roller')}</option><option value="fixed">{t('inspector.fixed')}</option><option value="custom">{t('inspector.custom')}</option>
         </SelectField>
+        <div className="segmented-control inspector-support-control" role="group" aria-label={t('inspector.support')}>
+          {[
+            { value: 'none', label: t('inspector.free') },
+            { value: 'pin', label: t('inspector.pin') },
+            { value: 'roller', label: t('inspector.roller') },
+            { value: 'fixed', label: t('inspector.fixed') },
+            { value: 'custom', label: t('inspector.custom') },
+          ].map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              aria-pressed={selectedNode.support.type === option.value}
+              className={selectedNode.support.type === option.value ? 'active' : ''}
+              onClick={() => updateNode('supportType', option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         {selectedNode.support.type === 'roller' ? <InspectorNumericField label={t('inspector.normal')} value={selectedNode.support.angleDeg ?? 90} unit="°" resetKey={`${selectionKey}:support-angle`} language={language} formatOptions={{ maximumFractionDigits: 2 }} hint={t('inspector.rollerNormalHint')} onCommit={(value) => updateNode('supportAngle', value)} /> : null}
         {selectedNode.support.type === 'custom' ? <div className="checkbox-grid" role="group" aria-label={t('inspector.restrictedDegreesOfFreedom')}>
           <label><input type="checkbox" checked={selectedNode.support.restrainX ?? false} onChange={(event) => updateNode('restrainX', event.target.checked)} /> Ux</label>
@@ -555,6 +612,37 @@ export const InspectorProperties = () => {
       const angle = ni && nj ? Math.atan2(nj.y - ni.y, nj.x - ni.x) * 180 / Math.PI : Number.NaN;
       return <>
         <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberFrequentDescription')}>
+          <div className="inspector-quick-actions" role="group" aria-label={t('inspector.quickActions')}>
+            <button
+              type="button"
+              className="inspector-action-chip"
+              onClick={splitSelectedMember}
+              title={t('inspector.splitMemberHint')}
+            >
+              <Split size={14} aria-hidden="true" />
+              <span>{t('inspector.splitMember')}</span>
+            </button>
+            <button
+              type="button"
+              className="inspector-action-chip"
+              onClick={flipSelectedMember}
+              title={t('inspector.flipEndpointsHint')}
+            >
+              <ArrowLeftRight size={14} aria-hidden="true" />
+              <span>{t('inspector.flipEndpoints')}</span>
+            </button>
+            {selectedMember.type === 'frame' ? (
+              <button
+                type="button"
+                className="inspector-action-chip"
+                onClick={articulateSelectedMember}
+                title={t('inspector.articulateBothHint')}
+              >
+                <CircleDot size={14} aria-hidden="true" />
+                <span>{t('inspector.articulateBoth')}</span>
+              </button>
+            ) : null}
+          </div>
           <SelectField label={t('inspector.element')} value={selectedMember.type} onChange={(value) => updateMember('type', value)}>
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>

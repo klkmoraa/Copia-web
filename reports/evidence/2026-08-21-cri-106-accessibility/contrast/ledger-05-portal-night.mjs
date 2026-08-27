@@ -78,11 +78,12 @@ const ratio = (a, b) => { const x = lum(a); const y = lum(b); return (Math.max(x
 const r2 = (n) => Math.round(n * 100) / 100;
 const hex = ([r, g, b]) => '#' + [r, g, b].map((c) => Math.round(c).toString(16).padStart(2, '0')).join('');
 
-const assetsDir = path.join(repoRoot, 'dist', 'assets');
 const previewServer = await preview({ root: repoRoot, preview: { host: '127.0.0.1', port: 4188, strictPort: true }, logLevel: 'error' });
 const baseURL = 'http://127.0.0.1:4188/';
 
-const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium' });
+const browser = await chromium.launch(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+  : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 
 async function measureTheme(theme) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });

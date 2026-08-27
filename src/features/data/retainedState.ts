@@ -1,4 +1,14 @@
-import { createContext, useCallback, useContext, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 
 /**
  * Estado que sobrevive a una suspensión de la superficie.
@@ -23,7 +33,7 @@ const RetainedStateContext = createContext<Map<string, unknown> | null>(null);
 export const RetainedStateProvider = ({ children }: { children: ReactNode }) => {
   const store = useRef<Map<string, unknown>>(undefined as unknown as Map<string, unknown>);
   store.current ??= new Map<string, unknown>();
-  return <RetainedStateContext.Provider value={store.current}>{children}</RetainedStateContext.Provider>;
+  return createElement(RetainedStateContext.Provider, { value: store.current }, children);
 };
 
 /**
@@ -34,7 +44,7 @@ export const RetainedStateProvider = ({ children }: { children: ReactNode }) => 
  */
 export const useRetainedState = <T,>(key: string, initial: T): [T, Dispatch<SetStateAction<T>>] => {
   const store = useContext(RetainedStateContext);
-  const [value, setValue] = useState<T>(() => (store?.has(key) ? store.get(key) as T : initial));
+  const [value, setValue] = useState<T>(() => (store?.has(key) ? (store.get(key) as T) : initial));
   const commit = useCallback<Dispatch<SetStateAction<T>>>((next) => {
     setValue((current) => {
       const resolved = typeof next === 'function' ? (next as (previous: T) => T)(current) : next;

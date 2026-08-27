@@ -168,7 +168,7 @@ export const porticoHero = (extraClass = '', { grain = 0.07 } = {}) => {
   instance += 1;
   const uid = `p3d${instance}`;
   const faces = buildPortal();
-  const { columnWidth: cw, columnDepth: cd, baseWidth: bw, baseHeight: bhh, columnHeight: ch, span } = DEFAULT_PORTAL;
+  const { columnWidth: cw, columnDepth: cd, baseWidth: _bw, baseHeight: bhh, columnHeight: ch, span } = DEFAULT_PORTAL;
 
   const footprints = [footprintOf(0), footprintOf(1)];
   const footEllipses = footprints.map(contactEllipseOf);

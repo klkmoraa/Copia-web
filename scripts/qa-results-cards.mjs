@@ -28,11 +28,9 @@ const previewServer = await preview({
 });
 const baseURL = 'http://127.0.0.1:4191/';
 
-const browser = await chromium.launch({
-  headless: true,
-  channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined,
-  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium',
-});
+const browser = await chromium.launch(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+  : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 
 const report = { checks: [], failures: [], shots: [] };
 const check = (name, ok, detail) => {

@@ -29,12 +29,11 @@ export const ResultSummary = () => {
   const selectedMemberId = summary?.diagrams.moment?.absolute.memberId ?? summary?.members[0]?.memberId ?? '';
   const deformationEnvelope = useMemo(() => scenarios && selectedMemberId ? buildDeformationEnvelope(scenarios, selectedMemberId, 'v') : null, [scenarios, selectedMemberId]);
   const units = project.settings.units;
-  /* Estable a propósito: las tarjetas de extremos están memoizadas y no deben
-     repintarse cuando el cursor de resultados cambia con el puntero. */
   const locate = useCallback((quantity: DiagramQuantity | ResponseQuantity, memberId: string, x: number) => {
     setSelection({ kind: 'member', id: memberId });
     setResultCursor({ memberId, x, pinned: true });
     setResultTab(quantity === 'u' || quantity === 'v' || quantity === 'theta' ? 'deformed' : diagramTab[quantity]);
+    window.requestAnimationFrame(() => emitWorkspaceCommand('focus-object', { kind: 'member', id: memberId }));
   }, [setResultCursor, setResultTab, setSelection]);
   /**
    * Los extremos se derivan del análisis y de las unidades — nunca del cursor —

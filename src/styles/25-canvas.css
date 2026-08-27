@@ -235,3 +235,41 @@
 /* Sin dato verificable el corte no inventa un η: lo dice, en gris y en texto. */
 .cut-demand-badge[data-status='unavailable'] { color:var(--subtle); border-style:dashed; }
 .cut-station { color:var(--subtle); font-family:var(--sc-font-mono); }
+
+/* --- Botones de control rápido del diagrama -------------------------- */
+.canvas-result-legend-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--sc-space-1);
+  margin-top: var(--sc-space-1);
+  pointer-events: auto;
+}
+
+.canvas-legend-btn {
+  min-height: 22px;
+  padding: 1px 7px;
+  border-radius: var(--sc-radius-control);
+  border: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-2);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-medium);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background var(--sc-motion-fast) var(--sc-ease-standard),
+    color var(--sc-motion-fast) var(--sc-ease-standard),
+    border-color var(--sc-motion-fast) var(--sc-ease-standard);
+}
+
+.canvas-legend-btn:hover:not(:disabled) {
+  background: var(--sc-color-surface-elevated);
+  color: var(--sc-color-text-primary);
+  border-color: var(--sc-color-border);
+  box-shadow: var(--sc-elevation-1);
+}
+
+.canvas-legend-btn:active:not(:disabled) {
+  box-shadow: none;
+  transform: var(--sc-press-transform);
+}
+

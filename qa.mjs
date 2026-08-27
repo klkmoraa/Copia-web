@@ -428,11 +428,6 @@ async function readDataSurfaceMaterial(page) {
   return { material, level };
 }
 
-function hasExactBorderGeometry(material, expectedWidths) {
-  return material.borderWidths === expectedWidths &&
-    material.borderStyles === 'solid solid solid solid';
-}
-
 /* FLAT es la ausencia deliberada de materia en una zona técnica densa: un
    relleno de la jerarquía de fills, sin canto visible y sin sombra. Antes era
    superficie opaca más borde suave; ahora un dato no es una pieza.

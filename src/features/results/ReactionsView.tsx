@@ -67,6 +67,17 @@ export const ReactionsView = () => {
       : extreme.component === 'y' ? 'results.signGlobalY' : 'results.signGlobalRotation'),
   } satisfies ResultRef])), [caseOrCombinationId, extremes, t]);
 
+  const totalReactions = useMemo(() => {
+    return nodeResults.reduce(
+      (acc, r) => ({
+        rx: acc.rx + (r.rx || 0),
+        ry: acc.ry + (r.ry || 0),
+        rm: acc.rm + (r.rm || 0),
+      }),
+      { rx: 0, ry: 0, rm: 0 },
+    );
+  }, [nodeResults]);
+
   return <div className="dense-reactions">
     <div className="result-extreme-grid">
       {extremes.map((extreme) => <ResultExtremeCard
@@ -97,6 +108,15 @@ export const ReactionsView = () => {
               <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
             </tr>;
           })}</tbody>
+          {nodeResults.length > 0 ? <tfoot>
+            <tr className="results-table-total">
+              <th scope="row"><strong>Σ Total</strong></th>
+              <td>—</td><td>—</td><td>—</td>
+              <td><strong>{formatResultNumber(toDisplay(totalReactions.rx, units, 'force'))}</strong></td>
+              <td><strong>{formatResultNumber(toDisplay(totalReactions.ry, units, 'force'))}</strong></td>
+              <td><strong>{formatResultNumber(toDisplay(totalReactions.rm, units, 'moment'))}</strong></td>
+            </tr>
+          </tfoot> : null}
         </table>
       </div>
     </Surface>

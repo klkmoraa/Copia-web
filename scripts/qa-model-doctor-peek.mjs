@@ -17,7 +17,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const outDir = path.join(repoRoot, 'reports', 'evidence', '2026-08-20-datasheet-contextual-actions-k0', 'doctor');
 fs.mkdirSync(outDir, { recursive: true });
 const previewServer = await preview({ root: repoRoot, preview: { host: '127.0.0.1', port: 4199, strictPort: true }, logLevel: 'error' });
-const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium' });
+const browser = await chromium.launch(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+  : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 
 const report = { checks: [], failures: [] };
 const check = (name, ok, detail) => {

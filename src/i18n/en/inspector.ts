@@ -500,5 +500,12 @@ export const inspector = {
   'bulk.option.node.support.type.pin': 'Pinned',
   'bulk.option.node.support.type.roller': 'Oriented roller',
   'bulk.option.node.support.type.fixed': 'Fixed',
+  'inspector.quickActions': 'Quick actions',
+  'inspector.splitMember': 'Split at midpoint',
+  'inspector.splitMemberHint': 'Splits member at midpoint inserting a central node.',
+  'inspector.flipEndpoints': 'Invert direction',
+  'inspector.flipEndpointsHint': 'Swaps start (i) and end (j) nodes.',
+  'inspector.articulateBoth': 'Hinge both ends',
+  'inspector.articulateBothHint': 'Releases bending moments at both ends.',
   'bulk.option.node.support.type.custom': 'Custom',
 } as const;

@@ -500,5 +500,12 @@ export const inspector = {
   'bulk.option.node.support.type.pin': 'Articulado',
   'bulk.option.node.support.type.roller': 'Rodillo orientable',
   'bulk.option.node.support.type.fixed': 'Empotramiento',
+  'inspector.quickActions': 'Acciones rápidas',
+  'inspector.splitMember': 'Subdividir a la mitad',
+  'inspector.splitMemberHint': 'Divide la barra por la mitad insertando un nodo central.',
+  'inspector.flipEndpoints': 'Invertir sentido',
+  'inspector.flipEndpointsHint': 'Intercambia los extremos i y j de la barra.',
+  'inspector.articulateBoth': 'Articular extremos',
+  'inspector.articulateBothHint': 'Libera los momentos flectores en ambos extremos.',
   'bulk.option.node.support.type.custom': 'Personalizado',
 } as const;

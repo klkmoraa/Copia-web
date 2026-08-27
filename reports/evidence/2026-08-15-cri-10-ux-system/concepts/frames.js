@@ -2,7 +2,7 @@
  * verificada contra la evidencia de CRI-7 y contra el árbol actual. Ninguna
  * pantalla existe para enseñar estilo.
  */
-import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel, contextLine, resultTabs, diagramCurve, maxMinCard, densityToggle, persistChip, ATTENTION_RING } from './parts.js';
+import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel, contextLine, resultTabs, diagramCurve, maxMinCard, densityToggle, persistChip, ATTENTION_RING } from './parts.js';
 import { porticoHero } from './portico3d.js';
 
 const F = [];
@@ -835,7 +835,7 @@ ${cinta({ estado: 'limitado' })}
 /* 15 · ESTADOS — success ≠ reliable ≠ safe                             */
 /* ------------------------------------------------------------------ */
 const estadoSpec = (key, forma, dice, noDice) => {
-  const e = { sin: 'Sin analizar', calc: 'Resolviendo', resuelto: 'Resuelto', limitado: 'Limitado', nofiable: 'No fiable', obsoleto: 'Obsoleto', fallido: 'Fallido' };
+  const _e = { sin: 'Sin analizar', calc: 'Resolviendo', resuelto: 'Resuelto', limitado: 'Limitado', nofiable: 'No fiable', obsoleto: 'Obsoleto', fallido: 'Fallido' };
   return `<div style="display:grid;grid-template-columns:230px 92px 1fr 1fr;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--sc-color-border-soft)">
     ${estadoChip(key)}
     <small style="color:var(--sc-color-text-muted);font-family:var(--sc-font-mono);font-size:11px">${forma}</small>

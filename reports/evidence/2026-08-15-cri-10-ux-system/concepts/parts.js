@@ -521,7 +521,7 @@ const RESULT_FAMILIES = [
   { id: 'advanced', label: 'Avanzado', tabs: [{ id: 'influence', label: 'Influencia', color: 'var(--sc-color-technical-shear)' }] },
   { id: 'understand', label: 'Entender', tabs: [{ id: 'learn', label: 'Aprender' }] },
 ];
-export const resultTabs = (active, { compact = false } = {}) => `
+export const resultTabs = (active, { compact: _compact = false } = {}) => `
 <nav class="rtabs" role="tablist" aria-label="Resultados">
   ${RESULT_FAMILIES.map((fam) => `
     <div class="rtabs__fam" role="presentation">

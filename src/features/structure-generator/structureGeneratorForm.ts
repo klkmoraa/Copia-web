@@ -137,6 +137,69 @@ export const DEFAULT_GENERATOR_FORM: GeneratorFormState = {
   inertia: '',
 };
 
+export interface GeneratorPreset {
+  readonly id: string;
+  readonly labelKey: 'preset.frame' | 'preset.beam' | 'preset.trussPratt' | 'preset.trussWarren' | 'preset.grid';
+  readonly form: Partial<GeneratorFormState>;
+}
+
+export const GENERATOR_PRESETS: readonly GeneratorPreset[] = [
+  {
+    id: 'frame',
+    labelKey: 'preset.frame',
+    form: {
+      family: 'multi-story-frame',
+      bays: uniformSpacing('2', '6'),
+      stories: uniformSpacing('3', '3.5'),
+      support: 'fixed',
+    },
+  },
+  {
+    id: 'beam',
+    labelKey: 'preset.beam',
+    form: {
+      family: 'continuous-beam',
+      spans: uniformSpacing('3', '6'),
+      support: 'pin',
+    },
+  },
+  {
+    id: 'trussPratt',
+    labelKey: 'preset.trussPratt',
+    form: {
+      family: 'truss',
+      topology: 'pratt',
+      panels: uniformSpacing('6', '3'),
+      depth: '3',
+      includeVerticals: true,
+      support: 'pin',
+    },
+  },
+  {
+    id: 'trussWarren',
+    labelKey: 'preset.trussWarren',
+    form: {
+      family: 'truss',
+      topology: 'warren',
+      panels: uniformSpacing('8', '2.5'),
+      depth: '2.5',
+      includeVerticals: false,
+      support: 'pin',
+    },
+  },
+  {
+    id: 'grid',
+    labelKey: 'preset.grid',
+    form: {
+      family: 'grid',
+      columns: uniformSpacing('4', '4'),
+      rows: uniformSpacing('3', '4'),
+      gridMembers: 'both',
+      support: 'pin',
+    },
+  },
+] as const;
+
 /**
  * Los números del catálogo elegido, en las unidades que se muestran. Es lo que
  * llena los campos personalizados al cambiar de origen: personalizar es partir
