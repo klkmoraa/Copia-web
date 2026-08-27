@@ -35,7 +35,7 @@ import type {
 import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorSelectionPreview } from './InspectorSelectionPreview';
-import { ModelOverview } from './ModelOverview';
+import { ModelOverview } from './ModelOverview.tsx';
 import { readExpandedSections, writeExpandedSections } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';

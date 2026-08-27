@@ -24,7 +24,7 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
-const LazyDataSurface = lazy(() => import('../data/DataSurface').then((module) => ({ default: module.DataSurface })));
+const LazyDataSurface = lazy(() => import('../data/DataSurface.tsx').then((module) => ({ default: module.DataSurface })));
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ModelOverview } from './ModelOverview';
+import { ModelOverview } from './ModelOverview.tsx';
 import { createBlankProject, createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { ProjectProvider } from '../../store/ProjectContext';

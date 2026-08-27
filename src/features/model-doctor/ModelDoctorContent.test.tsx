@@ -9,7 +9,7 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import type { ProjectModel } from '../../types';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
-import { DataSurface } from '../data/DataSurface';
+import { DataSurface } from '../data/DataSurface.tsx';
 import { ModelDoctorContent } from './ModelDoctorContent';
 import { buildModelDoctorReport } from './modelDoctorDiagnostics';
 

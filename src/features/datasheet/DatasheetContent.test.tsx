@@ -7,7 +7,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { workspaceCommandEventName } from '../workspace/workspaceCommands';
-import { DataSurface } from '../data/DataSurface';
+import { DataSurface } from '../data/DataSurface.tsx';
 import { DatasheetContent } from './DatasheetContent';
 import { createDatasheetProject } from './datasheetFixtures';
 import { useState } from 'react';
