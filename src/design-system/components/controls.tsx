@@ -178,6 +178,8 @@ export interface SegmentedOption {
   value: string;
   label: string;
   disabled?: boolean;
+  /** Contenido visual opcional (p. ej. un ícono SVG) mostrado antes de la etiqueta. */
+  preview?: ReactNode;
 }
 
 export interface SegmentedControlProps {
@@ -239,7 +241,7 @@ export const SegmentedControl = ({
           event.preventDefault();
           move(index, event.key);
         }}
-      >{option.label}</button>;
+      >{option.preview ? <><span className="sc-segmented__preview" aria-hidden="true">{option.preview}</span><span className="sc-segmented__label">{option.label}</span></> : option.label}</button>;
     })}
   </div>;
 };

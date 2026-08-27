@@ -80,4 +80,20 @@ describe('component-library controls', () => {
     />);
     await waitFor(() => expect(screen.getByRole('radio', { name: 'Dibujar' }).getAttribute('tabindex')).toBe('0'));
   });
+
+  it('renders an optional preview alongside the label without losing the accessible name', () => {
+    render(<SegmentedControl
+      label="Familia"
+      value="beam"
+      options={[
+        { value: 'beam', label: 'Viga', preview: <svg data-testid="beam-preview" /> },
+        { value: 'truss', label: 'Armadura' },
+      ]}
+      onValueChange={() => {}}
+    />);
+
+    const beamOption = screen.getByRole('radio', { name: 'Viga' });
+    expect(beamOption.querySelector('[data-testid="beam-preview"]')).not.toBeNull();
+    expect(screen.getByRole('radio', { name: 'Armadura' }).querySelector('svg')).toBeNull();
+  });
 });

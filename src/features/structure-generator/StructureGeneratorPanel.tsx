@@ -12,6 +12,7 @@ import { unitLabel } from '../../engine/units';
 import type { Language } from '../../i18n/catalogs';
 import type { UnitSystemId } from '../../types';
 import { createStructureGeneratorTranslator } from './structureGeneratorCopy';
+import { GeneratorFamilyPreview } from './GeneratorFamilyPreview';
 import {
   GENERATOR_FAMILIES,
   GENERATOR_SPACING_FIELDS,
@@ -430,7 +431,7 @@ export const StructureGeneratorPanel = ({
         className="structure-generator__families"
         label={t('familyLabel')}
         value={form.family}
-        options={GENERATOR_FAMILIES.map((family) => ({ value: family, label: t(`family.${family}`) }))}
+        options={GENERATOR_FAMILIES.map((family) => ({ value: family, label: t(`family.${family}`), preview: <GeneratorFamilyPreview family={family} /> }))}
         onValueChange={(value) => patch({ family: value as GeneratorFormState['family'] })}
       />
 

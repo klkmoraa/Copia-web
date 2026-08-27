@@ -59,10 +59,24 @@
 
 .structure-generator__families {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
 }
 
-.structure-generator__families > button { min-height: 40px; }
+.structure-generator__families > button {
+  display: grid;
+  grid-template-rows: 38px auto;
+  align-items: center;
+  min-height: 66px;
+  padding: 5px 4px 7px;
+  font-size: 0.68rem;
+  white-space: normal;
+}
+
+.generator-family-preview { width: 100%; height: 38px; overflow: visible; color: inherit; }
+.generator-family-preview :is(path, circle) { stroke: currentColor; stroke-width: 1.6; }
+.generator-family-preview circle { fill: var(--sc-color-surface-1); }
+.generator-family-preview__ground { opacity: .28; stroke-dasharray: 2 3; }
 
 .structure-generator__geometry,
 .structure-generator__placement,
