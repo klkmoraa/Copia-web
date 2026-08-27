@@ -202,6 +202,10 @@ describe('contrato de los design tokens', () => {
         '--sc-color-focus',
         '--sc-color-action-ink',
         '--sc-color-aula',
+        '--sc-color-util-safe',
+        '--sc-color-util-optimal',
+        '--sc-color-util-warning',
+        '--sc-color-util-danger',
       ]) {
         expect(worstOnAppearance(role, theme), role).toBeGreaterThanOrEqual(3);
       }

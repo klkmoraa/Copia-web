@@ -7,13 +7,30 @@
  */
 
 export type DesignComponentStatus = 'within-component' | 'outside-component';
-export type DesignConclusionStatus = 'incomplete';
+export type DesignConclusionStatus = 'incomplete' | 'verified';
+
+export type DesignStandardId =
+  | 'ntc-2023'
+  | 'aisc-360-16-lrfd'
+  | 'aisc-360-16-asd'
+  | 'eurocode-3';
+
+export type LimitStateKind =
+  | 'tension-yielding'
+  | 'compression-buckling'
+  | 'flexure-yielding'
+  | 'flexure-ltb'
+  | 'shear-yielding'
+  | 'combined-interaction'
+  | 'slenderness';
+
+export type UtilizationStatus = 'safe' | 'optimal' | 'warning' | 'critical' | 'unavailable';
 
 export interface DesignVariable {
   readonly symbol: string;
   readonly label: string;
   readonly value: number;
-  readonly unit: 'kN' | 'kN/m²' | 'm²' | '1';
+  readonly unit: 'kN' | 'kN-m' | 'kN/m²' | 'm²' | 'm³' | 'm⁴' | 'm' | '1';
   readonly source: string;
 }
 
@@ -39,7 +56,7 @@ export interface DesignResult {
     readonly kind: 'analysis-result';
     readonly combinationId: string;
     readonly memberResultId: string;
-    readonly demandSelector: 'positive-axial-envelope';
+    readonly demandSelector: string;
   };
   readonly subject: {
     readonly memberId: string;
@@ -52,12 +69,13 @@ export interface DesignResult {
     readonly clause: string;
     readonly equation: string;
     readonly inequality: string;
+    readonly limitStateKind?: LimitStateKind;
   };
   readonly substitutions: readonly DesignVariable[];
   readonly demand: DesignVariable;
   readonly resistance: DesignVariable;
   readonly ratio: {
-    readonly symbol: 'Pu/Rt,y';
+    readonly symbol: string;
     readonly value: number;
     readonly unit: '1';
   };
@@ -66,4 +84,30 @@ export interface DesignResult {
   readonly assumptions: readonly string[];
   readonly limitations: readonly string[];
   readonly missingChecks: readonly string[];
+}
+
+export interface MemberUtilization {
+  readonly memberId: string;
+  readonly standardId: DesignStandardId;
+  readonly governingRatio: number;
+  readonly status: UtilizationStatus;
+  readonly governingCheck: DesignResult | null;
+  readonly checks: readonly DesignResult[];
+  readonly evaluated: boolean;
+  readonly reason?: string;
+}
+
+export interface StructureDesignSummary {
+  readonly standardId: DesignStandardId;
+  readonly standardTitle: string;
+  readonly totalMembers: number;
+  readonly evaluatedMembers: number;
+  readonly maxRatio: number;
+  readonly criticalCount: number;
+  readonly warningCount: number;
+  readonly optimalCount: number;
+  readonly safeCount: number;
+  readonly governingMemberId: string | null;
+  readonly memberUtilizations: readonly MemberUtilization[];
+  readonly timestamp: string;
 }

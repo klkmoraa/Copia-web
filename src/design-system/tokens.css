@@ -275,6 +275,13 @@
   --sc-color-demand-reference-peak: #4a1d63;
   --sc-color-demand-unevaluated: var(--sc-grey-500);
 
+  /* Utilización estructural normativa (AISC / Eurocódigo / NTC) */
+  --sc-color-util-safe: var(--sc-sys-green-light);
+  --sc-color-util-optimal: var(--sc-blue-ink-light);
+  --sc-color-util-warning: var(--sc-sys-yellow-light);
+  --sc-color-util-danger: var(--sc-sys-red-light);
+  --sc-color-util-unrated: var(--sc-grey-500);
+
   /* Los tres roles estructurales que el lienzo consume de verdad. La capa
      anterior declaraba veintiuno —muelle, rótula, liberación, tracción,
      compresión, cortante y momento con signo…— de los que dieciocho no tenían
@@ -727,6 +734,13 @@
   --sc-color-demand-peak: #a9dcea;
   --sc-color-demand-reference: #bf5af2;
   --sc-color-demand-reference-peak: #eddcff;
+
+  /* Utilización estructural normativa (AISC / Eurocódigo / NTC) */
+  --sc-color-util-safe: var(--sc-sys-green-dark);
+  --sc-color-util-optimal: var(--sc-blue-ink-dark);
+  --sc-color-util-warning: var(--sc-sys-yellow-dark);
+  --sc-color-util-danger: var(--sc-sys-red-dark);
+  --sc-color-util-unrated: #7c7c82;
 
   --sc-color-canvas-grid: rgba(255, 255, 255, 0.07);
   --sc-color-canvas-grid-strong: rgba(255, 255, 255, 0.13);

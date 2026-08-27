@@ -39,6 +39,7 @@ import { normalizeProject } from '../../data/migrate';
 import { saveBytes, type SaveOutcome } from '../../platform/fileSystem';
 import { buildShareLink } from '../../utils/shareLink';
 import { AnalysisStatus } from './AnalysisStatus';
+import { DesignStandardSelector } from './DesignStandardSelector';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
@@ -729,6 +730,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           <Wrench size={16} aria-hidden="true" />
           <span>{modelDoctorCommand.label}</span>
         </button>
+        <DesignStandardSelector />
         <AnalysisStatus
           projectId={project.id}
           analysis={analysis}
