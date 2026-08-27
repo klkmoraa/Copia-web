@@ -24,6 +24,7 @@
 import type { ComponentType } from 'react';
 import {
   ChartNoAxesCombined,
+  ClipboardList,
   Download,
   Grid3x3,
   BoxSelect,
@@ -180,6 +181,21 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     hint: (ctx) => ctx.t('datasheet.description'),
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-data', { tab: 'table' }),
+  },
+  {
+    /**
+     * El único lanzador del BOM estructural. Vive como cuarta pestaña de
+     * «Datos» (ver `dataSurface.ts`), no como superficie propia — este
+     * comando abre esa pestaña con el mismo `open-data` que ya usan
+     * Resultados y la Hoja de datos, en vez de inventar un comando paralelo.
+     */
+    id: 'tool:bom',
+    category: 'tools',
+    icon: ClipboardList,
+    label: (ctx) => ctx.t('bom.title'),
+    hint: (ctx) => ctx.t('bom.description'),
+    deferredOpen: true,
+    run: () => emitWorkspaceCommand('open-data', { tab: 'bom' }),
   },
   {
     id: 'tool:structure-generator',

@@ -9,9 +9,9 @@ import {
   resolveResultTab,
 } from './dataSurface';
 
-describe('las tres pestañas de «Datos»', () => {
-  it('declara exactamente Resultados · Tabla · Revisión', () => {
-    expect(DATA_SURFACE_TABS).toEqual(['results', 'table', 'review']);
+describe('las cuatro pestañas de «Datos»', () => {
+  it('declara exactamente Resultados · Tabla · Revisión · BOM', () => {
+    expect(DATA_SURFACE_TABS).toEqual(['results', 'table', 'review', 'bom']);
   });
 
   /**

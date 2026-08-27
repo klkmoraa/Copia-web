@@ -59,6 +59,7 @@ export const shell = {
   'data.tabs': 'Secciones de Datos',
   'data.tabTable': 'Tabla',
   'data.tabReview': 'Revisión',
+  'data.tabBom': 'BOM',
   'data.open': 'Abrir Datos',
   'overview.region': 'Panorama del modelo',
   'overview.title': 'Panorama del modelo',

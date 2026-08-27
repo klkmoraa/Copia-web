@@ -19,11 +19,18 @@
  *
  * POR QUE ES UN MODULO PURO. De datos a datos: las pestañas y las familias se
  * prueban sin montar la superficie.
+ *
+ * LA CUARTA PESTAÑA. El BOM estructural (cuantificación geométrica de
+ * perfiles y materiales) llegó después como una superficie propia, con su
+ * propio cromo y lanzador — el mismo patrón que esta superficie ya había
+ * dejado atrás. Se integra aquí como cuarta pestaña en vez de repetir ese
+ * error: no abre nada nuevo, ni añade un id al broker, ni relaja la
+ * exclusión mutua que `validateSurfaceCombination` ya imponía.
  */
 import type { ResultTab } from '../../store/WorkspaceUIContext';
 import type { TranslationKey } from '../../i18n/catalogs';
 
-export const DATA_SURFACE_TABS = ['results', 'table', 'review'] as const;
+export const DATA_SURFACE_TABS = ['results', 'table', 'review', 'bom'] as const;
 
 export type DataSurfaceTab = (typeof DATA_SURFACE_TABS)[number];
 
@@ -31,6 +38,7 @@ export const DATA_SURFACE_TAB_LABEL_KEY: Readonly<Record<DataSurfaceTab, Transla
   results: 'results.outputs',
   table: 'data.tabTable',
   review: 'data.tabReview',
+  bom: 'data.tabBom',
 };
 
 export interface ResultFamily {

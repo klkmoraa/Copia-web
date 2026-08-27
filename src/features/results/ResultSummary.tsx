@@ -14,6 +14,7 @@ import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { NumericQualityCard } from './NumericQualityCard';
 import { ElasticDemandCard } from './ElasticDemandCard';
+import { NtcSteelDesignCard } from '../design/NtcSteelDesignCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import type { ResultRef } from './provenance';
 
@@ -112,6 +113,7 @@ export const ResultSummary = () => {
       </div>
     </header>
     <ElasticDemandCard />
+    <NtcSteelDesignCard />
     <NumericQualityCard analysis={analysis} />
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>

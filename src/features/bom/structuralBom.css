@@ -1,0 +1,139 @@
+.structural-bom {
+  --bom-line: color-mix(in srgb, var(--sc-color-border) 86%, transparent);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.structural-bom__scope {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--bom-line);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-2);
+}
+
+.structural-bom__eyebrow,
+.structural-bom__scope-notes span,
+.structural-bom td small,
+.structural-bom__metrics span {
+  color: var(--sc-color-text-muted);
+  font-size: 0.72rem;
+}
+
+.structural-bom__scope h3 {
+  margin: 3px 0 4px;
+  color: var(--sc-color-text-primary);
+  font-size: 1.05rem;
+}
+
+.structural-bom__scope p { margin: 0; color: var(--sc-color-text-secondary); }
+.structural-bom__scope-notes { display: grid; gap: 5px; max-width: 330px; }
+
+.structural-bom__toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.structural-bom__family-filter {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--bom-line);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-2);
+}
+
+.structural-bom__family-filter button,
+.structural-bom__provenance button {
+  min-height: 36px;
+  border: 0;
+  border-radius: calc(var(--sc-radius-md) - 2px);
+  color: var(--sc-color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.structural-bom__family-filter button { padding: 0 12px; font-weight: 650; }
+.structural-bom__family-filter button.active { color: var(--sc-color-text-primary); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
+
+.structural-bom__identity-filter { display: grid; gap: 4px; min-width: 180px; }
+.structural-bom__identity-filter span { color: var(--sc-color-text-muted); font-size: 0.72rem; }
+.structural-bom__identity-filter select {
+  min-height: 42px;
+  padding: 0 34px 0 11px;
+  border: 1px solid var(--bom-line);
+  border-radius: var(--sc-radius-md);
+  color: var(--sc-color-text-primary);
+  background: var(--sc-color-surface-1);
+}
+.structural-bom__toolbar > .sc-button { margin-left: auto; }
+
+.structural-bom__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.structural-bom__metrics > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--bom-line);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-1);
+}
+
+.structural-bom__metrics strong { color: var(--sc-color-text-primary); font: 650 0.95rem var(--sc-font-mono); }
+
+.structural-bom__table-wrap {
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--bom-line);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-1);
+}
+
+.structural-bom table { width: 100%; min-width: 820px; border-collapse: collapse; }
+.structural-bom th,
+.structural-bom td { padding: 9px 10px; border-bottom: 1px solid var(--bom-line); text-align: left; vertical-align: top; }
+.structural-bom th { position: sticky; top: 0; z-index: 1; color: var(--sc-color-text-muted); background: var(--sc-color-surface-2); font-size: 0.7rem; letter-spacing: 0.03em; text-transform: uppercase; }
+.structural-bom tbody tr:last-child td { border-bottom: 0; }
+.structural-bom td { color: var(--sc-color-text-secondary); font: 0.78rem var(--sc-font-mono); }
+.structural-bom td strong { display: block; color: var(--sc-color-text-primary); font: 650 0.78rem var(--sc-font-ui); }
+.structural-bom td small { display: block; margin-top: 2px; font-family: var(--sc-font-mono); }
+
+.structural-bom__provenance { display: flex; gap: 4px; flex-wrap: wrap; }
+.structural-bom__provenance button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 7px; border: 1px solid var(--bom-line); color: var(--sc-color-text-primary); background: var(--sc-color-surface-2); font: 650 0.72rem var(--sc-font-mono); }
+.structural-bom__provenance button:hover { border-color: var(--sc-color-action-ink); }
+.structural-bom__warning { display: inline-flex !important; align-items: center; gap: 4px; color: var(--sc-color-state-warning-foreground) !important; }
+.structural-bom__empty,
+.structural-bom__excluded { margin: 0; padding: 12px; border-radius: var(--sc-radius-md); color: var(--sc-color-text-secondary); background: var(--sc-color-surface-2); }
+.structural-bom__excluded { font-size: 0.75rem; }
+
+@media (max-width: 720px) {
+  .structural-bom__scope { display: grid; gap: 10px; }
+  .structural-bom__scope-notes { max-width: none; }
+  .structural-bom__family-filter { flex: 1 1 auto; }
+  .structural-bom__family-filter button { min-height: 44px; flex: 1; }
+  .structural-bom__identity-filter { flex: 1 1 150px; }
+  .structural-bom__identity-filter select { min-height: 44px; }
+  .structural-bom__toolbar > .sc-button { width: 100%; margin-left: 0; }
+  .structural-bom__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .structural-bom__metrics > div { min-height: 58px; }
+  .structural-bom table { min-width: 0; }
+  .structural-bom thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .structural-bom tbody,
+  .structural-bom tr,
+  .structural-bom td { display: block; }
+  .structural-bom tr { padding: 8px 10px; border-bottom: 1px solid var(--bom-line); }
+  .structural-bom tbody tr:last-child { border-bottom: 0; }
+  .structural-bom td { display: grid; grid-template-columns: minmax(88px, 0.45fr) minmax(0, 1fr); gap: 8px; padding: 6px 0; border: 0; }
+  .structural-bom td::before { content: attr(data-label); color: var(--sc-color-text-muted); font: 0.68rem var(--sc-font-ui); text-transform: uppercase; }
+  .structural-bom__provenance button { min-height: 44px; }
+}

@@ -6,13 +6,14 @@ import { DATA_SURFACE_TABS, DATA_SURFACE_TAB_LABEL_KEY, type DataSurfaceTab } fr
 import { RetainedStateProvider } from './retainedState';
 
 /**
- * Las tres pestañas viajan en su propio chunk. Fundir el cromo no puede
+ * Las cuatro pestañas viajan en su propio chunk. Fundir el cromo no puede
  * costar el troceado: abrir «Datos» en Resultados no debe descargar la Hoja de
- * datos ni el Doctor.
+ * datos, el Doctor ni el BOM.
  */
 const LazyResultsContent = lazy(() => import('../results/ResultsContent').then((module) => ({ default: module.ResultsContent })));
 const LazyDatasheetContent = lazy(() => import('../datasheet/DatasheetContent').then((module) => ({ default: module.DatasheetContent })));
 const LazyModelDoctorContent = lazy(() => import('../model-doctor/ModelDoctorContent').then((module) => ({ default: module.ModelDoctorContent })));
+const LazyBomContent = lazy(() => import('../bom/BomContent').then((module) => ({ default: module.BomContent })));
 
 export interface DataSurfaceProps {
   open: boolean;
@@ -30,7 +31,7 @@ export interface DataSurfaceProps {
 }
 
 /**
- * La superficie «Datos»: un cromo, tres pestañas.
+ * La superficie «Datos»: un cromo, cuatro pestañas.
  *
  * QUE SUSTITUYE. Cuatro superficies densas con cuatro cromos y cuatro
  * lanzadores: el dock inferior de Resultados, la superficie invocada `dense`,
@@ -39,7 +40,8 @@ export interface DataSurfaceProps {
  * `validateSurfaceCombination`—, así que en pantalla nunca hubo más de una a la
  * vez. Esto no cambia lo que se puede tener abierto: le da a esa restricción
  * una sola superficie, un solo título, un solo botón de cerrar y un solo
- * `peek`.
+ * `peek`. El BOM estructural se sumó después como cuarta pestaña en vez de
+ * como una quinta superficie invocada con su propio cromo.
  *
  * LO QUE MUERE CON EL DOCK. Resultados era un dock inferior redimensionable
  * con tres modos, tirador de arrastre, altura persistida y su propia trampa de
@@ -124,6 +126,7 @@ export const DataSurface = ({
           onPeek={onPeek}
           onClose={() => onOpenChange(false)}
         /> : null}
+        {tab === 'bom' ? <LazyBomContent onPeek={onPeek} /> : null}
       </Suspense>
     </div>
   </Drawer></RetainedStateProvider>;

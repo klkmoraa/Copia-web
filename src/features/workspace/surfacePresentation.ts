@@ -24,15 +24,18 @@ export const BROKER_SURFACE_IDS = [
    */
   'detail',
   /**
-   * Todo lo denso, en una sola superficie con tres pestañas: Resultados ·
-   * Tabla · Revisión.
+   * Todo lo denso, en una sola superficie con cuatro pestañas: Resultados ·
+   * Tabla · Revisión · BOM.
    *
    * Antes eran cuatro ids —`results`, `dense`, `datasheet` y `doctor`— con
    * cuatro cromos y cuatro lanzadores. Este mismo resolutor ya las obligaba a
    * ser mutuamente excluyentes (`validateSurfaceCombination`: «drawer y
    * fullscreen son mutuamente exclusivos»), así que en pantalla nunca hubo más
    * de una a la vez. Unificarlas no cambia lo que el usuario puede tener
-   * abierto: le da a esa restricción, que ya existía, una sola forma.
+   * abierto: le da a esa restricción, que ya existía, una sola forma. El BOM
+   * estructural se sumó después como cuarta pestaña, en vez de como una
+   * quinta superficie con su propio cromo — el mismo error que esta
+   * unificación ya había corregido para las otras tres.
    *
    * Es invocada, nunca residente: se abre a petición y se cierra devolviendo el
    * foco, por eso su presentación es modal en las tres clases y admite `peek`.
