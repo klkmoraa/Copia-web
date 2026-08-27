@@ -760,6 +760,16 @@ async function verifyTopBarNeverOverlapsItself() {
       await page.getByLabel(trigger).first().click();
       await page.locator(menu).waitFor({ state: 'visible' });
       if (key) {
+        // El foco lo coloca `TopBar` dentro de un `requestAnimationFrame`, así
+        // que «el menú ya es visible» todavía no significa «el foco ya se
+        // movió»: leer `activeElement` aquí mismo es una carrera que se pierde
+        // de vez en cuando y culpa al producto de un fallo del gate. Se esperan
+        // dos cuadros —uno para que corra el rAF programado y otro para que el
+        // navegador aplique lo que hizo— y sólo entonces se mide. No enmascara
+        // nada: si el foco no llega, sigue llegando `false`.
+        await page.evaluate(() => new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }));
         // Dentro del menú Y pintado. Sólo «pintado» no basta: `focus()` sobre
         // un elemento con `display:none` no hace nada y el foco se queda en el
         // disparador, que sí se ve — el defecto pasaría por bueno.
@@ -790,8 +800,27 @@ async function verifyTopBarNeverOverlapsItself() {
     checks.topbarHistoryLivesInRibbonOnWideScreens = historyHomes[900].inRibbon;
     checks.topbarHistoryLivesInOverflowOnPhones = historyHomes[390].inOverflow;
 
+    /* «Ir al inicio»: un destino, un lanzador, a cada ancho — y la marca cede
+       donde el nombre del proyecto pagaría por ella.
+
+       El umbral estaba en 360 px y este gate lo fijaba pidiendo que a 390 la
+       marca siguiera en la Cinta. Medido con el nombre por defecto, eso costaba
+       un escalón invertido: a 360 px el campo del nombre recibe 79 px —ocho
+       caracteres— y a **361 px recibe 24 —dos—**, porque la marca vuelve y el
+       nombre paga sola sus 46 px. Una pantalla más ancha leyendo seis
+       caracteres menos no es una degradación ordenada, es una discontinuidad.
+
+       Lo que NO cambia, y es lo que de verdad protegía este gate: la capacidad
+       nunca desaparece ni se duplica. La marca es identidad; «Ir al inicio» es
+       la capacidad, y vive en `.overflow-home` cuando la marca cede. Por eso
+       `topbarGoToStartHasExactlyOneHome` sigue barriendo los dos lados de la
+       frontera y las dos bandas.
+
+       475 no es redondo: es el último ancho al que el campo todavía paga por la
+       marca (llega a sus 100 px justo en 476). 476 entra en la lista porque un
+       gate que sólo mira un lado de una frontera no la vigila. */
     const startHomes = {};
-    for (const width of [390, 320]) {
+    for (const width of [900, 476, 475, 390, 361, 360, 320]) {
       await page.setViewportSize({ width, height: 844 });
       await page.waitForTimeout(260);
       const inRibbon = (await readTopBarGeometry(page)).homeInRibbon;
@@ -802,7 +831,8 @@ async function verifyTopBarNeverOverlapsItself() {
     }
     out.metrics.topbarStartHomes = startHomes;
     checks.topbarGoToStartHasExactlyOneHome = Object.values(startHomes).every(({ inRibbon, inOverflow }) => inRibbon !== inOverflow);
-    checks.topbarGoToStartLivesInBrandMarkOnPhones = startHomes[390].inRibbon;
+    checks.topbarGoToStartLivesInBrandMarkAbove475 = startHomes[900].inRibbon && startHomes[476].inRibbon;
+    checks.topbarGoToStartYieldsToOverflowUpTo475 = [475, 390, 361, 360, 320].every((width) => startHomes[width].inOverflow);
     checks.topbarGoToStartLivesInProjectMenuOnTheNarrowest = startHomes[320].inOverflow;
 
     out.metrics.topbarMenuFocus = focusLanded;

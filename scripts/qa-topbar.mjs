@@ -36,6 +36,8 @@ const portraitSizes = [
 // El nombre de proyecto más largo posible en ES (issue: "el piso debe medirse
 // con el copy real en los dos idiomas, no con lorem").
 const LONG_PROJECT_NAME_ES = 'Pórtico de concreto reforzado de tres crujías y cuatro niveles con muros de cortante perimetrales y cimentación combinada';
+/** Muestra con la que se cuentan caracteres legibles en la escalera del nombre. */
+const LADDER_SAMPLE_NAME = 'Pórtico de concreto reforzado de tres crujías';
 const LONG_PROJECT_NAME_EN = 'Reinforced concrete three-bay four-story frame with perimeter shear walls and a combined mat foundation';
 
 const intersects = (first, second) => first.left < second.right && second.left < first.right && first.top < second.bottom && second.top < first.bottom;
@@ -151,11 +153,76 @@ try {
     if (projectNameValue !== longName) throw new Error(`Project name lost its full accessible value in ${language} (got "${projectNameValue}")`);
   }
 
+
+  // Una pantalla más ancha nunca lee menos nombre de proyecto — salvo que la
+  // Cinta haya ganado capacidad en ese mismo ancho.
+  //
+  // Es la regla que ordena la degradación de CRI-95 mirada por el otro lado: el
+  // nombre cede antes que los comandos, sí, pero sólo PARA que quepa un comando
+  // más. Si el nombre encoge y la Cinta no ganó nada, alguien está pagando por
+  // nada. Eso es lo que pasaba en 360→361: el campo caía de 79 px a 24 —de ocho
+  // caracteres a dos— porque volvía la marca, cuya única capacidad, «Ir al
+  // inicio», ya estaba servida por el menú del proyecto a los dos lados de la
+  // frontera. La marca es identidad, no capacidad: no cuenta como ganancia.
+  //
+  // El escalón de 700→701 SÍ es legítimo y esta regla lo deja pasar solo:
+  // entran seis destinos a la Cinta (Resultados, Hoja de datos, Space 3D,
+  // deshacer, rehacer y exportar) y el nombre paga 107 px por ellos.
+  //
+  // Se afirma la regla, no el umbral: si mañana se mueve el reparto, este gate
+  // sigue diciendo la verdad sin tocarlo.
+  await renameProjectTo(LONG_PROJECT_NAME_ES);
+  const nameLadderWidths = [...new Set([
+    ...Array.from({ length: 141 }, (_, index) => 320 + index * 5),
+    320, 360, 361, 414, 475, 476, 700, 701, 1023,
+  ])].filter((width) => width <= 1023).sort((first, second) => first - second);
+  const nameLadder = [];
+  for (const width of nameLadderWidths) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.waitForTimeout(24);
+    nameLadder.push({
+      width,
+      ...await page.evaluate((sample) => {
+        const isPainted = (element) => element.getClientRects().length > 0;
+        const input = document.querySelector('.project-name input');
+        // La marca es identidad, no capacidad: se excluye del recuento a
+        // propósito, que es justo lo que la hace ceder.
+        const capabilities = [...document.querySelectorAll('.topbar button, .topbar select')]
+          .filter((control) => isPainted(control) && !control.classList.contains('brand-home-button'))
+          .length;
+        if (!input || !isPainted(input)) return { name: 0, readable: 0, capabilities };
+        // La unidad es el carácter, no el píxel. Entre tramos cambian la cara y
+        // los rellenos —12 px bajo 700, 13 por encima—, así que dos anchos en
+        // píxeles no son comparables y un gate que los comparara acusaría de
+        // regresión a un tramo que en realidad lee lo mismo o más.
+        const style = getComputedStyle(input);
+        const context = document.createElement('canvas').getContext('2d');
+        context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        const available = input.getBoundingClientRect().width
+          - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        let readable = 0;
+        while (readable < sample.length && context.measureText(sample.slice(0, readable + 1)).width <= available) readable += 1;
+        return { name: Math.round(input.getBoundingClientRect().width), readable, capabilities };
+      }, LADDER_SAMPLE_NAME),
+    });
+  }
+  const nameRegressions = nameLadder.filter((entry, index) => {
+    if (index === 0) return false;
+    const previous = nameLadder[index - 1];
+    return entry.readable < previous.readable && entry.capabilities <= previous.capabilities;
+  }).map((entry) => {
+    const previous = nameLadder[nameLadder.indexOf(entry) - 1];
+    return `${previous.width}px→${entry.width}px: ${previous.readable}→${entry.readable} readable characters (${previous.name}px→${entry.name}px) with no capability gained (${previous.capabilities}→${entry.capabilities})`;
+  });
+  if (nameRegressions.length) {
+    throw new Error(`The project name loses width without the ribbon gaining capability:\n  · ${nameRegressions.join('\n  · ')}`);
+  }
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(32);
   if (!(await page.getByLabel('More actions').isVisible())) throw new Error('Mobile More actions is no longer reachable');
 
-  console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px; compact floor ${compactWidths.join(', ')}px; long ES/EN project name in portrait+landscape with Estado/Doctor always visible.`);
+  console.log(`TopBar browser geometry passed: readable-name ladder never regresses across ${nameLadderWidths.length} widths (320-1023px); ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px; compact floor ${compactWidths.join(', ')}px; long ES/EN project name in portrait+landscape with Estado/Doctor always visible.`);
 } finally {
   await browser.close();
   await previewServer.close();

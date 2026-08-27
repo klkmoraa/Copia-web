@@ -381,7 +381,27 @@ button:not(:disabled):active,.selection-card:active {
   .top-actions { gap:2px; }
 }
 
-@media (min-width:361px) and (max-width:460px) {
+/* El mismo trato, y por la misma razón, un tramo más arriba.
+   El umbral estaba en 360 y producía un escalón que no se sostiene: medido con
+   el nombre por defecto, a 360 px el campo recibe 79 px —ocho caracteres— y a
+   **361 px recibe 24 —dos—**, porque la marca vuelve y el nombre paga sola los
+   46 px. Una pantalla un píxel más ancha leyendo seis caracteres menos no es un
+   compromiso, es una discontinuidad: la banda de arriba tiene exactamente el
+   mismo problema de sitio que la de abajo y no estaba tratada igual.
+   Cede la marca, que es identidad, no capacidad — y su capacidad, «Ir al
+   inicio», sigue entrando por `.overflow-home`, la primera entrada del menú del
+   proyecto, igual que a 320. Es el trato que el bloque de arriba ya explica.
+   Con la marca fuera el campo pasa de 53 a 100 px a 390.
+
+   El techo, 475, no es un número redondo: es el último ancho al que el campo
+   TODAVÍA paga por la marca. Medido con la marca puesta, el campo llega a los
+   100 px que recibe a 460 justo en **476** (101 px); por debajo de ahí se queda
+   corto —86 px a 461— y por encima ya no necesita ayuda. Así el escalón de
+   360→361 no se sustituye por otro en 460→461. */
+@media (min-width:361px) and (max-width:475px) {
+  .brand-block { gap:5px; }
+  .topbar .brand-home-button { display:none; }
+  .project-menu .overflow-home { display:flex; }
   .project-name input { width:min(100px,26vw); }
 }
 
