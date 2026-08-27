@@ -1,0 +1,70 @@
+.asset-studio {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--sc-color-bg-app);
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-ui);
+}
+
+.asset-studio[data-theme='dark'] {
+  --sc-color-bg-app: #07161b;
+  --sc-color-bg-canvas: #0b1d23;
+  --sc-color-surface-1: #112830;
+  --sc-color-surface-2: #17333d;
+  --sc-color-surface-elevated: #17343e;
+  --sc-color-text-primary: #f3f0e8;
+  --sc-color-text-secondary: #c1ceca;
+  --sc-color-text-muted: #91a29f;
+  --sc-color-border: #29434b;
+  --sc-color-border-soft: #1f3942;
+  --sc-color-divider: #203941;
+  --sc-shadow-clay-xs: 2px 3px 6px rgb(0 0 0 / .42), -2px -2px 4px rgb(67 98 108 / .14), inset 0 1px 0 rgb(255 255 255 / .05), inset -1px -1px 3px rgb(0 0 0 / .25);
+  color-scheme: dark;
+}
+
+.asset-studio__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+  min-height: 112px;
+  padding: 25px clamp(20px, 5vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--sc-color-border);
+  background: var(--sc-color-bg-app);
+}
+
+.asset-studio__header > div { display: grid; gap: 5px; }
+.asset-studio__header p { margin: 0; color: var(--sc-color-action-primary); font: 720 10px/1 var(--sc-font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.asset-studio__header h1 { margin: 0; font-size: clamp(29px, 4vw, 47px); letter-spacing: -.05em; line-height: .95; }
+.asset-studio__header span { color: var(--sc-color-text-secondary); font-size: 12px; }
+.asset-studio__header > button { min-width: 104px; min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--sc-color-border); border-radius: 11px; background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); cursor: pointer; font: 700 12px/1 var(--sc-font-ui); }
+
+.asset-studio__body { width: min(1480px, 100%); margin-inline: auto; padding: 33px clamp(16px, 4vw, 56px) 80px; display: grid; gap: 42px; }
+.asset-studio__family { display: grid; gap: 14px; }
+.asset-studio__family > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--sc-color-divider); padding-bottom: 9px; }
+.asset-studio__family h2 { margin: 0; font-size: 18px; letter-spacing: -.025em; }
+.asset-studio__family > header span { color: var(--sc-color-text-muted); font: 600 10px/1 var(--sc-font-mono); }
+.asset-studio__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+
+.asset-studio__card { min-width: 0; overflow: hidden; border: 1px solid var(--sc-color-border-soft); border-radius: 16px; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
+.asset-studio__canvas { min-height: 190px; padding: 10px; display: grid; place-items: center; border-bottom: 1px solid var(--sc-color-border-soft); background: var(--sc-color-bg-canvas); }
+.asset-studio__canvas :is(img, svg) { width: 100%; max-height: 190px; }
+.asset-studio__meta { min-height: 76px; padding: 12px 14px 13px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; align-items: baseline; }
+.asset-studio__meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.asset-studio__meta code { grid-row: 2; color: var(--sc-color-text-muted); font: 550 9px/1.2 var(--sc-font-mono); }
+.asset-studio__meta span { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--sc-color-action-primary); font: 700 9px/1 var(--sc-font-mono); text-transform: uppercase; }
+
+@media (max-width: 1050px) { .asset-studio__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) {
+  .asset-studio__header { align-items: flex-start; padding: 19px 16px; }
+  .asset-studio__header > div > span { max-width: 230px; }
+  .asset-studio__header > button { min-width: 44px; padding-inline: 12px; }
+  .asset-studio__header > button span { display: none; }
+  .asset-studio__body { padding-top: 24px; gap: 34px; }
+  .asset-studio__grid { grid-template-columns: 1fr; }
+  .asset-studio__canvas { min-height: 220px; }
+}

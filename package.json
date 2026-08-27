@@ -12,6 +12,8 @@
     "test": "vitest run --maxWorkers=1",
     "verify:docs": "node --test scripts/check-docs.test.mjs && node scripts/check-docs.mjs",
     "verify:protected": "node scripts/check-protected-baseline.mjs",
+    "verify:structural-assets": "node --test scripts/structural-png-contract.test.mjs scripts/structural-asset-bundle.test.mjs && node scripts/check-three-structural-renders.mjs",
+    "assets:generate": "node scripts/generate-three-portal-assets.mjs",
     "perf": "npm run build && node scripts/measure-performance.mjs",
     "inspect:pdf": "node scripts/inspect-pdf.mjs",
     "validate:ci": "node scripts/validate-ci.mjs",
@@ -29,6 +31,9 @@
     "qa:bulk-edit:webkit": "npm run build && node scripts/qa-bulk-edit.mjs --webkit",
     "qa:structural-edits": "npm run build && node scripts/qa-structural-edits.mjs",
     "qa:structural-edits:webkit": "npm run build && node scripts/qa-structural-edits.mjs --webkit",
+    "qa:structural-assets": "npm run build && node scripts/qa-structural-assets.mjs",
+    "qa:illustration-studio": "npm run build && node scripts/qa-illustration-studio.mjs",
+    "qa:illustration-studio:webkit": "npm run build && node scripts/qa-illustration-studio.mjs --webkit",
     "qa:structure-generator": "npm run build && node scripts/qa-structure-generator.mjs",
     "qa:structure-generator:webkit": "npm run build && node scripts/qa-structure-generator.mjs --webkit",
     "qa:webkit": "npm run build && node qa-webkit.mjs"
