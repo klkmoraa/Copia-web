@@ -6,6 +6,7 @@ import {
 } from './portableTypes';
 import { parsePortablePayload } from './portablePayload';
 import { FILE_BUDGETS, PDF_BUDGETS } from './fileGuards';
+import { loadPdfjs } from './pdfjsRuntime';
 
 export interface InspectPdfOptions {
   maxBytes?: number;
@@ -54,11 +55,7 @@ export const inspectPdf = async (
       : new Uint8Array(input);
   if (source.byteLength > maxBytes) throw tooLarge();
 
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  if (typeof document !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-    const worker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs?url');
-    pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-  }
+  const pdfjs = await loadPdfjs();
 
   let documentProxy: Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>;
   try {

@@ -22,6 +22,24 @@ vi.mock('../../utils/portable', () => ({
   STRUCTURECO_BUNDLE_MIME: 'application/vnd.structureco.bundle+zip',
 }));
 
+// PDF.js no pinta en jsdom y no es lo que estas pruebas comprueban: aquí interesa que el
+// PDF se enseñe antes de bajar y que sea el pie del diálogo quien lo entregue.
+vi.mock('../import-export/pdfPageRenderer', () => ({
+  openPreviewDocument: vi.fn().mockResolvedValue({
+    pageCount: 3,
+    renderPage: vi.fn().mockResolvedValue(undefined),
+    aspectRatio: vi.fn().mockResolvedValue(1.414),
+    destroy: vi.fn(),
+  }),
+}));
+
+/** Abre el menú de exportación, pide el PDF y devuelve el botón de descarga del diálogo. */
+const openPdfPreview = async (user: ReturnType<typeof userEvent.setup>, labels: { menu: string; pdf: string; download: string }) => {
+  await user.click(screen.getByRole('button', { name: labels.menu }));
+  await user.click(screen.getByRole('button', { name: labels.pdf }));
+  return screen.findByRole('button', { name: new RegExp(labels.download, 'i') });
+};
+
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(createDefaultProject()));
@@ -120,8 +138,11 @@ describe('TopBar portable export', () => {
     expect(screen.queryByText('Pórtico de ejemplo')).toBeNull();
 
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
-    await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
+    const download = await openPdfPreview(user, { menu: 'More actions', pdf: 'Complete reimportable PDF', download: 'Download' });
+    expect(screen.getByText('Calculation report preview')).toBeTruthy();
+    // Enseñar no es entregar: hasta que alguien pulsa Descargar no sale ningún archivo.
+    expect(portableMocks.shareOrDownloadPortableBytes).not.toHaveBeenCalled();
+    await user.click(download);
     await waitFor(() => expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
       expect.any(Uint8Array),
       'memoria-structureco.pdf',
@@ -141,6 +162,8 @@ describe('TopBar portable export', () => {
     await user.click(screen.getByRole('button', { name: 'More actions' }));
     await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
 
+    // El fallo ocurre al componer, así que lo reporta el diálogo — y en el idioma del
+    // proyecto, nunca con el texto de primera parte que venga en el Error.
     expect((await screen.findByRole('alert')).textContent).toContain('The package could not be generated.');
     expect(screen.queryByText('No se pudo generar el expediente.')).toBeNull();
   });
@@ -159,18 +182,18 @@ describe('TopBar portable export', () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
-    await user.click(screen.getByRole('button', { name: 'PDF completo reimportable' }));
+    const download = await openPdfPreview(user, { menu: 'Más acciones', pdf: 'PDF completo reimportable', download: 'Descargar' });
 
     await waitFor(() => expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce());
     const [, generatedAnalysis] = portableMocks.createCalculationReport.mock.calls[0];
     expect(generatedAnalysis.success).toBe(true);
-    expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
+    await user.click(download);
+    await waitFor(() => expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
       new Uint8Array([1, 2, 3]),
       'memoria-structureco.pdf',
       'application/pdf',
       expect.stringContaining('memoria de cálculo'),
-    );
+    ));
   });
 });
 

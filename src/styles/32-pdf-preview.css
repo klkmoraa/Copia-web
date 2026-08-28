@@ -1,0 +1,129 @@
+/* Vista previa de la memoria de cálculo.
+   Dos columnas: las opciones de contenido a la izquierda, las páginas a la derecha.
+   Bajo 900 px se apilan y las opciones pasan a ser la cabecera del cuerpo. */
+
+.pdf-preview-dialog {
+  width: min(1080px, 94vw);
+  max-width: none;
+}
+
+.pdf-preview-dialog .sc-modal-surface__body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pdf-preview-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 0;
+  min-height: min(62vh, 560px);
+  max-height: 68vh;
+}
+
+.pdf-preview-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  overflow-y: auto;
+  border-inline-end: var(--sc-border-width) solid var(--sc-color-divider);
+  background: var(--sc-color-surface-1);
+}
+
+.pdf-preview-options h3 {
+  margin: 0 0 2px;
+  font-size: var(--sc-font-size-label);
+  font-weight: var(--sc-font-weight-semibold);
+  color: var(--sc-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pdf-preview-option {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: var(--sc-font-size-control);
+  color: var(--sc-color-text-primary);
+  cursor: pointer;
+}
+
+.pdf-preview-option input {
+  margin-top: 2px;
+  accent-color: var(--sc-color-action-primary);
+  flex: none;
+}
+
+.pdf-preview-option:has(input:disabled) {
+  color: var(--sc-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.pdf-preview-note {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.45;
+  color: var(--sc-color-text-muted);
+}
+
+.pdf-preview-pages {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+  /* El lienzo de la aplicación, no el papel: así la página blanca se lee como una hoja
+     apoyada sobre la mesa y no como una continuación del diálogo. */
+  background: var(--sc-color-bg-canvas);
+}
+
+.pdf-preview-page {
+  display: block;
+  max-width: 100%;
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-data);
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+
+.pdf-preview-status,
+.pdf-preview-error {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: var(--sc-font-size-control);
+  border-radius: var(--sc-radius-control);
+}
+
+.pdf-preview-status {
+  color: var(--sc-color-text-secondary);
+  background: var(--sc-color-surface-1);
+}
+
+.pdf-preview-error {
+  color: var(--sc-color-error-solid);
+  background: var(--sc-color-surface-1);
+}
+
+.pdf-preview-counter {
+  margin-inline-end: auto;
+  font-size: var(--sc-font-size-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--sc-color-text-muted);
+}
+
+@media (width <= 900px) {
+  .pdf-preview-body {
+    grid-template-columns: 1fr;
+    max-height: 72vh;
+  }
+
+  .pdf-preview-options {
+    border-inline-end: none;
+    border-block-end: var(--sc-border-width) solid var(--sc-color-divider);
+  }
+}

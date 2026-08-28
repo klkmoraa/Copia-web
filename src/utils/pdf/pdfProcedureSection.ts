@@ -9,14 +9,14 @@ import { drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
 import { drawMathBlock } from './pdfMath';
 import type { ReportContext } from './reportContext';
 
-export const drawProcedureSummary = (context: ReportContext): void => {
+export const drawProcedureSummary = (context: ReportContext, band = '06'): void => {
   const { layout, project, analysis, payload } = context;
   const { rgb, fonts, palette, margin } = layout;
   const maxWidth = layout.contentWidth;
   layout.newPage();
   layout.page.drawRectangle({ x: 0, y: 0, width: layout.width, height: layout.height, color: rgb(0.965, 0.975, 0.968) });
   drawVisualHeader(layout, project.name, 'Procedimiento claro y verificable');
-  drawSectionBand(layout, '06', 'Procedimiento y cálculos', 'Secuencia resumida desde el modelo hasta la comprobación');
+  drawSectionBand(layout, band, 'Procedimiento y cálculos', 'Secuencia resumida desde el modelo hasta la comprobación');
   const representative = (categories: Array<AnalysisResult['explanation'][number]['category']>) =>
     analysis.explanation.find((step) => categories.includes(step.category));
   const stages = [

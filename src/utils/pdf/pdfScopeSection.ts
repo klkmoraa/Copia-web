@@ -10,12 +10,12 @@ import { unitLabel } from '../../engine/units';
 import { drawSectionBand, drawVisualHeader } from './pdfChrome';
 import type { ReportContext } from './reportContext';
 
-export const drawScopePage = (context: ReportContext): void => {
+export const drawScopePage = (context: ReportContext, band = '05'): void => {
   const { layout, project, analysis } = context;
   const { rgb } = layout;
   layout.newPage();
   drawVisualHeader(layout, 'Unidades y convenciones', 'Como debe leerse este documento');
-  drawSectionBand(layout, '05', 'Unidades y convenciones', 'Base de lectura de todas las cifras del documento');
+  drawSectionBand(layout, band, 'Unidades y convenciones', 'Base de lectura de todas las cifras del documento');
   layout.y = 700;
 
   layout.heading('Unidades de presentacion');

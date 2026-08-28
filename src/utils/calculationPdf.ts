@@ -72,13 +72,20 @@ export const createCalculationReport = async (
     index: createModelIndex(project, analysis),
   };
 
+  // The executive page is the document: it is never dropped. Everything after it is a
+  // section the reader may not need in this particular copy, and the numbered bands stay
+  // consecutive so a shortened report never shows a gap where a section used to be.
   drawExecutivePage(context);
-  drawQuantityPage(context, 'axial', '02');
-  drawQuantityPage(context, 'shear', '03');
-  drawQuantityPage(context, 'moment', '04');
-  drawScopePage(context);
-  drawProcedureSummary(context);
-  drawTechnicalAnnex(context);
+  let band = 2;
+  const nextBand = (): string => String(band++).padStart(2, '0');
+  if (options.includeDiagrams !== false) {
+    drawQuantityPage(context, 'axial', nextBand());
+    drawQuantityPage(context, 'shear', nextBand());
+    drawQuantityPage(context, 'moment', nextBand());
+  }
+  if (options.includeScope !== false) drawScopePage(context, nextBand());
+  if (options.includeProcedure !== false) drawProcedureSummary(context, nextBand());
+  if (options.includeAnnex !== false) drawTechnicalAnnex(context);
   context.layout.stampFooters();
 
   const bytes = await attachPortablePayload(context);

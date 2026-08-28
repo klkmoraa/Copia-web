@@ -49,10 +49,11 @@ import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
-import type { PDeltaConfig } from '../../types';
+import type { AnalysisResult, PDeltaConfig } from '../../types';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 const ProposalAssistant = lazy(() => import('../ai/ProposalAssistant').then((module) => ({ default: module.ProposalAssistant })));
+const PdfPreviewDialog = lazy(() => import('../import-export/PdfPreviewDialog').then((module) => ({ default: module.PdfPreviewDialog })));
 
 /**
  * La compacidad del riel salió de aquí en CRI-89: la decide la clase de
@@ -138,6 +139,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const [proposalAssistantOpen, setProposalAssistantOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  /* La vista previa retiene el análisis con el que se compuso el informe: mientras el
+     diálogo está abierto, cada cambio de contenido recompone el PDF sin volver a analizar. */
+  const [previewAnalysis, setPreviewAnalysis] = useState<AnalysisResult | null>(null);
   /* Manejador de un guardado nativo previo (File System Access API). Vive en
      el componente, no en `saveBytes` —que documenta explícitamente que
      retenerlo ahí lo compartiría entre proyectos— ni en `commandRegistry`,
@@ -351,15 +355,19 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         // (AG-013); the report annex needs it, so fetch it here on demand.
         exportAnalysis = await ensureEducationTrace() ?? exportAnalysis;
       }
+      if (kind === 'pdf') {
+        // El PDF ya no baja a ciegas: el análisis queda retenido y el diálogo compone el
+        // documento, lo enseña y descarga desde su propio pie. El `toast` de exportación
+        // se emite allí, cuando el archivo sale de verdad.
+        setPreviewAnalysis(exportAnalysis);
+        setShowExportMenu(false);
+        setShowMobileMenu(false);
+        return;
+      }
       const portable = await import('../../utils/portable');
       const options = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true };
-      if (kind === 'pdf') {
-        const report = await portable.createCalculationReport(project, exportAnalysis, options);
-        await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
-      } else {
-        const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
-        await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
-      }
+      const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
+      await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
       emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
       setShowExportMenu(false);
       setShowMobileMenu(false);
@@ -752,6 +760,29 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       {proposalAssistantOpen ? <Suspense fallback={null}><ProposalAssistant
         open
         onClose={() => setProposalAssistantOpen(false)}
+      /></Suspense> : null}
+      {previewAnalysis ? <Suspense fallback={null}><PdfPreviewDialog
+        open
+        onOpenChange={(next) => { if (!next) setPreviewAnalysis(null); }}
+        t={t as (key: string, values?: Record<string, string | number>) => string}
+        buildReport={async (contentOptions) => {
+          const portable = await import('../../utils/portable');
+          return portable.createCalculationReport(project, previewAnalysis, {
+            appVersion: APP_VERSION,
+            scenarioName,
+            scenarioFactors,
+            ...contentOptions,
+          });
+        }}
+        openDocument={async (bytes) => {
+          const { openPreviewDocument } = await import('../import-export/pdfPageRenderer');
+          return openPreviewDocument(bytes);
+        }}
+        onDownload={async (artifact) => {
+          const portable = await import('../../utils/portable');
+          await portable.shareOrDownloadPortableBytes(artifact.bytes, artifact.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
+          emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
+        }}
       /></Suspense> : null}
     </header>
   );

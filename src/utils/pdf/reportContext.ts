@@ -15,6 +15,15 @@ export interface CalculationReportOptions extends PortablePayloadOptions {
   includeEducationTrace?: boolean;
   /** Exact load-case multipliers used to produce the supplied analysis. */
   scenarioFactors?: Record<string, number>;
+  /**
+   * Sections the reader can drop from the export. All default to `true`, so every existing
+   * caller keeps the complete document; the preview dialog is what makes them adjustable.
+   * The portable payload is attached regardless — a shorter report is still re-importable.
+   */
+  includeDiagrams?: boolean;
+  includeScope?: boolean;
+  includeProcedure?: boolean;
+  includeAnnex?: boolean;
 }
 
 export interface CalculationReportArtifact {
