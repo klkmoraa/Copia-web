@@ -1,16 +1,8 @@
 /**
  * Text sanitising and wrapping for the standard PDF fonts.
  *
- * Two audiences, two rules. Prose is drawn in Helvetica, which only carries WinAnsi, so
- * `pdfText` transliterates every engineering glyph explicitly instead of dropping to a
- * replacement box. Fórmulas are drawn by `pdfMath`, which also has the Symbol face embedded,
- * so `mathText` *keeps* the Greek and the operators Symbol can render and transliterates only
- * what it cannot. That difference is the whole reason the annex used to print the engine's
- * `L = √(ΔX² + ΔY²)` as `L = sqrt(DeltaX^2 + DeltaY^2)`.
- *
- * Both share the script table: `²` and `ⱼ` become the `^`/`_` markers that `drawMathFormula`
- * raises and lowers. In prose those markers stay literal, which is the most honest rendering
- * Helvetica can offer.
+ * Prose is drawn in Helvetica, which only carries WinAnsi, so `pdfText` transliterates
+ * every engineering glyph explicitly instead of dropping to a replacement box.
  */
 import type { PDFFont } from 'pdf-lib';
 
@@ -28,18 +20,6 @@ const SCRIPT_GLYPHS = new Map<string, string>([
   ['ᵃ', '^a'], ['ᵉ', '^e'], ['ᵍ', '^g'], ['ˡ', '^l'], ['ⁿ', '^n'],
 ]);
 
-/**
- * Glyphs the Adobe Symbol face renders, so `mathText` leaves them alone for `pdfMath` to
- * draw in that font. Every entry is asserted encodable in `pdfGlyphs.test.ts`; `·`, `∥`,
- * `⟨` and `⟩` are deliberately absent because Symbol has no glyph for them.
- */
-export const SYMBOL_GLYPHS = new Set<string>([
-  'α', 'β', 'γ', 'Γ', 'δ', 'Δ', 'ε', 'ζ', 'η', 'θ', 'Θ', 'ϑ', 'κ', 'λ', 'Λ', 'μ', 'ν',
-  'ξ', 'Ξ', 'π', 'Π', 'ρ', 'σ', 'ς', 'Σ', 'τ', 'φ', 'Φ', 'ϕ', 'χ', 'ψ', 'Ψ', 'ω', 'Ω',
-  '√', '∫', '∑', '∏', '∂', '∇', '∞', '∝', '∠', '∴', '≈', '≡', '∼', '≤', '≥', '≠',
-  '±', '×', '÷', '−', '⋅', '→', '←', '↑', '↓', '↔', '⇒', '⇐', '⊗', '⊕',
-  '∈', '∉', '∅', '⊂', '⊃', '∩', '∪', '∀', '∃', '¬', '∧', '∨', '′', '″', 'ƒ', '°',
-]);
 
 /** Standard PDF fonts use WinAnsi; transliterate engineering glyphs explicitly. */
 const PDF_GLYPHS = new Map<string, string>([
@@ -78,12 +58,6 @@ export const pdfText = (value: unknown): string => transliterate(value, () => fa
  * Fórmula source for `pdfMath`: Greek and operators survive for the Symbol face, and the
  * Unicode scripts become `^`/`_` markers. Everything else degrades exactly as prose does.
  */
-/** True when the text carries a Unicode super/subscript the typesetter can raise or lower. */
-export const hasScriptGlyph = (value: string): boolean =>
-  Array.from(value).some((character) => SCRIPT_GLYPHS.has(character));
-
-export const mathText = (value: unknown): string =>
-  transliterate(value, (character) => SYMBOL_GLYPHS.has(character) && !SCRIPT_GLYPHS.has(character));
 
 export const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): string[] => {
   const paragraphs = pdfText(text).split(/\r?\n/);
