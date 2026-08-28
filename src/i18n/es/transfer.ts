@@ -17,6 +17,7 @@ export const transfer = {
   'method.kaniFrame': 'Kani (rotación de nudos)',
   'method.virtualWork': 'Trabajo Virtual (carga unitaria)',
   'method.methodOfSections': 'Método de los Cortes',
+  'method.methodOfJoints': 'Método de los Nudos',
   'method.castiglianoTruss': 'Castigliano (trabajo mínimo)',
   'method.rejectedNotBeam': 'La doble integración sólo aplica a vigas rectas.',
   'method.rejectedMechanism': 'El modelo es un mecanismo: no hay solución que desarrollar.',

@@ -17,6 +17,7 @@ export const transfer = {
   'method.kaniFrame': 'Kani (rotation contribution)',
   'method.virtualWork': 'Virtual Work (unit load)',
   'method.methodOfSections': 'Method of Sections',
+  'method.methodOfJoints': 'Method of Joints',
   'method.castiglianoTruss': 'Castigliano (least work)',
   'method.rejectedNotBeam': 'Double integration only applies to straight beams.',
   'method.rejectedMechanism': 'The model is a mechanism: there is no solution to develop.',

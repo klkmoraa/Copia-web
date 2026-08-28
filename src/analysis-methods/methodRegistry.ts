@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -78,6 +78,15 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // Pure statics on a cut portion of the truss, which only closes with three equations per cut
     // when the truss itself is statically determinate — unlike Virtual Work, which needs no such
     // restriction. `solveMethodOfSections` is what actually searches for a valid cut per member.
+    applies: (classification) => classification.kind === 'truss' && classification.indeterminacy === 0,
+  },
+  {
+    id: 'method-of-joints',
+    labelKey: 'method.methodOfJoints',
+    // The classical complement to the Method of Sections: local equilibrium at one pin at a
+    // time instead of global equilibrium of a cut portion. Same scope — pure statics only closes
+    // when the truss is statically determinate — for the same reason. `solveMethodOfJoints` is
+    // what actually walks the joints in dependency order.
     applies: (classification) => classification.kind === 'truss' && classification.indeterminacy === 0,
   },
   {

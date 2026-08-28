@@ -19,6 +19,7 @@ import { solveKaniFrame, type KaniResult } from '../../analysis-methods/kaniFram
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
 import { solveMethodOfSections, type MethodOfSectionsResult } from '../../analysis-methods/methodOfSections';
+import { solveMethodOfJoints, type MethodOfJointsResult } from '../../analysis-methods/methodOfJoints';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
@@ -654,6 +655,60 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
   );
 };
 
+const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResult): void => {
+  const { layout, project } = context;
+  const { fonts, palette } = layout;
+  const forceUnit = unitFor(project, 'force');
+
+  layout.heading('5. Procedimiento: Método de los Nudos');
+  layout.text(
+    'Cada nudo de la armadura tiene sólo dos ecuaciones de equilibrio, ΣFx = 0 y ΣFy = 0, así que '
+    + 'un nudo sólo se resuelve de una vez cuando le quedan como mucho dos fuerzas de barra por '
+    + 'conocer. El procedimiento recorre los nudos en el orden en que esa condición se va '
+    + 'cumpliendo —normalmente empezando en un apoyo o un extremo libre— resolviendo en cada uno '
+    + 'las fuerzas que aún faltan a partir de las reacciones, las cargas y las barras ya resueltas '
+    + 'que concurren ahí, y repite hasta agotar la armadura.',
+    8.7, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.1 Nudos y fuerzas de barra', 2);
+  layout.text(
+    'La última columna es lo que el análisis matricial obtiene para esa misma barra: el método y '
+    + 'el solver tienen que coincidir. El orden de los nudos es el orden en que el procedimiento '
+    + 'pudo resolverlos, no el orden en que aparecen en el modelo.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  for (const [index, step] of solution.steps.entries()) {
+    layout.ensure(40);
+    layout.text(`Nudo ${index + 1}: ${step.nodeId}`, 8, fonts.bold, palette.forestDeep, 8);
+    layout.table(
+      [
+        { header: 'Barra', width: 70 },
+        { header: `Método de los nudos (${forceUnit})`, ...NUMERIC },
+        { header: `Análisis matricial (${forceUnit})`, ...NUMERIC },
+      ],
+      step.members.map((member) => [
+        member.memberId,
+        displayCell(project, member.value, 'force'),
+        displayCell(project, member.solverValue, 'force'),
+      ]),
+      { size: 7.6 },
+    );
+  }
+  if (solution.unresolvedMemberIds.length) {
+    layout.text(
+      `Ningún nudo llegó a tener dos o menos incógnitas para resolver: ${solution.unresolvedMemberIds.join(', ')}.`,
+      7.8, fonts.regular, undefined, 8,
+    );
+  }
+
+  layout.heading('5.2 Verificación contra el análisis matricial', 2);
+  layout.text(
+    `Diferencia máxima, en cualquier barra resuelta: ${clearNumber(solution.residual, 1)} ${forceUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
 
 const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
@@ -976,6 +1031,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawMethodOfSections(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'method-of-joints') {
+    const solution = solveMethodOfJoints(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawMethodOfJoints(context, solution);
     return true;
   }
   if (project.settings.solutionMethod === 'castigliano-truss') {
