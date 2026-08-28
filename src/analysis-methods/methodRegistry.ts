@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -47,6 +47,18 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // Only means something with an interior support to write an equation about; a simple beam
     // (0 degrees) has nothing for it to solve. Its deeper requirements — every support simple
     // (no fixed end), full continuity, uniform EI within each span — are `solveThreeMoment`'s job.
+    applies: (classification) => (
+      (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
+      && classification.indeterminacy >= 1
+    ),
+  },
+  {
+    id: 'hardy-cross',
+    labelKey: 'method.hardyCross',
+    // The same continuous-beam scope as Three Moments — every support simple, full continuity,
+    // uniform EI within each span — reached instead by iterative joint balancing. Offered
+    // alongside Three Moments rather than in its place, because the two are checked against each
+    // other, not only against the solver.
     applies: (classification) => (
       (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
       && classification.indeterminacy >= 1

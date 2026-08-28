@@ -14,6 +14,7 @@
 import { solveCantileverMethod, type CantileverMethodResult } from '../../analysis-methods/cantileverMethod';
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
 import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
+import { solveHardyCross, type HardyCrossResult } from '../../analysis-methods/hardyCross';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
@@ -434,6 +435,102 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
   );
 };
 
+const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): void => {
+  const { layout, project } = context;
+  const { fonts, rgb, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const momentUnit = unitFor(project, 'moment');
+
+  layout.heading('5. Procedimiento: Hardy Cross (distribución de momentos)');
+  layout.text(
+    'Cada vano se empotra en imaginación en sus dos extremos y se calcula el momento que '
+    + 'desarrollaría así, bajo sus propias cargas — el momento de empotramiento perfecto. Cada '
+    + 'apoyo interior reparte ese desequilibrio entre sus vanos, en proporción a la rigidez '
+    + 'relativa de cada uno, y transmite la mitad de lo repartido al extremo lejano de ese vano. '
+    + 'Repitiendo esto apoyo por apoyo, el desequilibrio se hace cada vez más pequeño hasta '
+    + 'desaparecer — sin resolver ningún sistema de ecuaciones.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  layout.text(
+    'En los dos extremos simples de la viga, el momento de empotramiento perfecto se libera de '
+    + 'una vez: se transmite la mitad al apoyo vecino y ese extremo no vuelve a tocarse, con la '
+    + 'rigidez de ese vano reducida a 3EI/L en vez de 4EI/L para reflejarlo.',
+    8.3, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.1 Momentos de empotramiento perfecto y rigidez por vano', 2);
+  layout.table(
+    [
+      { header: 'Vano', width: 70 },
+      { header: `L (${lengthUnit})`, ...NUMERIC },
+      { header: `FEM izq. (${momentUnit})`, ...NUMERIC },
+      { header: `FEM der. (${momentUnit})`, ...NUMERIC },
+      { header: 'Rigidez izq.', ...NUMERIC },
+      { header: 'Rigidez der.', ...NUMERIC },
+    ],
+    solution.spans.map((span) => [
+      `${span.leftNodeId}–${span.rightNodeId}`,
+      number(span.length, 5),
+      displayCell(project, span.fixedEndMomentLeft, 'moment'),
+      displayCell(project, span.fixedEndMomentRight, 'moment'),
+      clearNumber(span.stiffnessLeft, Math.max(1, Math.abs(span.stiffnessLeft))),
+      clearNumber(span.stiffnessRight, Math.max(1, Math.abs(span.stiffnessRight))),
+    ]),
+    { size: 7.6 },
+  );
+
+  layout.heading('5.2 Momentos de apoyo tras converger', 2);
+  layout.text(
+    `El reparto convergió en ${solution.iterationCount} pasada${solution.iterationCount === 1 ? '' : 's'} `
+    + '(ningún apoyo quedó con desequilibrio medible). La última columna es lo que el análisis '
+    + 'matricial obtiene en ese mismo apoyo: el método y el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Apoyo', width: 90 },
+      { header: `Hardy Cross (${momentUnit})`, ...NUMERIC },
+      { header: `Análisis matricial (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.joints.map((joint) => [
+      joint.nodeId,
+      displayCell(project, joint.value, 'moment'),
+      displayCell(project, joint.solverMoment, 'moment'),
+    ]),
+    { size: 7.8 },
+  );
+
+  layout.heading('5.3 Momento final por tramo', 2);
+  layout.text(
+    'El momento libre de cada vano —el que tendría como viga simplemente apoyada bajo sus '
+    + 'propias cargas— más la corrección lineal entre los momentos de apoyo ya convergidos. La '
+    + 'variable x se mide desde el extremo izquierdo de la viga.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  for (const [index, segment] of solution.segments.entries()) {
+    layout.ensure(40);
+    layout.text(
+      `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
+      8, fonts.bold, palette.forestDeep, 8,
+    );
+    const expressionText = `M(x) = ${expression(segment.moment)}`;
+    layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
+    layout.y -= layout.drawMathBlockAt(expressionText, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  }
+
+  layout.heading('5.4 Verificación contra el análisis matricial', 2);
+  layout.text(
+    'Los dos caminos parten del mismo modelo y llegan por separado: si no coincidieran, el '
+    + 'procedimiento de arriba estaría mal. Ésta es la diferencia máxima medida, entre el momento '
+    + 'de apoyo que resuelve este método y el que reporta el análisis matricial en ese mismo punto.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.text(
+    `Diferencia máxima: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
 
 const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
@@ -720,6 +817,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawThreeMoment(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'hardy-cross') {
+    const solution = solveHardyCross(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawHardyCross(context, solution);
     return true;
   }
   if (project.settings.solutionMethod === 'virtual-work') {
