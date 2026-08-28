@@ -113,11 +113,11 @@ describe('TopBar portable export', () => {
 
     await user.click(trigger);
     const popover = await screen.findByRole('dialog', { name: 'Análisis' });
-    // El proyecto por defecto es un pórtico, y ahí sólo aplica el método matricial: el
-    // selector de método se oculta cuando no hay nada que elegir, así que siguen siendo
-    // cuatro. La prueba de abajo cubre la viga, donde sí aparece.
-    expect(popover.querySelectorAll('[data-context-control]')).toHaveLength(4);
-    expect(within(popover).queryByRole('combobox', { name: 'Método' })).toBeNull();
+    // El proyecto por defecto es un pórtico, y ahí aplican tanto el método matricial como el
+    // del Portal: el selector aparece, con cinco controles en total. La prueba de abajo cubre
+    // la viga, donde en cambio es la doble integración la que se ofrece junto al matricial.
+    expect(popover.querySelectorAll('[data-context-control]')).toHaveLength(5);
+    expect(within(popover).getByRole('combobox', { name: 'Método' })).toBeTruthy();
     expect(within(popover).getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
     expect(within(popover).getByRole('combobox', { name: 'Modo de cálculo' })).toBeTruthy();
     expect(within(popover).getByRole('combobox', { name: 'Orden del análisis' })).toBeTruthy();

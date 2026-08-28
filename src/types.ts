@@ -210,10 +210,11 @@ export interface ProjectSettings {
   analysisMode?: 'first-order' | 'p-delta';
   /**
    * Procedure the calculation report narrates. The results always come from the matrix
-   * stiffness solver; a different method re-derives them the way a reader was taught to,
-   * and its narrator is required to land on the same numbers.
+   * stiffness solver; a different method re-derives them the way a reader was taught to.
+   * An exact method (Double Integration) is required to land on the same numbers; a
+   * deliberately approximate one (Portal) is required to disclose the gap instead.
    */
-  solutionMethod?: 'matrix-stiffness' | 'double-integration';
+  solutionMethod?: 'matrix-stiffness' | 'double-integration' | 'portal-method';
   /** Overrides merged over `DEFAULT_PDELTA_CONFIG`; unset fields keep their default. */
   pDeltaConfig?: Partial<PDeltaConfig>;
 }

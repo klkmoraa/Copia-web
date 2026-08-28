@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -40,6 +40,16 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
       // A mechanism has no solution to narrate, and the solver refuses it anyway.
       && classification.indeterminacy >= 0
     ),
+  },
+  {
+    id: 'portal-method',
+    labelKey: 'method.portalMethod',
+    // A deliberately approximate method for lateral load on a rectangular building frame. Its
+    // deeper requirements — a clean storey/column-line grid, no lateral load on the members
+    // themselves, an actual lateral load to narrate — can only be checked by trying to reduce
+    // the frame to that grid, which is `solvePortalMethod`'s job; the selector only offers it
+    // where the shallow shape (a frame) makes that attempt plausible.
+    applies: (classification) => classification.kind === 'frame',
   },
 ];
 

@@ -12,6 +12,7 @@
  * is not decoration: it is the reader's evidence that the two paths met.
  */
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
+import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
@@ -171,6 +172,137 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
   layout.y -= 112;
 };
 
+const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
+
+const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
+  const { layout, project } = context;
+  const { fonts, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const forceUnit = unitFor(project, 'force');
+  const momentUnit = unitFor(project, 'moment');
+  const lineLabel = (index: number) => String.fromCharCode(65 + index);
+
+  layout.heading('5. Procedimiento: Método del Portal');
+  layout.text(
+    'Método aproximado para carga lateral sobre un pórtico rectangular. Se apoya en tres '
+    + 'hipótesis: el momento se anula a media altura de cada columna y a media luz de cada viga '
+    + '(salvo en el primer piso, donde un apoyo que no restringe el giro fuerza el punto de '
+    + 'inflexión en el propio apoyo); el cortante de cada planta se reparte entre sus columnas '
+    + 'según el ancho tributario de piso que cada una soporta; y con esos cortantes la estructura '
+    + 'queda estáticamente determinada: el equilibrio de momento en cada nudo da el momento de '
+    + 'cada viga, y el equilibrio vertical, recorrido desde la cubierta hacia abajo, da la axial '
+    + 'de cada columna.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  layout.text(
+    'A diferencia de un método exacto, éste no tiene por qué coincidir con el análisis matricial: '
+    + 'es una simplificación deliberada. Por eso esta sección no exige que las reacciones '
+    + 'coincidan — las contrasta, y declara la brecha, para que nadie firme una aproximación '
+    + 'creyéndola exacta.',
+    8.3, fonts.regular, palette.forestDeep, 8,
+  );
+
+  layout.heading('5.1 Retícula y cortante por planta', 2);
+  const stories = solution.grid.storyLevels.length - 1;
+  layout.text(
+    `${solution.grid.columnLines.length} ejes de columna (${solution.grid.columnLines.map((_, index) => lineLabel(index)).join(', ')}) `
+    + `y ${stories} planta${stories === 1 ? '' : 's'}. El cortante de cada planta es la carga lateral acumulada de esa `
+    + 'planta hacia arriba.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Planta', width: 60 },
+      { header: `Cortante de planta (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.storyShear.map((shear, index) => [String(index + 1), displayCell(project, shear, 'force')]),
+    { size: 7.8 },
+  );
+
+  layout.heading('5.2 Columnas: cortante, momento y axial', 2);
+  layout.table(
+    [
+      { header: 'Columna', width: 56 },
+      { header: 'Planta', width: 44 },
+      { header: `Ancho trib. (${lengthUnit})`, ...NUMERIC },
+      { header: `Cortante (${forceUnit})`, ...NUMERIC },
+      { header: `M inferior (${momentUnit})`, ...NUMERIC },
+      { header: `M superior (${momentUnit})`, ...NUMERIC },
+      { header: `Axial (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.columns.map((column) => [
+      lineLabel(column.columnIndex),
+      String(column.story),
+      number(column.tributaryWidth, 4),
+      displayCell(project, column.shear, 'force'),
+      displayCell(project, column.bottomMoment, 'moment'),
+      displayCell(project, column.topMoment, 'moment'),
+      displayCell(project, column.axial, 'force'),
+    ]),
+    { size: 7.4 },
+  );
+  layout.text(
+    'Axial positiva es tracción: en carga lateral unidireccional, las columnas de un lado del '
+    + 'pórtico entran en tracción y las del lado contrario en compresión — es la pareja de '
+    + 'fuerzas que resiste el vuelco.',
+    7.8, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.3 Vigas: momento y cortante', 2);
+  layout.table(
+    [
+      { header: 'Vano', width: 70 },
+      { header: 'Planta', width: 44 },
+      { header: `Luz (${lengthUnit})`, ...NUMERIC },
+      { header: `Momento (${momentUnit})`, ...NUMERIC },
+      { header: `Cortante (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.beams.map((beam) => [
+      `${lineLabel(beam.bayIndex)}–${lineLabel(beam.bayIndex + 1)}`,
+      String(beam.story),
+      number(beam.span, 4),
+      displayCell(project, beam.moment, 'moment'),
+      displayCell(project, beam.shear, 'force'),
+    ]),
+    { size: 7.4 },
+  );
+
+  layout.heading('5.4 Contraste en la base: método aproximado frente al modelo lateral exacto', 2);
+  layout.text(
+    'Se aísla un modelo con únicamente la carga lateral de este proyecto y se resuelve con el '
+    + 'análisis matricial: es la comparación honesta, porque el Método del Portal tampoco '
+    + 'pretende explicar la carga vertical. Las columnas «matricial» son ese resultado exacto; '
+    + 'las «Portal», el de esta sección.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Columna', width: 54 },
+      { header: `Rx Portal (${forceUnit})`, ...NUMERIC },
+      { header: `Rx matricial (${forceUnit})`, ...NUMERIC },
+      { header: `Ry Portal (${forceUnit})`, ...NUMERIC },
+      { header: `Ry matricial (${forceUnit})`, ...NUMERIC },
+      { header: `M Portal (${momentUnit})`, ...NUMERIC },
+      { header: `M matricial (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.baseChecks.map((check) => [
+      lineLabel(check.columnIndex),
+      displayCell(project, check.approxRx, 'force'),
+      displayCell(project, check.solverRx, 'force'),
+      displayCell(project, check.approxRy, 'force'),
+      displayCell(project, check.solverRy, 'force'),
+      displayCell(project, check.approxRm, 'moment'),
+      displayCell(project, check.solverRm, 'moment'),
+    ]),
+    { size: 7.4 },
+  );
+  layout.text(
+    `Mayor diferencia: ${clearNumber(solution.reactionGap.force, 1)} ${forceUnit} en fuerza, `
+    + `${clearNumber(solution.reactionGap.moment, 1)} ${momentUnit} en momento — el precio de la aproximación, a la vista.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 /**
  * Draws the selected method's section, or reports that it could not.
  *
@@ -179,15 +311,23 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
  */
 export const drawMethodSection = (context: ReportContext): boolean => {
   const { project, analysis } = context;
-  if (project.settings.solutionMethod !== 'double-integration') return false;
-  const solution = solveDoubleIntegration(project, analysis, null);
-  if (!solution.applicable) {
-    context.layout.text(
-      pdfText('El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.'),
-      8.3, context.layout.fonts.regular, undefined, 8,
-    );
-    return false;
+  if (project.settings.solutionMethod === 'double-integration') {
+    const solution = solveDoubleIntegration(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawDoubleIntegration(context, solution);
+    return true;
   }
-  drawDoubleIntegration(context, solution);
-  return true;
+  if (project.settings.solutionMethod === 'portal-method') {
+    const solution = solvePortalMethod(project, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawPortalMethod(context, solution);
+    return true;
+  }
+  return false;
 };
