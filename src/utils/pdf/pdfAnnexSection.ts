@@ -12,6 +12,7 @@
  * a two-column grid reads worse, not better.
  */
 import { drawGlobalDcl, drawMemberDiagrams } from './pdfDiagrams';
+import { memberAxis } from '../../graphics/structureGeometry';
 import {
   clearCell,
   clearNumber,
@@ -365,6 +366,41 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     drawMemberDiagrams(context, result);
   }
 
+  /**
+   * Instantiates the geometry step's equations (`ΔX = Xⱼ − Xᵢ`, `L = √(ΔX²+ΔY²)`, `c = ΔX/L`,
+   * `s = ΔY/L`) per member, straight from the project's own node coordinates via `memberAxis` —
+   * the same geometry helper the canvas and the solver's own axis resolution use. This reads
+   * project data; it does not touch `src/engine`, so it needed no authorization to add.
+   */
+  const drawGeometrySubstitution = (): void => {
+    if (!project.members.length) return;
+    layout.table(
+      [
+        { header: 'Miembro', width: 58 },
+        { header: `ΔX (${unitFor(project, 'length')})`, ...NUMERIC },
+        { header: `ΔY (${unitFor(project, 'length')})`, ...NUMERIC },
+        { header: `L (${unitFor(project, 'length')})`, ...NUMERIC },
+        { header: 'c', ...NUMERIC },
+        { header: 's', ...NUMERIC },
+      ],
+      project.members.map((member) => {
+        const ni = index.node(member.i);
+        const nj = index.node(member.j);
+        if (!ni || !nj) return [member.id, 'n/d', 'n/d', 'n/d', 'n/d', 'n/d'];
+        const axis = memberAxis(member, ni, nj);
+        return [
+          member.id,
+          displayCell(project, axis.dx, 'length'),
+          displayCell(project, axis.dy, 'length'),
+          displayCell(project, axis.length, 'length'),
+          number(axis.c, 4),
+          number(axis.s, 4),
+        ];
+      }),
+      { size: 7.6 },
+    );
+  };
+
   layout.heading('5. Procedimiento y cálculos');
   if (!analysis.explanation.length) layout.text('El análisis no incluyó pasos explicativos.', 8.7, fonts.regular, undefined, 8);
   for (const [stepIndex, step] of analysis.explanation.entries()) {
@@ -396,6 +432,36 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
         { size: 7.8 },
       );
     };
+    // The generic equations state the method; what follows instantiates it for this
+    // project, or says exactly where that instantiation already lives, rather than leaving
+    // the reader at a symbol with nowhere to find its number.
+    if (step.id === 'geometry') drawGeometrySubstitution();
+    if (step.id === 'loads' || step.id === 'equivalent-loads') {
+      layout.text(
+        'El intervalo, la intensidad y la resultante reales de cada carga están en «Cargas de miembro» y «Cargas nodales», sección 2.',
+        7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
+      );
+    }
+    if (step.id === 'stiffness' || step.id === 'transform') {
+      // K y C son sumas sobre todos los miembros y un sistema completo: sustituir aquí
+      // reconstruiría el álgebra lineal del motor en la capa de dibujo, con el riesgo de
+      // errar un cálculo en un documento que alguien va a firmar. Se apunta a donde ya
+      // están ensambladas con números reales — y sólo cuando esta copia las incluye; un
+      // puntero a una sección ausente no ayudaría al lector.
+      const traceIncluded = options.includeEducationTrace !== false && Boolean(analysis.educationTrace);
+      if (traceIncluded) {
+        layout.text(
+          'La matriz de rigidez K y la matriz de restricciones C, ya ensambladas con los valores reales del proyecto, están en «6. Traza educativa y matrices».',
+          7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
+        );
+      }
+    }
+    if (step.id === 'diagrams') {
+      layout.text(
+        'Las funciones N(s), V(s) y M(s) de cada tramo, con los coeficientes reales del proyecto, están en «4. Diagramas N, V y M».',
+        7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
+      );
+    }
     quantities('Datos de este paso', step.inputs ?? []);
     quantities('Resultados de este paso', step.outputs ?? []);
   }

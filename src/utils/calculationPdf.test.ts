@@ -61,6 +61,21 @@ describe('memoria de cálculo visual', () => {
     expect(momentPage).toMatch(/@\s*3 m/i);
   }, 60_000);
 
+  it('sustituye la geometría del procedimiento con los números reales del proyecto', async () => {
+    const { project, analysis } = fixture();
+    const report = await createCalculationReport(project, analysis, fixedOptions);
+    const inspection = await inspectPdf(report.bytes);
+    const page = inspection.textByPage.find((text) => /Geometría, nodos y ejes/i.test(text)) ?? '';
+    const flat = page.replace(/\s+/g, ' ');
+    // Las ecuaciones genéricas del motor (ΔX = Xⱼ − Xᵢ, L = √(ΔX²+ΔY²)…) describen el
+    // método; la tabla que sigue las instancia con las coordenadas reales del proyecto —
+    // A(0,0), B(8,0) en este miembro — sin tocar el motor: se calcula con `memberAxis`
+    // sobre `project.nodes`, que no es frontera protegida.
+    expect(flat).toMatch(/Miembro DeltaX \(m\) DeltaY \(m\) L \(m\) c s AB 8 0 8 1 0/);
+    // El paso de cargas no reconstruye su propia tabla: apunta a la que ya existe.
+    expect(flat).toMatch(/Cargas de miembro.*Cargas nodales.*sección 2/i);
+  }, 60_000);
+
   it('conserva el informe visual sin matrices y agrega el anexo educativo solo cuando se solicita', async () => {
     const { project, analysis } = fixture();
     const [visualReport, completeReport] = await Promise.all([
