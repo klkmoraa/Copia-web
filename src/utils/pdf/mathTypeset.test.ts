@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { typesetLatex } from './mathTypeset';
+import { MathTypesetError, typesetLatex } from './mathTypeset';
 
 describe('typesetLatex', () => {
+  it('throws on an undefined control sequence instead of drawing MathJax\'s error bar', () => {
+    // MathJax does not throw on bad LaTeX: it substitutes an `merror` node whose background
+    // <rect> the walker used to pick up as ordinary ink — a ~201pt solid black bar, silently.
+    expect(() => typesetLatex('\\badcommand')).toThrow(MathTypesetError);
+    expect(() => typesetLatex('\\badcommand')).toThrow(/Undefined control sequence/);
+  });
+
+  it('throws on a malformed expression that parses to a "Double exponent" error', () => {
+    // Two adjacent Unicode superscripts used to translate to `^{-}^{1}`; see mathLatex.ts.
+    expect(() => typesetLatex('Kbb^{-}^{1}')).toThrow(MathTypesetError);
+  });
+
+  it('names the offending LaTeX in the error message', () => {
+    expect(() => typesetLatex('\\notarealmacro')).toThrow(/notarealmacro/);
+  });
+
+
   it('parses a simple relation into glyph paths with a positive natural width', () => {
     const formula = typesetLatex('M(x) = 12.5x^{2}');
     expect(formula.ops.length).toBeGreaterThan(0);

@@ -26,11 +26,21 @@ const SYMBOLS: ReadonlyMap<string, string> = new Map([
   ['ᵃ', '^{a}'], ['ᵉ', '^{e}'], ['ᵍ', '^{g}'], ['ˡ', '^{l}'], ['ⁿ', '^{n}'],
 ]);
 
-/** LaTeX's own reserved characters, escaped when they reach the output as literal text. */
+/**
+ * LaTeX's own reserved characters, escaped when they reach the output as literal text.
+ *
+ * `\textbackslash`, `\textasciitilde` and `\textasciicircum` are text-mode macros from the
+ * wider LaTeX distribution: MathJax's `['base', 'ams']` package set (see `mathTypeset.ts`)
+ * does not define them, so they used to raise "Undefined control sequence" — which MathJax
+ * renders as a silent `merror` bar rather than throwing. `\text{^}` / `\text{~}` reach the
+ * real U+005E / U+007E glyphs through the base kernel's own `\text`, and `\backslash` is a
+ * plain math-mode command; all three were verified to typeset cleanly under this exact
+ * TeX instance.
+ */
 const escapeLiteral = (character: string): string => {
-  if (character === '\\') return '\\textbackslash{}';
-  if (character === '~') return '\\textasciitilde{}';
-  if (character === '^') return '\\textasciicircum{}';
+  if (character === '\\') return '\\backslash';
+  if (character === '~') return '\\text{~}';
+  if (character === '^') return '\\text{^}';
   if ('#$%&{}'.includes(character)) return `\\${character}`;
   return character;
 };

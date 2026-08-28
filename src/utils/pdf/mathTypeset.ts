@@ -78,6 +78,18 @@ interface LiteElement {
   children: LiteElement[];
 }
 
+/**
+ * SVG node kinds `walk` recurses through as pure containers. Everything MathJax's SVG output
+ * puts inside the root `<g>` is either drawn here (`use`, `rect`) or one of these; anything
+ * else is a leaf that carries meaning this renderer would otherwise drop silently, leaving a
+ * gap in the drawing while the formula's reserved width still accounts for it. `text`/`#text`
+ * are the concrete case: MathJax renders an `merror`'s message as a `<text>` node, and the old
+ * walker let it fall through the `<g>` recursion branch and vanish. `compute` now rejects error
+ * trees upstream, so this is defence in depth for any future construct that reaches a
+ * text-bearing leaf without going through `merror`.
+ */
+const CONTAINER_KINDS: ReadonlySet<string> = new Set(['g', 'svg', 'defs', 'clipPath', 'title', 'desc', 'style', 'metadata']);
+
 const walk = (element: LiteElement, parentMatrix: AffineMatrix, paths: Map<string, string>, ops: FormulaOp[]): void => {
   if (element.kind === 'use') {
     const id = element.attributes['xlink:href'].slice(1);
@@ -98,6 +110,9 @@ const walk = (element: LiteElement, parentMatrix: AffineMatrix, paths: Map<strin
     });
     return;
   }
+  if (!CONTAINER_KINDS.has(element.kind)) {
+    throw new MathTypesetError(`Nodo «${element.kind}» inesperado en la salida SVG de MathJax: no se puede dibujar ni recorrer.`);
+  }
   const local = parseTransform(element.attributes?.transform);
   const next = multiply(parentMatrix, local);
   for (const child of element.children ?? []) walk(child, next, paths, ops);
@@ -109,6 +124,24 @@ const parseViewBox = (viewBox: string | undefined): { minY: number; width: numbe
   return { minY, width, height };
 };
 
+/**
+ * MathJax never throws on unparseable LaTeX: it substitutes an `merror` node and carries on. In
+ * the liteAdaptor's SVG tree that shows up as a `<g data-mml-node="merror">` carrying the
+ * message in a `data-mjx-error` attribute, wrapping a full-width background `<rect>` plus a
+ * `<text>` holding the message. Left undetected, that `<rect>` was picked up as ordinary ink —
+ * `10\textasciicircum{}(-3)` produced a single 25800×950 rect, i.e. a ~201pt solid black bar at
+ * a 7.8pt font size, with no error anywhere. Returns the message so `compute` can fail loudly.
+ */
+const findTypesetError = (element: LiteElement): string | undefined => {
+  const message = element.attributes?.['data-mjx-error'];
+  if (message !== undefined) return message;
+  for (const child of element.children ?? []) {
+    const found = findTypesetError(child);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+};
+
 const compute = (latex: string): ParsedFormula => {
   let node: LiteElement;
   try {
@@ -118,6 +151,9 @@ const compute = (latex: string): ParsedFormula => {
   }
   const svgNode = node.children.find((child) => child.kind === 'svg');
   if (!svgNode) throw new MathTypesetError(`MathJax no produjo salida SVG para «${latex}».`);
+
+  const parseError = findTypesetError(svgNode);
+  if (parseError !== undefined) throw new MathTypesetError(`MathJax no pudo interpretar «${latex}»: ${parseError}`);
 
   const paths = new Map<string, string>();
   const defsNode = svgNode.children.find((child) => child.kind === 'defs');

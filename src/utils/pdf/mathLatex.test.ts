@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { atomize, translateExpression } from './mathLatex';
+import { typesetLatex } from './mathTypeset';
 
 describe('translateExpression', () => {
   it('passes plain relations through unchanged, spacing words with an explicit \\ command', () => {
@@ -53,8 +54,23 @@ describe('translateExpression', () => {
     expect(translateExpression('N_theta^T')).toBe('N_{theta}^{T}');
   });
 
-  it('leaves a caret with nothing alphanumeric after it as a literal', () => {
-    expect(translateExpression('10^(-3)')).toBe('10\\textasciicircum{}(-3)');
+  it('leaves a caret with nothing alphanumeric after it as a literal MathJax can typeset', () => {
+    // Regression test: the literal escapes used to be `\textasciicircum{}` and friends —
+    // text-mode macros the `['base', 'ams']` package set does not define, so MathJax replaced
+    // the whole formula with an `merror` node that drew as a solid black bar. Pin the string,
+    // then prove the string actually typesets.
+    expect(translateExpression('10^(-3)')).toBe('10\\text{^}(-3)');
+    expect(() => typesetLatex(translateExpression('10^(-3)'))).not.toThrow();
+  });
+
+  it('escapes a literal tilde and backslash into math-mode-safe LaTeX', () => {
+    // Neither character reaches `escapeLiteral` from the solver's own equations today (a scan
+    // of src/engine and src/analysis-methods finds none), so these are synthetic — the point is
+    // that the substitution itself renders rather than erroring.
+    expect(translateExpression('a~b')).toBe('a\\text{~}b');
+    expect(translateExpression('a\\b')).toBe('a\\backslash b');
+    expect(() => typesetLatex(translateExpression('a~b'))).not.toThrow();
+    expect(() => typesetLatex(translateExpression('a\\b'))).not.toThrow();
   });
 
   it('does not hang on unbalanced radical with missing closing paren', () => {
