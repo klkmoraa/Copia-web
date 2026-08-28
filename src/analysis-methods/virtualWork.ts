@@ -72,7 +72,7 @@ export interface VirtualWorkRejection {
 export type VirtualWorkOutcome = VirtualWorkResult | VirtualWorkRejection;
 
 /** Which translational components of a joint are free to displace, given its support. */
-const freeComponents = (support: SupportDefinition): { ux: boolean; uy: boolean } => {
+export const freeComponents = (support: SupportDefinition): { ux: boolean; uy: boolean } => {
   switch (support.type) {
     case 'fixed':
     case 'pin':
@@ -95,7 +95,7 @@ const freeComponents = (support: SupportDefinition): { ux: boolean; uy: boolean 
   }
 };
 
-const memberLength = (member: ProjectModel['members'][number], byId: Map<string, NodeModel>): number => {
+export const memberLength = (member: ProjectModel['members'][number], byId: Map<string, NodeModel>): number => {
   const i = byId.get(member.i);
   const j = byId.get(member.j);
   if (!i || !j) return Number.NaN;
@@ -103,7 +103,7 @@ const memberLength = (member: ProjectModel['members'][number], byId: Map<string,
 };
 
 /** This member's constant axial force, tension positive — a truss member carries no bending. */
-const axialForceOf = (result: AnalysisResult['memberResults'][number] | undefined): number =>
+export const axialForceOf = (result: AnalysisResult['memberResults'][number] | undefined): number =>
   result?.diagramSegments[0]?.axial[0] ?? Number.NaN;
 
 export const solveVirtualWork = (

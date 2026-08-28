@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -78,6 +78,15 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // own extra requirement — that the first storey's columns share one base condition, so the
     // flexure-formula cut is a single free body.
     applies: (classification) => classification.kind === 'frame',
+  },
+  {
+    id: 'castigliano-truss',
+    labelKey: 'method.castiglianoTruss',
+    // Only means something with a redundant reaction to solve for; a determinate truss (0
+    // degrees) is exactly what `virtual-work` already narrates. Its deeper requirements — the
+    // indeterminacy has to be external (no extra bar), every support axis-aligned — are
+    // `solveCastiglianoTruss`'s job.
+    applies: (classification) => classification.kind === 'truss' && classification.indeterminacy >= 1,
   },
 ];
 

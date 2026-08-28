@@ -16,6 +16,7 @@ import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../anal
 import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
+import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
@@ -349,6 +350,90 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
   );
 };
 
+const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTrussResult): void => {
+  const { layout, project } = context;
+  const { fonts, rgb, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const forceUnit = unitFor(project, 'force');
+  const componentLabel = (component: 'ux' | 'uy') => (component === 'ux' ? 'horizontal' : 'vertical');
+
+  layout.heading('5. Procedimiento: Castigliano (teorema del trabajo mínimo)');
+  layout.text(
+    'La armadura tiene más reacciones de las que el equilibrio por sí solo puede fijar. El '
+    + 'teorema del trabajo mínimo dice que la energía de deformación es estacionaria respecto de '
+    + 'cada reacción redundante — y para una armadura articulada, esa condición es exactamente el '
+    + 'trabajo virtual: el desplazamiento de la estructura liberada en la dirección de cada '
+    + 'redundante, bajo las cargas reales y el resto de redundantes, tiene que ser cero, porque en '
+    + 'la estructura real ese apoyo no se mueve.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  const relation = '∂U/∂Xₖ = Σ (Nᵢ · ∂Nᵢ/∂Xₖ) Lᵢ / (AᵢEᵢ) = 0';
+  layout.ensure(layout.measureMathBlock(relation, 9, 16));
+  layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
+
+  layout.heading('5.1 Clasificación estática', 2);
+  layout.text(
+    `g = ${solution.classification.indeterminacy}: la armadura es externamente hiperestática de ese grado. Se liberan esas reacciones para dejar una armadura isostática —la estructura primaria— cuya fuerza de barra bajo las cargas reales se puede seguir.`,
+    8.7, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.2 Redundantes elegidas y verificadas', 2);
+  layout.text(
+    'La última columna es lo que el análisis matricial obtiene en ese mismo apoyo, sobre la '
+    + 'estructura original: el método y el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Redundante', width: 60, math: true },
+      { header: 'Apoyo', width: 60 },
+      { header: 'Dirección', width: 76 },
+      { header: `Castigliano (${forceUnit})`, ...NUMERIC },
+      { header: `Análisis matricial (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.redundants.map((redundant) => [
+      redundant.symbol,
+      redundant.nodeId,
+      componentLabel(redundant.component),
+      displayCell(project, redundant.value, 'force'),
+      displayCell(project, redundant.solverReaction, 'force'),
+    ]),
+    { size: 7.8 },
+  );
+
+  layout.heading('5.3 Fuerza final en cada barra', 2);
+  layout.text(
+    'Fuerza en la estructura primaria bajo las cargas reales, más la contribución de cada '
+    + 'redundante ya resuelta — contrastada, barra por barra, contra el análisis matricial de la '
+    + 'estructura original.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Barra', width: 56 },
+      { header: `L (${lengthUnit})`, ...NUMERIC },
+      { header: `Primaria N₀ (${forceUnit})`, ...NUMERIC, math: true },
+      { header: `Final (${forceUnit})`, ...NUMERIC },
+      { header: `Análisis matricial (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.members.map((member) => [
+      member.memberId,
+      number(member.length, 5),
+      displayCell(project, member.primaryForce, 'force'),
+      displayCell(project, member.force, 'force'),
+      displayCell(project, member.solverForce, 'force'),
+    ]),
+    { size: 7.4 },
+  );
+
+  layout.heading('5.4 Verificación contra el análisis matricial', 2);
+  layout.text(
+    `Diferencia máxima: ${clearNumber(solution.reactionResidual, 1)} ${forceUnit} en las reacciones redundantes, `
+    + `${clearNumber(solution.forceResidual, 1)} ${forceUnit} en la fuerza de barra.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
 
 const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
@@ -644,6 +729,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawVirtualWork(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'castigliano-truss') {
+    const solution = solveCastiglianoTruss(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawCastiglianoTruss(context, solution);
     return true;
   }
   return false;
