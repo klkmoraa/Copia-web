@@ -235,42 +235,64 @@ const PreviewPages = ({ document, container, onVisiblePage }: PreviewPagesProps)
     () => Array.from({ length: document.pageCount }, (_, index) => index + 1),
     [document],
   );
+  const canvases = useRef(new Map<number, HTMLCanvasElement>());
   const painted = useRef(new Set<number>());
+
+  const register = useCallback((canvas: HTMLCanvasElement | null, number: number) => {
+    if (!canvas) return undefined;
+    canvases.current.set(number, canvas);
+    return () => { canvases.current.delete(number); };
+  }, []);
 
   useEffect(() => {
     painted.current = new Set<number>();
-  }, [document]);
-
-  const attach = useCallback((canvas: HTMLCanvasElement | null, number: number) => {
-    if (!canvas) return;
     const root = container.current;
     const width = Math.max(160, (root?.clientWidth ?? 640) - 32);
-    void document.aspectRatio(number).then((ratio) => {
-      // Reserve the page's height before it is painted so the scrollbar stops jumping as
-      // pages arrive, and `IntersectionObserver` has a real box to observe.
+    const entries = [...canvases.current.entries()];
+
+    // Reserve each page's height before anything is painted. Until this lands every canvas
+    // is zero-high, so they all overlap at the top of the scroller — which is how the
+    // counter used to open on "page 12 of 16" while showing page one.
+    for (const [number, canvas] of entries) {
       canvas.style.width = `${width}px`;
-      canvas.style.height = `${Math.round(width * ratio)}px`;
-    });
-    const paint = () => {
-      if (painted.current.has(number)) return;
+      void document.aspectRatio(number).then((ratio) => {
+        canvas.style.height = `${Math.round(width * ratio)}px`;
+      });
+    }
+
+    const paint = (number: number) => {
+      const canvas = canvases.current.get(number);
+      if (!canvas || painted.current.has(number)) return;
       painted.current.add(number);
       void document.renderPage(number, canvas, width).catch(() => painted.current.delete(number));
     };
+
     // Without an observer there is no way to tell what is on screen, so everything is
     // painted at once. Costlier, but a reader who cannot see the pages has nothing.
     if (typeof IntersectionObserver === 'undefined') {
       onVisiblePage(1);
-      paint();
-      return;
+      for (const [number] of entries) paint(number);
+      return undefined;
     }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        onVisiblePage(number);
-        paint();
+
+    // The counter names the *first* page on screen, not whichever one the observer
+    // happened to report last: with a 200 px margin several pages are visible at once,
+    // and the reader is looking at the topmost of them.
+    const visible = new Set<number>();
+    const observer = new IntersectionObserver((records) => {
+      for (const record of records) {
+        const number = Number((record.target as HTMLElement).dataset.page);
+        if (!number) continue;
+        if (record.isIntersecting) {
+          visible.add(number);
+          paint(number);
+        } else visible.delete(number);
       }
+      if (visible.size) onVisiblePage(Math.min(...visible));
     }, { root: root ?? null, rootMargin: '200px 0px', threshold: 0.01 });
-    observer.observe(canvas);
+
+    for (const [, canvas] of entries) observer.observe(canvas);
+    return () => observer.disconnect();
   }, [container, document, onVisiblePage]);
 
   return <>
@@ -278,8 +300,9 @@ const PreviewPages = ({ document, container, onVisiblePage }: PreviewPagesProps)
       <canvas
         key={number}
         className="pdf-preview-page"
+        data-page={number}
         aria-label={`${number}`}
-        ref={(canvas) => attach(canvas, number)}
+        ref={(canvas) => register(canvas, number)}
       />
     ))}
   </>;

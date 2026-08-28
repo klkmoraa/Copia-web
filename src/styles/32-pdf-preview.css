@@ -2,9 +2,15 @@
    Dos columnas: las opciones de contenido a la izquierda, las páginas a la derecha.
    Bajo 900 px se apilan y las opciones pasan a ser la cabecera del cuerpo. */
 
-.pdf-preview-dialog {
-  width: min(1080px, 94vw);
+/* Especificidad compuesta a propósito: `ui.css` se importa después de esta hoja y fija
+   `.sc-modal-surface--dialog { width: min(560px, ...) }`, que a igual especificidad gana por
+   orden. A 560 px la columna de páginas queda en 268 px y la memoria se lee con lupa. Un
+   documento necesita ancho; el resto de los diálogos del producto no, así que se ensancha
+   éste y no la regla general. */
+.sc-modal-surface--dialog.pdf-preview-dialog {
+  width: min(1120px, 94vw);
   max-width: none;
+  max-height: min(900px, calc(100dvh - (var(--sc-space-5) * 2)));
 }
 
 .pdf-preview-dialog .sc-modal-surface__body {
@@ -122,8 +128,18 @@
     max-height: 72vh;
   }
 
+
   .pdf-preview-options {
     border-inline-end: none;
     border-block-end: var(--sc-border-width) solid var(--sc-color-divider);
+  }
+}
+
+@media (width <= 700px) {
+  /* `ui.css` vuelve el diálogo una hoja a pantalla completa por debajo de 700 px. La regla
+     compuesta de arriba tiene más especificidad y se lo impediría, así que se repite aquí. */
+  .sc-modal-surface--dialog.pdf-preview-dialog {
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top));
   }
 }
