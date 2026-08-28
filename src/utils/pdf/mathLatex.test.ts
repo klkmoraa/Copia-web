@@ -27,6 +27,15 @@ describe('translateExpression', () => {
   it('leaves a caret with nothing alphanumeric after it as a literal', () => {
     expect(translateExpression('10^(-3)')).toBe('10\\textasciicircum{}(-3)');
   });
+
+  it('does not hang on unbalanced radical with missing closing paren', () => {
+    // Regression test: unbalanced √( should not cause infinite loop
+    const result = translateExpression('√(ΔX² + ΔY²');
+    expect(result).toBeDefined();
+    expect(typeof result).toBe('string');
+    // The √ and ( should be treated as literals, content translated
+    expect(result).toContain('Delta');
+  });
 });
 
 describe('atomize', () => {
@@ -36,5 +45,14 @@ describe('atomize', () => {
 
   it('keeps a radical whose argument spans a space as one atom', () => {
     expect(atomize('L = √(ΔX² + ΔY²)')).toEqual(['L', '=', '√(ΔX² + ΔY²)']);
+  });
+
+  it('does not hang on unbalanced radical with missing closing paren', () => {
+    // Regression test: unbalanced √( should not cause infinite loop
+    const result = atomize('√(ΔX² + ΔY²');
+    expect(result).toBeDefined();
+    expect(Array.isArray(result)).toBe(true);
+    // The √( should be treated as separate atoms or literal text
+    expect(result.length).toBeGreaterThan(0);
   });
 });

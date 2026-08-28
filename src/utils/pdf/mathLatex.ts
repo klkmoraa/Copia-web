@@ -124,7 +124,8 @@ export const translateExpression = (expression: string): string => {
   let result = '';
   let index = 0;
   while (index < expression.length) {
-    if (expression[index] === '√' && expression[index + 1] === '(') {
+    let foundUnbalanced = false;
+    if (expression[index] === '√' && index + 1 < expression.length && expression[index + 1] === '(') {
       const close = matchParen(expression, index + 1);
       if (close !== -1) {
         const inner = expression.slice(index + 2, close);
@@ -132,8 +133,9 @@ export const translateExpression = (expression: string): string => {
         index = close + 1;
         continue;
       }
+      foundUnbalanced = true;
     }
-    let next = expression.indexOf('√(', index);
+    let next = expression.indexOf('√(', foundUnbalanced ? index + 1 : index);
     if (next === -1) next = expression.length;
     result += translateRunOfWords(expression.slice(index, next));
     index = next;
@@ -146,15 +148,17 @@ export const atomize = (expression: string): string[] => {
   const atoms: string[] = [];
   let index = 0;
   while (index < expression.length) {
-    if (expression[index] === '√' && expression[index + 1] === '(') {
+    let foundUnbalanced = false;
+    if (expression[index] === '√' && index + 1 < expression.length && expression[index + 1] === '(') {
       const close = matchParen(expression, index + 1);
       if (close !== -1) {
         atoms.push(expression.slice(index, close + 1));
         index = close + 1;
         continue;
       }
+      foundUnbalanced = true;
     }
-    let next = expression.indexOf('√(', index);
+    let next = expression.indexOf('√(', foundUnbalanced ? index + 1 : index);
     if (next === -1) next = expression.length;
     atoms.push(...expression.slice(index, next).split(' ').filter((word) => word.length > 0));
     index = next;
