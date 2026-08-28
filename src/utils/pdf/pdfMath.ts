@@ -13,8 +13,15 @@ import { pdfText } from './pdfGlyphs';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor } from './reportContext';
 
-/** True when the text carries something plain WinAnsi prose can't spell out: Greek, operators, scripts. */
-export const needsMath = (value: string): boolean => translateExpression(value) !== pdfText(value);
+/**
+ * True when the text carries something plain WinAnsi prose can't spell out: Greek, operators,
+ * scripts. `translateExpression` joins every word with an explicit `\ ` (TeX ignores bare
+ * whitespace between atoms), which by itself makes any multi-word string differ from
+ * `pdfText`'s plain spaces — undo just that escaping before comparing, so this only flags text
+ * that needed a *substantive* translation (a symbol, script, or fraction), not merely having
+ * more than one word.
+ */
+export const needsMath = (value: string): boolean => translateExpression(value).split('\\ ').join(' ') !== pdfText(value);
 
 /** True when the expression will stack something above and below its baseline. */
 export const hasFraction = (expression: string): boolean => /\\frac\{/.test(translateExpression(expression));

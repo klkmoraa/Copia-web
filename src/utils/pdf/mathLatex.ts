@@ -22,6 +22,8 @@ const SYMBOLS: ReadonlyMap<string, string> = new Map([
   ['′', "'"], ['″', "''"], ['ƒ', 'f'], ['°', '^\\circ'], ['∥', '\\parallel'], ['⟨', '\\langle'], ['⟩', '\\rangle'],
   ['⁰', '^{0}'], ['¹', '^{1}'], ['²', '^{2}'], ['³', '^{3}'], ['⁴', '^{4}'], ['⁵', '^{5}'], ['⁶', '^{6}'], ['⁷', '^{7}'], ['⁸', '^{8}'], ['⁹', '^{9}'],
   ['₀', '_{0}'], ['₁', '_{1}'], ['₂', '_{2}'], ['₃', '_{3}'], ['₄', '_{4}'], ['₅', '_{5}'], ['₆', '_{6}'], ['₇', '_{7}'], ['₈', '_{8}'], ['₉', '_{9}'],
+  ['ᵀ', '^{T}'], ['ᵢ', '_{i}'], ['ⱼ', '_{j}'], ['ₐ', '_{a}'], ['ₑ', '_{e}'], ['ₙ', '_{n}'], ['ₛ', '_{s}'], ['ₓ', '_{x}'], ['ᵧ', '_{y}'],
+  ['ᵃ', '^{a}'], ['ᵉ', '^{e}'], ['ᵍ', '^{g}'], ['ˡ', '^{l}'], ['ⁿ', '^{n}'],
 ]);
 
 /** LaTeX's own reserved characters, escaped when they reach the output as literal text. */
@@ -116,7 +118,10 @@ const matchParen = (expression: string, openIndex: number): number => {
 };
 
 const translateRunOfWords = (run: string): string => {
-  const words = run.split(' ').filter((word) => word.length > 0).map(translateWord).join(' ');
+  // TeX math mode ignores raw whitespace between ordinary atoms, so a bare ' ' join
+  // collapses multi-word prose labels (e.g. "q uniforme transversal") into one illegible
+  // run. '\ ' is TeX's explicit "insert an interword space" command.
+  const words = run.split(' ').filter((word) => word.length > 0).map(translateWord).join('\\ ');
   return words + (run.endsWith(' ') ? ' ' : '');
 };
 
