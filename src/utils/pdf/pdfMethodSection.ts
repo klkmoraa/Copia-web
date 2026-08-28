@@ -11,6 +11,7 @@
  * required to agree with the analysis the rest of the document reports. The verification row
  * is not decoration: it is the reader's evidence that the two paths met.
  */
+import { solveCantileverMethod, type CantileverMethodResult } from '../../analysis-methods/cantileverMethod';
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { drawElasticCurve } from './pdfDiagrams';
@@ -303,6 +304,119 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
   );
 };
 
+const drawCantileverMethod = (context: ReportContext, solution: CantileverMethodResult): void => {
+  const { layout, project } = context;
+  const { fonts, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const forceUnit = unitFor(project, 'force');
+  const momentUnit = unitFor(project, 'moment');
+  const lineLabel = (index: number) => String.fromCharCode(65 + index);
+
+  layout.heading('5. Procedimiento: Método del Voladizo');
+  layout.text(
+    'Método aproximado para carga lateral sobre un pórtico rectangular. Comparte con el Método '
+    + 'del Portal el punto de inflexión a media altura de cada columna y a media luz de cada viga '
+    + '(salvo en el primer piso, donde un apoyo que no restringe el giro fuerza el punto de '
+    + 'inflexión en el propio apoyo), pero sustituye su segunda hipótesis: en vez de repartir el '
+    + 'cortante de planta por ancho tributario, trata la fila de columnas de cada planta como la '
+    + 'sección de un voladizo vertical que resiste el momento de vuelco — la axial de cada columna '
+    + 'es proporcional a su área y a su distancia al centroide de áreas de esa planta, la fórmula '
+    + 'de flexión aplicada a columnas discretas en vez de a una sección continua. Conocida esa '
+    + 'axial, el equilibrio vertical de cada nudo da el momento de cada viga, y el equilibrio de '
+    + 'momento en cada nudo —recorrido desde la cubierta hacia abajo— da el cortante de cada '
+    + 'columna.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  layout.text(
+    'Como el Método del Portal, no tiene por qué coincidir con el análisis matricial: es una '
+    + 'simplificación deliberada, y esta sección contrasta sus reacciones en la base contra el '
+    + 'modelo lateral exacto en vez de exigir que coincidan.',
+    8.3, fonts.regular, palette.forestDeep, 8,
+  );
+
+  layout.heading('5.1 Columnas: axial por flexión, cortante y momento', 2);
+  layout.text(
+    'La axial es la incógnita que este método resuelve primero, no la última: positiva es '
+    + 'tracción, y las columnas más alejadas del centroide de áreas son las que más trabajan.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Columna', width: 56 },
+      { header: 'Planta', width: 44 },
+      { header: `Dist. al centroide (${lengthUnit})`, ...NUMERIC },
+      { header: `Axial (${forceUnit})`, ...NUMERIC },
+      { header: `Cortante (${forceUnit})`, ...NUMERIC },
+      { header: `M inferior (${momentUnit})`, ...NUMERIC },
+      { header: `M superior (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.columns.map((column) => [
+      lineLabel(column.columnIndex),
+      String(column.story),
+      number(column.centroidDistance, 4),
+      displayCell(project, column.axial, 'force'),
+      displayCell(project, column.shear, 'force'),
+      displayCell(project, column.bottomMoment, 'moment'),
+      displayCell(project, column.topMoment, 'moment'),
+    ]),
+    { size: 7.4 },
+  );
+
+  layout.heading('5.2 Vigas: momento y cortante', 2);
+  layout.table(
+    [
+      { header: 'Vano', width: 70 },
+      { header: 'Planta', width: 44 },
+      { header: `Luz (${lengthUnit})`, ...NUMERIC },
+      { header: `Momento (${momentUnit})`, ...NUMERIC },
+      { header: `Cortante (${forceUnit})`, ...NUMERIC },
+    ],
+    solution.beams.map((beam) => [
+      `${lineLabel(beam.bayIndex)}–${lineLabel(beam.bayIndex + 1)}`,
+      String(beam.story),
+      number(beam.span, 4),
+      displayCell(project, beam.moment, 'moment'),
+      displayCell(project, beam.shear, 'force'),
+    ]),
+    { size: 7.4 },
+  );
+
+  layout.heading('5.3 Contraste en la base: método aproximado frente al modelo lateral exacto', 2);
+  layout.text(
+    'Se aísla un modelo con únicamente la carga lateral de este proyecto y se resuelve con el '
+    + 'análisis matricial: es la comparación honesta, porque el Método del Voladizo tampoco '
+    + 'pretende explicar la carga vertical. Las columnas «matricial» son ese resultado exacto; '
+    + 'las «Voladizo», el de esta sección.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Columna', width: 54 },
+      { header: `Rx Voladizo (${forceUnit})`, ...NUMERIC },
+      { header: `Rx matricial (${forceUnit})`, ...NUMERIC },
+      { header: `Ry Voladizo (${forceUnit})`, ...NUMERIC },
+      { header: `Ry matricial (${forceUnit})`, ...NUMERIC },
+      { header: `M Voladizo (${momentUnit})`, ...NUMERIC },
+      { header: `M matricial (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.baseChecks.map((check) => [
+      lineLabel(check.columnIndex),
+      displayCell(project, check.approxRx, 'force'),
+      displayCell(project, check.solverRx, 'force'),
+      displayCell(project, check.approxRy, 'force'),
+      displayCell(project, check.solverRy, 'force'),
+      displayCell(project, check.approxRm, 'moment'),
+      displayCell(project, check.solverRm, 'moment'),
+    ]),
+    { size: 7.4 },
+  );
+  layout.text(
+    `Mayor diferencia: ${clearNumber(solution.reactionGap.force, 1)} ${forceUnit} en fuerza, `
+    + `${clearNumber(solution.reactionGap.moment, 1)} ${momentUnit} en momento — el precio de la aproximación, a la vista.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 /**
  * Draws the selected method's section, or reports that it could not.
  *
@@ -327,6 +441,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawPortalMethod(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'cantilever-method') {
+    const solution = solveCantileverMethod(project, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawCantileverMethod(context, solution);
     return true;
   }
   return false;

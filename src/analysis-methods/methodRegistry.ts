@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -49,6 +49,15 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // themselves, an actual lateral load to narrate — can only be checked by trying to reduce
     // the frame to that grid, which is `solvePortalMethod`'s job; the selector only offers it
     // where the shallow shape (a frame) makes that attempt plausible.
+    applies: (classification) => classification.kind === 'frame',
+  },
+  {
+    id: 'cantilever-method',
+    labelKey: 'method.cantileverMethod',
+    // Also approximate, also lateral-load-only, and offered on the same shallow shape: a frame.
+    // `solveCantileverMethod` is what actually checks the grid, the loads, and — this method's
+    // own extra requirement — that the first storey's columns share one base condition, so the
+    // flexure-formula cut is a single free body.
     applies: (classification) => classification.kind === 'frame',
   },
 ];
