@@ -9,8 +9,7 @@
  * asserted end-to-end in `calculationPdfEditorial.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts, concatTransformationMatrix, rgb } from 'pdf-lib';
-import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
+import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib';
 import { CONTENT_BOTTOM, MARGIN, PAGE_SIZE, PdfLayout, resolveColumnWidths } from './pdfBuilder';
 import type { ReportPalette } from './reportContext';
 

@@ -49,12 +49,13 @@ export const createCalculationReport = async (
   options: CalculationReportOptions = {},
 ): Promise<CalculationReportArtifact> => {
   const [
-    { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString, concatTransformationMatrix },
-    { pushGraphicsState, popGraphicsState },
+    {
+      PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString,
+      concatTransformationMatrix, pushGraphicsState, popGraphicsState,
+    },
     payload,
   ] = await Promise.all([
     import('pdf-lib'),
-    import('pdf-lib/cjs/api/operators.js'),
     createPortablePayload(project, analysis, options),
   ]);
   const pdf = await PDFDocument.create();

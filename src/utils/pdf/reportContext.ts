@@ -40,16 +40,16 @@ export type RgbFactory = typeof import('pdf-lib').rgb;
 
 /**
  * The three `pdf-lib` operator functions `mathVector.ts` needs to draw a formula's outer
- * transform manually (see that file's header for why). Handed to the renderer by the dynamic
- * import in `calculationPdf.ts`, the same way `rgb` is — a static value import of `pdf-lib`
- * anywhere under `utils/pdf/` would drag the library back into the entry chunk. The two
- * graphics-state functions are not exported from the top-level `pdf-lib` package, only from
- * this CJS-only deep path, hence the `typeof import(...)` on that specific module.
+ * transform manually (see that file's header for why). All three are ordinary top-level
+ * `pdf-lib` exports — its ESM entry re-exports `./api/operators` wholesale — so they travel
+ * through the single dynamic `import('pdf-lib')` in `calculationPdf.ts`, the same way `rgb`
+ * does. A static value import of `pdf-lib` anywhere under `utils/pdf/` would drag the library
+ * back into the entry chunk, hence the `typeof import(...)` type queries.
  */
 export interface PdfVectorOps {
   concatTransformationMatrix: typeof import('pdf-lib').concatTransformationMatrix;
-  pushGraphicsState: typeof import('pdf-lib/cjs/api/operators.js').pushGraphicsState;
-  popGraphicsState: typeof import('pdf-lib/cjs/api/operators.js').popGraphicsState;
+  pushGraphicsState: typeof import('pdf-lib').pushGraphicsState;
+  popGraphicsState: typeof import('pdf-lib').popGraphicsState;
 }
 
 export interface ReportFonts {

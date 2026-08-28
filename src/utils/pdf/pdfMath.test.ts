@@ -1,7 +1,6 @@
 // src/utils/pdf/pdfMath.test.ts
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts, concatTransformationMatrix, rgb } from 'pdf-lib';
-import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
+import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib';
 import { PdfLayout } from './pdfBuilder';
 import { translateExpression } from './mathLatex';
 import { typesetLatex } from './mathTypeset';

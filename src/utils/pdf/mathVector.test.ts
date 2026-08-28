@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, concatTransformationMatrix, rgb } from 'pdf-lib';
+import { PDFDocument, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib';
 import type { PDFPage } from 'pdf-lib';
-import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import { typesetLatex } from './mathTypeset';
 import { drawFormula, measureFormula } from './mathVector';
 
