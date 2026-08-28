@@ -113,9 +113,33 @@ diálogo; las aserciones que fijaban texto sin tilde, el guión bajo literal de
 `d_local` y la barra de `dV/dx` se ajustaron a un dibujo donde eso es geometría y ya
 no un carácter.
 
-## 7. Pendiente comprobado sólo por extracción de texto
+## 7. Comprobación visual en navegador (cerrada)
 
-El contenido del PDF se verificó extrayendo texto con PDF.js y leyendo los marcadores
-y metadatos del archivo. **No se abrió el PDF en un lector gráfico ni se ejecutó la
-aplicación en un navegador**: la maquetación de las fracciones apiladas y el aspecto
-del diálogo no están comprobados a ojo. `npm run qa` (Playwright) tampoco se ejecutó.
+El hueco que este reporte declaraba abierto —la maquetación nunca vista en un
+navegador— se cerró con Chromium sobre el build real (`vite preview`). Resultado:
+
+- El diálogo abre en menos de 500 ms, con 16 páginas y los lienzos pintados
+  (102 081 píxeles con tinta en la portada; se midió, no se supuso).
+- Al desmarcar «Anexo técnico» el documento se recompone de 16 a 7 páginas.
+- Sin errores de página ni de consola.
+- Las fracciones apiladas (`c = ΔX/L`, `s = ΔY/L`) y el radical de
+  `L = √(ΔX² + ΔY²)` se ven con su barra, sus subíndices y su numeración.
+
+La comprobación encontró **dos defectos**, corregidos en `ecd8a9b`:
+
+1. **El diálogo salía a 560 px.** `ui.css` fija `.sc-modal-surface--dialog { width:
+   min(560px, ...) }` y se importa después de `styles.css`, así que a igual
+   especificidad ganaba por orden. La columna de páginas quedaba en 268 px.
+2. **El contador abría en «Página 12 de 16»** mostrando la primera. Cada lienzo creaba
+   su propio `IntersectionObserver`, ninguno se desconectaba, y con altura cero todos
+   se solapaban arriba: entraban a la vez y ganaba el último en informar.
+
+### Lo que no se pudo ejecutar
+
+`npm run qa` **no pasa en este entorno**, ni en esta rama ni en `origin/main`. El
+gate `verifyTopBarNeverOverlapsItself` falla idénticamente en ambas (misma línea,
+`qa.mjs:827`), porque `qa.mjs` pide el canal `chrome` y aquí sólo hay Chromium: las
+métricas de fuente difieren y la barra superior desborda de otro modo. Se comprobó
+sobre `origin/main` justamente para descartar que fuera cosa de este cambio. **Queda
+pendiente que `npm run qa` corra con Chrome de verdad**, en CI o en una máquina que
+lo tenga.
