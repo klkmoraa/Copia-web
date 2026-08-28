@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -39,6 +39,17 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
       (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
       // A mechanism has no solution to narrate, and the solver refuses it anyway.
       && classification.indeterminacy >= 0
+    ),
+  },
+  {
+    id: 'three-moment',
+    labelKey: 'method.threeMoment',
+    // Only means something with an interior support to write an equation about; a simple beam
+    // (0 degrees) has nothing for it to solve. Its deeper requirements — every support simple
+    // (no fixed end), full continuity, uniform EI within each span — are `solveThreeMoment`'s job.
+    applies: (classification) => (
+      (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
+      && classification.indeterminacy >= 1
     ),
   },
   {

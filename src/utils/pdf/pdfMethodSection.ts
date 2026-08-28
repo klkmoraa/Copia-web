@@ -13,6 +13,7 @@
  */
 import { solveCantileverMethod, type CantileverMethodResult } from '../../analysis-methods/cantileverMethod';
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
+import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
@@ -171,6 +172,108 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     palette.quantity.moment,
   );
   layout.y -= 112;
+};
+
+const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): void => {
+  const { layout, project } = context;
+  const { fonts, rgb, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const momentUnit = unitFor(project, 'moment');
+
+  layout.heading('5. Procedimiento: Teorema de los Tres Momentos');
+  layout.text(
+    'La incógnita aquí no es una reacción, como en la doble integración, sino el momento en cada '
+    + 'apoyo interior. Cada vano se resuelve primero como si fuera una viga simplemente apoyada '
+    + 'bajo sus propias cargas — el «momento libre» — y la ecuación de Clapeyron impone, en cada '
+    + 'apoyo interior, que la pendiente que ese momento libre produciría a cada lado, corregida '
+    + 'por los momentos de apoyo todavía desconocidos, coincida entre ambos vanos.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  const relation = '(Lₙ/EIₙ) Mₙ₋₁ + 2(Lₙ/EIₙ + Lₙ₊₁/EIₙ₊₁) Mₙ + (Lₙ₊₁/EIₙ₊₁) Mₙ₊₁ = −6[Aₙaₙ/(EIₙLₙ) + Aₙ₊₁bₙ₊₁/(EIₙ₊₁Lₙ₊₁)]';
+  layout.ensure(layout.measureMathBlock(relation, 8.4, 16));
+  layout.y -= layout.drawMathBlockAt(relation, 8.4, 16, rgb(0.24, 0.28, 0.34));
+
+  layout.heading('5.1 Clasificación estática', 2);
+  const degree = solution.classification.indeterminacy;
+  layout.text(
+    `g = ${degree}: ${degree} apoyo${degree === 1 ? '' : 's'} interior${degree === 1 ? '' : 'es'}, y otras tantas ecuaciones de Clapeyron — una por cada pareja de vanos consecutivos.`,
+    8.7, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.2 Vanos y momento libre', 2);
+  layout.text(
+    'El vano n se resuelve como viga simplemente apoyada entre sus dos apoyos, bajo sus propias '
+    + 'cargas. Aₙaₙ y Aₙbₙ son el primer momento de ese diagrama respecto de cada extremo — lo '
+    + 'que la ecuación de Clapeyron necesita, no el área ni el centroide por separado.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Vano', width: 70 },
+      { header: `L (${lengthUnit})`, ...NUMERIC },
+      { header: 'EI (kN·m²)', ...NUMERIC },
+      { header: `Aₙaₙ (kN·m³)`, ...NUMERIC, math: true },
+      { header: `Aₙbₙ (kN·m³)`, ...NUMERIC, math: true },
+    ],
+    solution.spans.map((span) => [
+      `${span.leftNodeId}–${span.rightNodeId}`,
+      number(span.length, 5),
+      number(span.EI, 6),
+      clearNumber(span.firstMomentLeft, Math.max(1, Math.abs(span.firstMomentLeft))),
+      clearNumber(span.firstMomentRight, Math.max(1, Math.abs(span.firstMomentRight))),
+    ]),
+    { size: 7.6 },
+  );
+
+  layout.heading('5.3 Momentos de apoyo resueltos', 2);
+  layout.text(
+    'La última columna es lo que el análisis matricial reporta en ese mismo apoyo: el método y '
+    + 'el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Apoyo', width: 90, math: true },
+      { header: `Tres momentos (${momentUnit})`, ...NUMERIC },
+      { header: `Análisis matricial (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.supportMoments.map((entry) => [
+      `${entry.symbol} — ${entry.nodeId}`,
+      displayCell(project, entry.value, 'moment'),
+      displayCell(project, entry.solverMoment, 'moment'),
+    ]),
+    { size: 7.8 },
+  );
+
+  layout.heading('5.4 Momento final por tramo', 2);
+  layout.text(
+    'M(x) = M libre(x) + Mₗ(1 − x/L) + Mᵣ(x/L): el momento libre de cada vano, más la corrección '
+    + 'lineal entre los momentos de apoyo que ya se resolvieron. La variable x se mide desde el '
+    + 'extremo izquierdo de la viga.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  for (const [index, segment] of solution.segments.entries()) {
+    layout.ensure(40);
+    layout.text(
+      `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
+      8, fonts.bold, palette.forestDeep, 8,
+    );
+    const expressionText = `M(x) = ${expression(segment.moment)}`;
+    layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
+    layout.y -= layout.drawMathBlockAt(expressionText, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  }
+
+  layout.heading('5.5 Verificación contra el análisis matricial', 2);
+  layout.text(
+    'Los dos caminos parten del mismo modelo y llegan por separado: si no coincidieran, el '
+    + 'procedimiento de arriba estaría mal. Ésta es la diferencia máxima medida, entre el momento '
+    + 'de apoyo que resuelve este método y el que reporta el análisis matricial en ese mismo punto.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.text(
+    `Diferencia máxima: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
 };
 
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
@@ -450,6 +553,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawCantileverMethod(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'three-moment') {
+    const solution = solveThreeMoment(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawThreeMoment(context, solution);
     return true;
   }
   return false;
