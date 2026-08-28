@@ -82,13 +82,15 @@ const walk = (element: LiteElement, parentMatrix: AffineMatrix, paths: Map<strin
   if (element.kind === 'use') {
     const id = element.attributes['xlink:href'].slice(1);
     const path = paths.get(id);
-    if (path !== undefined) ops.push({ kind: 'path', path, matrix: parentMatrix });
+    const matrix = multiply(parentMatrix, parseTransform(element.attributes?.transform));
+    if (path !== undefined) ops.push({ kind: 'path', path, matrix });
     return;
   }
   if (element.kind === 'rect') {
+    const matrix = multiply(parentMatrix, parseTransform(element.attributes?.transform));
     ops.push({
       kind: 'rect',
-      matrix: parentMatrix,
+      matrix,
       x: parseFloat(element.attributes.x ?? '0'),
       y: parseFloat(element.attributes.y ?? '0'),
       width: parseFloat(element.attributes.width ?? '0'),
