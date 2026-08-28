@@ -1,5 +1,7 @@
 # PDF Formulas via MathJax Vector Embedding — Implementation Plan
 
+**Clasificación:** `AUDIT/TEMPORARY`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the hand-drawn glyph typesetter in `src/utils/pdf/pdfMath.ts`/`pdfGlyphs.ts` with real math typesetting — MathJax renders each formula to an SVG glyph/path tree, which is embedded into the PDF as true vector paths via `pdf-lib`, all fully offline and client-side.
