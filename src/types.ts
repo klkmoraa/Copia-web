@@ -208,6 +208,12 @@ export interface ProjectSettings {
   calculationMode?: 'complete' | 'classroom';
   /** Second-order geometric-stiffness (P-Delta) analysis; absent/`'first-order'` keeps today's linear behavior. */
   analysisMode?: 'first-order' | 'p-delta';
+  /**
+   * Procedure the calculation report narrates. The results always come from the matrix
+   * stiffness solver; a different method re-derives them the way a reader was taught to,
+   * and its narrator is required to land on the same numbers.
+   */
+  solutionMethod?: 'matrix-stiffness' | 'double-integration';
   /** Overrides merged over `DEFAULT_PDELTA_CONFIG`; unset fields keep their default. */
   pDeltaConfig?: Partial<PDeltaConfig>;
 }

@@ -178,6 +178,11 @@ const normalizeSettings = (input: unknown): ProjectSettings => {
     analysisMode: raw.analysisMode === undefined
       ? defaults.analysisMode
       : enumAt(raw.analysisMode, 'settings.analysisMode', ['first-order', 'p-delta'] as const),
+    // Sin esta línea el campo se descartaría en cada guardado: los ajustes se reconstruyen
+    // con lista blanca, así que lo que no se lee aquí no sobrevive a un ciclo de ida y vuelta.
+    solutionMethod: raw.solutionMethod === undefined
+      ? defaults.solutionMethod
+      : enumAt(raw.solutionMethod, 'settings.solutionMethod', ['matrix-stiffness', 'double-integration'] as const),
     pDeltaConfig: normalizePDeltaConfig(raw.pDeltaConfig, 'settings.pDeltaConfig'),
   };
   if (settings.gridSize <= 0) fail('settings.gridSize', 'debe ser mayor que cero.');
