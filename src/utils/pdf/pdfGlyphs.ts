@@ -54,11 +54,6 @@ const transliterate = (value: unknown, keep: (character: string) => boolean): st
 /** Prose for the WinAnsi faces: every glyph outside Latin-1 is spelled out. */
 export const pdfText = (value: unknown): string => transliterate(value, () => false);
 
-/**
- * Fórmula source for `pdfMath`: Greek and operators survive for the Symbol face, and the
- * Unicode scripts become `^`/`_` markers. Everything else degrades exactly as prose does.
- */
-
 export const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): string[] => {
   const paragraphs = pdfText(text).split(/\r?\n/);
   const lines: string[] = [];
