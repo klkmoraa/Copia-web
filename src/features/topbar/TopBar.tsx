@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -50,6 +50,7 @@ import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/co
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { AnalysisResult, PDeltaConfig } from '../../types';
+import { applicableMethods, resolveSolutionMethod, type SolutionMethodId } from '../../analysis-methods/methodRegistry';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 const ProposalAssistant = lazy(() => import('../ai/ProposalAssistant').then((module) => ({ default: module.ProposalAssistant })));
@@ -809,6 +810,9 @@ const AnalysisContextFields = ({ onCommit }: { onCommit?: () => void }) => {
   const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { t } = useI18n();
   const analysisMode = project.settings.analysisMode ?? 'first-order';
+  // La aplicabilidad depende de la geometría, así que se recalcula cuando el modelo cambia:
+  // una viga editada hasta volverse marco deja de ofrecer la doble integración sola.
+  const methods = useMemo(() => applicableMethods(project), [project]);
 
   return <>
     <label className="mobile-menu-field topbar-context-field overflow-case" data-context-control="scenario">
@@ -854,6 +858,31 @@ const AnalysisContextFields = ({ onCommit }: { onCommit?: () => void }) => {
     </label>
 
     {analysisMode === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
+
+    {/* Sólo se ofrecen los métodos que de verdad aplican a esta estructura: la doble
+        integración no significa nada en un marco ni en una armadura, y un selector que
+        ofrece lo que luego no puede honrar es peor que uno que se calla. Con un único
+        método aplicable el control se oculta, porque no habría nada que elegir. */}
+    {methods.length > 1 ? (
+      <label className="mobile-menu-field topbar-context-field overflow-method" data-context-control="method">
+        <span>{t('method.label')}</span>
+        <select
+          className="method-select"
+          value={resolveSolutionMethod(project)}
+          onChange={(event) => {
+            updateProjectView((draft) => ({
+              ...draft,
+              settings: { ...draft.settings, solutionMethod: event.target.value as SolutionMethodId },
+            }));
+            onCommit?.();
+          }}
+        >
+          {methods.map((method) => (
+            <option key={method.id} value={method.id}>{t(method.labelKey as TranslationKey)}</option>
+          ))}
+        </select>
+      </label>
+    ) : null}
 
     <label className="mobile-menu-field topbar-context-field overflow-units" data-context-control="units">
       <span>{t('units.label')}</span>

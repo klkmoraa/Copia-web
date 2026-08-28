@@ -314,10 +314,10 @@ export const solveDoubleIntegration = (
     // The released supports are included on purpose: their `y = 0` is precisely the
     // compatibility condition that determines the redundant that replaced them.
     if (restrainsTransverse(node.support)) {
-      push(deflectionRow(k, station.x), { statement: `y(${station.x}) = 0 · ${station.nodeId}`, kind: 'deflection', x: station.x });
+      push(deflectionRow(k, station.x), { statement: `y(${station.x}) = 0 en ${station.nodeId}`, kind: 'deflection', x: station.x });
     }
     if (restrainsRotation(node.support)) {
-      push(slopeRow(k, station.x), { statement: `θ(${station.x}) = 0 · ${station.nodeId}`, kind: 'slope', x: station.x });
+      push(slopeRow(k, station.x), { statement: `θ(${station.x}) = 0 en ${station.nodeId}`, kind: 'slope', x: station.x });
     }
   }
 

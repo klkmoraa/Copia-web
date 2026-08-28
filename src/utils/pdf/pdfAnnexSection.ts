@@ -12,6 +12,7 @@
  * a two-column grid reads worse, not better.
  */
 import { drawGlobalDcl, drawMemberDiagrams } from './pdfDiagrams';
+import { drawMethodSection } from './pdfMethodSection';
 import { memberAxis } from '../../graphics/structureGeometry';
 import {
   clearCell,
@@ -401,70 +402,78 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     );
   };
 
-  layout.heading('5. Procedimiento y cálculos');
-  if (!analysis.explanation.length) layout.text('El análisis no incluyó pasos explicativos.', 8.7, fonts.regular, undefined, 8);
-  for (const [stepIndex, step] of analysis.explanation.entries()) {
-    layout.heading(`${stepIndex + 1}. ${step.title.replace(/^\d+\.\s*/, '')}`, 2);
-    layout.text(step.summary, 8.7, fonts.regular, undefined, 8);
-    // The equations arrive from the solver already written as maths — `L = √(ΔX² + ΔY²)`,
-    // `dθ/dx = M/EI`. Drawn with `layout.text` they went through the WinAnsi transliteration
-    // and came out as `L = sqrt(DeltaX^2 + DeltaY^2)`, carets included. `drawMathBlock` keeps
-    // the symbols, stacks the fractions and folds a long relation instead of clipping it.
-    for (const equation of step.equations) {
-      const height = layout.measureMathBlock(equation, 8.6, 16);
-      layout.ensure(height);
-      layout.y -= layout.drawMathBlockAt(equation, 8.6, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
-    }
-    // The values come from the engine, but the formatting is ours. Within one step,
-    // entries sharing a unit are comparable, so each collapses against the largest of its
-    // own family: an equilibrium sum of -1.06581e-14 kN beside a load of 22 kN is zero.
-    const quantities = (title: string, entries: readonly { label: string; value: number; unit: string }[]): void => {
-      if (!entries.length) return;
-      const scaleByUnit = new Map<string, number>();
-      for (const entry of entries) {
-        scaleByUnit.set(entry.unit, Math.max(scaleByUnit.get(entry.unit) ?? 1e-12, Math.abs(entry.value)));
+  /** El procedimiento genérico del método matricial: la sección 5 de siempre. */
+  const drawGenericProcedure = (): void => {
+    layout.heading('5. Procedimiento y cálculos');
+    if (!analysis.explanation.length) layout.text('El análisis no incluyó pasos explicativos.', 8.7, fonts.regular, undefined, 8);
+    for (const [stepIndex, step] of analysis.explanation.entries()) {
+      layout.heading(`${stepIndex + 1}. ${step.title.replace(/^\d+\.\s*/, '')}`, 2);
+      layout.text(step.summary, 8.7, fonts.regular, undefined, 8);
+      // The equations arrive from the solver already written as maths — `L = √(ΔX² + ΔY²)`,
+      // `dθ/dx = M/EI`. Drawn with `layout.text` they went through the WinAnsi transliteration
+      // and came out as `L = sqrt(DeltaX^2 + DeltaY^2)`, carets included. `drawMathBlock` keeps
+      // the symbols, stacks the fractions and folds a long relation instead of clipping it.
+      for (const equation of step.equations) {
+        const height = layout.measureMathBlock(equation, 8.6, 16);
+        layout.ensure(height);
+        layout.y -= layout.drawMathBlockAt(equation, 8.6, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
       }
-      layout.table(
-        // La etiqueta la escribe el motor con símbolos (`ΣFx`, `κ₁`), así que se compone
-        // como matemáticas y no como prosa, que es lo que la volvía `SumFx` y `kappa_1`.
-        [{ header: title, width: 150, math: true }, { header: 'Valor', ...NUMERIC }, { header: 'Unidad', width: 74 }],
-        entries.map((entry) => [entry.label, clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1), entry.unit]),
-        { size: 7.8 },
-      );
-    };
-    // The generic equations state the method; what follows instantiates it for this
-    // project, or says exactly where that instantiation already lives, rather than leaving
-    // the reader at a symbol with nowhere to find its number.
-    if (step.id === 'geometry') drawGeometrySubstitution();
-    if (step.id === 'loads' || step.id === 'equivalent-loads') {
-      layout.text(
-        'El intervalo, la intensidad y la resultante reales de cada carga están en «Cargas de miembro» y «Cargas nodales», sección 2.',
-        7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
-      );
-    }
-    if (step.id === 'stiffness' || step.id === 'transform') {
-      // K y C son sumas sobre todos los miembros y un sistema completo: sustituir aquí
-      // reconstruiría el álgebra lineal del motor en la capa de dibujo, con el riesgo de
-      // errar un cálculo en un documento que alguien va a firmar. Se apunta a donde ya
-      // están ensambladas con números reales — y sólo cuando esta copia las incluye; un
-      // puntero a una sección ausente no ayudaría al lector.
-      const traceIncluded = options.includeEducationTrace !== false && Boolean(analysis.educationTrace);
-      if (traceIncluded) {
+      // The values come from the engine, but the formatting is ours. Within one step,
+      // entries sharing a unit are comparable, so each collapses against the largest of its
+      // own family: an equilibrium sum of -1.06581e-14 kN beside a load of 22 kN is zero.
+      const quantities = (title: string, entries: readonly { label: string; value: number; unit: string }[]): void => {
+        if (!entries.length) return;
+        const scaleByUnit = new Map<string, number>();
+        for (const entry of entries) {
+          scaleByUnit.set(entry.unit, Math.max(scaleByUnit.get(entry.unit) ?? 1e-12, Math.abs(entry.value)));
+        }
+        layout.table(
+          // La etiqueta la escribe el motor con símbolos (`ΣFx`, `κ₁`), así que se compone
+          // como matemáticas y no como prosa, que es lo que la volvía `SumFx` y `kappa_1`.
+          [{ header: title, width: 150, math: true }, { header: 'Valor', ...NUMERIC }, { header: 'Unidad', width: 74 }],
+          entries.map((entry) => [entry.label, clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1), entry.unit]),
+          { size: 7.8 },
+        );
+      };
+      // The generic equations state the method; what follows instantiates it for this
+      // project, or says exactly where that instantiation already lives, rather than leaving
+      // the reader at a symbol with nowhere to find its number.
+      if (step.id === 'geometry') drawGeometrySubstitution();
+      if (step.id === 'loads' || step.id === 'equivalent-loads') {
         layout.text(
-          'La matriz de rigidez K y la matriz de restricciones C, ya ensambladas con los valores reales del proyecto, están en «6. Traza educativa y matrices».',
+          'El intervalo, la intensidad y la resultante reales de cada carga están en «Cargas de miembro» y «Cargas nodales», sección 2.',
           7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
         );
       }
+      if (step.id === 'stiffness' || step.id === 'transform') {
+        // K y C son sumas sobre todos los miembros y un sistema completo: sustituir aquí
+        // reconstruiría el álgebra lineal del motor en la capa de dibujo, con el riesgo de
+        // errar un cálculo en un documento que alguien va a firmar. Se apunta a donde ya
+        // están ensambladas con números reales — y sólo cuando esta copia las incluye; un
+        // puntero a una sección ausente no ayudaría al lector.
+        const traceIncluded = options.includeEducationTrace !== false && Boolean(analysis.educationTrace);
+        if (traceIncluded) {
+          layout.text(
+            'La matriz de rigidez K y la matriz de restricciones C, ya ensambladas con los valores reales del proyecto, están en «6. Traza educativa y matrices».',
+            7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
+          );
+        }
+      }
+      if (step.id === 'diagrams') {
+        layout.text(
+          'Las funciones N(s), V(s) y M(s) de cada tramo, con los coeficientes reales del proyecto, están en «4. Diagramas N, V y M».',
+          7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
+        );
+      }
+      quantities('Datos de este paso', step.inputs ?? []);
+      quantities('Resultados de este paso', step.outputs ?? []);
     }
-    if (step.id === 'diagrams') {
-      layout.text(
-        'Las funciones N(s), V(s) y M(s) de cada tramo, con los coeficientes reales del proyecto, están en «4. Diagramas N, V y M».',
-        7.8, fonts.regular, rgb(0.34, 0.40, 0.36), 16,
-      );
-    }
-    quantities('Datos de este paso', step.inputs ?? []);
-    quantities('Resultados de este paso', step.outputs ?? []);
-  }
+  };
+
+  // Un método elegido escribe la sección 5 con los números de este proyecto. Si no hay
+  // método, o el elegido no aplica a esta estructura, se conserva intacto el procedimiento
+  // genérico de siempre: el documento nunca se queda sin sección 5.
+  if (!drawMethodSection(context)) drawGenericProcedure();
 
   if (options.includeEducationTrace !== false && analysis.educationTrace) {
     const trace = analysis.educationTrace;

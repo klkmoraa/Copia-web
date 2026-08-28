@@ -7,6 +7,15 @@
  * así que un tramo no puede quedarse a medias sin que un gate lo diga.
  */
 export const transfer = {
+  'method.label': 'Método',
+  'method.matrixStiffness': 'Matricial de la rigidez',
+  'method.doubleIntegration': 'Doble integración',
+  'method.rejectedNotBeam': 'La doble integración sólo aplica a vigas rectas.',
+  'method.rejectedMechanism': 'El modelo es un mecanismo: no hay solución que desarrollar.',
+  'method.rejectedGeometry': 'La geometría no se pudo reducir a un eje continuo.',
+  'method.rejectedRedundants': 'No se encontró una liberación estable para las redundantes.',
+  'method.rejectedConditions': 'Las condiciones no forman un sistema cuadrado.',
+  'method.rejectedSingular': 'El sistema de condiciones resultó singular.',
   'portable.pdfLabel': 'PDF completo reimportable',
   'portable.bundleLabel': 'Expediente .structureco',
   'portable.analyzingPdf': 'Analizando y generando PDF…',

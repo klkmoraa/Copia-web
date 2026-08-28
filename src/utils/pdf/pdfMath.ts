@@ -17,7 +17,7 @@
  * `^` and `_` raise and lower the glyph that follows, and the size shrinks until the
  * expression fits its box rather than overflowing it.
  */
-import { SYMBOL_GLYPHS, mathText, pdfText } from './pdfGlyphs';
+import { SYMBOL_GLYPHS, hasScriptGlyph, mathText, pdfText } from './pdfGlyphs';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor } from './reportContext';
 
@@ -172,7 +172,10 @@ export const mathWidth = (layout: PdfLayout, expression: string, size: number): 
  * glyph or a Unicode script. Prose without any of that is better left to `wrapText`, which
  * wraps properly and keeps the roman face; only `ΣFx` and `κ₁` need the typesetter.
  */
-export const needsMath = (value: string): boolean => mathText(value) !== pdfText(value);
+export const needsMath = (value: string): boolean =>
+  // A Unicode subscript spells the same either way — `X₁` is `X_1` down both paths — so
+  // comparing the two sanitisers alone declared it prose and printed the marker literally.
+  mathText(value) !== pdfText(value) || hasScriptGlyph(value);
 
 /** True when the expression will stack something above and below its baseline. */
 export const hasFraction = (expression: string): boolean => words(normalize(expression)).some((word) => asFraction(word) !== undefined);

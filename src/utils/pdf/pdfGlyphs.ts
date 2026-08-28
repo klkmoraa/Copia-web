@@ -78,6 +78,10 @@ export const pdfText = (value: unknown): string => transliterate(value, () => fa
  * Fórmula source for `pdfMath`: Greek and operators survive for the Symbol face, and the
  * Unicode scripts become `^`/`_` markers. Everything else degrades exactly as prose does.
  */
+/** True when the text carries a Unicode super/subscript the typesetter can raise or lower. */
+export const hasScriptGlyph = (value: string): boolean =>
+  Array.from(value).some((character) => SCRIPT_GLYPHS.has(character));
+
 export const mathText = (value: unknown): string =>
   transliterate(value, (character) => SYMBOL_GLYPHS.has(character) && !SCRIPT_GLYPHS.has(character));
 

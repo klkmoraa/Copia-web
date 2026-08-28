@@ -1,6 +1,6 @@
 /**
- * Vector artwork of the report: the global free-body diagram, the per-member N/V/M strips
- * and the full-page N, V or M diagram drawn over the structure.
+ * Vector artwork of the report: the global free-body diagram, the per-member N/V/M strips,
+ * the full-page N, V or M diagram drawn over the structure, and the elastic curve.
  *
  * All three project the model onto the page with the same transform — bounding box, uniform
  * scale, centred offsets — so it lives in one place and each caller only declares its plot
@@ -320,4 +320,79 @@ export const drawGlobalQuantityDiagram = (
   });
   page.drawLine({ start: { x: left + 14, y: bottom + 20 }, end: { x: left + 42, y: bottom + 20 }, thickness: 1.7, color });
   page.drawText(pdfText(`${quantitySymbol(quantity)} positivo según los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: rgb(0.32, 0.39, 0.35) });
+};
+
+/**
+ * The elastic curve of a straight beam, drawn over its undeformed axis.
+ *
+ * A deflection is a number nobody can picture, so a report that computes one and never draws
+ * it has done half the work. The vertical scale is exaggerated on purpose and said so in the
+ * caption: at true scale the curve would be indistinguishable from the axis.
+ *
+ * The shape comes from the deflection polynomials the method solved, not from a re-reading of
+ * the model — this is the picture of the answer the page just derived.
+ */
+export const drawElasticCurve = (
+  layout: PdfLayout,
+  segments: readonly { x0: number; x1: number; deflection: readonly number[] }[],
+  span: number,
+  left: number,
+  bottom: number,
+  width: number,
+  height: number,
+  color: PdfColor,
+): { peak: number; peakAt: number } => {
+  const { page, rgb, fonts } = layout;
+  const baseline = bottom + height / 2;
+  const plotLeft = left + 26;
+  const plotWidth = Math.max(1, width - 52);
+  const evaluate = (coefficients: readonly number[], x: number): number => {
+    let value = 0;
+    for (let power = coefficients.length - 1; power >= 0; power -= 1) value = value * x + coefficients[power];
+    return value;
+  };
+  const sampleAt = (x: number): number => {
+    const segment = segments.find((entry) => x >= entry.x0 - 1e-9 && x <= entry.x1 + 1e-9) ?? segments[segments.length - 1];
+    return segment ? evaluate(segment.deflection, x) : 0;
+  };
+
+  const steps = 120;
+  const samples: { x: number; value: number }[] = [];
+  for (let step = 0; step <= steps; step += 1) {
+    const x = (span * step) / steps;
+    samples.push({ x, value: sampleAt(x) });
+  }
+  const peakSample = samples.reduce((largest, sample) => (Math.abs(sample.value) > Math.abs(largest.value) ? sample : largest), samples[0]);
+  const peak = Math.abs(peakSample.value);
+  const amplitude = Math.min(height / 2 - 12, 34);
+  const toPoint = (sample: { x: number; value: number }) => ({
+    x: plotLeft + (sample.x / Math.max(span, 1e-9)) * plotWidth,
+    // Positive deflection is upward in the model; on the page +y is up too, so the sign
+    // carries straight through and a sagging beam reads as sagging.
+    y: baseline + (peak > 0 ? (sample.value / peak) * amplitude : 0),
+  });
+
+  page.drawLine({
+    start: { x: plotLeft, y: baseline },
+    end: { x: plotLeft + plotWidth, y: baseline },
+    thickness: 1.1,
+    color: rgb(0.42, 0.49, 0.45),
+  });
+  let previous = toPoint(samples[0]);
+  for (const sample of samples.slice(1)) {
+    const point = toPoint(sample);
+    page.drawLine({ start: previous, end: point, thickness: 1.35, color });
+    previous = point;
+  }
+
+  const peakPoint = toPoint(peakSample);
+  page.drawCircle({ x: peakPoint.x, y: peakPoint.y, size: 2.2, color });
+  page.drawText(pdfText('Curva elástica (escala vertical exagerada)'), {
+    x: plotLeft,
+    y: bottom + 4,
+    size: 6.2,
+    font: fonts.regular,
+    color: rgb(0.38, 0.44, 0.40),
+  });
+  return { peak: peakSample.value, peakAt: peakSample.x };
 };

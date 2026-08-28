@@ -7,6 +7,15 @@
  * así que un tramo no puede quedarse a medias sin que un gate lo diga.
  */
 export const transfer = {
+  'method.label': 'Method',
+  'method.matrixStiffness': 'Matrix stiffness',
+  'method.doubleIntegration': 'Double integration',
+  'method.rejectedNotBeam': 'Double integration only applies to straight beams.',
+  'method.rejectedMechanism': 'The model is a mechanism: there is no solution to develop.',
+  'method.rejectedGeometry': 'The geometry could not be reduced to a continuous axis.',
+  'method.rejectedRedundants': 'No stable release was found for the redundants.',
+  'method.rejectedConditions': 'The conditions do not form a square system.',
+  'method.rejectedSingular': 'The system of conditions turned out singular.',
   'portable.pdfLabel': 'Complete reimportable PDF',
   'portable.bundleLabel': '.structureco package',
   'portable.analyzingPdf': 'Analyzing and generating PDF…',

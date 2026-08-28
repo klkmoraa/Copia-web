@@ -113,7 +113,11 @@ describe('TopBar portable export', () => {
 
     await user.click(trigger);
     const popover = await screen.findByRole('dialog', { name: 'Análisis' });
+    // El proyecto por defecto es un pórtico, y ahí sólo aplica el método matricial: el
+    // selector de método se oculta cuando no hay nada que elegir, así que siguen siendo
+    // cuatro. La prueba de abajo cubre la viga, donde sí aparece.
     expect(popover.querySelectorAll('[data-context-control]')).toHaveLength(4);
+    expect(within(popover).queryByRole('combobox', { name: 'Método' })).toBeNull();
     expect(within(popover).getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
     expect(within(popover).getByRole('combobox', { name: 'Modo de cálculo' })).toBeTruthy();
     expect(within(popover).getByRole('combobox', { name: 'Orden del análisis' })).toBeTruthy();
@@ -122,6 +126,36 @@ describe('TopBar portable export', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Análisis' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('ofrece el método de resolución sólo donde aplica, y lo guarda en el proyecto', async () => {
+    const user = userEvent.setup();
+    const beam = createDefaultProject();
+    // Una viga recta: aquí la doble integración sí significa algo, y el selector aparece.
+    beam.nodes = [
+      { id: 'A', x: 0, y: 0, support: { type: 'pin' } },
+      { id: 'B', x: 6, y: 0, support: { type: 'roller', angleDeg: 90 } },
+    ];
+    beam.members = [{ id: 'AB', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.01, I: 8e-5 }];
+    beam.memberLoads = [];
+    beam.nodalLoads = [];
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(beam));
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    const bar = document.querySelector('.topbar')!;
+    await user.click(within(bar as HTMLElement).getByRole('button', { name: 'Análisis' }));
+    const popover = await screen.findByRole('dialog', { name: 'Análisis' });
+    expect(popover.querySelectorAll('[data-context-control]')).toHaveLength(5);
+
+    const select = within(popover).getByRole('combobox', { name: 'Método' }) as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value))
+      .toEqual(['matrix-stiffness', 'double-integration']);
+
+    await user.selectOptions(select, 'double-integration');
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}');
+      expect(stored.settings?.solutionMethod).toBe('double-integration');
+    });
   });
 
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {
