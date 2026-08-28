@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument, StandardFonts, concatTransformationMatrix, rgb } from 'pdf-lib';
 import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import { PdfLayout } from './pdfBuilder';
-import { drawFormulaCard, drawMathBlock, drawMathFormula, hasFraction, mathWidth, needsMath } from './pdfMath';
+import { translateExpression } from './mathLatex';
+import { typesetLatex } from './mathTypeset';
+import { measureFormula } from './mathVector';
+import { drawFormulaCard, drawMathBlock, drawMathFormula, hasFraction, mathWidth, needsMath, packMathLines } from './pdfMath';
 
 const INK = rgb(0.1, 0.1, 0.1);
 const vectorOps = { concatTransformationMatrix, pushGraphicsState, popGraphicsState };
@@ -73,6 +76,24 @@ describe('drawMathBlock', () => {
     );
     // One line at this size/width would be far shorter than two lines' worth of height.
     expect(consumed).toBeGreaterThan(9 * 1.45 * 1.5);
+  });
+
+  it('keeps every packed line inside the column, measured the way it is drawn', async () => {
+    const page = await layout();
+    // The exact reported overflow: the old packer summed per-atom widths plus a fixed 0.175 em
+    // inter-atom guess, so this whole relation "fit" on one line at width 150 and then drew
+    // 163.31pt wide. Assert the drawn geometry, not merely that nothing threw.
+    const expression = 'P transversal en ξ → P[0, N₁, N₂, 0, N₃, N₄]ᵀ';
+    const width = 150;
+    const size = 9;
+    const indent = size * 1.6;
+    const packed = packMathLines(expression, width, size, indent);
+    expect(packed.length).toBeGreaterThan(1);
+    for (const [index, line] of packed.entries()) {
+      const drawn = measureFormula(typesetLatex(translateExpression(line)), size).widthPt;
+      expect(drawn).toBeLessThanOrEqual(width - (index === 0 ? 0 : indent) + 0.001);
+    }
+    expect(() => drawMathBlock(page, expression, 50, 700, width, size, INK)).not.toThrow();
   });
 
   it('keeps a radical argument that spans a space on one line, unsplit', async () => {

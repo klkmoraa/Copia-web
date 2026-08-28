@@ -54,16 +54,53 @@ export interface MathBlockOptions {
   tag?: string;
 }
 
-const atomWidth = (size: number, atom: string): number => measureFormula(typesetLatex(translateExpression(atom)), size).widthPt;
+/**
+ * Packs `expression` into as many lines as `width` needs, returning each line as its own
+ * expression string (exported so the geometry can be asserted directly in tests).
+ *
+ * Breaks at atom boundaries (`mathLatex.ts`'s `atomize`, not a bare space split) so a `√(...)`
+ * whose argument spans a space never gets its radical bar cut across a line break.
+ *
+ * Each *candidate* line is measured exactly the way `drawMathBlock` will render it — by
+ * typesetting the joined LaTeX — rather than by summing per-atom widths plus a guessed
+ * inter-atom space. Summing underestimated the drawn width by 8-16%: TeX's `\ ` (≈0.333 em,
+ * what `translateExpression` joins words with) is roughly double the 0.175 em the old heuristic
+ * assumed, and TeX's own spacing around relations and operators only exists once the whole line
+ * is typeset together, never when atoms are measured one at a time. Real solver equations
+ * therefore overflowed their column. Re-measuring the growing candidate on every atom is O(n²)
+ * in atoms per line, but `typesetLatex` is memoised by LaTeX string and equations run ~10-20
+ * atoms, so the cost is negligible.
+ */
+export const packMathLines = (expression: string, width: number, size: number, indent: number): string[] => {
+  const atoms = atomize(expression);
+  if (!atoms.length) return [];
+
+  const lineWidth = (line: readonly string[]): number =>
+    measureFormula(typesetLatex(translateExpression(line.join(' '))), size).widthPt;
+
+  const lines: string[][] = [];
+  let current: string[] = [];
+  for (const atom of atoms) {
+    const available = width - (lines.length === 0 ? 0 : indent);
+    const candidate = [...current, atom];
+    if (current.length && lineWidth(candidate) > available) {
+      lines.push(current);
+      current = [atom];
+      continue;
+    }
+    current = candidate;
+  }
+  if (current.length) lines.push(current);
+  return lines.map((line) => line.join(' '));
+};
 
 /**
  * Draws a relation across as many lines as it needs, starting at `top` and growing downward.
  * Returns the height consumed so the caller can advance its own cursor.
  *
- * Packs at atom boundaries (`mathLatex.ts`'s `atomize`, not a bare space split) so a `√(...)`
- * whose argument spans a space never gets its radical bar cut across a line break. Each packed
- * line is re-typeset as one LaTeX string at draw time, so inter-symbol spacing within a line
- * comes from MathJax's own spacing rules rather than a fixed-width space glyph.
+ * Each packed line is re-typeset as one LaTeX string at draw time, so inter-symbol spacing
+ * within a line comes from MathJax's own spacing rules rather than a fixed-width space glyph —
+ * and, since `packMathLines` measured that very same joined string, what fits is what is drawn.
  */
 export const drawMathBlock = (
   layout: PdfLayout,
@@ -75,31 +112,12 @@ export const drawMathBlock = (
   color: PdfColor,
   options: MathBlockOptions = {},
 ): number => {
-  const atoms = atomize(expression);
-  if (!atoms.length) return 0;
   const indent = options.continuationIndent ?? size * 1.6;
-  const spaceWidth = atomWidth(size, 'x') * 0.35;
-
-  const lines: string[][] = [];
-  let current: string[] = [];
-  let currentWidth = 0;
-  for (const atom of atoms) {
-    const available = width - (lines.length === 0 ? 0 : indent);
-    const advance = (current.length ? spaceWidth : 0) + atomWidth(size, atom);
-    if (current.length && currentWidth + advance > available) {
-      lines.push(current);
-      current = [atom];
-      currentWidth = atomWidth(size, atom);
-      continue;
-    }
-    current.push(atom);
-    currentWidth += advance;
-  }
-  if (current.length) lines.push(current);
+  const lines = packMathLines(expression, width, size, indent);
+  if (!lines.length) return 0;
 
   let consumed = 0;
-  for (const [index, line] of lines.entries()) {
-    const lineExpression = line.join(' ');
+  for (const [index, lineExpression] of lines.entries()) {
     const parsed = typesetLatex(translateExpression(lineExpression));
     const box = measureFormula(parsed, size);
     const stacked = hasFraction(lineExpression);
