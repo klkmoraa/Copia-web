@@ -99,16 +99,18 @@ describe('memoria de cálculo: calidad editorial', () => {
   it('compone los símbolos del motor en vez de deletrearlos', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    // El motor publica `L = √(ΔX² + ΔY²)`, `ΣFx` y `κ₁`; el informe los imprimía como
-    // `sqrt(DeltaX^2 + DeltaY^2)`, `SumFx` y `kappa_1`. La cara Symbol es estándar en PDF,
-    // así que recuperarlos no cuesta ni una dependencia ni un byte de descarga.
-    // Symbol declara su Delta en U+2206, que es el mismo glifo que el U+0394 del motor.
-    expect(all).toMatch(/[Δ∆]\s*X/);
-    expect(all).toMatch(/√/);
-    expect(all).toMatch(/Σ\s*F\s*x/);
-    expect(all).toMatch(/κ/);
+    // Since the MathJax vector rewrite, every fórmula — `L = √(ΔX² + ΔY²)`, `ΣFx`, `κ₁`
+    // included — is drawn as real SVG path geometry (`drawFormula` in `mathVector.ts`),
+    // not PDF text runs. `pdfjs` text extraction can no longer see any of a formula's own
+    // characters, spelled-out or symbolic, so this can no longer assert the symbols are
+    // *present* in the extracted text — that composition is what `mathLatex.test.ts` and
+    // `pdfMath.test.ts` verify instead, at the LaTeX-translation and geometry level.
+    // What extraction can still confirm here: no formula ever regresses to a spelled-out
+    // ASCII fallback (there simply is no text where a formula sits), and the equation-number
+    // tags, which are drawn with `pdfText`/`page.drawText` and so remain real text, survive.
     expect(all).not.toMatch(/sqrt\(/);
     expect(all).not.toMatch(/SumF/);
+    expect(all).not.toMatch(/kappa_?1/);
     // Cada ecuación destacada del anexo lleva su número, continuo en todo el documento.
     expect(all).toMatch(/\(1\)/);
   }, 60_000);

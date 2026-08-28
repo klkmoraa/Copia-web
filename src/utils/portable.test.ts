@@ -69,9 +69,10 @@ describe('expediente portable structureCo', () => {
     expect(inspection.text).toMatch(/cobertura=70%/i);
     expect(inspection.text).toMatch(/base=longitud real/i);
     expect(inspection.text).toMatch(/Factores del escenario\s+LC1=1/i);
-    // `d_local` y `d_global` se componen ahora con subíndices reales, así que el guión
-    // bajo es geometría y no un carácter que la extracción pueda ver.
-    expect(inspection.text).toMatch(/d\s*local\s*=\s*T\s*d\s*global/i);
+    // `d_local = T d_global` is drawn by `drawMathBlockAt`, which since the MathJax vector
+    // rewrite is real SVG path geometry, not PDF text — extraction can no longer see the
+    // formula's own characters (subscripts included). The step around it is still real text.
+    expect(inspection.text).toMatch(/Transformación y ensamblaje global/i);
     expect(inspection.text).toMatch(/\[U_x, U_y, R_z\]/i);
     expect(inspection.text).toMatch(/Auditoría independiente de cargas/i);
     expect(inspection.text).toMatch(/Auditoría por trabajo virtual/i);

@@ -48,16 +48,18 @@ describe('memoria de cálculo visual', () => {
     expect(dclPage).toMatch(/32\.5 kN/i);
     expect(dclPage).toMatch(/27\.5 kN/i);
     expect(axialPage).toMatch(/OPERACIONES CLARAS/i);
-    expect(axialPage.replace(/\s+/g, '')).toMatch(/N\(s\)=0/i);
+    // `N(s) = 0` is drawn by `drawMathFormula`, which since the MathJax vector rewrite is
+    // real SVG path geometry, not PDF text — `pdfjs` text extraction can no longer see it.
+    // The label around it is still drawn with `page.drawText`, so that's what this pins now.
+    expect(axialPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
     expect(axialPage).toMatch(/RELACIÓN FUNDAMENTAL/i);
     expect(axialPage).toMatch(/La carga axial distribuida determina/i);
     expect(shearPage).toMatch(/OPERACIONES CLARAS/i);
-    // The derivatives are typeset as stacked fractions, so the slash is geometry now and
-    // not a character: `dV` sits above `dx` over a rule. Extraction sees the two operands
-    // in reading order, which is the signature this assertion pins.
-    expect(shearPage.replace(/\s+/g, '')).toMatch(/dVdx=q\(x\)/i);
+    // `dV/dx = q(x)` is the formula card's own relation — also vector geometry now, so this
+    // checks the surrounding label/explanation text instead of the formula's characters.
+    expect(shearPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
     expect(momentPage).toMatch(/OPERACIONES CLARAS/i);
-    expect(momentPage.replace(/\s+/g, '')).toMatch(/dMdx=V\(x\)/i);
+    expect(momentPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
     expect(momentPage).toMatch(/75 kN\s*x\s*m/i);
     expect(momentPage).toMatch(/@\s*3 m/i);
   }, 60_000);
