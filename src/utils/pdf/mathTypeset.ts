@@ -11,6 +11,11 @@ import { TeX } from 'mathjax-full/js/input/tex.js';
 import { SVG } from 'mathjax-full/js/output/svg.js';
 import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js';
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
+// Naming a package in `new TeX({ packages })` only *selects* it; the package registers itself
+// as a side effect of being imported. Without this line the `'ams'` below was a no-op, and
+// `\therefore` / `\varnothing` — both in `mathLatex.ts`'s symbol table — were undefined control
+// sequences that MathJax silently rendered as an `merror` bar.
+import 'mathjax-full/js/input/tex/ams/AmsConfiguration.js';
 
 export class MathTypesetError extends Error {}
 
@@ -79,16 +84,27 @@ interface LiteElement {
 }
 
 /**
- * SVG node kinds `walk` recurses through as pure containers. Everything MathJax's SVG output
- * puts inside the root `<g>` is either drawn here (`use`, `rect`) or one of these; anything
- * else is a leaf that carries meaning this renderer would otherwise drop silently, leaving a
- * gap in the drawing while the formula's reserved width still accounts for it. `text`/`#text`
- * are the concrete case: MathJax renders an `merror`'s message as a `<text>` node, and the old
- * walker let it fall through the `<g>` recursion branch and vanish. `compute` now rejects error
- * trees upstream, so this is defence in depth for any future construct that reaches a
- * text-bearing leaf without going through `merror`.
+ * SVG node kinds `walk` recurses through as pure containers, rather than drawing.
+ *
+ * `walk` used to treat *every* unrecognised kind as a container and recurse into its children,
+ * which silently discarded any leaf that was neither `use` nor `rect` — no error, just a gap in
+ * the drawing while the formula's reserved width still accounted for it. Anything outside this
+ * set and outside `use`/`rect`/`text` is now an error instead.
  */
 const CONTAINER_KINDS: ReadonlySet<string> = new Set(['g', 'svg', 'defs', 'clipPath', 'title', 'desc', 'style', 'metadata']);
+
+/**
+ * `<text>` (and the `#text` value node inside it) is MathJax's fallback for a character its TeX
+ * fonts have no glyph for, so there is no path to draw and this renderer can only skip it.
+ *
+ * It is *not* treated as an error, however tempting: the concrete producers in this codebase are
+ * accented Spanish letters — `deformación` typesets to eight `<use>` glyphs plus a `<text>` for
+ * the `ó` — and any user-entered label that also carries a math symbol reaches here through
+ * `pdfMath.ts`'s `needsMath` gate. Throwing would turn a dropped accent into a failed PDF
+ * export, which is strictly worse. The other producer, an `merror`'s message text, never gets
+ * this far: `compute` rejects error trees before `walk` runs.
+ */
+const UNDRAWABLE_KINDS: ReadonlySet<string> = new Set(['text', '#text']);
 
 const walk = (element: LiteElement, parentMatrix: AffineMatrix, paths: Map<string, string>, ops: FormulaOp[]): void => {
   if (element.kind === 'use') {
@@ -110,6 +126,7 @@ const walk = (element: LiteElement, parentMatrix: AffineMatrix, paths: Map<strin
     });
     return;
   }
+  if (UNDRAWABLE_KINDS.has(element.kind)) return;
   if (!CONTAINER_KINDS.has(element.kind)) {
     throw new MathTypesetError(`Nodo «${element.kind}» inesperado en la salida SVG de MathJax: no se puede dibujar ni recorrer.`);
   }

@@ -18,6 +18,19 @@ describe('typesetLatex', () => {
     expect(() => typesetLatex('\\notarealmacro')).toThrow(/notarealmacro/);
   });
 
+  it('skips, rather than rejects, the <text> node MathJax emits for a glyph its fonts lack', () => {
+    // `walk` now throws on any node kind it can neither draw nor recurse into, but `<text>` is
+    // deliberately exempt: it is MathJax's fallback for characters outside its TeX fonts, and
+    // the concrete producer here is accented Spanish prose reaching the math renderer through
+    // `needsMath`. Turning a dropped accent into a failed PDF export would be strictly worse.
+    // The other `<text>` producer — an `merror` message — never reaches `walk`; `compute`
+    // rejects error trees first, which is what the cases above pin down.
+    expect(() => typesetLatex('deformaci\u00f3n')).not.toThrow();
+    const formula = typesetLatex('a\u00f1o');
+    expect(formula.ops.length).toBeGreaterThan(0);
+    expect(formula.widthUnits).toBeGreaterThan(0);
+  });
+
 
   it('parses a simple relation into glyph paths with a positive natural width', () => {
     const formula = typesetLatex('M(x) = 12.5x^{2}');
