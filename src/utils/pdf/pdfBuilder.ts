@@ -10,7 +10,7 @@
 import type { PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 import { pdfText, wrapText } from './pdfGlyphs';
 import { drawMathBlock, mathWidth, hasFraction, needsMath } from './pdfMath';
-import type { PdfColor, ReportFonts, ReportPalette, RgbFactory } from './reportContext';
+import type { PdfColor, PdfVectorOps, ReportFonts, ReportPalette, RgbFactory } from './reportContext';
 
 export const PAGE_SIZE: [number, number] = [595.28, 841.89];
 export const MARGIN = 48;
@@ -69,6 +69,8 @@ export class PdfLayout {
   readonly fonts: ReportFonts;
   readonly palette: ReportPalette;
   readonly rgb: RgbFactory;
+  /** The `pdf-lib` operator functions `pdfMath.ts`/`mathVector.ts` need but never import directly. */
+  readonly vectorOps: PdfVectorOps;
   readonly pages: PDFPage[] = [];
   readonly width = PAGE_SIZE[0];
   readonly height = PAGE_SIZE[1];
@@ -88,11 +90,12 @@ export class PdfLayout {
    */
   readonly sections: { title: string; pageIndex: number }[] = [];
 
-  constructor(doc: PDFDocument, fonts: ReportFonts, palette: ReportPalette, rgb: RgbFactory) {
+  constructor(doc: PDFDocument, fonts: ReportFonts, palette: ReportPalette, rgb: RgbFactory, vectorOps: PdfVectorOps) {
     this.doc = doc;
     this.fonts = fonts;
     this.palette = palette;
     this.rgb = rgb;
+    this.vectorOps = vectorOps;
     this.newPage();
   }
 

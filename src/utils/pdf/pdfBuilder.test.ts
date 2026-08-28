@@ -9,9 +9,12 @@
  * asserted end-to-end in `calculationPdfEditorial.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, concatTransformationMatrix, rgb } from 'pdf-lib';
+import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import { CONTENT_BOTTOM, MARGIN, PAGE_SIZE, PdfLayout, resolveColumnWidths } from './pdfBuilder';
 import type { ReportPalette } from './reportContext';
+
+const vectorOps = { concatTransformationMatrix, pushGraphicsState, popGraphicsState };
 
 const createLayout = async () => {
   const doc = await PDFDocument.create();
@@ -31,7 +34,7 @@ const createLayout = async () => {
     white: rgb(1, 1, 1),
     quantity: { axial: rgb(0, 0, 1), shear: rgb(0, 1, 0), moment: rgb(1, 0, 0) },
   };
-  return new PdfLayout(doc, fonts, palette, rgb);
+  return new PdfLayout(doc, fonts, palette, rgb, vectorOps);
 };
 
 const CONTENT_WIDTH = PAGE_SIZE[0] - MARGIN * 2;

@@ -11,10 +11,8 @@
  * derivation and the rendered proof it was checked against.
  */
 import type { PDFPage } from 'pdf-lib';
-import { concatTransformationMatrix } from 'pdf-lib';
-import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import type { AffineMatrix, FormulaOp, ParsedFormula } from './mathTypeset';
-import type { PdfColor } from './reportContext';
+import type { PdfColor, PdfVectorOps } from './reportContext';
 
 export interface FormulaBox {
   widthPt: number;
@@ -38,6 +36,7 @@ const pdfPoint = (matrix: AffineMatrix, localX: number, localY: number, unitScal
 
 const drawPathOp = (
   page: PDFPage,
+  ops: PdfVectorOps,
   op: Extract<FormulaOp, { kind: 'path' }>,
   unitScale: number,
   baselineX: number,
@@ -48,9 +47,9 @@ const drawPathOp = (
   const sy = op.matrix.d * unitScale;
   const tx = baselineX + op.matrix.e * unitScale;
   const ty = baselineY - op.matrix.f * unitScale;
-  page.pushOperators(pushGraphicsState(), concatTransformationMatrix(sx, 0, 0, sy, tx, ty));
+  page.pushOperators(ops.pushGraphicsState(), ops.concatTransformationMatrix(sx, 0, 0, sy, tx, ty));
   page.drawSvgPath(op.path, { x: 0, y: 0, scale: 1, color });
-  page.pushOperators(popGraphicsState());
+  page.pushOperators(ops.popGraphicsState());
 };
 
 const drawRectOp = (
@@ -75,6 +74,7 @@ const drawRectOp = (
 /** Draws `parsed` with its baseline at `(x, baseline)` and returns the width consumed, in points. */
 export const drawFormula = (
   page: PDFPage,
+  ops: PdfVectorOps,
   parsed: ParsedFormula,
   x: number,
   baseline: number,
@@ -83,7 +83,7 @@ export const drawFormula = (
 ): number => {
   const unitScale = fontSizePt / 1000;
   for (const op of parsed.ops) {
-    if (op.kind === 'path') drawPathOp(page, op, unitScale, x, baseline, color);
+    if (op.kind === 'path') drawPathOp(page, ops, op, unitScale, x, baseline, color);
     else drawRectOp(page, op, unitScale, x, baseline, color);
   }
   return parsed.widthUnits * unitScale;

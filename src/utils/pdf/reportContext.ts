@@ -38,6 +38,20 @@ export type PdfColor = ReturnType<typeof import('pdf-lib').rgb>;
 /** The `rgb` factory itself, handed to the renderer by the dynamic import. */
 export type RgbFactory = typeof import('pdf-lib').rgb;
 
+/**
+ * The three `pdf-lib` operator functions `mathVector.ts` needs to draw a formula's outer
+ * transform manually (see that file's header for why). Handed to the renderer by the dynamic
+ * import in `calculationPdf.ts`, the same way `rgb` is — a static value import of `pdf-lib`
+ * anywhere under `utils/pdf/` would drag the library back into the entry chunk. The two
+ * graphics-state functions are not exported from the top-level `pdf-lib` package, only from
+ * this CJS-only deep path, hence the `typeof import(...)` on that specific module.
+ */
+export interface PdfVectorOps {
+  concatTransformationMatrix: typeof import('pdf-lib').concatTransformationMatrix;
+  pushGraphicsState: typeof import('pdf-lib/cjs/api/operators.js').pushGraphicsState;
+  popGraphicsState: typeof import('pdf-lib/cjs/api/operators.js').popGraphicsState;
+}
+
 export interface ReportFonts {
   readonly regular: import('pdf-lib').PDFFont;
   readonly bold: import('pdf-lib').PDFFont;

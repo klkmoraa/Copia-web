@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, concatTransformationMatrix, rgb } from 'pdf-lib';
 import type { PDFPage } from 'pdf-lib';
+import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import { typesetLatex } from './mathTypeset';
 import { drawFormula, measureFormula } from './mathVector';
+
+// Tests aren't bundled into the app, so importing `pdf-lib` directly here is fine — the
+// dynamic-import discipline (see `calculationPdf.ts`'s header) only applies to app code.
+const vectorOps = { concatTransformationMatrix, pushGraphicsState, popGraphicsState };
 
 /**
  * `pdf-lib` has no public way to read back the operators queued on a page (only to write
@@ -35,7 +40,7 @@ describe('drawFormula', () => {
     const pdf = await PDFDocument.create();
     const page = pdf.addPage([600, 200]);
     const parsed = typesetLatex('M(x) = \\frac{d\\theta}{dx} \\le \\Sigma F_{x}^{2}');
-    const width = drawFormula(page, parsed, 40, 100, 11, rgb(0, 0, 0));
+    const width = drawFormula(page, vectorOps, parsed, 40, 100, 11, rgb(0, 0, 0));
     expect(width).toBeGreaterThan(0);
     expect(width).toBeCloseTo(measureFormula(parsed, 11).widthPt, 5);
   });
@@ -47,7 +52,7 @@ describe('drawFormula', () => {
     const x = 40;
     const baseline = 100;
     const fontSizePt = 24;
-    drawFormula(page, parsed, x, baseline, fontSizePt, rgb(0, 0, 0));
+    drawFormula(page, vectorOps, parsed, x, baseline, fontSizePt, rgb(0, 0, 0));
     const unitScale = fontSizePt / 1000;
 
     const pathOps = parsed.ops.filter((op) => op.kind === 'path');
@@ -117,7 +122,7 @@ describe('drawFormula', () => {
     const x = 40;
     const baseline = 100;
     const fontSizePt = 100; // unitScale = 0.1: round numbers, easy to hand-verify
-    drawFormula(page, parsed, x, baseline, fontSizePt, rgb(0, 0, 0));
+    drawFormula(page, vectorOps, parsed, x, baseline, fontSizePt, rgb(0, 0, 0));
 
     const ops = readOperators(page);
     // The first two operators pushed are `drawPathOp`'s own manual `pushGraphicsState()` +

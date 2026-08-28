@@ -37,7 +37,7 @@ export const drawMathFormula = (
   const parsed = typesetLatex(translateExpression(expression));
   let size = requestedSize;
   while (size > 7.5 && measureFormula(parsed, size).widthPt > maxFormulaWidth) size -= 0.4;
-  return drawFormula(layout.page, parsed, x, baseline, size, color);
+  return drawFormula(layout.page, layout.vectorOps, parsed, x, baseline, size, color);
 };
 
 export interface MathBlockOptions {
@@ -99,7 +99,7 @@ export const drawMathBlock = (
     const lineHeight = size * (stacked ? 2.05 : 1.45);
     const baseline = top - consumed - Math.max(size, box.heightPt);
     const cursor = x + (index === 0 ? 0 : indent);
-    drawFormula(layout.page, parsed, cursor, baseline, size, color);
+    drawFormula(layout.page, layout.vectorOps, parsed, cursor, baseline, size, color);
     if (options.tag && index === lines.length - 1) {
       const tag = pdfText(options.tag);
       const tagWidth = layout.fonts.mathRegular.widthOfTextAtSize(tag, size * 0.9);

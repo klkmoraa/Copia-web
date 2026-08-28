@@ -7,8 +7,9 @@
  * document has and in *what* order.
  *
  * `pdf-lib` stays behind a dynamic `import()` — that is what keeps it out of the entry chunk —
- * so the modules under `utils/pdf/` import it as types only and receive `rgb` and the fonts
- * through the `ReportContext`.
+ * so the modules under `utils/pdf/` import it as types only and receive `rgb`, the fonts, and
+ * the handful of operator functions `mathVector.ts` needs (`concatTransformationMatrix`,
+ * `pushGraphicsState`, `popGraphicsState`) through the `ReportContext`/`PdfLayout`.
  */
 import { createPortablePayload } from './portablePayload';
 import { PdfLayout } from './pdf/pdfBuilder';
@@ -47,8 +48,13 @@ export const createCalculationReport = async (
   analysis: AnalysisResult,
   options: CalculationReportOptions = {},
 ): Promise<CalculationReportArtifact> => {
-  const [{ PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString }, payload] = await Promise.all([
+  const [
+    { PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString, concatTransformationMatrix },
+    { pushGraphicsState, popGraphicsState },
+    payload,
+  ] = await Promise.all([
     import('pdf-lib'),
+    import('pdf-lib/cjs/api/operators.js'),
     createPortablePayload(project, analysis, options),
   ]);
   const pdf = await PDFDocument.create();
@@ -73,7 +79,7 @@ export const createCalculationReport = async (
     },
   };
   const context: ReportContext = {
-    layout: new PdfLayout(pdf, fonts, palette, rgb),
+    layout: new PdfLayout(pdf, fonts, palette, rgb, { concatTransformationMatrix, pushGraphicsState, popGraphicsState }),
     project,
     analysis,
     payload,

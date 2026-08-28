@@ -1,10 +1,12 @@
 // src/utils/pdf/pdfMath.test.ts
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, concatTransformationMatrix, rgb } from 'pdf-lib';
+import { popGraphicsState, pushGraphicsState } from 'pdf-lib/cjs/api/operators.js';
 import { PdfLayout } from './pdfBuilder';
 import { drawFormulaCard, drawMathBlock, drawMathFormula, hasFraction, mathWidth, needsMath } from './pdfMath';
 
 const INK = rgb(0.1, 0.1, 0.1);
+const vectorOps = { concatTransformationMatrix, pushGraphicsState, popGraphicsState };
 
 const layout = async () => {
   const pdf = await PDFDocument.create();
@@ -15,7 +17,7 @@ const layout = async () => {
     mathItalic: await pdf.embedFont(StandardFonts.TimesRomanItalic),
     mathSymbol: await pdf.embedFont(StandardFonts.Symbol),
   };
-  return new PdfLayout(pdf, fonts, { forest: rgb(0, 0, 0) } as never, rgb);
+  return new PdfLayout(pdf, fonts, { forest: rgb(0, 0, 0) } as never, rgb, vectorOps);
 };
 
 describe('needsMath', () => {
