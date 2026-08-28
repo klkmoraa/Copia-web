@@ -57,9 +57,14 @@ describe('memoria de cálculo visual', () => {
     expect(shearPage).toMatch(/OPERACIONES CLARAS/i);
     // `dV/dx = q(x)` is the formula card's own relation — also vector geometry now, so this
     // checks the surrounding label/explanation text instead of the formula's characters.
+    // The explanation is quantity-specific (`pdfQuantitySection.ts`'s `relationExplanation`),
+    // so unlike the generic "FUNCIÓN DEL TRAMO" label it still tells this page apart from
+    // the axial and moment pages.
     expect(shearPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
+    expect(shearPage).toMatch(/La carga transversal q determina la pendiente del diagrama de cortante V/i);
     expect(momentPage).toMatch(/OPERACIONES CLARAS/i);
     expect(momentPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
+    expect(momentPage).toMatch(/El cortante V determina la pendiente del diagrama de momento M/i);
     expect(momentPage).toMatch(/75 kN\s*x\s*m/i);
     expect(momentPage).toMatch(/@\s*3 m/i);
   }, 60_000);
