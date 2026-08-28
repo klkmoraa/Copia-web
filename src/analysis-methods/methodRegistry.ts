@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -71,6 +71,14 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // — no distributed load along a member, at least one genuinely free joint — are
     // `solveVirtualWork`'s job.
     applies: (classification) => classification.kind === 'truss',
+  },
+  {
+    id: 'method-of-sections',
+    labelKey: 'method.methodOfSections',
+    // Pure statics on a cut portion of the truss, which only closes with three equations per cut
+    // when the truss itself is statically determinate — unlike Virtual Work, which needs no such
+    // restriction. `solveMethodOfSections` is what actually searches for a valid cut per member.
+    applies: (classification) => classification.kind === 'truss' && classification.indeterminacy === 0,
   },
   {
     id: 'portal-method',

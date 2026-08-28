@@ -18,6 +18,7 @@ import { solveHardyCross, type HardyCrossResult } from '../../analysis-methods/h
 import { solveKaniFrame, type KaniResult } from '../../analysis-methods/kaniFrame';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
+import { solveMethodOfSections, type MethodOfSectionsResult } from '../../analysis-methods/methodOfSections';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
@@ -599,6 +600,60 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
   );
 };
 
+const drawMethodOfSections = (context: ReportContext, solution: MethodOfSectionsResult): void => {
+  const { layout, project } = context;
+  const { fonts, palette } = layout;
+  const forceUnit = unitFor(project, 'force');
+
+  layout.heading('5. Procedimiento: Método de los Cortes');
+  layout.text(
+    'Un corte imaginario divide la armadura en dos, atravesando como mucho tres barras. El '
+    + 'equilibrio del lado que se conserva —ΣFx = 0, ΣFy = 0, ΣM = 0, con las reacciones y cargas '
+    + 'ya conocidas de ese lado— basta para hallar las tres fuerzas de barra que el corte dejó '
+    + 'como incógnitas, sin recorrer la armadura nudo por nudo.',
+    8.7, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.1 Cortes y fuerzas de barra', 2);
+  layout.text(
+    'La última columna es lo que el análisis matricial obtiene para esa misma barra: el método '
+    + 'y el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  for (const [index, cut] of solution.cuts.entries()) {
+    layout.ensure(40);
+    layout.text(
+      `Corte ${index + 1}: lado conservado {${cut.keptNodeIds.join(', ')}}`,
+      8, fonts.bold, palette.forestDeep, 8,
+    );
+    layout.table(
+      [
+        { header: 'Barra', width: 70 },
+        { header: `Método de cortes (${forceUnit})`, ...NUMERIC },
+        { header: `Análisis matricial (${forceUnit})`, ...NUMERIC },
+      ],
+      cut.members.map((member) => [
+        member.memberId,
+        displayCell(project, member.value, 'force'),
+        displayCell(project, member.solverValue, 'force'),
+      ]),
+      { size: 7.6 },
+    );
+  }
+  if (solution.unresolvedMemberIds.length) {
+    layout.text(
+      `Sin un corte de tres barras o menos que las aísle: ${solution.unresolvedMemberIds.join(', ')}.`,
+      7.8, fonts.regular, undefined, 8,
+    );
+  }
+
+  layout.heading('5.2 Verificación contra el análisis matricial', 2);
+  layout.text(
+    `Diferencia máxima, en cualquier barra resuelta: ${clearNumber(solution.residual, 1)} ${forceUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
 
 const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
@@ -912,6 +967,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawVirtualWork(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'method-of-sections') {
+    const solution = solveMethodOfSections(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawMethodOfSections(context, solution);
     return true;
   }
   if (project.settings.solutionMethod === 'castigliano-truss') {
