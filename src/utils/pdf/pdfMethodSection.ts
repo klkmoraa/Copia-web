@@ -13,6 +13,7 @@
  */
 import { solveCantileverMethod, type CantileverMethodResult } from '../../analysis-methods/cantileverMethod';
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
+import { solveConjugateBeam, type ConjugateBeamResult, type ConjugateSupportKind } from '../../analysis-methods/conjugateBeam';
 import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import { solveHardyCross, type HardyCrossResult } from '../../analysis-methods/hardyCross';
 import { solveKaniFrame, type KaniResult } from '../../analysis-methods/kaniFrame';
@@ -169,6 +170,152 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
       x0: segment.x0,
       x1: segment.x1,
       deflection: segment.deflection,
+    })),
+    solution.axis.length,
+    layout.margin,
+    layout.y - 104,
+    layout.contentWidth,
+    104,
+    palette.quantity.moment,
+  );
+  layout.y -= 112;
+};
+
+const CONJUGATE_KIND_LABEL: Record<ConjugateSupportKind, string> = {
+  fixed: 'empotramiento',
+  simple: 'apoyo simple',
+  guided: 'apoyo deslizante (guía)',
+  free: 'extremo libre',
+};
+
+const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult): void => {
+  const { layout, project } = context;
+  const { fonts, rgb, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const scaleLabel = solution.uniformEI ? 'EI ' : '';
+
+  layout.heading('5. Procedimiento: Método de la Viga Conjugada');
+  layout.text(
+    'La ecuación EI y″(x) = M(x) se lee dos veces sin integrar a mano: se construye una segunda '
+    + 'viga, la conjugada, cargada con w*(x) = M(x)/EI, y cada apoyo se convierte por una tabla fija '
+    + '— un apoyo simple sigue siendo simple, un empotramiento pasa a extremo libre, un extremo libre '
+    + 'pasa a empotramiento. El giro y la flecha de la viga real son entonces el cortante y el momento '
+    + 'de esa viga ficticia, que se hallan por la misma estática de siempre.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  for (const relation of ['w*(x) = M(x)/EI', 'θ(x) = V*(x)', 'y(x) = M*(x)']) {
+    layout.ensure(layout.measureMathBlock(relation, 9, 16));
+    layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
+  }
+
+  layout.heading('5.1 Clasificación estática', 2);
+  layout.text(
+    `La viga es isostática: las ${solution.classification.reactionCount} componentes de reacción quedan `
+    + 'determinadas por la estática, y no hay apoyo ni rótula entre los dos extremos — condición que '
+    + 'la tabla de conversión de apoyos exige.',
+    8.7, fonts.regular, undefined, 8,
+  );
+
+  layout.heading('5.2 Conversión de apoyos', 2);
+  layout.text(
+    'Cada extremo real se convierte en su contrapartida conjugada. Cuando el conjugado tiene una '
+    + 'reacción de fuerza, su valor es el giro real en ese punto; cuando tiene una reacción de '
+    + 'momento, su valor es la flecha real ahí.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Nudo', width: 60 },
+      { header: 'Apoyo real', width: 96 },
+      { header: 'Apoyo conjugado', width: 96 },
+      { header: `Reacción·fuerza (${scaleLabel}θ)`, ...NUMERIC },
+      { header: `Reacción·momento (${scaleLabel}y)`, ...NUMERIC },
+    ],
+    solution.ends.map((end) => [
+      end.nodeId,
+      CONJUGATE_KIND_LABEL[end.realKind],
+      CONJUGATE_KIND_LABEL[end.conjugateKind],
+      end.reactionForce === undefined ? '—' : clearNumber(end.reactionForce, Math.max(1, Math.abs(end.reactionForce))),
+      end.reactionMoment === undefined ? '—' : clearNumber(end.reactionMoment, Math.max(1, Math.abs(end.reactionMoment))),
+    ]),
+    { size: 7.8 },
+  );
+
+  layout.heading('5.3 Carga ficticia, cortante y momento del conjugado por tramo', 2);
+  layout.text(
+    solution.uniformEI
+      ? `Con EI = ${number(solution.EI, 6)} kN·m² constante, se factoriza y las expresiones se escriben como EI θ y EI y. La variable x se mide desde el extremo izquierdo de la viga.`
+      : 'La rigidez cambia entre tramos, así que EI no se puede factorizar: las expresiones son directamente θ(x) e y(x). La variable x se mide desde el extremo izquierdo de la viga.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  for (const [index, segment] of solution.segments.entries()) {
+    layout.ensure(70);
+    layout.text(
+      `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
+      8, fonts.bold, palette.forestDeep, 8,
+    );
+    for (const relation of [
+      `M(x) = ${expression(segment.moment)}`,
+      `w*(x) = ${expression(segment.fictitiousLoad)}`,
+      `${scaleLabel}θ(x) = V*(x) = ${expression(segment.conjugateShear)}`,
+      `${scaleLabel}y(x) = M*(x) = ${expression(segment.conjugateMoment)}`,
+    ]) {
+      layout.ensure(layout.measureMathBlock(relation, 8.4, 20));
+      layout.y -= layout.drawMathBlockAt(relation, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    }
+  }
+
+  layout.heading('5.4 Condiciones y sistema resuelto', 2);
+  layout.text(
+    `${solution.conditions.length} condiciones para ${solution.constants.length} incógnitas: continuidad de `
+    + 'giro y flecha en cada frontera entre tramos, flecha nula en cada apoyo y giro nulo en cada '
+    + 'empotramiento. El sistema es cuadrado por construcción.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [{ header: 'Condición', flex: 2.2, math: true }, { header: 'Tipo', width: 84 }, { header: `x (${lengthUnit})`, ...NUMERIC, width: 58 }],
+    solution.conditions.map((condition) => [
+      condition.statement,
+      condition.kind === 'continuity' ? 'continuidad' : condition.kind === 'slope' ? 'giro impuesto' : 'flecha impuesta',
+      number(condition.x, 5),
+    ]),
+    { size: 7.4 },
+  );
+  layout.table(
+    [{ header: 'Constante', width: 74, math: true }, { header: 'Valor', ...NUMERIC }],
+    solution.constants.map((constant) => [constant.symbol, clearNumber(constant.value, Math.max(1, Math.abs(constant.value)))]),
+    { size: 7.6 },
+  );
+
+  layout.heading('5.5 Verificación contra el análisis matricial', 2);
+  layout.text(
+    'Los dos caminos parten del mismo modelo y llegan por separado: si no coincidieran, el procedimiento '
+    + 'de arriba estaría mal. Estas son las diferencias máximas medidas.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [{ header: 'Contraste', flex: 2 }, { header: 'Diferencia máxima', ...NUMERIC }, { header: 'Unidad', width: 74 }],
+    [
+      ['Giro a lo largo de la viga', clearNumber(solution.slopeResidual, 1), 'rad'],
+      ['Flecha a lo largo de la viga', clearNumber(solution.deflectionResidual, 1), unitFor(project, 'length')],
+    ],
+    { size: 7.8 },
+  );
+
+  const peakAbsolute = Math.abs(solution.maxDeflection.value);
+  layout.text(
+    `Flecha máxima ${displayCell(project, peakAbsolute, 'length')} ${lengthUnit} en x = ${number(solution.maxDeflection.x, 5)} ${lengthUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+
+  layout.ensure(120);
+  layout.y -= 8;
+  drawElasticCurve(
+    layout,
+    solution.segments.map((segment) => ({
+      x0: segment.x0,
+      x1: segment.x1,
+      deflection: segment.conjugateMoment,
     })),
     solution.axis.length,
     layout.margin,
@@ -968,6 +1115,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawDoubleIntegration(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'conjugate-beam') {
+    const solution = solveConjugateBeam(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawConjugateBeam(context, solution);
     return true;
   }
   if (project.settings.solutionMethod === 'portal-method') {

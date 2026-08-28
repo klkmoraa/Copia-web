@@ -149,7 +149,7 @@ describe('TopBar portable export', () => {
 
     const select = within(popover).getByRole('combobox', { name: 'Método' }) as HTMLSelectElement;
     expect([...select.options].map((option) => option.value))
-      .toEqual(['matrix-stiffness', 'double-integration']);
+      .toEqual(['matrix-stiffness', 'double-integration', 'conjugate-beam']);
 
     await user.selectOptions(select, 'double-integration');
     await waitFor(() => {

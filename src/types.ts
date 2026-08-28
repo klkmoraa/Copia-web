@@ -215,7 +215,7 @@ export interface ProjectSettings {
    * Castigliano, Method of Sections, Method of Joints) is required to land on the same numbers;
    * a deliberately approximate one (Portal, Cantilever) is required to disclose the gap instead.
    */
-  solutionMethod?: 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints';
+  solutionMethod?: 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints' | 'conjugate-beam';
   /** Overrides merged over `DEFAULT_PDELTA_CONFIG`; unset fields keep their default. */
   pDeltaConfig?: Partial<PDeltaConfig>;
 }

@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints' | 'conjugate-beam';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -39,6 +39,20 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
       (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
       // A mechanism has no solution to narrate, and the solver refuses it anyway.
       && classification.indeterminacy >= 0
+    ),
+  },
+  {
+    id: 'conjugate-beam',
+    labelKey: 'method.conjugateBeam',
+    // The classical closed-form alternative to Double Integration on the same isostatic span:
+    // instead of solving the boundary-value problem directly, it converts the beam's supports
+    // by a fixed table and reads slope and deflection off the shear and moment of a fictitious
+    // beam. Its deeper requirement — nothing between the two ends, no interior support and no
+    // interior hinge, since the conversion table has no counterpart for either — is
+    // `solveConjugateBeam`'s job.
+    applies: (classification) => (
+      (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
+      && classification.indeterminacy === 0
     ),
   },
   {
