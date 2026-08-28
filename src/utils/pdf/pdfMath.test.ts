@@ -1,9 +1,9 @@
 // src/utils/pdf/pdfMath.test.ts
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib';
 import { PdfLayout } from './pdfBuilder';
 import { translateExpression } from './mathLatex';
-import { typesetLatex } from './mathTypeset';
+import { MathTypesetError, typesetLatex } from './mathTypeset';
 import { measureFormula } from './mathVector';
 import { drawFormulaCard, drawMathBlock, drawMathFormula, hasFraction, mathWidth, needsMath, packMathLines } from './pdfMath';
 
@@ -100,6 +100,67 @@ describe('drawMathBlock', () => {
     // A width that comfortably fits "L = √(ΔX² + ΔY²)" as one atom but would have split
     // a naive space-based packer between "√(ΔX²" and "+".
     expect(() => drawMathBlock(page, 'L = √(ΔX² + ΔY²)', 50, 700, 200, 9, INK)).not.toThrow();
+  });
+});
+
+describe('unparseable expressions degrade instead of aborting the export', () => {
+  // `mathTypeset.ts` throws on LaTeX MathJax cannot parse, which is right — but that error must
+  // not escape this module: `createCalculationReport` has no handler, so one bad string would
+  // abort the whole PDF. A user-entered label really can reach here through `needsMath`:
+  // 'A_1_2' translates to 'A_{1}_{2}', a "Double subscripts" error.
+  const unparseable = 'A_1_2';
+
+  it('confirms the fixture really is unparseable', () => {
+    expect(translateExpression(unparseable)).toBe('A_{1}_{2}');
+    expect(() => typesetLatex(translateExpression(unparseable))).toThrow(MathTypesetError);
+  });
+
+  it('mathWidth returns a usable plain-text width instead of throwing', async () => {
+    const page = await layout();
+    const width = mathWidth(page, unparseable, 9);
+    expect(width).toBeGreaterThan(0);
+    expect(Number.isFinite(width)).toBe(true);
+  });
+
+  it('drawMathFormula draws plain prose and returns the width it consumed', async () => {
+    const page = await layout();
+    let drawn = 0;
+    expect(() => { drawn = drawMathFormula(page, unparseable, 40, 100, 11, INK); }).not.toThrow();
+    expect(drawn).toBeGreaterThan(0);
+    expect(Number.isFinite(drawn)).toBe(true);
+    expect(drawn).toBeCloseTo(page.fonts.mathRegular.widthOfTextAtSize('A_1_2', 11), 3);
+  });
+
+  it('drawMathBlock consumes real height for a block it cannot typeset', async () => {
+    const page = await layout();
+    let consumed = 0;
+    expect(() => { consumed = drawMathBlock(page, unparseable, 50, 700, 200, 9, INK); }).not.toThrow();
+    expect(consumed).toBeGreaterThan(0);
+    expect(Number.isFinite(consumed)).toBe(true);
+  });
+
+  it('degrades only the offending line of an otherwise valid relation', async () => {
+    const page = await layout();
+    const good = drawMathBlock(page, 'M(x) = 12.5x^2', 50, 700, 200, 9, INK);
+    const mixed = drawMathBlock(page, `M(x) = 12.5x^2 + ${unparseable}`, 50, 600, 200, 9, INK);
+    expect(mixed).toBeGreaterThanOrEqual(good);
+    expect(Number.isFinite(mixed)).toBe(true);
+  });
+
+  it('warns once per offending expression rather than swallowing the failure', async () => {
+    const page = await layout();
+    // A fixture unique to this test, so the module-level "already warned" set starts empty for it.
+    const fresh = 'Z_9_9';
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      mathWidth(page, fresh, 9);
+      mathWidth(page, fresh, 9);
+      drawMathFormula(page, fresh, 40, 100, 9, INK);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain(fresh);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

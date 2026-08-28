@@ -7,11 +7,44 @@
  * drawn box, exactly as it always has, so none of its nine call sites needed to change.
  */
 import { atomize, translateExpression } from './mathLatex';
-import { typesetLatex } from './mathTypeset';
+import { MathTypesetError, typesetLatex } from './mathTypeset';
+import type { ParsedFormula } from './mathTypeset';
 import { drawFormula, measureFormula } from './mathVector';
-import { pdfText } from './pdfGlyphs';
+import { pdfText, wrapText } from './pdfGlyphs';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor } from './reportContext';
+
+/** Expressions already reported by `safeTypeset`, so one bad string warns once, not per page. */
+const warnedExpressions = new Set<string>();
+
+/**
+ * Typesets an expression, or returns `null` when MathJax cannot parse it.
+ *
+ * `mathTypeset.ts` deliberately throws on an unparseable expression rather than letting a
+ * corrupt tree reach the page — but a thrown error here would propagate all the way out of
+ * `createCalculationReport` and abort the whole document. That is a strictly worse outcome for
+ * the reader than one imperfectly-rendered label: everything the engine emits is covered by
+ * tests, yet a user-entered member or load-case name can still reach this module through
+ * `needsMath` and translate to invalid LaTeX (`A_1_2` becomes `A_{1}_{2}`, a "Double subscripts"
+ * error). Every public function in this file therefore degrades to plain `pdfText` prose when
+ * this returns `null`.
+ *
+ * The failure is *not* swallowed: each distinct offending expression is warned about once, so a
+ * genuine regression in the engine's own equations still shows up in a dev console and a CI log
+ * instead of hiding behind the fallback.
+ */
+const safeTypeset = (expression: string): ParsedFormula | null => {
+  try {
+    return typesetLatex(translateExpression(expression));
+  } catch (error) {
+    if (!(error instanceof MathTypesetError)) throw error;
+    if (!warnedExpressions.has(expression)) {
+      warnedExpressions.add(expression);
+      console.warn(`[pdfMath] «${expression}» no se pudo tipografiar; se dibuja como texto plano. ${error.message}`);
+    }
+    return null;
+  }
+};
 
 /**
  * True when the text carries something plain WinAnsi prose can't spell out: Greek, operators,
@@ -26,8 +59,9 @@ export const needsMath = (value: string): boolean => translateExpression(value).
 /** True when the expression will stack something above and below its baseline. */
 export const hasFraction = (expression: string): boolean => /\\frac\{/.test(translateExpression(expression));
 
-export const mathWidth = (_layout: PdfLayout, expression: string, size: number): number => {
-  const parsed = typesetLatex(translateExpression(expression));
+export const mathWidth = (layout: PdfLayout, expression: string, size: number): number => {
+  const parsed = safeTypeset(expression);
+  if (!parsed) return layout.fonts.mathRegular.widthOfTextAtSize(pdfText(expression), size);
   return measureFormula(parsed, size).widthPt;
 };
 
@@ -41,7 +75,16 @@ export const drawMathFormula = (
   color: PdfColor,
   maxFormulaWidth = Number.POSITIVE_INFINITY,
 ): number => {
-  const parsed = typesetLatex(translateExpression(expression));
+  const parsed = safeTypeset(expression);
+  if (!parsed) {
+    // Plain-prose fallback, shrinking on the same schedule the vector path uses.
+    const text = pdfText(expression);
+    const font = layout.fonts.mathRegular;
+    let plainSize = requestedSize;
+    while (plainSize > 7.5 && font.widthOfTextAtSize(text, plainSize) > maxFormulaWidth) plainSize -= 0.4;
+    layout.page.drawText(text, { x, y: baseline, size: plainSize, font, color });
+    return font.widthOfTextAtSize(text, plainSize);
+  }
   let size = requestedSize;
   while (size > 7.5 && measureFormula(parsed, size).widthPt > maxFormulaWidth) size -= 0.4;
   return drawFormula(layout.page, layout.vectorOps, parsed, x, baseline, size, color);
@@ -70,13 +113,21 @@ export interface MathBlockOptions {
  * therefore overflowed their column. Re-measuring the growing candidate on every atom is O(n²)
  * in atoms per line, but `typesetLatex` is memoised by LaTeX string and equations run ~10-20
  * atoms, so the cost is negligible.
+ *
+ * An unparseable candidate falls back to a crude character-count estimate rather than failing:
+ * `drawMathBlock` draws such an expression as plain prose anyway (see `safeTypeset`), so the
+ * packing only has to stay finite and roughly sane.
  */
 export const packMathLines = (expression: string, width: number, size: number, indent: number): string[] => {
   const atoms = atomize(expression);
   if (!atoms.length) return [];
 
-  const lineWidth = (line: readonly string[]): number =>
-    measureFormula(typesetLatex(translateExpression(line.join(' '))), size).widthPt;
+  const lineWidth = (line: readonly string[]): number => {
+    const joined = line.join(' ');
+    const parsed = safeTypeset(joined);
+    if (!parsed) return pdfText(joined).length * size * 0.5;
+    return measureFormula(parsed, size).widthPt;
+  };
 
   const lines: string[][] = [];
   let current: string[] = [];
@@ -101,6 +152,10 @@ export const packMathLines = (expression: string, width: number, size: number, i
  * Each packed line is re-typeset as one LaTeX string at draw time, so inter-symbol spacing
  * within a line comes from MathJax's own spacing rules rather than a fixed-width space glyph —
  * and, since `packMathLines` measured that very same joined string, what fits is what is drawn.
+ *
+ * A line MathJax cannot parse is drawn as plain prose instead of aborting the document (see
+ * `safeTypeset`). The fallback is per line, not per block, so one unparseable fragment of a long
+ * relation costs only its own line.
  */
 export const drawMathBlock = (
   layout: PdfLayout,
@@ -118,13 +173,25 @@ export const drawMathBlock = (
 
   let consumed = 0;
   for (const [index, lineExpression] of lines.entries()) {
-    const parsed = typesetLatex(translateExpression(lineExpression));
-    const box = measureFormula(parsed, size);
-    const stacked = hasFraction(lineExpression);
-    const lineHeight = size * (stacked ? 2.05 : 1.45);
-    const baseline = top - consumed - Math.max(size, box.heightPt);
     const cursor = x + (index === 0 ? 0 : indent);
-    drawFormula(layout.page, layout.vectorOps, parsed, cursor, baseline, size, color);
+    const parsed = safeTypeset(lineExpression);
+    let baseline: number;
+    if (parsed) {
+      const box = measureFormula(parsed, size);
+      baseline = top - consumed - Math.max(size, box.heightPt);
+      drawFormula(layout.page, layout.vectorOps, parsed, cursor, baseline, size, color);
+      consumed += size * (hasFraction(lineExpression) ? 2.05 : 1.45);
+    } else {
+      // The packer only had a character-count estimate for this line, so re-wrap it against the
+      // real font rather than trusting that estimate to have kept it inside the column.
+      const wrapped = wrapText(lineExpression, layout.fonts.regular, size, width - (index === 0 ? 0 : indent));
+      baseline = top - consumed - size;
+      for (const text of wrapped.length ? wrapped : [pdfText(lineExpression)]) {
+        baseline = top - consumed - size;
+        layout.page.drawText(text, { x: cursor, y: baseline, size, font: layout.fonts.regular, color });
+        consumed += size * 1.45;
+      }
+    }
     if (options.tag && index === lines.length - 1) {
       const tag = pdfText(options.tag);
       const tagWidth = layout.fonts.mathRegular.widthOfTextAtSize(tag, size * 0.9);
@@ -136,7 +203,6 @@ export const drawMathBlock = (
         color,
       });
     }
-    consumed += lineHeight;
   }
   return consumed;
 };
