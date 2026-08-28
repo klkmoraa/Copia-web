@@ -8,6 +8,8 @@
 
 **Tech Stack:** `mathjax-full` (new dependency, TeX input + SVG output + `liteAdaptor`, no DOM), `pdf-lib` (already a dependency), TypeScript, Vitest.
 
+**Font decision:** MathJax's bundled default SVG font (Latin Modern-derived, TeX-authentic) — not a Times-matching alternative. `mathjax-termes-font` (a Times-metric clone, the obvious pick to match the report's existing Times body) and `mathjax-stix2-font` were both checked against the npm registry and neither has ever shipped past a `beta` version (`mathjax-termes-font` tops out at `1.0.0-beta.1`, with no published `dependencies`/`peerDependencies` even), which is too immature a dependency for a document engineers sign. The default font ships inside `mathjax-full` itself (zero extra dependency, the version this plan already pins), is what the validated spike in "Validated groundwork" was rendered with, and reads as unambiguously real mathematical typesetting rather than the flat glyph-by-glyph look it replaces — that matters more here than exact family-matching with the Times/Helvetica prose. Revisit only if `mathjax-termes-font` reaches a stable release later.
+
 ## Global Constraints
 
 - `src/engine/**` is INTOCABLE — this plan touches nothing under `src/engine/`. `src/engine/solver.ts:1120` is read-only source of one of the fixture expressions (`√(ΔX² + ΔY²)`), never edited.
