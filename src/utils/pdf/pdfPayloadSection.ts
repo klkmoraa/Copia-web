@@ -14,10 +14,10 @@ import type { ReportContext } from './reportContext';
 export const attachPortablePayload = async (context: ReportContext): Promise<Uint8Array> => {
   const { layout, project, payload } = context;
   const pdf = layout.doc;
-  pdf.setTitle(pdfText(`${project.name} - memoria de calculo structureCo`));
+  pdf.setTitle(pdfText(`${project.name} - memoria de cálculo structureCo`));
   pdf.setAuthor('structureCo');
   pdf.setSubject('Modelo, DCL, diagramas N-V-M, resultados y procedimiento estructural');
-  pdf.setKeywords(['structureCo', 'calculo estructural', 'DCL', 'NVM', payload.checksum.value]);
+  pdf.setKeywords(['structureCo', 'cálculo estructural', 'DCL', 'NVM', payload.checksum.value]);
   const attachment = new TextEncoder().encode(serializePortablePayload(payload, true));
   const attachmentDate = new Date(payload.provenance.generatedAt);
   await pdf.attach(attachment, STRUCTURECO_PAYLOAD_FILENAME, {

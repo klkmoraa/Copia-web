@@ -38,7 +38,7 @@ export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuanti
     : quantity === 'shear'
       ? 'La carga transversal q determina la pendiente del diagrama de cortante V.'
       : 'El cortante V determina la pendiente del diagrama de momento M.';
-  drawFormulaCard(layout, 'Relacion fundamental', relation, relationExplanation, margin + 14, 248, maxWidth - 28, color);
+  drawFormulaCard(layout, 'Relación fundamental', relation, relationExplanation, margin + 14, 248, maxWidth - 28, color);
   let operationBottom = 174;
   const visibleResults = analysis.memberResults.filter((result) => result.diagramSegments.length).slice(0, 2);
   visibleResults.forEach((result, resultIndex) => {
@@ -51,9 +51,9 @@ export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuanti
     layout.page.drawRectangle({ x: margin + 14, y: operationBottom, width: maxWidth - 28, height: 63, color: rgb(1, 1, 1), borderColor: rgb(0.82, 0.87, 0.84), borderWidth: 0.6 });
     layout.page.drawCircle({ x: margin + 29, y: operationBottom + 45, size: 8, color: palette.forest });
     layout.page.drawText(String(resultIndex + 1), { x: margin + 26.5, y: operationBottom + 42.5, size: 6.5, font: fonts.bold, color: rgb(1, 1, 1) });
-    layout.page.drawText(pdfText(`MIEMBRO ${result.memberId} | FUNCION DEL TRAMO`), { x: margin + 45, y: operationBottom + 46, size: 6.3, font: fonts.bold, color: palette.forestDeep });
+    layout.page.drawText(pdfText(`MIEMBRO ${result.memberId} | FUNCIÓN DEL TRAMO`), { x: margin + 45, y: operationBottom + 46, size: 6.3, font: fonts.bold, color: palette.forestDeep });
     drawMathFormula(layout, formula, margin + 45, operationBottom + 27, 10.6, rgb(0.10, 0.15, 0.12), 300);
-    layout.page.drawText(pdfText(`s = distancia local; valida de ${display(project, segment.x0, 'length')} a ${display(project, segment.x1, 'length')}.`), { x: margin + 45, y: operationBottom + 10, size: 6.2, font: fonts.regular, color: rgb(0.40, 0.46, 0.42) });
+    layout.page.drawText(pdfText(`s = distancia local; válida de ${display(project, segment.x0, 'length')} a ${display(project, segment.x1, 'length')}.`), { x: margin + 45, y: operationBottom + 10, size: 6.2, font: fonts.regular, color: rgb(0.40, 0.46, 0.42) });
     const extremaReference = Math.max(1e-12, Math.abs(minValue), Math.abs(maxValue));
     layout.page.drawRectangle({ x: margin + 370, y: operationBottom + 12, width: 111, height: 39, color: rgb(0.95, 0.98, 0.96), borderColor: color, borderWidth: 0.7 });
     layout.page.drawText('RESULTADOS', { x: margin + 378, y: operationBottom + 40, size: 5.2, font: fonts.bold, color });

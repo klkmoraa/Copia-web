@@ -15,7 +15,7 @@ export const drawVisualHeader = (layout: PdfLayout, section: string, subtitle: s
   page.drawRectangle({ x: margin, y: height - 52, width: 30, height: 30, color: palette.forest });
   page.drawText('S', { x: margin + 9, y: height - 44, size: 17, font: fonts.bold, color: rgb(1, 1, 1) });
   page.drawText('structureCo', { x: margin + 42, y: height - 38, size: 17, font: fonts.bold, color: rgb(1, 1, 1) });
-  page.drawText('MEMORIA DE CALCULO ESTRUCTURAL', { x: margin + 42, y: height - 52, size: 6.5, font: fonts.bold, color: palette.forestSoft });
+  page.drawText('MEMORIA DE CÁLCULO ESTRUCTURAL', { x: margin + 42, y: height - 52, size: 6.5, font: fonts.bold, color: palette.forestSoft });
   page.drawText(pdfText(section), { x: width - margin - fonts.bold.widthOfTextAtSize(pdfText(section), 12), y: height - 37, size: 12, font: fonts.bold, color: rgb(1, 1, 1) });
   page.drawText(pdfText(subtitle), { x: width - margin - fonts.regular.widthOfTextAtSize(pdfText(subtitle), 7), y: height - 52, size: 7, font: fonts.regular, color: palette.forestSoft });
 };

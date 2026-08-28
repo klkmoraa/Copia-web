@@ -9,6 +9,7 @@
  */
 import type { PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 import { pdfText, wrapText } from './pdfGlyphs';
+import { drawMathBlock, mathWidth, hasFraction } from './pdfMath';
 import type { PdfColor, ReportFonts, ReportPalette, RgbFactory } from './reportContext';
 
 export const PAGE_SIZE: [number, number] = [595.28, 841.89];
@@ -72,6 +73,8 @@ export class PdfLayout {
   page!: PDFPage;
   /** Vertical cursor, in PDF units from the bottom of the page. */
   y = 0;
+  /** Running count so every displayed equation carries a number the prose can cite. */
+  private equationCount = 0;
 
   constructor(doc: PDFDocument, fonts: ReportFonts, palette: ReportPalette, rgb: RgbFactory) {
     this.doc = doc;
@@ -201,6 +204,25 @@ export class PdfLayout {
     this.y -= 9;
   }
 
+  /** Next display-equation number, consumed as the `(n)` tag of a math block. */
+  nextEquationNumber(): number {
+    this.equationCount += 1;
+    return this.equationCount;
+  }
+
+  /** Height `drawMathBlockAt` will consume, so the caller can break the page first. */
+  measureMathBlock(expression: string, size: number, indent = 0): number {
+    const available = this.contentWidth - indent;
+    // One line is the floor; anything wider folds, and a stacked fraction is taller.
+    const lines = Math.max(1, Math.ceil(mathWidth(this, expression, size) / Math.max(1, available)));
+    return lines * size * (hasFraction(expression) ? 2.05 : 1.45);
+  }
+
+  /** Displayed equation at the current cursor. Returns the height it consumed. */
+  drawMathBlockAt(expression: string, size: number, indent: number, color: PdfColor, tag?: string): number {
+    return drawMathBlock(this, expression, MARGIN + indent, this.y, this.contentWidth - indent, size, color, { tag });
+  }
+
   /** `label: value` entry of the technical annex. */
   row(label: string, value: string): void {
     this.ensure(15);
@@ -216,7 +238,7 @@ export class PdfLayout {
         thickness: 0.5,
         color: this.rgb(0.78, 0.81, 0.85),
       });
-      reportPage.drawText(`structureCo - memoria de calculo | pagina ${index + 1} de ${this.pages.length}`, {
+      reportPage.drawText(`structureCo - memoria de cálculo | página ${index + 1} de ${this.pages.length}`, {
         x: MARGIN,
         y: 20,
         size: 7.5,

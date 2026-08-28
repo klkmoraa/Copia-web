@@ -70,7 +70,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   };
 
   layout.newPage();
-  layout.heading('Anexo tecnico verificable');
+  layout.heading('Anexo técnico verificable');
   layout.text(`Expediente portable v${payload.formatVersion} - app ${payload.provenance.appVersion}. Integridad SHA-256: ${payload.checksum.value}`, 8.3);
   layout.text('Este anexo conserva el proyecto, las operaciones completas y los resultados exactos. El adjunto JSON permite reimportar el expediente sin OCR.', 8.3);
 
@@ -78,7 +78,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   // These sums are meant to close at zero. Printing one of them as `0` and the next as
   // `-1.06581e-14` says nothing about the structure, only about which float happened to
   // land exactly on zero. They collapse against the applied load; the normalized residual
-  // right after keeps the audit trail at full precision.
+  // right after keeps the audit trail at full precisión.
   const equilibriumScale = Math.max(
     Math.abs(analysis.loadAudit?.source.fx ?? 0),
     Math.abs(analysis.loadAudit?.source.fy ?? 0),
@@ -86,13 +86,13 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   );
   const equilibriumMomentScale = Math.max(Math.abs(analysis.loadAudit?.source.mz ?? 0), 1);
   summary([
-    ['Estado del analisis', analysis.success ? 'resuelto' : 'con errores'],
+    ['Estado del análisis', analysis.success ? 'resuelto' : 'con errores'],
     ['Modelo', `${project.nodes.length} nodos, ${project.members.length} miembros`],
     ['Cargas', `${payload.metadata.loadCount} acciones; ${project.loadCases.length} casos; ${project.combinations.length} combinaciones`],
     ['Factores del escenario', project.loadCases.map((loadCase) => `${loadCase.id}=${number(scenarioFactors[loadCase.id] ?? 0)}`).join(', ') || 'sin casos'],
-    ['Formulacion', analysis.educationTrace?.formulation ?? 'analisis estatico lineal 2D'],
+    ['Formulacion', analysis.educationTrace?.formulation ?? 'análisis estático lineal 2D'],
     ['Norma residual', number(analysis.residualNorm)],
-    ['Estimacion de condicion', number(analysis.conditionEstimate)],
+    ['Estimación de condición', number(analysis.conditionEstimate)],
     ['Equilibrio', `Fx=${clearNumber(analysis.equilibrium.sumFx, equilibriumScale)}, Fy=${clearNumber(analysis.equilibrium.sumFy, equilibriumScale)}, M=${clearNumber(analysis.equilibrium.sumM, equilibriumMomentScale)}; residuo=${number(analysis.equilibrium.normalizedResidual)}`],
   ]);
 
@@ -105,7 +105,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     );
     const auditForce = (value: number) => clearNumber(value, equilibriumScale);
     const auditMoment = (value: number) => clearNumber(value, equilibriumMomentScale);
-    layout.heading('Auditoria independiente de cargas', 2);
+    layout.heading('Auditoría independiente de cargas', 2);
     layout.table(
       [
         { header: 'Origen', width: 96 },
@@ -119,19 +119,19 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
       ],
       { size: 8, zebra: false },
     );
-    layout.text(`Punto de reduccion O=${reference ? `(${number(reference.x)}, ${number(reference.y)})` : 'no disponible'}; residuo global=${number(audit.resultantResidual)}; residuo maximo=${number(audit.normalizedResidual)}${critical ? ` en ${critical.memberId}` : ''}.`, 8, fonts.regular, undefined, 8);
+    layout.text(`Punto de reduccion O=${reference ? `(${number(reference.x)}, ${number(reference.y)})` : 'no disponible'}; residuo global=${number(audit.resultantResidual)}; residuo máximo=${number(audit.normalizedResidual)}${critical ? ` en ${critical.memberId}` : ''}.`, 8, fonts.regular, undefined, 8);
   }
 
   if (analysis.issues.length) {
     layout.heading('Incidencias', 2);
     layout.table(
-      [{ header: 'Severidad', width: 62 }, { header: 'Titulo', width: 120 }, { header: 'Detalle' }],
+      [{ header: 'Severidad', width: 62 }, { header: 'Título', width: 120 }, { header: 'Detalle' }],
       analysis.issues.map((issue) => [issue.severity.toUpperCase(), issue.title, issue.message]),
       { size: 7.8 },
     );
   }
 
-  layout.heading('2. DCL, geometria y acciones');
+  layout.heading('2. DCL, geometría y acciones');
   drawGlobalDcl(context);
 
   layout.heading('Nodos y apoyos', 2);
@@ -156,7 +156,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   layout.table(
     [
       { header: 'Miembro', width: 58 },
-      { header: 'Conexion', width: 74 },
+      { header: 'Conexión', width: 74 },
       { header: 'Tipo', width: 52 },
       { header: 'E (kN/m^2)', ...NUMERIC },
       { header: 'A (m^2)', ...NUMERIC },
@@ -208,7 +208,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
         { header: 'Caso', width: 46 },
         { header: 'Factor', ...NUMERIC, width: 40 },
         { header: 'Ejes', width: 44 },
-        { header: 'Descripcion', flex: 3.4 },
+        { header: 'Descripción', flex: 3.4 },
       ],
       project.memberLoads.map((load) => [
         load.id,
@@ -224,14 +224,14 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   }
 
   if (analysis.loadAudit?.memberAudits.length) {
-    layout.heading('Auditoria por trabajo virtual', 2);
-    layout.text('Cada vector local [Fxi, Fyi, Mi, Fxj, Fyj, Mj] se reintegra desde las cargas fuente con funciones cerradas independientes, antes de liberaciones o condensacion.', 8, fonts.regular, undefined, 8);
+    layout.heading('Auditoría por trabajo virtual', 2);
+    layout.text('Cada vector local [Fxi, Fyi, Mi, Fxj, Fyj, Mj] se reintegra desde las cargas fuente con funciones cerradas independientes, antes de liberaciones o condensación.', 8, fonts.regular, undefined, 8);
     layout.table(
       [
         { header: 'Miembro', width: 62 },
         { header: 'L fuente', ...NUMERIC },
         { header: 'L ensamblada', ...NUMERIC },
-        { header: 'Residuo mecanico', ...NUMERIC },
+        { header: 'Residuo mecánico', ...NUMERIC },
         { header: 'Residuo inicial', ...NUMERIC },
         { header: 'Residuo total', ...NUMERIC },
       ],
@@ -281,7 +281,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   }
 
   layout.heading('4. Diagramas N, V y M');
-  layout.text('Los extremos se obtienen de los segmentos polinomicos exactos y puntos criticos del motor; el attachment conserva todas las funciones, saltos y muestras.', 8.7);
+  layout.text('Los extremos se obtienen de los segmentos polinómicos exactos y puntos críticos del motor; el attachment conserva todas las funciones, saltos y muestras.', 8.7);
   if (!analysis.memberResults.length) layout.text('No hay resultados de miembros.', 8.7, fonts.regular, undefined, 8);
   for (const result of analysis.memberResults) {
     layout.ensure(160);
@@ -299,8 +299,8 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     layout.table(
       [
         { header: 'Magnitud', width: 128 },
-        { header: 'Minimo', ...NUMERIC },
-        { header: 'Maximo', ...NUMERIC },
+        { header: 'Mínimo', ...NUMERIC },
+        { header: 'Máximo', ...NUMERIC },
         { header: 'Unidad', width: 62 },
       ],
       [
@@ -328,7 +328,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     if (result.criticalPoints.length) {
       layout.table(
         [
-          { header: 'Punto critico', width: 92 },
+          { header: 'Punto crítico', width: 92 },
           { header: `x (${unitFor(project, 'length')})`, ...NUMERIC },
           { header: 'Valor', ...NUMERIC },
           { header: 'Unidad', width: 58 },
@@ -347,9 +347,9 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     layout.table(
       [
         { header: 'Tramo', width: 40 },
-        { header: 'Estacion', width: 96 },
-        { header: 'Funcion', width: 44 },
-        { header: 'Expresion (s = x - x0)', flex: 3 },
+        { header: 'Estación', width: 96 },
+        { header: 'Función', width: 44 },
+        { header: 'Expresión (s = x - x0)', flex: 3 },
       ],
       result.diagramSegments.flatMap((segment, segmentIndex) => {
         const station = `${displayCell(project, segment.x0, 'length')} -> ${displayCell(project, segment.x1, 'length')} ${unitFor(project, 'length')}`;
@@ -364,12 +364,20 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     drawMemberDiagrams(context, result);
   }
 
-  layout.heading('5. Procedimiento y calculos');
-  if (!analysis.explanation.length) layout.text('El analisis no incluyo pasos explicativos.', 8.7, fonts.regular, undefined, 8);
+  layout.heading('5. Procedimiento y cálculos');
+  if (!analysis.explanation.length) layout.text('El análisis no incluyó pasos explicativos.', 8.7, fonts.regular, undefined, 8);
   for (const [stepIndex, step] of analysis.explanation.entries()) {
     layout.heading(`${stepIndex + 1}. ${step.title.replace(/^\d+\.\s*/, '')}`, 2);
     layout.text(step.summary, 8.7, fonts.regular, undefined, 8);
-    for (const equation of step.equations) layout.text(`- ${equation}`, 8.3, fonts.regular, rgb(0.24, 0.28, 0.34), 16);
+    // The equations arrive from the solver already written as maths — `L = √(ΔX² + ΔY²)`,
+    // `dθ/dx = M/EI`. Drawn with `layout.text` they went through the WinAnsi transliteration
+    // and came out as `L = sqrt(DeltaX^2 + DeltaY^2)`, carets included. `drawMathBlock` keeps
+    // the symbols, stacks the fractions and folds a long relation instead of clipping it.
+    for (const equation of step.equations) {
+      const height = layout.measureMathBlock(equation, 8.6, 16);
+      layout.ensure(height);
+      layout.y -= layout.drawMathBlockAt(equation, 8.6, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    }
     // The values come from the engine, but the formatting is ours. Within one step,
     // entries sharing a unit are comparable, so each collapses against the largest of its
     // own family: an equilibrium sum of -1.06581e-14 kN beside a load of 22 kN is zero.
@@ -395,7 +403,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     summary([
       ['Esquema', `v${trace.schemaVersion}; ${trace.formulation}`],
       ['Grados de libertad', `${trace.dofs.length}; ${trace.dofs.filter((dof) => dof.constrained).length} restringidos`],
-      ['Energia de deformacion', number(trace.assembly.strainEnergy)],
+      ['Energía de deformación', number(trace.assembly.strainEnergy)],
     ]);
     matrix('Matriz global K', trace.assembly.stiffness);
     matrix('Matriz de restricciones C', trace.assembly.constraintMatrix);
@@ -403,9 +411,9 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
       layout.ensure(150);
       layout.heading(`Elemento ${element.memberId}`, 2);
       layout.text(`L=${number(element.length)} m, c=${number(element.c)}, s=${number(element.s)}.`, 8, fonts.regular, undefined, 8);
-      matrix('Transformacion T', element.transformation);
+      matrix('Transformación T', element.transformation);
       matrix('Rigidez local efectiva', element.localStiffnessEffective);
-      matrix('Contribucion global', element.globalStiffnessContribution);
+      matrix('Contribución global', element.globalStiffnessContribution);
     }
   }
 };

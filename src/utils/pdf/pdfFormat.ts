@@ -79,8 +79,8 @@ export const clearCell = (project: ProjectModel, value: number, quantity: UnitQu
 };
 
 const loadBasisLabel = (basis: MemberLoad['lengthBasis']): string => basis === 'horizontal'
-  ? 'proyeccion horizontal'
-  : basis === 'vertical' ? 'proyeccion vertical' : 'longitud real';
+  ? 'proyección horizontal'
+  : basis === 'vertical' ? 'proyección vertical' : 'longitud real';
 
 export const flexibleMemberLength = (index: ModelIndex, memberId: string): number | undefined => {
   const member = index.member(memberId);

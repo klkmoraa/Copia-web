@@ -59,8 +59,8 @@ const buildReport = async () => {
   return { project, analysis, report, pages: await readPages(report.bytes) };
 };
 
-describe('memoria de calculo: calidad editorial', () => {
-  it('produce un documento A4 paginado, con cabecera y pie en cada pagina', async () => {
+describe('memoria de cálculo: calidad editorial', () => {
+  it('produce un documento A4 paginado, con cabecera y pie en cada página', async () => {
     const { pages } = await buildReport();
     expect(pages.length).toBeGreaterThanOrEqual(9);
     for (const page of pages) {
@@ -68,7 +68,7 @@ describe('memoria de calculo: calidad editorial', () => {
       expect(Math.abs(page.height - A4_HEIGHT)).toBeLessThan(1);
       expect(page.text).not.toBe('');
       expect(page.text).toMatch(/structureCo/);
-      expect(page.text).toMatch(new RegExp(`pagina ${page.number} de ${pages.length}`));
+      expect(page.text).toMatch(new RegExp(`página ${page.number} de ${pages.length}`));
     }
   }, 60_000);
 
@@ -78,7 +78,7 @@ describe('memoria de calculo: calidad editorial', () => {
     expect(total).toBeGreaterThan(10_000);
   }, 60_000);
 
-  it('no pierde glifos al transliterar la notacion de ingenieria', async () => {
+  it('no pierde glifos al transliterar la notación de ingenieria', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
     expect(all).not.toMatch(/�/);
@@ -89,28 +89,28 @@ describe('memoria de calculo: calidad editorial', () => {
     const all = pages.map((page) => page.text).join('\n');
     expect(all).toMatch(/Unidades de presentacion/);
     expect(all).toMatch(/Longitud y desplazamiento: ft/);
-    expect(all).toMatch(/Fuerza y reaccion: kip/);
+    expect(all).toMatch(/Fuerza y reacción: kip/);
     expect(all).toMatch(/Momento: kip x ft/);
     expect(all).toMatch(/Convenciones de signo/);
     expect(all).toMatch(/N axial: positivo en traccion/);
-    expect(all).toMatch(/Alcance del analisis/);
+    expect(all).toMatch(/Alcance del análisis/);
     expect(all).toMatch(/Limitaciones declaradas/);
     expect(all).toMatch(/P-Delta/);
     expect(all).toMatch(/no reporta verificaciones normativas|no se aplica ninguna norma|No se aplica ninguna norma/i);
-    expect(all).toMatch(/Advertencias del analisis/);
+    expect(all).toMatch(/Advertencias del análisis/);
   }, 60_000);
 
   it('comunica calidad numérica sin convertir success en aprobación estructural', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/CALIDAD NUMERICA/);
+    expect(all).toMatch(/CALIDAD NUMÉRICA/);
     expect(all).toMatch(/ESTABLE/);
-    expect(all).toMatch(/condicion k1/i);
-    expect(all).toMatch(/no evalua seguridad estructural/i);
+    expect(all).toMatch(/condición k1/i);
+    expect(all).toMatch(/no evalúa seguridad estructural/i);
     expect(all).not.toMatch(/EQUILIBRIO APROBADO/);
   }, 60_000);
 
-  it('declara la version real de la aplicacion, no una constante olvidada', async () => {
+  it('declara la versión real de la aplicación, no una constante olvidada', async () => {
     const { pages, report } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
     expect(report.payload.provenance.appVersion).toBe(APP_VERSION);
@@ -118,7 +118,7 @@ describe('memoria de calculo: calidad editorial', () => {
     expect(all).not.toMatch(/app 0\.7\.0/);
   }, 60_000);
 
-  it('presenta como cero el ruido numerico que la portada ya presenta como cero', async () => {
+  it('presenta como cero el ruido numérico que la portada ya presenta como cero', async () => {
     // A beam with no axial load reported "min=1.53081e-16 kip" in the annex while page 1
     // said "|N| MAX. 0 kip". The document must not contradict itself.
     const { pages } = await buildReport();
@@ -129,13 +129,13 @@ describe('memoria de calculo: calidad editorial', () => {
     expect(all).toMatch(/N axial\s+0\s+0\s+kip/);
     expect(all).toMatch(/Equilibrio\s+Fx=0, Fy=0, M=0/);
     // Only one context may legitimately carry a value that small: the solver's own
-    // precision figures, where the exponent *is* the information.
+    // precisión figures, where the exponent *is* the information.
     //
     // The narrative and the pre-rendered equation vectors used to be exceptions here,
     // because they are produced inside `src/engine/**`. They were fixed at the source
     // under explicit authorization, so the allowance is gone and this assertion now
     // covers the whole document.
-    const allowed = /residuo|precision|error|condicion/i;
+    const allowed = /residuo|precisión|error|condición/i;
     const unexplained: string[] = [];
     for (const match of all.matchAll(/-?\d(?:\.\d+)?e-(?:1[2-9]|[2-9]\d)/g)) {
       const context = all.slice(Math.max(0, match.index - 90), match.index);
@@ -156,7 +156,7 @@ describe('memoria de calculo: calidad editorial', () => {
     // And the values under them stay converted: this beam's end shear is 2.5 kip, the same
     // figure the cover reports, not the 11.1 kN the engine holds internally.
     expect(all).toMatch(/M_j \(kip x ft\)\s+0\s+2\.5\s+0/);
-    expect(all).toMatch(/REACCION MAX\. 2\.5 kip/);
+    expect(all).toMatch(/REACCIÓN MAX\. 2\.5 kip/);
     // Reactions and displacements likewise declare their unit once, in the header.
     expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip x ft\)/);
     expect(all).toMatch(/Ux \(ft\)\s+Uy \(ft\)\s+Rz \(rad\)/);

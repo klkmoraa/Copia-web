@@ -34,6 +34,8 @@ export interface ReportFonts {
   readonly bold: import('pdf-lib').PDFFont;
   readonly mathRegular: import('pdf-lib').PDFFont;
   readonly mathItalic: import('pdf-lib').PDFFont;
+  /** Adobe Symbol: the Greek and the operators the WinAnsi faces cannot encode. */
+  readonly mathSymbol: import('pdf-lib').PDFFont;
 }
 
 export interface ReportPalette {

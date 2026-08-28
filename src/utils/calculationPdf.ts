@@ -45,6 +45,7 @@ export const createCalculationReport = async (
     bold: await pdf.embedFont(StandardFonts.HelveticaBold),
     mathRegular: await pdf.embedFont(StandardFonts.TimesRoman),
     mathItalic: await pdf.embedFont(StandardFonts.TimesRomanItalic),
+    mathSymbol: await pdf.embedFont(StandardFonts.Symbol),
   };
   const palette: ReportPalette = {
     forest: rgb(0.07, 0.38, 0.21),

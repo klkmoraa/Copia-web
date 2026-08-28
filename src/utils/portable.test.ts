@@ -21,7 +21,7 @@ const analyzedFixture = () => {
 };
 
 describe('expediente portable structureCo', () => {
-  it('firma y valida el snapshot exacto de proyecto y analisis', async () => {
+  it('firma y válida el snapshot exacto de proyecto y análisis', async () => {
     const { project, analysis } = analyzedFixture();
     const payload = await createPortablePayload(project, analysis, {
       generatedAt: '2026-07-12T12:00:00.000Z',
@@ -44,7 +44,7 @@ describe('expediente portable structureCo', () => {
     await expect(parsePortablePayload(JSON.stringify(tampered))).rejects.toThrow(/checksum/i);
   });
 
-  it('genera un PDF legible con attachment reimportable y texto tecnico', async () => {
+  it('genera un PDF legible con attachment reimportable y texto técnico', async () => {
     const { project } = analyzedFixture();
     project.memberLoads[0].end = 0.7;
     const analysis = analyzeProject(project);
@@ -61,7 +61,7 @@ describe('expediente portable structureCo', () => {
     expect(inspection.payload?.project).toEqual(report.payload.project);
     expect(inspection.payload?.analysis).toEqual(report.payload.analysis);
     expect(inspection.text).toMatch(/Diagramas N, V y M/i);
-    expect(inspection.text).toMatch(/Procedimiento y calculos/i);
+    expect(inspection.text).toMatch(/Procedimiento y cálculos/i);
     expect(inspection.text).toMatch(/dominio x\/L=0\s*->\s*0\.7/i);
     expect(inspection.text).toMatch(/x=0 ft\s*->\s*7 ft/i);
     expect(inspection.text).toMatch(/longitud real cargada=7 ft/i);
@@ -69,13 +69,15 @@ describe('expediente portable structureCo', () => {
     expect(inspection.text).toMatch(/cobertura=70%/i);
     expect(inspection.text).toMatch(/base=longitud real/i);
     expect(inspection.text).toMatch(/Factores del escenario\s+LC1=1/i);
-    expect(inspection.text).toMatch(/d_local\s*=\s*T d_global/i);
+    // `d_local` y `d_global` se componen ahora con subíndices reales, así que el guión
+    // bajo es geometría y no un carácter que la extracción pueda ver.
+    expect(inspection.text).toMatch(/d\s*local\s*=\s*T\s*d\s*global/i);
     expect(inspection.text).toMatch(/\[U_x, U_y, R_z\]/i);
-    expect(inspection.text).toMatch(/Auditoria independiente de cargas/i);
-    expect(inspection.text).toMatch(/Auditoria por trabajo virtual/i);
+    expect(inspection.text).toMatch(/Auditoría independiente de cargas/i);
+    expect(inspection.text).toMatch(/Auditoría por trabajo virtual/i);
     // The per-member residuals are a table since AG-014, so the label is a column header
     // rather than a `nombre=valor` pair. The audit itself is unchanged.
-    expect(inspection.text).toMatch(/Residuo mecanico\s+Residuo inicial\s+Residuo total/i);
+    expect(inspection.text).toMatch(/Residuo mecánico\s+Residuo inicial\s+Residuo total/i);
     expect(inspection.text).toMatch(/residuo equilibrio f[ií]sico/i);
   }, 30_000);
 

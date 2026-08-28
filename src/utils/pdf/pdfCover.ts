@@ -47,7 +47,7 @@ export const drawExecutivePage = (context: ReportContext): void => {
     ? rgb(0.08, 0.43, 0.27)
     : numericQuality === 'limited' ? rgb(0.72, 0.43, 0.05) : rgb(0.75, 0.20, 0.16);
   layout.page.drawRectangle({ x: 0, y: 0, width: layout.width, height: layout.height, color: rgb(0.965, 0.975, 0.968) });
-  drawVisualHeader(layout, project.name, options.scenarioName ?? 'Analisis activo');
+  drawVisualHeader(layout, project.name, options.scenarioName ?? 'Análisis activo');
   drawSectionBand(layout, '01', 'DCL global y equilibrio', 'Cargas, reacciones y resultados gobernantes en una sola lectura');
   const axialExtreme = absoluteExtreme(context, 'axial');
   const shearExtreme = absoluteExtreme(context, 'shear');
@@ -56,7 +56,7 @@ export const drawExecutivePage = (context: ReportContext): void => {
     const values = [result.rx, result.ry];
     return Math.max(best, ...values.map((value) => Math.abs(value)));
   }, 0);
-  drawKpi(layout, margin, 'Reaccion max.', clearDisplay(project, reactionMaximum, 'force', reactionMaximum), rgb(0.04, 0.40, 0.72));
+  drawKpi(layout, margin, 'Reacción max.', clearDisplay(project, reactionMaximum, 'force', reactionMaximum), rgb(0.04, 0.40, 0.72));
   drawKpi(layout, margin + 126, '|N| max.', axialExtreme ? clearDisplay(project, Math.abs(axialExtreme.value), 'force', Math.abs(axialExtreme.value)) : 'n/d', palette.quantity.axial);
   drawKpi(layout, margin + 252, '|V| max.', shearExtreme ? clearDisplay(project, Math.abs(shearExtreme.value), 'force', Math.abs(shearExtreme.value)) : 'n/d', palette.quantity.shear);
   drawKpi(layout, margin + 378, '|M| max.', momentExtreme ? clearDisplay(project, Math.abs(momentExtreme.value), 'moment', Math.abs(momentExtreme.value)) : 'n/d', palette.quantity.moment);
@@ -65,10 +65,10 @@ export const drawExecutivePage = (context: ReportContext): void => {
   drawPanel(layout, margin, 60, 242, 278);
   layout.page.drawText('OPERACIONES DE EQUILIBRIO', { x: margin + 12, y: 318, size: 8.5, font: fonts.bold, color: palette.forestDeep });
   const equilibriumRows = [
-    { title: 'Fuerzas horizontales', formula: 'F_x = 0', result: clearDisplay(project, analysis.equilibrium.sumFx, 'force', reactionMaximum) },
-    { title: 'Fuerzas verticales', formula: 'F_y = 0', result: clearDisplay(project, analysis.equilibrium.sumFy, 'force', reactionMaximum) },
-    { title: 'Momentos respecto al origen', formula: 'M_O = 0', result: clearDisplay(project, analysis.equilibrium.sumM, 'moment', momentExtreme ? Math.abs(momentExtreme.value) : 1) },
-    { title: 'Control numerico del cierre', formula: 'r = ||residuo|| / ||acciones||', result: clearNumber(analysis.equilibrium.normalizedResidual) },
+    { title: 'Fuerzas horizontales', formula: 'ΣF_x = 0', result: clearDisplay(project, analysis.equilibrium.sumFx, 'force', reactionMaximum) },
+    { title: 'Fuerzas verticales', formula: 'ΣF_y = 0', result: clearDisplay(project, analysis.equilibrium.sumFy, 'force', reactionMaximum) },
+    { title: 'Momentos respecto al origen', formula: 'ΣM_O = 0', result: clearDisplay(project, analysis.equilibrium.sumM, 'moment', momentExtreme ? Math.abs(momentExtreme.value) : 1) },
+    { title: 'Control numérico del cierre', formula: 'r = ||residuo||/||acciones||', result: clearNumber(analysis.equilibrium.normalizedResidual) },
   ];
   let rowY = 283;
   equilibriumRows.forEach((entry, index) => {
@@ -82,9 +82,9 @@ export const drawExecutivePage = (context: ReportContext): void => {
     rowY -= 44;
   });
   layout.page.drawRectangle({ x: margin + 12, y: 80, width: 218, height: 52, color: rgb(0.91, 0.96, 0.93), borderColor: qualityColor, borderWidth: 0.8 });
-  layout.page.drawText(pdfText(`CALIDAD NUMERICA: ${qualityLabel}`), { x: margin + 24, y: 111, size: 8.7, font: fonts.bold, color: qualityColor });
-  layout.page.drawText(pdfText(`Condicion k1 ${clearNumber(analysis.conditionEstimate)} | residuo ${clearNumber(analysis.linearResidual ?? analysis.residualNorm)} | error ${clearNumber(analysis.forwardErrorBound ?? Number.NaN)}`), { x: margin + 24, y: 97, size: 5.8, font: fonts.regular, color: rgb(0.20, 0.28, 0.23) });
-  layout.page.drawText(pdfText('Diagnostico numerico; no evalua seguridad estructural.'), { x: margin + 24, y: 85, size: 5.8, font: fonts.bold, color: rgb(0.28, 0.35, 0.30) });
+  layout.page.drawText(pdfText(`CALIDAD NUMÉRICA: ${qualityLabel}`), { x: margin + 24, y: 111, size: 8.7, font: fonts.bold, color: qualityColor });
+  layout.page.drawText(pdfText(`Condición k1 ${clearNumber(analysis.conditionEstimate)} | residuo ${clearNumber(analysis.linearResidual ?? analysis.residualNorm)} | error ${clearNumber(analysis.forwardErrorBound ?? Number.NaN)}`), { x: margin + 24, y: 97, size: 5.8, font: fonts.regular, color: rgb(0.20, 0.28, 0.23) });
+  layout.page.drawText(pdfText('Diagnóstico numérico; no evalúa seguridad estructural.'), { x: margin + 24, y: 85, size: 5.8, font: fonts.bold, color: rgb(0.28, 0.35, 0.30) });
 
   drawPanel(layout, margin + 254, 60, 241, 278);
   layout.page.drawText('REACCIONES Y DATOS CLAVE', { x: margin + 266, y: 318, size: 8.5, font: fonts.bold, color: palette.forestDeep });
@@ -95,9 +95,9 @@ export const drawExecutivePage = (context: ReportContext): void => {
     if (Math.abs(result.rm) > 1e-10) layout.page.drawText(pdfText(`M ${clearDisplay(project, result.rm, 'moment', momentExtreme ? Math.abs(momentExtreme.value) : 1)}`), { x: margin + 266, y: rowY - 26, size: 7, font: fonts.regular, color: rgb(0.20, 0.25, 0.22) });
     rowY -= 49;
   }
-  layout.page.drawText('HIPOTESIS', { x: margin + 266, y: 124, size: 7, font: fonts.bold, color: palette.forestDeep });
-  const formulation = analysis.educationTrace?.formulation ?? 'analisis estatico lineal 2D';
+  layout.page.drawText('HIPÓTESIS', { x: margin + 266, y: 124, size: 7, font: fonts.bold, color: palette.forestDeep });
+  const formulation = analysis.educationTrace?.formulation ?? 'análisis estático lineal 2D';
   const experimentalScope = analysis.pDelta?.experimental ? 'P-Delta experimental; ' : '';
-  const hypothesis = wrapText(`${experimentalScope}${formulation}; pequenas deformaciones; propiedades prismaticas por miembro.`, fonts.regular, 6.8, 213);
+  const hypothesis = wrapText(`${experimentalScope}${formulation}; pequeñas deformaciones; propiedades prismáticas por miembro.`, fonts.regular, 6.8, 213);
   hypothesis.slice(0, 3).forEach((entry, index) => layout.page.drawText(entry, { x: margin + 266, y: 109 - index * 11, size: 6.8, font: fonts.regular, color: rgb(0.30, 0.36, 0.32) }));
 };

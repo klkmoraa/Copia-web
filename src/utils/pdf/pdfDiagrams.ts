@@ -86,7 +86,7 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
   const right = layout.width - margin;
   const bottom = top - height;
   page.drawRectangle({ x: left, y: bottom, width: right - left, height, borderWidth: 0.7, borderColor: palette.rule, color: rgb(0.975, 0.985, 0.995) });
-  page.drawText('DCL global - geometria, apoyos y acciones', { x: left + 10, y: top - 15, size: 8.5, font: fonts.bold, color: palette.forestDeep });
+  page.drawText('DCL global - geometría, apoyos y acciones', { x: left + 10, y: top - 15, size: 8.5, font: fonts.bold, color: palette.forestDeep });
   const projection = createProjection(project.nodes, {
     left: left + 42,
     right: right - 42,
@@ -319,5 +319,5 @@ export const drawGlobalQuantityDiagram = (
     page.drawText(pdfText(label), { x: Math.min(left + width - 130, Math.max(left + 8, candidate.x + 5)), y: labelY, size: 6.2, font: fonts.bold, color });
   });
   page.drawLine({ start: { x: left + 14, y: bottom + 20 }, end: { x: left + 42, y: bottom + 20 }, thickness: 1.7, color });
-  page.drawText(pdfText(`${quantitySymbol(quantity)} positivo segun los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: rgb(0.32, 0.39, 0.35) });
+  page.drawText(pdfText(`${quantitySymbol(quantity)} positivo según los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: rgb(0.32, 0.39, 0.35) });
 };

@@ -20,6 +20,7 @@ const createLayout = async () => {
     bold: await doc.embedFont(StandardFonts.HelveticaBold),
     mathRegular: await doc.embedFont(StandardFonts.TimesRoman),
     mathItalic: await doc.embedFont(StandardFonts.TimesRomanItalic),
+    mathSymbol: await doc.embedFont(StandardFonts.Symbol),
   };
   const palette: ReportPalette = {
     forest: rgb(0.07, 0.38, 0.21),

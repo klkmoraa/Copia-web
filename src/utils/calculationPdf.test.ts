@@ -18,8 +18,8 @@ const fixedOptions = {
   scenarioFactors: { LC1: 1 },
 };
 
-describe('memoria de calculo visual', () => {
-  it('separa DCL y diagramas N-V-M en paginas visuales con operaciones verificables', async () => {
+describe('memoria de cálculo visual', () => {
+  it('separa DCL y diagramas N-V-M en páginas visuales con operaciones verificables', async () => {
     const { project, analysis } = fixture();
     const report = await createCalculationReport(project, analysis, { ...fixedOptions, includeEducationTrace: false });
     const inspection = await inspectPdf(report.bytes);
@@ -40,12 +40,15 @@ describe('memoria de calculo visual', () => {
     expect(dclPage).toMatch(/27\.5 kN/i);
     expect(axialPage).toMatch(/OPERACIONES CLARAS/i);
     expect(axialPage.replace(/\s+/g, '')).toMatch(/N\(s\)=0/i);
-    expect(axialPage).toMatch(/RELACION FUNDAMENTAL/i);
+    expect(axialPage).toMatch(/RELACIÓN FUNDAMENTAL/i);
     expect(axialPage).toMatch(/La carga axial distribuida determina/i);
     expect(shearPage).toMatch(/OPERACIONES CLARAS/i);
-    expect(shearPage.replace(/\s+/g, '')).toMatch(/dV\/dx=q\(x\)/i);
+    // The derivatives are typeset as stacked fractions, so the slash is geometry now and
+    // not a character: `dV` sits above `dx` over a rule. Extraction sees the two operands
+    // in reading order, which is the signature this assertion pins.
+    expect(shearPage.replace(/\s+/g, '')).toMatch(/dVdx=q\(x\)/i);
     expect(momentPage).toMatch(/OPERACIONES CLARAS/i);
-    expect(momentPage.replace(/\s+/g, '')).toMatch(/dM\/dx=V\(x\)/i);
+    expect(momentPage.replace(/\s+/g, '')).toMatch(/dMdx=V\(x\)/i);
     expect(momentPage).toMatch(/75 kN\s*x\s*m/i);
     expect(momentPage).toMatch(/@\s*3 m/i);
   }, 60_000);
@@ -64,7 +67,7 @@ describe('memoria de calculo visual', () => {
       expect(inspection.text).toMatch(/Diagrama axial N/i);
       expect(inspection.text).toMatch(/Diagrama cortante V/i);
       expect(inspection.text).toMatch(/Diagrama de momento M/i);
-      expect(inspection.text).toMatch(/Procedimiento y calculos/i);
+      expect(inspection.text).toMatch(/Procedimiento y cálculos/i);
     }
     expect(visual.text).not.toMatch(/Traza educativa y matrices/i);
     expect(visual.text).not.toMatch(/Matriz global K/i);
