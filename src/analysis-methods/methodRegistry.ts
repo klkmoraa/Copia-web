@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -51,6 +51,14 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
       (classification.kind === 'simple-beam' || classification.kind === 'continuous-beam')
       && classification.indeterminacy >= 1
     ),
+  },
+  {
+    id: 'virtual-work',
+    labelKey: 'method.virtualWork',
+    // The first method offered on a truss instead of a beam or a frame. Its deeper requirements
+    // — no distributed load along a member, at least one genuinely free joint — are
+    // `solveVirtualWork`'s job.
+    applies: (classification) => classification.kind === 'truss',
   },
   {
     id: 'portal-method',

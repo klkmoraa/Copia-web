@@ -15,6 +15,7 @@ import { solveCantileverMethod, type CantileverMethodResult } from '../../analys
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
 import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
+import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
@@ -272,6 +273,78 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
   );
   layout.text(
     `Diferencia máxima: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
+const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): void => {
+  const { layout, project } = context;
+  const { fonts, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const forceUnit = unitFor(project, 'force');
+  const componentLabel = (component: 'ux' | 'uy') => (component === 'ux' ? 'horizontal' : 'vertical');
+
+  layout.heading('5. Procedimiento: Trabajo Virtual (carga unitaria)');
+  layout.text(
+    'Para hallar el desplazamiento de un nudo se retira la carga real, se aplica una única carga '
+    + 'virtual unitaria en ese nudo y en la dirección de interés, y se halla la fuerza que esa '
+    + 'carga virtual produce en cada barra. El desplazamiento es la suma, en toda la armadura, de '
+    + 'la fuerza real de cada barra por su fuerza virtual y su longitud, entre su rigidez axial:',
+    8.7, fonts.regular, undefined, 8,
+  );
+  const relation = 'Δ = Σ (nᵢ Nᵢ Lᵢ) / (Aᵢ Eᵢ)';
+  layout.ensure(layout.measureMathBlock(relation, 9, 16));
+  layout.y -= layout.drawMathBlockAt(relation, 9, 16, layout.rgb(0.24, 0.28, 0.34));
+
+  layout.heading('5.1 Desplazamientos en cada nudo libre', 2);
+  layout.text(
+    'La última columna es lo que el análisis matricial reporta en ese mismo grado de libertad: '
+    + 'el método y el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Nudo', width: 60 },
+      { header: 'Componente', width: 90 },
+      { header: `Trabajo virtual (${lengthUnit})`, ...NUMERIC },
+      { header: `Análisis matricial (${lengthUnit})`, ...NUMERIC },
+    ],
+    solution.displacements.map((entry) => [
+      entry.nodeId,
+      componentLabel(entry.component),
+      displayCell(project, entry.value, 'length'),
+      displayCell(project, entry.solverValue, 'length'),
+    ]),
+    { size: 7.8 },
+  );
+
+  layout.heading(`5.2 Detalle por barra: ${solution.narrated.nodeId}, componente ${componentLabel(solution.narrated.component)}`, 2);
+  layout.text(
+    'El nudo con mayor desplazamiento, desarrollado barra por barra: Nᵢ es la fuerza bajo la '
+    + 'carga real, nᵢ la fuerza bajo la carga virtual unitaria.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Barra', width: 56 },
+      { header: `L (${lengthUnit})`, ...NUMERIC },
+      { header: `Nᵢ (${forceUnit})`, ...NUMERIC, math: true },
+      { header: 'nᵢ', ...NUMERIC, math: true },
+      { header: `Aporte (${lengthUnit})`, ...NUMERIC },
+    ],
+    solution.narrated.contributions.map((entry) => [
+      entry.memberId,
+      number(entry.length, 5),
+      displayCell(project, entry.axialForce, 'force'),
+      clearNumber(entry.virtualForce, Math.max(1, Math.abs(entry.virtualForce))),
+      displayCell(project, entry.contribution, 'length'),
+    ]),
+    { size: 7.6 },
+  );
+
+  layout.heading('5.3 Verificación contra el análisis matricial', 2);
+  layout.text(
+    `Diferencia máxima entre este método y el análisis matricial, en cualquier grado de libertad: ${clearNumber(solution.residual, 1)} ${lengthUnit}.`,
     8.7, fonts.bold, palette.forestDeep, 8,
   );
 };
@@ -562,6 +635,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawThreeMoment(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'virtual-work') {
+    const solution = solveVirtualWork(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawVirtualWork(context, solution);
     return true;
   }
   return false;
