@@ -19,6 +19,8 @@ import { drawScopePage } from './pdf/pdfScopeSection';
 import { drawProcedureSummary } from './pdf/pdfProcedureSection';
 import { drawTechnicalAnnex } from './pdf/pdfAnnexSection';
 import { attachPortablePayload } from './pdf/pdfPayloadSection';
+import { drawCoverPage, drawTableOfContents } from './pdf/pdfFrontMatter';
+import { attachOutline } from './pdf/pdfOutline';
 import {
   createModelIndex,
   type CalculationReportArtifact,
@@ -30,12 +32,22 @@ import type { AnalysisResult, ProjectModel } from '../types';
 
 export type { CalculationReportOptions, CalculationReportArtifact } from './pdf/reportContext';
 
+/**
+ * Repeated on the cover because that is the one page of a signed document everybody reads.
+ * The catalogue key `app.professionalNote` says the same thing in the product; this copy is
+ * duplicated rather than imported so the report never depends on the UI's language state —
+ * the document is written in Spanish regardless of the interface.
+ */
+const PROFESSIONAL_NOTE = 'structureCo es una ayuda de modelado y cálculo: no sustituye la revisión, '
+  + 'el criterio ni la certificación de un profesional. Los resultados dependen enteramente del '
+  + 'modelo introducido, y su idoneidad es responsabilidad del ingeniero que firma.';
+
 export const createCalculationReport = async (
   project: ProjectModel,
   analysis: AnalysisResult,
   options: CalculationReportOptions = {},
 ): Promise<CalculationReportArtifact> => {
-  const [{ PDFDocument, StandardFonts, rgb }, payload] = await Promise.all([
+  const [{ PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString }, payload] = await Promise.all([
     import('pdf-lib'),
     createPortablePayload(project, analysis, options),
   ]);
@@ -72,6 +84,12 @@ export const createCalculationReport = async (
     index: createModelIndex(project, analysis),
   };
 
+  // Page one is reserved for the cover before anything is drawn on it. Its contents list
+  // can only be written once every section knows where it landed, so it is stamped at the
+  // end — the same reason `stampFooters` waits for the last page to exist.
+  const coverIndex = context.layout.pages.indexOf(context.layout.page);
+  context.layout.newPage();
+
   // The executive page is the document: it is never dropped. Everything after it is a
   // section the reader may not need in this particular copy, and the numbered bands stay
   // consecutive so a shortened report never shows a gap where a section used to be.
@@ -86,6 +104,10 @@ export const createCalculationReport = async (
   if (options.includeScope !== false) drawScopePage(context, nextBand());
   if (options.includeProcedure !== false) drawProcedureSummary(context, nextBand());
   if (options.includeAnnex !== false) drawTechnicalAnnex(context);
+
+  drawCoverPage(context, coverIndex, PROFESSIONAL_NOTE);
+  drawTableOfContents(context.layout, coverIndex);
+  attachOutline(pdf, { PDFName, PDFArray, PDFNumber, PDFHexString }, context.layout.sections);
   context.layout.stampFooters();
 
   const bytes = await attachPortablePayload(context);

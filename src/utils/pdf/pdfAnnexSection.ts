@@ -70,6 +70,7 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   };
 
   layout.newPage();
+  layout.markSection('Anexo técnico verificable');
   layout.heading('Anexo técnico verificable');
   layout.text(`Expediente portable v${payload.formatVersion} - app ${payload.provenance.appVersion}. Integridad SHA-256: ${payload.checksum.value}`, 8.3);
   layout.text('Este anexo conserva el proyecto, las operaciones completas y los resultados exactos. El adjunto JSON permite reimportar el expediente sin OCR.', 8.3);
@@ -388,13 +389,15 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
         scaleByUnit.set(entry.unit, Math.max(scaleByUnit.get(entry.unit) ?? 1e-12, Math.abs(entry.value)));
       }
       layout.table(
-        [{ header: title, width: 150 }, { header: 'Valor', ...NUMERIC }, { header: 'Unidad', width: 74 }],
+        // La etiqueta la escribe el motor con símbolos (`ΣFx`, `κ₁`), así que se compone
+        // como matemáticas y no como prosa, que es lo que la volvía `SumFx` y `kappa_1`.
+        [{ header: title, width: 150, math: true }, { header: 'Valor', ...NUMERIC }, { header: 'Unidad', width: 74 }],
         entries.map((entry) => [entry.label, clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1), entry.unit]),
         { size: 7.8 },
       );
     };
-    quantities('Entradas', step.inputs ?? []);
-    quantities('Resultados', step.outputs ?? []);
+    quantities('Datos de este paso', step.inputs ?? []);
+    quantities('Resultados de este paso', step.outputs ?? []);
   }
 
   if (options.includeEducationTrace !== false && analysis.educationTrace) {

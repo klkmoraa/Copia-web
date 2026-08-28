@@ -23,6 +23,9 @@ export const drawVisualHeader = (layout: PdfLayout, section: string, subtitle: s
 /** Numbered band that opens every visual section. */
 export const drawSectionBand = (layout: PdfLayout, index: string, title: string, subtitle: string): void => {
   const { page, rgb, fonts, palette, margin } = layout;
+  // Every visual section opens with this band, so this is the one place that knows where a
+  // section starts — which is exactly what the table of contents and the outline need.
+  layout.markSection(`${index}. ${title}`);
   page.drawRectangle({ x: margin, y: 724, width: 31, height: 22, color: palette.forest });
   page.drawText(index, { x: margin + 9, y: 731, size: 7, font: fonts.bold, color: rgb(1, 1, 1) });
   page.drawText(pdfText(title), { x: margin + 42, y: 732, size: 15, font: fonts.bold, color: palette.forestDeep });

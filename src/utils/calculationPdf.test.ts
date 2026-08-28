@@ -25,16 +25,24 @@ describe('memoria de cálculo visual', () => {
     const inspection = await inspectPdf(report.bytes);
 
     expect(inspection.kind).toBe('native');
+
+    // La página 1 es la portada, y su índice nombra todas las secciones: buscar ahí
+    // encontraría los cuatro títulos en la misma página. Las secciones viven detrás.
+    const [cover, ...body] = inspection.textByPage;
+    expect(cover).toMatch(/MEMORIA DE CÁLCULO ESTRUCTURAL/i);
+    expect(cover).toMatch(/CONTENIDO/i);
+    expect(cover).toMatch(/DCL global y equilibrio/i);
+
     const indices = [
-      inspection.textByPage.findIndex((text) => /DCL global y equilibrio/i.test(text)),
-      inspection.textByPage.findIndex((text) => /Diagrama axial N/i.test(text)),
-      inspection.textByPage.findIndex((text) => /Diagrama cortante V/i.test(text)),
-      inspection.textByPage.findIndex((text) => /Diagrama de momento M/i.test(text)),
+      body.findIndex((text) => /DCL global y equilibrio/i.test(text)),
+      body.findIndex((text) => /Diagrama axial N/i.test(text)),
+      body.findIndex((text) => /Diagrama cortante V/i.test(text)),
+      body.findIndex((text) => /Diagrama de momento M/i.test(text)),
     ];
     expect(indices.every((index) => index >= 0)).toBe(true);
     expect(new Set(indices).size).toBe(4);
 
-    const [dclPage, axialPage, shearPage, momentPage] = indices.map((index) => inspection.textByPage[index]);
+    const [dclPage, axialPage, shearPage, momentPage] = indices.map((index) => body[index]);
     expect(dclPage).toMatch(/OPERACIONES DE EQUILIBRIO/i);
     expect(dclPage).toMatch(/32\.5 kN/i);
     expect(dclPage).toMatch(/27\.5 kN/i);

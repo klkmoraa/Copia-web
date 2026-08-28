@@ -9,7 +9,7 @@
  */
 import type { PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 import { pdfText, wrapText } from './pdfGlyphs';
-import { drawMathBlock, mathWidth, hasFraction } from './pdfMath';
+import { drawMathBlock, mathWidth, hasFraction, needsMath } from './pdfMath';
 import type { PdfColor, ReportFonts, ReportPalette, RgbFactory } from './reportContext';
 
 export const PAGE_SIZE: [number, number] = [595.28, 841.89];
@@ -26,6 +26,12 @@ export interface PdfTableColumn {
   flex?: number;
   /** Numbers belong on the right, so a column of them can be compared by eye. */
   align?: 'left' | 'right';
+  /**
+   * Allow the typesetter to take over a cell that actually needs it. The solver labels some
+   * results with symbols — `ΣFx`, `κ₁` — which drawn as prose came out `SumFx` and `kappa_1`;
+   * a cell without any such glyph stays prose, where it wraps better and reads upright.
+   */
+  math?: boolean;
 }
 
 export interface PdfTableOptions {
@@ -75,6 +81,12 @@ export class PdfLayout {
   y = 0;
   /** Running count so every displayed equation carries a number the prose can cite. */
   private equationCount = 0;
+  /**
+   * Sections in reading order, each with the page it opens on. Filled as the document is
+   * drawn and read afterwards by the table of contents and the outline, the same way
+   * `stampFooters` waits until every page exists before numbering them.
+   */
+  readonly sections: { title: string; pageIndex: number }[] = [];
 
   constructor(doc: PDFDocument, fonts: ReportFonts, palette: ReportPalette, rgb: RgbFactory) {
     this.doc = doc;
@@ -167,8 +179,17 @@ export class PdfLayout {
     drawHeader();
 
     rows.forEach((row, rowIndex) => {
-      const cells = columns.map((_, index) => wrapText(String(row[index] ?? ''), this.fonts.regular, size, Math.max(1, widths[index] - CELL_PAD_X * 2)));
-      const height = Math.max(1, ...cells.map((lines) => lines.length)) * lineHeight + CELL_PAD_Y * 2;
+      const typeset = columns.map((column, index) => column.math === true && needsMath(String(row[index] ?? '')));
+      const cells = columns.map((_, index) => typeset[index]
+        ? []
+        : wrapText(String(row[index] ?? ''), this.fonts.regular, size, Math.max(1, widths[index] - CELL_PAD_X * 2)));
+      const mathHeights = columns.map((_, index) => typeset[index]
+        ? this.measureMathBlock(String(row[index] ?? ''), size, this.contentWidth - (widths[index] - CELL_PAD_X * 2))
+        : 0);
+      const height = Math.max(
+        Math.max(1, ...cells.map((lines) => lines.length)) * lineHeight,
+        ...mathHeights,
+      ) + CELL_PAD_Y * 2;
       // `ensure` alone would break the page and leave the continuation rows headerless.
       if (this.y - height < CONTENT_BOTTOM) {
         this.newPage();
@@ -185,6 +206,18 @@ export class PdfLayout {
       }
       cells.forEach((lines, index) => {
         const column = columns[index];
+        if (typeset[index]) {
+          drawMathBlock(
+            this,
+            String(row[index] ?? ''),
+            offsets[index] + CELL_PAD_X,
+            this.y - CELL_PAD_Y,
+            Math.max(1, widths[index] - CELL_PAD_X * 2),
+            size,
+            this.palette.ink,
+          );
+          return;
+        }
         lines.forEach((line, lineIndex) => {
           const width = this.fonts.regular.widthOfTextAtSize(line, size);
           const x = column.align === 'right'
@@ -202,6 +235,11 @@ export class PdfLayout {
       });
     });
     this.y -= 9;
+  }
+
+  /** Records that a section opens on the current page. */
+  markSection(title: string): void {
+    this.sections.push({ title, pageIndex: this.pages.indexOf(this.page) });
   }
 
   /** Next display-equation number, consumed as the `(n)` tag of a math block. */

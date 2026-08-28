@@ -60,6 +60,72 @@ const buildReport = async () => {
 };
 
 describe('memoria de cálculo: calidad editorial', () => {
+  it('abre con una portada que identifica el documento y lo indexa', async () => {
+    const { report, pages } = await buildReport();
+    const cover = pages[0].text;
+    expect(cover).toMatch(/MEMORIA DE CÁLCULO ESTRUCTURAL/);
+    expect(cover).toMatch(/ESCENARIO/);
+    expect(cover).toMatch(/INTEGRIDAD SHA-256/);
+    // El aviso profesional vive donde de verdad se lee: la primera página de lo que
+    // alguien va a firmar.
+    expect(cover).toMatch(/no sustituye la revisión/i);
+    expect(cover).toMatch(/CONTENIDO/);
+    // El índice apunta a páginas reales, nunca a la portada misma.
+    const numbers = [...cover.matchAll(/(?:equilibrio|axial N|convenciones)\s+(\d+)/g)].map((match) => Number(match[1]));
+    expect(numbers.length).toBeGreaterThan(0);
+    for (const number of numbers) {
+      expect(number).toBeGreaterThan(1);
+      expect(number).toBeLessThanOrEqual(pages.length);
+    }
+    expect(report.bytes.byteLength).toBeGreaterThan(0);
+  }, 60_000);
+
+  it('lleva marcadores navegables y metadatos completos', async () => {
+    const { report } = await buildReport();
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const document_ = await pdfjs.getDocument({ data: report.bytes.slice(), useSystemFonts: true }).promise;
+    const outline = await document_.getOutline();
+    expect(outline?.map((entry) => entry.title)).toContain('01. DCL global y equilibrio');
+    const info = (await document_.getMetadata()).info as Record<string, string>;
+    expect(info.Producer).toMatch(/^structureCo /);
+    expect(info.Creator).toBe('structureCo');
+    expect(info.Language).toBe('es');
+    // La fecha sale del `generatedAt` declarado, no del reloj: es lo que hace el archivo
+    // reproducible y lo que permite comparar dos exportaciones byte a byte.
+    expect(info.CreationDate).toBe('D:20260802120000Z');
+    await document_.cleanup();
+  }, 60_000);
+
+  it('compone los símbolos del motor en vez de deletrearlos', async () => {
+    const { pages } = await buildReport();
+    const all = pages.map((page) => page.text).join('\n');
+    // El motor publica `L = √(ΔX² + ΔY²)`, `ΣFx` y `κ₁`; el informe los imprimía como
+    // `sqrt(DeltaX^2 + DeltaY^2)`, `SumFx` y `kappa_1`. La cara Symbol es estándar en PDF,
+    // así que recuperarlos no cuesta ni una dependencia ni un byte de descarga.
+    // Symbol declara su Delta en U+2206, que es el mismo glifo que el U+0394 del motor.
+    expect(all).toMatch(/[Δ∆]\s*X/);
+    expect(all).toMatch(/√/);
+    expect(all).toMatch(/Σ\s*F\s*x/);
+    expect(all).toMatch(/κ/);
+    expect(all).not.toMatch(/sqrt\(/);
+    expect(all).not.toMatch(/SumF/);
+    // Cada ecuación destacada del anexo lleva su número, continuo en todo el documento.
+    expect(all).toMatch(/\(1\)/);
+  }, 60_000);
+
+  it('produce bytes idénticos para el mismo modelo y el mismo instante declarado', async () => {
+    const project = createHibbelerTributaryBeam();
+    const analysis = analyzeProject(project);
+    const options = { generatedAt: '2026-08-02T12:00:00.000Z', scenarioName: 'Servicio', includeEducationTrace: true };
+    const [first, second] = await Promise.all([
+      createCalculationReport(project, analysis, options),
+      createCalculationReport(project, analysis, options),
+    ]);
+    // Las fechas del documento salían del reloj, así que dos exportaciones del mismo modelo
+    // nunca coincidían y el checksum del payload describía el contenido pero no el archivo.
+    expect(Buffer.from(second.bytes)).toEqual(Buffer.from(first.bytes));
+  }, 60_000);
+
   it('produce un documento A4 paginado, con cabecera y pie en cada página', async () => {
     const { pages } = await buildReport();
     expect(pages.length).toBeGreaterThanOrEqual(9);

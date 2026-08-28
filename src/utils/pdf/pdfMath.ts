@@ -167,6 +167,13 @@ export const mathWidth = (layout: PdfLayout, expression: string, size: number): 
   return parts.reduce((width, word) => width + wordWidth(layout, word, size), 0) + spacing * (parts.length - 1);
 };
 
+/**
+ * True when the text carries something the prose faces would have to spell out — a Symbol
+ * glyph or a Unicode script. Prose without any of that is better left to `wrapText`, which
+ * wraps properly and keeps the roman face; only `ΣFx` and `κ₁` need the typesetter.
+ */
+export const needsMath = (value: string): boolean => mathText(value) !== pdfText(value);
+
 /** True when the expression will stack something above and below its baseline. */
 export const hasFraction = (expression: string): boolean => words(normalize(expression)).some((word) => asFraction(word) !== undefined);
 
