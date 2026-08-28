@@ -49,6 +49,35 @@ describe('translateExpression', () => {
     expect(result).toContain('q\\ uniforme\\ transversal');
   });
 
+  it('merges a run of consecutive same-direction Unicode scripts into one LaTeX group', () => {
+    // Regression test for the real solver.ts equations. 'k̄aa = Kaa − Kab Kbb⁻¹ Kba' carries
+    // '⁻' immediately followed by '¹': one power of −1 (a matrix inverse), not two stacked
+    // scripts. Mapped one character at a time it produced '^{-}^{1}', a "Double exponent"
+    // parse error. 'W = ∫ₐᵇ w(x) dx' carries '​ₐ' then 'ᵇ' — different directions, so those
+    // stay two adjacent groups, which is what an integral's limits should be.
+    expect(translateExpression('Kbb⁻¹')).toBe('Kbb^{-1}');
+    expect(translateExpression('Kbb⁻¹')).not.toContain('^{-}^{1}');
+    expect(translateExpression('∫ₐᵇ')).toBe('\\int_{a}^{b}');
+    // The pre-existing single-digit case still behaves exactly as before.
+    expect(translateExpression('x²')).toBe('x^{2}');
+    // And a run of digits now merges rather than stacking.
+    expect(translateExpression('x¹²')).toBe('x^{12}');
+    for (const latex of ['Kbb^{-1}', '\\int_{a}^{b}', 'x^{2}', 'x^{12}']) {
+      expect(() => typesetLatex(latex)).not.toThrow();
+    }
+  });
+
+  it('translates the real solver.ts equations that carried unmapped script characters', () => {
+    const work = translateExpression('W = ∫ₐᵇ w(x) dx');
+    expect(work).toBe('W\\ =\\ \\int_{a}^{b}\\ w(x)\\ dx');
+    const condensation = translateExpression('kaa = Kaa − Kab Kbb⁻¹ Kba');
+    expect(condensation).toContain('Kbb^{-1}');
+    for (const result of [work, condensation, translateExpression('fₑˡ = ∫ₐᵇ Nᵀ(x) p(x) dx')]) {
+      expect(result).not.toMatch(/[ᴬ-ᵪ⁰-₟ⱼ]/);
+      expect(() => typesetLatex(result)).not.toThrow();
+    }
+  });
+
   it('lowers a full alphanumeric run after ^/_, not just the first character', () => {
     expect(translateExpression('d_local')).toBe('d_{local}');
     expect(translateExpression('N_theta^T')).toBe('N_{theta}^{T}');
@@ -71,6 +100,22 @@ describe('translateExpression', () => {
     expect(translateExpression('a\\b')).toBe('a\\backslash b');
     expect(() => typesetLatex(translateExpression('a~b'))).not.toThrow();
     expect(() => typesetLatex(translateExpression('a\\b'))).not.toThrow();
+  });
+
+  it('maps every character in its own vocabulary to LaTeX MathJax can actually typeset', () => {
+    // Must mirror SYMBOLS + SCRIPTS in mathLatex.ts. Written out rather than imported so the
+    // check stays a real contract: `∴` and `∅` mapped to `\therefore` / `\varnothing`, which
+    // were undefined control sequences until `mathTypeset.ts` actually loaded the `ams` package
+    // it had been naming all along — MathJax turned them into a solid error bar, not a throw.
+    const vocabulary = 'αβγΓδΔεζηθΘϑκλΛμνξΞπΠρσςΣτφΦϕχψΨωΩ'
+      + '∫∑∏∂∇∞∝∠∴≈≡∼≤≥≠±×÷−⋅·→←↑↓↔⇒⇐⊗⊕∈∉∅⊂⊃∩∪∀∃¬∧∨′″ƒ°∥⟨⟩'
+      + '⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉'
+      + 'ᵀᵃᵇᵉᵍᵏˡⁿ⁻⁺ₐₑᵢⱼₖₗₘₙᵣₛₓᵧ₋₊';
+    for (const character of vocabulary) {
+      const latex = translateExpression(character);
+      expect(latex, `sin traducir: ${character}`).not.toBe(character);
+      expect(() => typesetLatex(latex), `${character} -> ${latex}`).not.toThrow();
+    }
   });
 
   it('does not hang on unbalanced radical with missing closing paren', () => {

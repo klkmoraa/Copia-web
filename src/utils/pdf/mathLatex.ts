@@ -20,10 +20,38 @@ const SYMBOLS: ReadonlyMap<string, string> = new Map([
   ['∈', '\\in'], ['∉', '\\notin'], ['∅', '\\varnothing'], ['⊂', '\\subset'], ['⊃', '\\supset'], ['∩', '\\cap'],
   ['∪', '\\cup'], ['∀', '\\forall'], ['∃', '\\exists'], ['¬', '\\neg'], ['∧', '\\wedge'], ['∨', '\\vee'],
   ['′', "'"], ['″', "''"], ['ƒ', 'f'], ['°', '^\\circ'], ['∥', '\\parallel'], ['⟨', '\\langle'], ['⟩', '\\rangle'],
-  ['⁰', '^{0}'], ['¹', '^{1}'], ['²', '^{2}'], ['³', '^{3}'], ['⁴', '^{4}'], ['⁵', '^{5}'], ['⁶', '^{6}'], ['⁷', '^{7}'], ['⁸', '^{8}'], ['⁹', '^{9}'],
-  ['₀', '_{0}'], ['₁', '_{1}'], ['₂', '_{2}'], ['₃', '_{3}'], ['₄', '_{4}'], ['₅', '_{5}'], ['₆', '_{6}'], ['₇', '_{7}'], ['₈', '_{8}'], ['₉', '_{9}'],
-  ['ᵀ', '^{T}'], ['ᵢ', '_{i}'], ['ⱼ', '_{j}'], ['ₐ', '_{a}'], ['ₑ', '_{e}'], ['ₙ', '_{n}'], ['ₛ', '_{s}'], ['ₓ', '_{x}'], ['ᵧ', '_{y}'],
-  ['ᵃ', '^{a}'], ['ᵉ', '^{e}'], ['ᵍ', '^{g}'], ['ˡ', '^{l}'], ['ⁿ', '^{n}'],
+]);
+
+/**
+ * Unicode super/subscript characters, each as the direction it raises or lowers into and the
+ * plain character that goes inside the LaTeX group.
+ *
+ * Deliberately *not* pre-wrapped in `^{…}`/`_{…}` the way `SYMBOLS` used to hold them: a run of
+ * consecutive same-direction characters has to become ONE group. `Kbb⁻¹` (solver.ts's static
+ * condensation, `k̄aa = Kaa − Kab Kbb⁻¹ Kba`) is a single power of −1 — mapped one character at
+ * a time it produced `Kbb^{-}^{1}`, which is a "Double exponent" parse error, not an inverse.
+ * `translateChars` below does the run merging, digits included (`¹²` → `^{12}`, not `^{1}^{2}`).
+ */
+const SCRIPTS: ReadonlyMap<string, { readonly level: 'super' | 'sub'; readonly base: string }> = new Map([
+  ['⁰', { level: 'super', base: '0' }], ['¹', { level: 'super', base: '1' }], ['²', { level: 'super', base: '2' }],
+  ['³', { level: 'super', base: '3' }], ['⁴', { level: 'super', base: '4' }], ['⁵', { level: 'super', base: '5' }],
+  ['⁶', { level: 'super', base: '6' }], ['⁷', { level: 'super', base: '7' }], ['⁸', { level: 'super', base: '8' }],
+  ['⁹', { level: 'super', base: '9' }],
+  ['₀', { level: 'sub', base: '0' }], ['₁', { level: 'sub', base: '1' }], ['₂', { level: 'sub', base: '2' }],
+  ['₃', { level: 'sub', base: '3' }], ['₄', { level: 'sub', base: '4' }], ['₅', { level: 'sub', base: '5' }],
+  ['₆', { level: 'sub', base: '6' }], ['₇', { level: 'sub', base: '7' }], ['₈', { level: 'sub', base: '8' }],
+  ['₉', { level: 'sub', base: '9' }],
+  // Superscript letters and operators the engine emits.
+  ['ᵀ', { level: 'super', base: 'T' }], ['ᵃ', { level: 'super', base: 'a' }], ['ᵇ', { level: 'super', base: 'b' }],
+  ['ᵉ', { level: 'super', base: 'e' }], ['ᵍ', { level: 'super', base: 'g' }], ['ᵏ', { level: 'super', base: 'k' }],
+  ['ˡ', { level: 'super', base: 'l' }], ['ⁿ', { level: 'super', base: 'n' }],
+  ['⁻', { level: 'super', base: '-' }], ['⁺', { level: 'super', base: '+' }],
+  // Subscript letters and operators.
+  ['ₐ', { level: 'sub', base: 'a' }], ['ₑ', { level: 'sub', base: 'e' }], ['ᵢ', { level: 'sub', base: 'i' }],
+  ['ⱼ', { level: 'sub', base: 'j' }], ['ₖ', { level: 'sub', base: 'k' }], ['ₗ', { level: 'sub', base: 'l' }],
+  ['ₘ', { level: 'sub', base: 'm' }], ['ₙ', { level: 'sub', base: 'n' }], ['ᵣ', { level: 'sub', base: 'r' }],
+  ['ₛ', { level: 'sub', base: 's' }], ['ₓ', { level: 'sub', base: 'x' }], ['ᵧ', { level: 'sub', base: 'y' }],
+  ['₋', { level: 'sub', base: '-' }], ['₊', { level: 'sub', base: '+' }],
 ]);
 
 /**
@@ -88,10 +116,42 @@ const joinTranslated = (chars: string[]): string => {
   return result.join('');
 };
 
+/**
+ * Translates a run of characters, merging each maximal run of consecutive same-direction
+ * Unicode script characters into one `^{…}`/`_{…}` group.
+ *
+ * This is the character-level counterpart of what `segments` does for the ASCII `^`/`_` DSL
+ * markers, which already claim a whole alphanumeric run rather than a single character. A run
+ * stops as soon as the direction changes, which needs no special case: `∫ₐᵇ` becoming
+ * `\int_{a}^{b}` is two adjacent groups, and that is valid — and correct — LaTeX.
+ */
+const translateChars = (source: string): string => {
+  const chars = Array.from(source);
+  const pieces: string[] = [];
+  for (let index = 0; index < chars.length; index += 1) {
+    const script = SCRIPTS.get(chars[index]);
+    if (!script) {
+      pieces.push(translateChar(chars[index]));
+      continue;
+    }
+    let body = script.base;
+    let end = index + 1;
+    while (end < chars.length) {
+      const next = SCRIPTS.get(chars[end]);
+      if (!next || next.level !== script.level) break;
+      body += next.base;
+      end += 1;
+    }
+    pieces.push(script.level === 'super' ? `^{${body}}` : `_{${body}}`);
+    index = end - 1;
+  }
+  return joinTranslated(pieces);
+};
+
 const translateRun = (text: string): string =>
   segments(text)
     .map((segment) => {
-      const body = joinTranslated(Array.from(segment.text).map(translateChar));
+      const body = translateChars(segment.text);
       if (segment.level === 'super') return `^{${body}}`;
       if (segment.level === 'sub') return `_{${body}}`;
       return body;
