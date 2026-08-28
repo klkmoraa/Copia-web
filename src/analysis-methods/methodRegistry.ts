@@ -13,7 +13,7 @@
 import type { ProjectModel } from '../types';
 import { classifyStructure, type StructureClassification } from './structureClassification';
 
-export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross';
+export type SolutionMethodId = 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame';
 
 export const DEFAULT_SOLUTION_METHOD: SolutionMethodId = 'matrix-stiffness';
 
@@ -99,6 +99,17 @@ export const SOLUTION_METHODS: readonly SolutionMethodDefinition[] = [
     // indeterminacy has to be external (no extra bar), every support axis-aligned — are
     // `solveCastiglianoTruss`'s job.
     applies: (classification) => classification.kind === 'truss' && classification.indeterminacy >= 1,
+  },
+  {
+    id: 'kani-frame',
+    labelKey: 'method.kaniFrame',
+    // The frame counterpart of Hardy Cross's iterative joint balancing — offered on the same
+    // shallow shape (a frame) as Portal and Cantilever. Its formula carries no sway term, so it
+    // only lands on the solver's own moments when the frame genuinely does not translate
+    // sideways under this load; `solveKaniFrame` checks that by computing the answer and
+    // measuring the gap, not by guessing it from the geometry, and declares itself inapplicable
+    // rather than narrate anything less exact than that.
+    applies: (classification) => classification.kind === 'frame',
   },
 ];
 

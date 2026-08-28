@@ -15,6 +15,7 @@ import { solveCantileverMethod, type CantileverMethodResult } from '../../analys
 import { solveDoubleIntegration, type DoubleIntegrationResult } from '../../analysis-methods/doubleIntegration';
 import { solveThreeMoment, type ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import { solveHardyCross, type HardyCrossResult } from '../../analysis-methods/hardyCross';
+import { solveKaniFrame, type KaniResult } from '../../analysis-methods/kaniFrame';
 import { solvePortalMethod, type PortalMethodResult } from '../../analysis-methods/portalMethod';
 import { solveVirtualWork, type VirtualWorkResult } from '../../analysis-methods/virtualWork';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
@@ -531,6 +532,73 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
   );
 };
 
+const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
+  const { layout, project } = context;
+  const { fonts, rgb, palette } = layout;
+  const lengthUnit = unitFor(project, 'length');
+  const momentUnit = unitFor(project, 'moment');
+
+  layout.heading('5. Procedimiento: Kani (rotación de nudos)');
+  layout.text(
+    'Cada barra se empotra en imaginación en sus dos extremos y se calcula el momento que '
+    + 'desarrollaría así bajo sus propias cargas — el momento de empotramiento perfecto, igual '
+    + 'que en Hardy Cross. Pero en vez de repartir y acarrear, cada nudo lleva un único «momento '
+    + 'de rotación» por barra que se recalcula en cada pasada a partir de los momentos de '
+    + 'rotación actuales en el otro extremo de cada barra que concurre en él. Repetido nudo por '
+    + 'nudo, converge sin resolver ningún sistema de ecuaciones — y, a diferencia de Hardy Cross, '
+    + 'trabaja de una vez sobre un nudo con más de dos barras, como cualquier nudo real de un '
+    + 'pórtico.',
+    8.7, fonts.regular, undefined, 8,
+  );
+  const relation = "M'ᵢⱼ = μᵢⱼ (ΣFEMᵢ + Σ M'ⱼᵢ),  μᵢⱼ = −½ (Kᵢⱼ / ΣKᵢ)";
+  layout.ensure(layout.measureMathBlock(relation, 9, 16));
+  layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
+  layout.text(
+    'La fórmula no lleva término de bamboleo lateral: sólo es exacta si el pórtico no se '
+    + 'desplaza lateralmente bajo esta carga. Eso no se supone por la geometría — se comprueba '
+    + 'contrastando el resultado contra el análisis matricial, y si la brecha no es del tamaño '
+    + 'del ruido numérico, el método se retira en vez de narrar una aproximación sin decirlo.',
+    8.3, fonts.regular, palette.forestDeep, 8,
+  );
+
+  layout.heading('5.1 Momento de empotramiento perfecto y momento final por barra', 2);
+  layout.text(
+    `El reparto convergió en ${solution.iterationCount} pasada${solution.iterationCount === 1 ? '' : 's'}. `
+    + 'Las dos últimas columnas son lo que el análisis matricial obtiene en esos mismos extremos: '
+    + 'el método y el solver tienen que coincidir.',
+    8.3, fonts.regular, undefined, 8,
+  );
+  layout.table(
+    [
+      { header: 'Barra', width: 60 },
+      { header: `L (${lengthUnit})`, ...NUMERIC },
+      { header: `FEM i (${momentUnit})`, ...NUMERIC },
+      { header: `FEM j (${momentUnit})`, ...NUMERIC },
+      { header: `M final i (${momentUnit})`, ...NUMERIC },
+      { header: `M final j (${momentUnit})`, ...NUMERIC },
+      { header: `Matricial i (${momentUnit})`, ...NUMERIC },
+      { header: `Matricial j (${momentUnit})`, ...NUMERIC },
+    ],
+    solution.members.map((member) => [
+      `${member.nodeI}–${member.nodeJ}`,
+      number(member.length, 5),
+      displayCell(project, member.fixedEndMomentI, 'moment'),
+      displayCell(project, member.fixedEndMomentJ, 'moment'),
+      displayCell(project, member.finalMomentI, 'moment'),
+      displayCell(project, member.finalMomentJ, 'moment'),
+      displayCell(project, member.solverMomentI, 'moment'),
+      displayCell(project, member.solverMomentJ, 'moment'),
+    ]),
+    { size: 7 },
+  );
+
+  layout.heading('5.2 Verificación contra el análisis matricial', 2);
+  layout.text(
+    `Diferencia máxima, en cualquier extremo de cualquier barra: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
+    8.7, fonts.bold, palette.forestDeep, 8,
+  );
+};
+
 const REJECTION_MESSAGE = 'El método elegido no aplica a esta estructura; el procedimiento se reporta con el método matricial.';
 
 const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult): void => {
@@ -826,6 +894,15 @@ export const drawMethodSection = (context: ReportContext): boolean => {
       return false;
     }
     drawHardyCross(context, solution);
+    return true;
+  }
+  if (project.settings.solutionMethod === 'kani-frame') {
+    const solution = solveKaniFrame(project, analysis, null);
+    if (!solution.applicable) {
+      context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
+      return false;
+    }
+    drawKaniFrame(context, solution);
     return true;
   }
   if (project.settings.solutionMethod === 'virtual-work') {
