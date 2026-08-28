@@ -11,7 +11,6 @@ import { TeX } from 'mathjax-full/js/input/tex.js';
 import { SVG } from 'mathjax-full/js/output/svg.js';
 import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js';
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
-import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js';
 
 export class MathTypesetError extends Error {}
 
@@ -40,7 +39,7 @@ export interface ParsedFormula {
 
 const adaptor = liteAdaptor();
 RegisterHTMLHandler(adaptor);
-const tex = new TeX({ packages: AllPackages });
+const tex = new TeX({ packages: ['base', 'ams'] });
 const svgOutput = new SVG({ fontCache: 'local' });
 const html = mathjax.document('', { InputJax: tex, OutputJax: svgOutput });
 
