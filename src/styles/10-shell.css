@@ -48,9 +48,20 @@
    coinciden con `left`/`right` contra la pantalla — de ahí que sólo se
    toque `bottom` aquí. Reescribirlo contra `100dvh` (una unidad, no una
    coordenada de la caja hijacked) devuelve la bandeja a la pantalla real
-   sin renunciar a `position:fixed` ni a la anchura ya resuelta. */
+   sin renunciar a `position:fixed` ni a la anchura ya resuelta.
+   La compensación sólo vale mientras `.topbar` secuestre de verdad el
+   bloque de contención: sin soporte de `backdrop-filter`, `material.css`
+   (§ fallback opaco) deja la Cinta sin esa propiedad, deja de ser el
+   contenedor de los `fixed` y `bottom` vuelve a medir contra la pantalla
+   real por sí solo. Aplicar la compensación ahí sería restarle un
+   `100dvh` a una coordenada que ya era correcta — el panel se iría casi
+   una pantalla entera por DEBAJO. El `@supports` de aquí es el inverso
+   exacto del que usa ese fallback, así que las dos ramas nunca compensan
+   la misma coordenada dos veces. */
 @media (max-width:700px) {
-  .topbar .sc-popover__surface {
-    bottom: calc(var(--topbar-h) + env(safe-area-inset-top) - 100dvh + var(--sc-space-3) + env(safe-area-inset-bottom));
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .topbar .sc-popover__surface {
+      bottom: calc(var(--topbar-h) + env(safe-area-inset-top) - 100dvh + var(--sc-space-3) + env(safe-area-inset-bottom));
+    }
   }
 }
