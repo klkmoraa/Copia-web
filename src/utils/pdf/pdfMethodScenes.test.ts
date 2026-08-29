@@ -18,6 +18,7 @@ import { solveDoubleIntegration } from '../../analysis-methods/doubleIntegration
 import { solvePortalMethod } from '../../analysis-methods/portalMethod';
 import { axialDirection } from './pdfFreeBody';
 import {
+  columnFreeBodyScenes,
   cutLineThrough,
   doubleIntegrationScenes,
   jointScenes,
@@ -296,6 +297,81 @@ describe('ocupación de la figura', () => {
    * Under the old fixed 495x186 frame a 6x4 m truss filled 27.5 % of its own figure's width and
    * a beam 0.5 % of its height. An impression is not something a test can hold, so the number is.
    */
+  /**
+   * The same question asked of the *subject* instead of the declaration.
+   *
+   * The check below compares a scene's declared extent against the plot it was sized for, and
+   * those agree by construction — so it cannot see a scene whose declaration is honest and whose
+   * subject still does not fill it. Two did. A detail view of one column declared the whole
+   * portal, because it framed on every node rather than on the two it keeps, and drew the column
+   * as a sliver down one side of a box that was three quarters the rest of the structure. A
+   * focused joint declared twice its own largest half-span, because it measured symmetrically
+   * about the joint while the projection centred the joint, reserving as much room on the empty
+   * side as on the drawn one.
+   *
+   * Neither shows up in ink — the ghost of the rest of the model is ink, and it filled the frame
+   * in both cases. What each got wrong is *what the figure was sized to*, so that is what this
+   * measures: the model-space box the scene's own subject occupies, derived here independently
+   * of the code under test.
+   */
+  const subjectBox = (context: ReportContext, scene: Parameters<typeof sceneExtentOf>[1]) => {
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const push = (x: number, y: number) => { xs.push(x); ys.push(y); };
+
+    for (const id of scene.keptNodeIds ?? []) {
+      const node = context.index.node(id);
+      if (node) push(node.x, node.y);
+    }
+    for (const entry of scene.severed ?? []) {
+      const member = context.index.member(entry.memberId);
+      const ni = member ? context.index.node(member.i) : undefined;
+      const nj = member ? context.index.node(member.j) : undefined;
+      if (!ni || !nj) continue;
+      push(ni.x + (nj.x - ni.x) * entry.ratio, ni.y + (nj.y - ni.y) * entry.ratio);
+    }
+    const isolated = scene.isolation ? context.index.node(scene.isolation.nodeId) : undefined;
+    if (isolated && scene.isolation) {
+      push(isolated.x - scene.isolation.radius, isolated.y - scene.isolation.radius);
+      push(isolated.x + scene.isolation.radius, isolated.y + scene.isolation.radius);
+    }
+    if (xs.length < 2) return undefined;
+    return { spanX: Math.max(...xs) - Math.min(...xs), spanY: Math.max(...ys) - Math.min(...ys) };
+  };
+
+  it('la figura se dimensiona sobre su sujeto, no sobre el resto de la estructura', () => {
+    const truss = createHibbelerStyleTrussPractice();
+    const trussContext = contextFor(truss);
+    const joints = solveMethodOfJoints(truss, trussContext.analysis, null);
+    expect(joints.applicable).toBe(true);
+    if (joints.applicable) {
+      for (const scene of jointScenes(trussContext, joints)) {
+        const subject = subjectBox(trussContext, scene);
+        const extent = sceneExtentOf(trussContext, scene);
+        expect(subject, scene.title).toBeDefined();
+        expect(extent.spanX, scene.title).toBeCloseTo(subject!.spanX, 6);
+        expect(extent.spanY, scene.title).toBeCloseTo(subject!.spanY, 6);
+      }
+    }
+
+    const frame = lateralFrame();
+    const frameContext = contextFor(frame);
+    const portal = solvePortalMethod(frame, null);
+    expect(portal.applicable).toBe(true);
+    if (portal.applicable) {
+      const scenes = columnFreeBodyScenes(frameContext, portal.columns);
+      expect(scenes.length).toBeGreaterThan(0);
+      for (const scene of scenes) {
+        const subject = subjectBox(frameContext, scene);
+        const extent = sceneExtentOf(frameContext, scene);
+        expect(subject, scene.title).toBeDefined();
+        // One column out of a portal: the figure is as tall as the column and no wider than it.
+        expect(extent.spanY, scene.title).toBeCloseTo(subject!.spanY, 6);
+        expect(extent.spanX, scene.title).toBeCloseTo(subject!.spanX, 6);
+      }
+    }
+  });
+
   it('cada escena llena su propia figura, en las dos direcciones', () => {
     const truss = createHibbelerStyleTrussPractice();
     const trussContext = contextFor(truss);

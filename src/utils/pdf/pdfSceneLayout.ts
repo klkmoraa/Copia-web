@@ -36,6 +36,16 @@ export const SCENE_PADDING = {
  */
 export const MIN_PLOT_HEIGHT = 62;
 
+/**
+ * Horizontal room the plot always keeps, for the same reason and in the same way.
+ *
+ * A single column isolated from a frame spans zero in `x`, so matching the plot's aspect ratio
+ * to the model's asks for a plot of zero width — and the frame collapses to its own padding.
+ * The floor is what the marks hanging off a column need: a moment arc at each end, a shear
+ * arrow at the head, and the values beside all three.
+ */
+export const MIN_PLOT_WIDTH = 210;
+
 export const MIN_SCENE_HEIGHT = MIN_PLOT_HEIGHT + 40 + 22;
 export const MAX_SCENE_HEIGHT = 268;
 
@@ -74,8 +84,9 @@ export const sceneFrame = (rect: Rect, extent: SceneExtent): Rect => {
     drawHeight = availableHeight;
     drawWidth = ratio > 0 ? availableHeight / ratio : availableWidth;
   }
-  drawWidth = Math.min(drawWidth, availableWidth);
-  // Never a degenerate plot: a model with no depth still needs room above and below its axis.
+  // Never a degenerate plot: a model with no depth still needs room above and below its axis,
+  // and one with no width needs room either side of it.
+  drawWidth = Math.min(Math.max(drawWidth, MIN_PLOT_WIDTH), availableWidth);
   drawHeight = Math.min(Math.max(drawHeight, MIN_PLOT_HEIGHT), availableHeight);
   const width = drawWidth + SCENE_PADDING.side * 2;
   const height = drawHeight + SCENE_PADDING.top + SCENE_PADDING.bottom;

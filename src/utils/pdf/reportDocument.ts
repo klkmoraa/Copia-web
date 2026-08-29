@@ -115,7 +115,16 @@ export type SceneMark =
     readonly halo?: Tone;
   }
   /** A glyph outline from the math typesetter, already placed and scaled. */
-  | { readonly t: 'glyph'; readonly path: string; readonly matrix: readonly [number, number, number, number, number, number]; readonly tone: Tone };
+  | { readonly t: 'glyph'; readonly path: string; readonly matrix: readonly [number, number, number, number, number, number]; readonly tone: Tone }
+  /**
+   * Marks drawn together, optionally inside a boundary they cannot cross.
+   *
+   * The clip is what lets a detail view be sized to its subject and still show what the subject
+   * was cut out of: the surrounding structure is drawn at the subject's own scale and runs to
+   * the frame, where it stops — instead of either being left out, or sprawling across the
+   * caption because the drawing was sized to it rather than to what it surrounds.
+   */
+  | { readonly t: 'group'; readonly clip?: Rect; readonly marks: readonly SceneMark[] };
 
 // ---------------------------------------------------------------------------------------
 // Blocks — the flow of a part
@@ -320,6 +329,12 @@ export const translateMarks = (marks: readonly SceneMark[], dx: number, dy: numb
         return { ...mark, points: mark.points.map((point) => ({ x: point.x + dx, y: point.y + dy })) };
       case 'path':
         return { ...mark, d: mark.d.map((op) => translateOp(op, dx, dy)) };
+      case 'group':
+        return {
+          ...mark,
+          clip: mark.clip ? { ...mark.clip, x: mark.clip.x + dx, y: mark.clip.y + dy } : undefined,
+          marks: translateMarks(mark.marks, dx, dy),
+        };
       case 'rect':
         return { ...mark, rect: { ...mark.rect, x: mark.rect.x + dx, y: mark.rect.y + dy } };
       case 'circle':

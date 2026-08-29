@@ -267,6 +267,25 @@ export class PdfLayout {
   }
 
   /**
+   * Draws into a boundary the marks cannot cross.
+   *
+   * Everything `draw` records is grouped and clipped to `clip`. It is what lets a detail view be
+   * sized to its subject and still draw the structure around it: the context is drawn at the
+   * subject's own scale and is cut at the frame, instead of sprawling across the caption.
+   */
+  clipped(clip: Rect, draw: () => void): void {
+    const previous = this.surface;
+    const inner = new Surface();
+    this.surface = inner;
+    try {
+      draw();
+    } finally {
+      this.surface = previous;
+    }
+    if (inner.marks.length) previous.push([{ t: 'group', clip: { ...clip }, marks: inner.marks }]);
+  }
+
+  /**
    * Artwork with no caption and no number.
    *
    * Two drawings in the report are plates rather than figures — the elastic curve that closes a
@@ -438,5 +457,11 @@ const shift = (mark: SceneMark, dy: number): SceneMark => {
       return { ...mark, at: { x: mark.at.x, y: mark.at.y + dy } };
     case 'glyph':
       return { ...mark, matrix: [mark.matrix[0], mark.matrix[1], mark.matrix[2], mark.matrix[3], mark.matrix[4], mark.matrix[5] + dy] };
+    case 'group':
+      return {
+        ...mark,
+        clip: mark.clip ? { ...mark.clip, y: mark.clip.y + dy } : undefined,
+        marks: mark.marks.map((inner) => shift(inner, dy)),
+      };
   }
 };

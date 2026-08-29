@@ -230,11 +230,17 @@ export interface FreeBodyScene {
  * what `sceneFigureHeight` wants in order to ask for a short, wide figure.
  */
 /**
- * Nodes the scene is framed around.
+ * Nodes the scene is framed around: what it keeps, whenever that is a body at all.
  *
- * A scene that hides the rest of the model — one span of a continuous beam, the real and
- * conjugate beams — is framed on what it keeps, so that span fills the figure. A scene that
- * shows the model as context is framed on the whole model, or the ghost would run off the page.
+ * It used to be the whole model unless the scene hid its ghost, and that inverted the emphasis
+ * of every detail view. One column isolated from a portal is two nodes out of four; framing on
+ * all four drew the subject as a vertical sliver down one side of a box that was three quarters
+ * the *rest* of the structure. The ghost is context, and context is not what a drawing should be
+ * sized to.
+ *
+ * What makes that safe is the clip: `drawFreeBodyScene` draws the ghost inside the frame's own
+ * boundary, so the members leaving the subject run to the edge and are cut there — which is how
+ * a detail view is drawn — instead of sprawling across the caption.
  *
  * `sceneExtentOf` and the projection both read this, because sizing the figure to one span
  * while projecting the whole model into it is what drew a span in half its own frame.
@@ -243,25 +249,42 @@ const framedNodes = (context: ReportContext, scene: FreeBodyScene): readonly Nod
   const kept = scene.keptNodeIds?.length
     ? context.project.nodes.filter((node) => scene.keptNodeIds!.includes(node.id))
     : [];
-  return scene.hideGhost && kept.length > 1 ? kept : context.project.nodes;
+  return kept.length > 1 ? kept : context.project.nodes;
 };
 
 /**
- * Model-space box a focused scene actually draws: the joint and the far end of every stub
- * leaving it.
+ * Model-space box a focused scene actually draws: the joint, the isolation boundary around it,
+ * and the far end of every stub leaving it.
  *
- * Assuming a square of `radius × radius` was right for a truss joint and wrong for a beam one,
- * where both stubs run horizontally: the drawing came out as a line across the middle of a
- * square frame, three quarters of it empty.
+ * It is the plain bounding box, and it carries its own centre. Both matter. Measuring it
+ * symmetrically about the joint — which is what this did while the projection centred the joint
+ * — reserved as much room on the empty side as on the drawn one, so a truss joint whose two
+ * bars both leave up and to the left got a frame with a quarter of its area used and the rest
+ * white. Assuming a square of `radius x radius` was wrong in the other direction: a joint on a
+ * continuous beam, whose stubs are collinear, came out as a line across the middle of a square.
+ * A box with independent spans and a real centre handles both without a special case.
  */
-const focusBounds = (
-  context: ReportContext,
-  scene: FreeBodyScene,
-): { spanX: number; spanY: number } | undefined => {
+interface FocusBox {
+  readonly centre: Point;
+  readonly spanX: number;
+  readonly spanY: number;
+}
+
+const focusBox = (context: ReportContext, scene: FreeBodyScene): FocusBox | undefined => {
   const node = scene.focus ? context.index.node(scene.focus.nodeId) : undefined;
   if (!node) return undefined;
   const xs = [node.x];
   const ys = [node.y];
+
+  // The dashed boundary is the subject of an isolated-joint drawing, not decoration on it, so
+  // it sets the floor on the box: a joint whose stubs are all short still gets a frame its own
+  // circle fits inside.
+  const radius = scene.isolation?.radius ?? 0;
+  if (radius > 0) {
+    xs.push(node.x - radius, node.x + radius);
+    ys.push(node.y - radius, node.y + radius);
+  }
+
   for (const entry of scene.severed ?? []) {
     const member = context.index.member(entry.memberId);
     const ni = member ? context.index.node(member.i) : undefined;
@@ -271,21 +294,37 @@ const focusBounds = (
     xs.push(ni.x + (nj.x - ni.x) * ratio);
     ys.push(ni.y + (nj.y - ni.y) * ratio);
   }
+
+  // Anything the scene anchors at an explicit model point — a hinge, a note, a force applied
+  // away from the joint — is drawn too, so it belongs in the box the frame is sized to.
+  const places = [
+    ...(scene.forces ?? []).map((force) => force.place),
+    ...(scene.moments ?? []).map((moment) => moment.place),
+    ...(scene.hinges ?? []).map((hinge) => hinge.place),
+  ];
+  for (const place of places) {
+    if (!('at' in place)) continue;
+    xs.push(place.at.x);
+    ys.push(place.at.y);
+  }
+
   if (xs.length < 2) return undefined;
-  // Measured symmetrically about the joint, because the projection is centred there. Taking the
-  // plain bounding box understated the half-span whenever the stubs leave to one side — which
-  // scaled the drawing up until the model ran off the frame and across the page.
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
   return {
-    spanX: Math.max(...xs.map((x) => Math.abs(x - node.x))) * 2,
-    spanY: Math.max(...ys.map((y) => Math.abs(y - node.y))) * 2,
+    centre: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+    spanX: maxX - minX,
+    spanY: maxY - minY,
   };
 };
 
 export const sceneExtentOf = (context: ReportContext, scene: FreeBodyScene): SceneExtent => {
   if (scene.extent) return scene.extent;
   if (scene.focus) {
-    const bounds = focusBounds(context, scene);
-    if (bounds && bounds.spanX > 1e-9) return bounds;
+    const box = focusBox(context, scene);
+    if (box && box.spanX > 1e-9) return { spanX: box.spanX, spanY: box.spanY };
     const radius = Math.max(scene.focus.radius, 1e-6);
     return { spanX: radius * 2, spanY: radius * 2 };
   }
@@ -448,17 +487,25 @@ export const drawFreeBodyScene = (
   const plot = scenePlot(frame);
   const metrics = sceneMetrics(plot.right - plot.left, plot.top - plot.bottom);
   const taken: LabelBox[] = [];
+  // Labels are placed inside the frame, but a box clamped flush to it puts a baseline on the
+  // border and hangs the descenders through it. The placer gets a slightly smaller box so a
+  // value that ends up against the edge still sits clear of the line.
+  const labelFrame: Rect = { x: frame.x + 3, y: frame.y + 4, width: frame.width - 6, height: frame.height - 8 };
 
   const focusNode = scene.focus ? context.index.node(scene.focus.nodeId) : undefined;
-  // The projection frames exactly the box the figure was sized for; sizing to one thing and
-  // projecting another is what drew a span in half its own frame.
-  const focusExtent = focusBounds(context, scene)
-    ?? (scene.focus ? { spanX: scene.focus.radius * 2, spanY: scene.focus.radius * 2 } : undefined);
-  const projection = focusNode && focusExtent
+  // The projection frames exactly the box the figure was sized for, and centres *that box* —
+  // not the joint. Sizing to one thing and projecting another is what drew a span in half its
+  // own frame; centring the joint inside a box it does not sit in the middle of is what left
+  // the other half white.
+  const box = focusBox(context, scene)
+    ?? (focusNode && scene.focus
+      ? { centre: { x: focusNode.x, y: focusNode.y }, spanX: scene.focus.radius * 2, spanY: scene.focus.radius * 2 }
+      : undefined);
+  const projection = focusNode && box
     ? createFocusProjection(
-      { x: focusNode.x, y: focusNode.y },
+      box.centre,
       // A little air around the stubs, so an arrow leaving one does not start on the frame.
-      { spanX: focusExtent.spanX * 1.14, spanY: focusExtent.spanY * 1.14 },
+      { spanX: box.spanX * 1.14, spanY: box.spanY * 1.14 },
       plot,
     )
     : createProjection(framedNodes(context, scene), plot);
@@ -474,19 +521,51 @@ export const drawFreeBodyScene = (
     });
   }
 
+  // The axes indicator is drawn last but reserved first: it sits in a fixed corner, so a label
+  // that the placer sends there lands on it. Reserving the corner is what keeps the two apart.
+  const axesOrigin = { x: frame.x + frame.width - 26, y: frame.y + 12 };
+  if (scene.axes !== false) {
+    taken.push({ x: axesOrigin.x - 7, y: axesOrigin.y - 7, width: 26, height: 26 });
+  }
+
   const severed = scene.severed ?? [];
-  drawGhostModel(context, projection, {
-    solidMemberIds: scene.keptMemberIds ? new Set(scene.keptMemberIds) : undefined,
-    solidNodeIds: scene.keptNodeIds ? new Set(scene.keptNodeIds) : undefined,
-    // A close-up is scaled to its stubs, so the rest of the model would land far outside the
-    // frame — and there is nothing here that clips a drawing to one.
-    hideGhost: scene.hideGhost || scene.focus !== undefined,
-    // A severed member is neither wholly kept nor wholly discarded, so the ghost pass leaves it
-    // alone and the block below draws its two halves.
-    skipMemberIds: new Set(severed.map((entry) => entry.memberId)),
-    weight: metrics.memberWeight,
-    nodeSize: metrics.nodeDot,
-    labelSize: metrics.label,
+  // The model itself is drawn inside the frame's own boundary. That is what lets the figure be
+  // sized to its subject: the structure around it is drawn at the subject's scale and is cut at
+  // the frame — how a detail view is drawn — instead of sprawling over the caption.
+  layout.clipped(frame, () => {
+    drawGhostModel(context, projection, {
+      solidMemberIds: scene.keptMemberIds ? new Set(scene.keptMemberIds) : undefined,
+      solidNodeIds: scene.keptNodeIds ? new Set(scene.keptNodeIds) : undefined,
+      // A close-up on a joint is the one case where the ghost is still dropped: scaled to the
+      // stubs, the far side of the model is a couple of lines crossing the frame at random,
+      // and the severed stubs already say what the joint was cut out of.
+      hideGhost: scene.hideGhost || scene.focus !== undefined,
+      // A severed member is neither wholly kept nor wholly discarded, so the ghost pass leaves
+      // it alone and the block below draws its two halves.
+      skipMemberIds: new Set(severed.map((entry) => entry.memberId)),
+      weight: metrics.memberWeight,
+      nodeSize: metrics.nodeDot,
+      labelSize: metrics.label,
+    });
+    for (const entry of severed) {
+      const member = context.index.member(entry.memberId);
+      const ni = member ? context.index.node(member.i) : undefined;
+      const nj = member ? context.index.node(member.j) : undefined;
+      if (!member || !ni || !nj || scene.hideGhost) continue;
+      const ratio = Math.min(1, Math.max(0, entry.ratio));
+      const start = projection.at(ni.x, ni.y);
+      const end = projection.at(nj.x, nj.y);
+      const at = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
+      // The discarded half, which the clip now makes safe to draw on a close-up too: a bar that
+      // simply stopped at the cut left the reader to guess whether it ended there.
+      page.drawLine({
+        start: at,
+        end: entry.keep === 'start' ? end : start,
+        thickness: GHOST_WEIGHT,
+        color: palette.inkFaint,
+        opacity: GHOST_OPACITY,
+      });
+    }
   });
 
   if (scene.isolation) {
@@ -523,13 +602,7 @@ export const drawFreeBodyScene = (
     const end = projection.at(nj.x, nj.y);
     const at = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
     const kept = entry.keep === 'start' ? start : end;
-    const discarded = entry.keep === 'start' ? end : start;
     page.drawLine({ start: kept, end: at, thickness: metrics.memberWeight, color: palette.ink });
-    // The discarded half is context, and a close-up has no room for it: scaled to its stubs, the
-    // far end of a bar lands well outside the frame, and nothing here clips a drawing to one.
-    if (!scene.hideGhost && scene.focus === undefined) {
-      page.drawLine({ start: at, end: discarded, thickness: GHOST_WEIGHT, color: palette.inkFaint, opacity: GHOST_OPACITY });
-    }
     strokes.push(...segmentBoxes(kept, at));
   }
   for (const memberId of scene.keptMemberIds ?? []) {
@@ -568,7 +641,7 @@ export const drawFreeBodyScene = (
       const direction = where === 'start'
         ? { x: (from.x - to.x) / along, y: (from.y - to.y) / along }
         : { x: (to.x - from.x) / along, y: (to.y - from.y) / along };
-      drawLabel(layout, scene.cut.label, anchor, direction, frame, palette.ink, metrics, taken);
+      drawLabel(layout, scene.cut.label, anchor, direction, labelFrame, palette.ink, metrics, taken);
     }
   }
 
@@ -600,7 +673,7 @@ export const drawFreeBodyScene = (
         x: from.x + (to.x - from.x) * ratio,
         y: from.y + (to.y - from.y) * ratio + Math.max(amplitude, 12) * 0.55,
       };
-      drawLabel(layout, curve.label, at, { x: 0, y: 1 }, frame, color, metrics, taken, false);
+      drawLabel(layout, curve.label, at, { x: 0, y: 1 }, labelFrame, color, metrics, taken, false);
     }
   }
 
@@ -637,7 +710,7 @@ export const drawFreeBodyScene = (
       layout, force.label,
       force.anchor === 'tail' ? head : tail,
       { x: force.fx / magnitude * outward, y: force.fy / magnitude * outward },
-      frame, color, metrics, taken,
+      labelFrame, color, metrics, taken,
     );
   }
 
@@ -653,7 +726,7 @@ export const drawFreeBodyScene = (
         layout, moment.label,
         { x: at.x + (head.x - at.x) / out * (radius + 3), y: at.y + (head.y - at.y) / out * (radius + 3) },
         { x: (head.x - at.x) / out, y: (head.y - at.y) / out },
-        frame, color, metrics, taken,
+        labelFrame, color, metrics, taken,
       );
     }
   }
@@ -661,10 +734,10 @@ export const drawFreeBodyScene = (
   for (const note of scene.notes ?? []) {
     const at = resolvePlace(context, note.place, projection);
     if (!at) continue;
-    drawLabel(layout, note.text, at, { x: 0.6, y: -1 }, frame, toneColor(context, note.tone ?? 'faint'), metrics, taken, false);
+    drawLabel(layout, note.text, at, { x: 0.6, y: -1 }, labelFrame, toneColor(context, note.tone ?? 'faint'), metrics, taken, false);
   }
 
   if (scene.axes !== false) {
-    drawAxesIndicator(layout, { x: frame.x + frame.width - 26, y: frame.y + 12 }, 11, palette.inkFaint);
+    drawAxesIndicator(layout, axesOrigin, 11, palette.inkFaint);
   }
 };

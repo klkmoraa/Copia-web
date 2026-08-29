@@ -184,6 +184,25 @@ def draw_mark(canvas, mark, ox, oy):
     elif kind == "text":
         _draw_text(canvas, mark, ox, oy, opacity)
 
+    elif kind == "group":
+        # Marks drawn together, optionally inside a boundary they cannot cross. The clip is what
+        # lets a detail view be sized to its subject and still show the structure around it: the
+        # context is drawn at the subject's own scale and is cut at the frame.
+        inner = mark.get("marks") or []
+        if not inner:
+            return
+        canvas.saveState()
+        try:
+            clip = mark.get("clip")
+            if clip is not None:
+                boundary = canvas.beginPath()
+                boundary.rect(ox + clip["x"], oy + clip["y"], clip["width"], clip["height"])
+                canvas.clipPath(boundary, stroke=0, fill=0)
+            for child in inner:
+                draw_mark(canvas, child, ox, oy)
+        finally:
+            canvas.restoreState()
+
     elif kind == "glyph":
         # A typeset outline: the composer already folded placement and scale into the matrix,
         # so the renderer concatenates it and fills the raw path.

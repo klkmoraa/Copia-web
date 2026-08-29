@@ -294,4 +294,5 @@ export class Surface {
   push(marks: readonly SceneMark[]): void {
     this.marks.push(...marks);
   }
+
 }
