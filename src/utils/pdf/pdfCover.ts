@@ -11,7 +11,8 @@ import { pdfText, wrapText } from './pdfGlyphs';
 import { clearDisplay, clearNumber } from './pdfFormat';
 import { drawKpi, drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
 import { drawGlobalDcl } from './pdfDiagrams';
-import { drawMathFormula } from './pdfMath';
+import { drawMathBlock } from './pdfMath';
+import { equilibriumSums } from './pdfSubstitution';
 import type { ReportContext } from './reportContext';
 
 /** Largest |value| of a quantity across the model, preferring the engine's critical points. */
@@ -64,21 +65,32 @@ export const drawExecutivePage = (context: ReportContext): void => {
   drawGlobalDcl(context, 262, true);
   drawPanel(layout, margin, 60, 242, 278);
   layout.page.drawText('OPERACIONES DE EQUILIBRIO', { x: margin + 12, y: 318, size: 8.5, font: fonts.bold, color: palette.forestDeep });
+  // Each row used to read `ΣF_x = 0` — the condition, not the check. What goes here now is
+  // the sum that was actually performed: every applied resultant and every reaction, written
+  // out and added up, with the closing value beside it (`equilibriumSums` in
+  // `pdfSubstitution.ts`, which refuses to expand a sum it cannot reproduce from the engine's
+  // own figure). The value stays real PDF text so the page remains searchable; the expansion
+  // is typeset as maths.
+  const sums = equilibriumSums(context, 7);
   const equilibriumRows = [
-    { title: 'Fuerzas horizontales', formula: 'ΣF_x = 0', result: clearDisplay(project, analysis.equilibrium.sumFx, 'force', reactionMaximum) },
-    { title: 'Fuerzas verticales', formula: 'ΣF_y = 0', result: clearDisplay(project, analysis.equilibrium.sumFy, 'force', reactionMaximum) },
-    { title: 'Momentos respecto al origen', formula: 'ΣM_O = 0', result: clearDisplay(project, analysis.equilibrium.sumM, 'moment', momentExtreme ? Math.abs(momentExtreme.value) : 1) },
-    { title: 'Control numérico del cierre', formula: 'r = ||residuo||/||acciones||', result: clearNumber(analysis.equilibrium.normalizedResidual) },
+    ...sums.map((sum, index) => ({
+      title: ['Fuerzas horizontales', 'Fuerzas verticales', 'Momentos respecto al origen'][index],
+      formula: sum.equation,
+      result: sum.result,
+    })),
+    {
+      title: 'Control numérico del cierre',
+      formula: `r = ${clearNumber(analysis.equilibrium.normalizedResidual)}`,
+      result: clearNumber(analysis.equilibrium.normalizedResidual),
+    },
   ];
   let rowY = 283;
   equilibriumRows.forEach((entry, index) => {
     layout.page.drawCircle({ x: margin + 18, y: rowY + 3, size: 8, color: index === equilibriumRows.length - 1 ? rgb(0.12, 0.50, 0.34) : palette.forest });
     layout.page.drawText(String(index + 1), { x: margin + 15.5, y: rowY, size: 6.5, font: fonts.bold, color: rgb(1, 1, 1) });
-    layout.page.drawText(pdfText(entry.title.toUpperCase()), { x: margin + 34, y: rowY + 9, size: 5.8, font: fonts.bold, color: rgb(0.34, 0.41, 0.36) });
-    drawMathFormula(layout, entry.formula, margin + 34, rowY - 8, 10.4, rgb(0.10, 0.15, 0.12), 112);
-    layout.page.drawRectangle({ x: margin + 154, y: rowY - 12, width: 73, height: 23, color: rgb(0.95, 0.98, 0.96), borderColor: palette.quantity.shear, borderWidth: 0.65 });
-    layout.page.drawText('RESULTADO', { x: margin + 160, y: rowY + 2, size: 4.8, font: fonts.bold, color: palette.quantity.shear });
-    layout.page.drawText(pdfText(entry.result), { x: margin + 160, y: rowY - 8, size: 6.4, font: fonts.bold, color: rgb(0.10, 0.35, 0.22) });
+    layout.page.drawText(pdfText(entry.title.toUpperCase()), { x: margin + 34, y: rowY + 11, size: 5.8, font: fonts.bold, color: rgb(0.34, 0.41, 0.36) });
+    layout.page.drawText(pdfText(entry.result), { x: margin + 150, y: rowY + 11, size: 6.4, font: fonts.bold, color: rgb(0.10, 0.35, 0.22) });
+    drawMathBlock(layout, entry.formula, margin + 34, rowY + 1, 196, 7.4, rgb(0.10, 0.15, 0.12));
     rowY -= 44;
   });
   layout.page.drawRectangle({ x: margin + 12, y: 80, width: 218, height: 52, color: rgb(0.91, 0.96, 0.93), borderColor: qualityColor, borderWidth: 0.8 });

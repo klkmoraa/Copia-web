@@ -1,12 +1,14 @@
 /**
- * Procedure page: the sequence from model to verification, one panel per stage, each with
- * the engine's own summary and key equation when it published them.
+ * Procedure page: the sequence from model to verification, one panel per stage, each with the
+ * engine's own summary and — where this project has one — the stage's relation already carried
+ * out with its real numbers, rather than the generic identity the engine publishes.
  */
 import type { AnalysisResult } from '../../types';
 import { pdfText, wrapText } from './pdfGlyphs';
 import { clearNumber } from './pdfFormat';
 import { drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
 import { drawMathBlock } from './pdfMath';
+import { leadSubstitution } from './pdfSubstitution';
 import type { ReportContext } from './reportContext';
 
 export const drawProcedureSummary = (context: ReportContext, band = '06'): void => {
@@ -34,11 +36,14 @@ export const drawProcedureSummary = (context: ReportContext, band = '06'): void 
     layout.page.drawText(pdfText(stage.title.toUpperCase()), { x: margin + 44, y: stageY - 27, size: 8, font: fonts.bold, color: palette.forestDeep });
     const summaryLines = wrapText(stage.step?.summary ?? stage.fallback, fonts.regular, 7.2, maxWidth - 68).slice(0, 2);
     summaryLines.forEach((entry, lineIndex) => layout.page.drawText(entry, { x: margin + 44, y: stageY - 43 - lineIndex * 11, size: 7.2, font: fonts.regular, color: rgb(0.23, 0.29, 0.25) }));
-    const equation = stage.step?.equations[0];
+    // The engine's own `equations[0]` is the generic statement of the stage — `L = √(ΔX²+ΔY²)`,
+    // `dM/dx = V(x)`. What goes in the box is that same relation already carried out with this
+    // project's numbers; a stage with nothing to substitute simply shows no box.
+    const equation = stage.step ? leadSubstitution(context, stage.step.id) : undefined;
     if (equation) {
       const formulaColor = stageIndex === stages.length - 1 ? rgb(0.08, 0.47, 0.29) : rgb(0.32, 0.38, 0.34);
       layout.page.drawRectangle({ x: margin + 44, y: stageY - 91, width: maxWidth - 62, height: 24, color: rgb(0.965, 0.98, 0.97), borderColor: rgb(0.82, 0.87, 0.84), borderWidth: 0.5 });
-      layout.page.drawText('ECUACIÓN CLAVE', { x: margin + 52, y: stageY - 76, size: 5.2, font: fonts.bold, color: formulaColor });
+      layout.page.drawText('CÁLCULO REAL', { x: margin + 52, y: stageY - 76, size: 5.2, font: fonts.bold, color: formulaColor });
       // Folding beats clipping: this used to cut at 92 characters and append an ellipsis,
       // which lands mid-symbol as often as not.
       drawMathBlock(layout, equation, margin + 126, stageY - 71, maxWidth - 152, 8.6, formulaColor);

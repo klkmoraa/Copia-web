@@ -52,19 +52,23 @@ describe('memoria de cálculo visual', () => {
     // real SVG path geometry, not PDF text — `pdfjs` text extraction can no longer see it.
     // The label around it is still drawn with `page.drawText`, so that's what this pins now.
     expect(axialPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
-    expect(axialPage).toMatch(/RELACIÓN FUNDAMENTAL/i);
-    expect(axialPage).toMatch(/La carga axial distribuida determina/i);
+    // The card used to hold the differential relation (`dV/dx = q(x)`), true of every beam.
+    // It now holds that derivative already evaluated on this member, and the three
+    // construction steps below it report the numbers the diagram was built from — which is
+    // also what tells the three pages apart, since the values differ per quantity.
+    expect(axialPage).toMatch(/PENDIENTE REAL DEL DIAGRAMA - MIEMBRO AB/i);
+    expect(axialPage).toMatch(/Se parte de N\(0\) = 0 kN\./i);
+    expect(axialPage).not.toMatch(/La carga axial distribuida determina/i);
     expect(shearPage).toMatch(/OPERACIONES CLARAS/i);
-    // `dV/dx = q(x)` is the formula card's own relation — also vector geometry now, so this
-    // checks the surrounding label/explanation text instead of the formula's characters.
-    // The explanation is quantity-specific (`pdfQuantitySection.ts`'s `relationExplanation`),
-    // so unlike the generic "FUNCIÓN DEL TRAMO" label it still tells this page apart from
-    // the axial and moment pages.
     expect(shearPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
-    expect(shearPage).toMatch(/La carga transversal q determina la pendiente del diagrama de cortante V/i);
+    // 32.5 kN at the support, falling 5 kN per metre under the 5 kN/m load, 17.5 kN at 3 m.
+    expect(shearPage).toMatch(/Se parte de V\(0\) = 32\.5 kN\./i);
+    expect(shearPage).toMatch(/Se avanza con dV\/ds = -5 kN\/m\./i);
+    expect(shearPage).toMatch(/Cierra en V\(3 m\) = 17\.5 kN\./i);
     expect(momentPage).toMatch(/OPERACIONES CLARAS/i);
     expect(momentPage).toMatch(/MIEMBRO AB \| FUNCIÓN DEL TRAMO/i);
-    expect(momentPage).toMatch(/El cortante V determina la pendiente del diagrama de momento M/i);
+    expect(momentPage).toMatch(/Se parte de M\(0\) = 0 kN x m\./i);
+    expect(momentPage).toMatch(/Se avanza con dM\/ds = 32\.5 kN - 2 x 2\.5 s\./i);
     expect(momentPage).toMatch(/75 kN\s*x\s*m/i);
     expect(momentPage).toMatch(/@\s*3 m/i);
   }, 60_000);
@@ -120,12 +124,17 @@ describe('memoria de cálculo visual', () => {
     const page = inspection.textByPage.find((text) => /Geometría, nodos y ejes/i.test(text)) ?? '';
     const flat = page.replace(/\s+/g, ' ');
     // Las ecuaciones genéricas del motor (ΔX = Xⱼ − Xᵢ, L = √(ΔX²+ΔY²)…) describen el
-    // método; la tabla que sigue las instancia con las coordenadas reales del proyecto —
-    // A(0,0), B(8,0) en este miembro — sin tocar el motor: se calcula con `memberAxis`
-    // sobre `project.nodes`, que no es frontera protegida.
+    // método y ya no se imprimen: en su lugar van las mismas, sustituidas con las
+    // coordenadas reales — A(0,0), B(8,0) en este miembro — más la tabla que las recoge para
+    // todos los miembros. Ambas se calculan con `memberAxis` sobre `project.nodes`, que no
+    // es frontera protegida.
+    expect(flat).toMatch(/Miembro AB: de A \(0, 0\) a B \(8, 0\) m/);
     expect(flat).toMatch(/Miembro DeltaX \(m\) DeltaY \(m\) L \(m\) c s AB 8 0 8 1 0/);
-    // El paso de cargas no reconstruye su propia tabla: apunta a la que ya existe.
-    expect(flat).toMatch(/Cargas de miembro.*Cargas nodales.*sección 2/i);
+    // El paso de cargas no reconstruye su propia tabla: apunta a la que ya existe. Las
+    // sustituciones de cada carga la empujan a la página siguiente, así que se busca en todo
+    // el documento y no sólo en la página de la geometría.
+    const all = inspection.text.replace(/\s+/g, ' ');
+    expect(all).toMatch(/Cargas de miembro.*Cargas nodales.*sección 2/i);
   }, 60_000);
 
   it('conserva el informe visual sin matrices y agrega el anexo educativo solo cuando se solicita', async () => {

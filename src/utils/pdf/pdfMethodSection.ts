@@ -24,6 +24,7 @@ import { solveMethodOfJoints, type MethodOfJointsResult } from '../../analysis-m
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
+import { dimensionalFigure, dimensionalUnit } from './pdfSubstitution';
 import { pdfText } from './pdfGlyphs';
 import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
@@ -52,15 +53,16 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
 
   layout.heading('5. Procedimiento: Método de la Doble Integración');
   layout.text(
-    'La ecuación de la elástica, EI y″(x) = M(x), se integra dos veces. Cada integración deja una '
-    + 'constante por tramo, y en una viga hiperestática las reacciones redundantes son incógnitas más: '
-    + 'las condiciones de contorno y de continuidad las determinan todas a la vez.',
+    'La ecuación de la elástica se integra dos veces: la primera integración del momento da el giro, '
+    + 'la segunda la flecha. Cada integración deja una constante por tramo, y en una viga hiperestática '
+    + 'las reacciones redundantes son incógnitas más: las condiciones de contorno y de continuidad las '
+    + 'determinan todas a la vez. Todo lo que sigue son esas integrales ya resueltas, con los '
+    + 'coeficientes reales de esta viga.',
     8.7, fonts.regular, undefined, 8,
   );
-  for (const relation of ['EI y″(x) = M(x)', 'EI θ(x) = ∫ M dx + C', 'EI y(x) = ∫∫ M dx dx + C x + C′']) {
-    layout.ensure(layout.measureMathBlock(relation, 9, 16));
-    layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
-  }
+  // The three generic relations that used to sit here — `EI y″ = M`, and its two integrals —
+  // are the method, not this beam. They are developed with real coefficients a few lines
+  // below, one set per stretch, so printing them again as symbols only delayed the numbers.
 
   layout.heading('5.1 Clasificación estática', 2);
   const degree = solution.classification.indeterminacy;
@@ -196,17 +198,16 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
 
   layout.heading('5. Procedimiento: Método de la Viga Conjugada');
   layout.text(
-    'La ecuación EI y″(x) = M(x) se lee dos veces sin integrar a mano: se construye una segunda '
-    + 'viga, la conjugada, cargada con w*(x) = M(x)/EI, y cada apoyo se convierte por una tabla fija '
+    'La elástica se resuelve sin integrar a mano: se construye una segunda viga, la conjugada, '
+    + 'cargada con el diagrama de momentos de la real dividido por su rigidez, y cada apoyo se '
+    + 'convierte por una tabla fija '
     + '— un apoyo simple sigue siendo simple, un empotramiento pasa a extremo libre, un extremo libre '
     + 'pasa a empotramiento. El giro y la flecha de la viga real son entonces el cortante y el momento '
     + 'de esa viga ficticia, que se hallan por la misma estática de siempre.',
     8.7, fonts.regular, undefined, 8,
   );
-  for (const relation of ['w*(x) = M(x)/EI', 'θ(x) = V*(x)', 'y(x) = M*(x)']) {
-    layout.ensure(layout.measureMathBlock(relation, 9, 16));
-    layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
-  }
+  // `w* = M/EI`, `θ = V*`, `y = M*` state the correspondence; §5.3 below carries it out with
+  // this beam's own coefficients, stretch by stretch, which is what the reader checks.
 
   layout.heading('5.1 Clasificación estática', 2);
   layout.text(
@@ -342,9 +343,34 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
     + 'por los momentos de apoyo todavía desconocidos, coincida entre ambos vanos.',
     8.7, fonts.regular, undefined, 8,
   );
-  const relation = '(Lₙ/EIₙ) Mₙ₋₁ + 2(Lₙ/EIₙ + Lₙ₊₁/EIₙ₊₁) Mₙ + (Lₙ₊₁/EIₙ₊₁) Mₙ₊₁ = −6[Aₙaₙ/(EIₙLₙ) + Aₙ₊₁bₙ₊₁/(EIₙ₊₁Lₙ₊₁)]';
-  layout.ensure(layout.measureMathBlock(relation, 8.4, 16));
-  layout.y -= layout.drawMathBlockAt(relation, 8.4, 16, rgb(0.24, 0.28, 0.34));
+  // Clapeyron's equation used to be printed as the identity and left there. What follows is
+  // the same equation once, per interior support, with this beam's own spans, stiffnesses,
+  // first moments and solved support moments substituted in — and it is only printed when
+  // both sides really do close on the solved moments, so the memoir never shows an equality
+  // that its own numbers do not satisfy.
+  for (const [k, span] of solution.spans.slice(0, -1).entries()) {
+    const right = solution.spans[k + 1];
+    const left = span;
+    const moments = solution.supportMoments;
+    const [mPrev, mHere, mNext] = [moments[k]?.value ?? 0, moments[k + 1]?.value ?? 0, moments[k + 2]?.value ?? 0];
+    const flexLeft = left.length / left.EI;
+    const flexRight = right.length / right.EI;
+    const lhs = flexLeft * mPrev + 2 * (flexLeft + flexRight) * mHere + flexRight * mNext;
+    const rhs = -6 * (left.firstMomentLeft / (left.EI * left.length) + right.firstMomentRight / (right.EI * right.length));
+    if (Math.abs(lhs - rhs) > 1e-6 * Math.max(1, Math.abs(rhs))) continue;
+    const flex = (value: number) => dimensionalFigure(project, value, -1, -1, Math.max(flexLeft, flexRight));
+    const moment = (value: number) => dimensionalFigure(project, value, 1, 1, Math.max(1, Math.abs(mPrev), Math.abs(mHere), Math.abs(mNext)));
+    const equation = `${flex(flexLeft)}(${moment(mPrev)}) + 2(${flex(flexLeft)} + ${flex(flexRight)})(${moment(mHere)})`
+      + ` + ${flex(flexRight)}(${moment(mNext)}) = ${number(lhs, 6)} = ${number(rhs, 6)}`
+      + ` = −6(${dimensionalFigure(project, left.firstMomentLeft, 1, 3)}/${dimensionalFigure(project, left.EI * left.length, 1, 3)}`
+      + ` + ${dimensionalFigure(project, right.firstMomentRight, 1, 3)}/${dimensionalFigure(project, right.EI * right.length, 1, 3)})`;
+    layout.text(
+      `Apoyo interior ${moments[k + 1]?.nodeId ?? k + 1}: los coeficientes van en 1/(${unitFor(project, 'force')}·${lengthUnit}) y los momentos en ${momentUnit}.`,
+      7.9, fonts.bold, palette.forestDeep, 12,
+    );
+    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
+    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  }
 
   layout.heading('5.1 Clasificación estática', 2);
   const degree = solution.classification.indeterminacy;
@@ -400,9 +426,9 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
 
   layout.heading('5.4 Momento final por tramo', 2);
   layout.text(
-    'M(x) = M libre(x) + Mₗ(1 − x/L) + Mᵣ(x/L): el momento libre de cada vano, más la corrección '
-    + 'lineal entre los momentos de apoyo que ya se resolvieron. La variable x se mide desde el '
-    + 'extremo izquierdo de la viga.',
+    'El momento libre de cada vano, más la corrección lineal entre los momentos de apoyo que ya se '
+    + 'resolvieron. La variable x se mide desde el extremo izquierdo de la viga, y los coeficientes '
+    + 'de abajo son los de esta viga.',
     8.3, fonts.regular, undefined, 8,
   );
   for (const [index, segment] of solution.segments.entries()) {
@@ -444,9 +470,29 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
     + 'la fuerza real de cada barra por su fuerza virtual y su longitud, entre su rigidez axial:',
     8.7, fonts.regular, undefined, 8,
   );
-  const relation = 'Δ = Σ (nᵢ Nᵢ Lᵢ) / (Aᵢ Eᵢ)';
-  layout.ensure(layout.measureMathBlock(relation, 9, 16));
-  layout.y -= layout.drawMathBlockAt(relation, 9, 16, layout.rgb(0.24, 0.28, 0.34));
+  // The identity `Δ = Σ nNL/AE` is replaced by the sum this truss actually adds up: one
+  // quotient per bar, with its own virtual force, real force, length and axial stiffness,
+  // and the total that came out. The sum is checked against the value the method solved for
+  // before it is printed, so what appears is arithmetic that closes.
+  const contributions = solution.narrated.contributions;
+  const contributionTotal = contributions.reduce((sum, entry) => sum + entry.contribution, 0);
+  if (contributions.length && Math.abs(contributionTotal - solution.narrated.total) <= 1e-8 * Math.max(1, Math.abs(solution.narrated.total))) {
+    const forceScale = Math.max(1, ...contributions.map((entry) => Math.abs(entry.axialForce)));
+    const terms = contributions.slice(0, 8).map((entry) => (
+      `(${number(entry.virtualForce, 5)})(${dimensionalFigure(project, entry.axialForce, 1, 0, forceScale)})`
+      + `(${dimensionalFigure(project, entry.length, 0, 1)})/`
+      + `((${dimensionalFigure(project, entry.A, 0, 2)})(${dimensionalFigure(project, entry.E, 1, -2)}))`
+    ));
+    const shown = contributions.length > 8 ? [...terms, '...'] : terms;
+    const equation = `Δ = ${shown.join(' + ')} = ${dimensionalFigure(project, solution.narrated.total, 0, 1)} ${lengthUnit}`;
+    layout.text(
+      `Nudo ${solution.narrated.nodeId}, componente ${componentLabel(solution.narrated.component)}:`
+      + ` fuerzas en ${forceUnit}, longitudes en ${lengthUnit}, áreas en ${dimensionalUnit(project, 0, 2)}, E en ${dimensionalUnit(project, 1, -2)}.`,
+      7.9, fonts.bold, palette.forestDeep, 12,
+    );
+    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
+    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  }
 
   layout.heading('5.1 Desplazamientos en cada nudo libre', 2);
   layout.text(
@@ -503,7 +549,7 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
 
 const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTrussResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const forceUnit = unitFor(project, 'force');
   const componentLabel = (component: 'ux' | 'uy') => (component === 'ux' ? 'horizontal' : 'vertical');
@@ -518,9 +564,10 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
     + 'la estructura real ese apoyo no se mueve.',
     8.7, fonts.regular, undefined, 8,
   );
-  const relation = '∂U/∂Xₖ = Σ (Nᵢ · ∂Nᵢ/∂Xₖ) Lᵢ / (AᵢEᵢ) = 0';
-  layout.ensure(layout.measureMathBlock(relation, 9, 16));
-  layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
+  // The stationarity condition is stated in the paragraph above; printing `∂U/∂Xₖ = 0` again
+  // as symbols added no figure. What each redundant actually came out as, and the force it
+  // leaves in every bar, are the tables of §5.2 and §5.3 below — all of them real values,
+  // each next to what the matrix analysis reports at the same place.
 
   layout.heading('5.1 Clasificación estática', 2);
   layout.text(
@@ -699,9 +746,37 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
     + 'pórtico.',
     8.7, fonts.regular, undefined, 8,
   );
-  const relation = "M'ᵢⱼ = μᵢⱼ (ΣFEMᵢ + Σ M'ⱼᵢ),  μᵢⱼ = −½ (Kᵢⱼ / ΣKᵢ)";
-  layout.ensure(layout.measureMathBlock(relation, 9, 16));
-  layout.y -= layout.drawMathBlockAt(relation, 9, 16, rgb(0.24, 0.28, 0.34));
+  // `μᵢⱼ = −½(Kᵢⱼ/ΣKᵢ)` is the rule; below it is carried out on the busiest joint of this
+  // frame, with each bar's own EI/L, the sum they add up to, and the factor that came out.
+  const jointStiffness = new Map<string, { memberId: string; k: number }[]>();
+  for (const member of solution.members) {
+    const k = member.EI / member.length;
+    for (const nodeId of [member.nodeI, member.nodeJ]) {
+      jointStiffness.set(nodeId, [...(jointStiffness.get(nodeId) ?? []), { memberId: member.memberId, k }]);
+    }
+  }
+  const busiest = [...jointStiffness.entries()].reduce<[string, { memberId: string; k: number }[]] | undefined>(
+    (best, entry) => !best || entry[1].length > best[1].length ? entry : best,
+    undefined,
+  );
+  if (busiest && busiest[1].length > 1) {
+    const [nodeId, bars] = busiest;
+    const total = bars.reduce((sum, bar) => sum + bar.k, 0);
+    const stiffness = (value: number) => dimensionalFigure(project, value, 1, 2, total);
+    layout.text(
+      `Nudo ${nodeId}: rigideces K = EI/L en ${dimensionalUnit(project, 1, 2)}.`,
+      7.9, fonts.bold, palette.forestDeep, 12,
+    );
+    const sumEquation = `ΣK(${nodeId}) = ${bars.map((bar) => stiffness(bar.k)).join(' + ')} = ${stiffness(total)}`;
+    layout.ensure(layout.measureMathBlock(sumEquation, 8.4, 16));
+    layout.y -= layout.drawMathBlockAt(sumEquation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    for (const bar of bars) {
+      const factor = -0.5 * (bar.k / total);
+      const equation = `μ(${bar.memberId}) = −½ · ${stiffness(bar.k)}/${stiffness(total)} = ${number(factor, 6)}`;
+      layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
+      layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    }
+  }
   layout.text(
     'La fórmula no lleva término de bamboleo lateral: sólo es exacta si el pórtico no se '
     + 'desplaza lateralmente bajo esta carga. Eso no se supone por la geometría — se comprueba '

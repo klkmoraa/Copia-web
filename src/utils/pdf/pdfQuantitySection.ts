@@ -1,6 +1,11 @@
 /**
- * One full page per quantity: the N, V or M diagram over the structure, the differential
- * relation that governs it, and the exact segment functions of the first members.
+ * One full page per quantity: the N, V or M diagram over the structure, the slope that
+ * diagram was actually measured to have on the governing member, and the exact segment
+ * functions of the first members.
+ *
+ * The page used to lead with the differential relation — `dV/dx = q(x)` — which holds for
+ * every beam ever drawn and tells the reader nothing about this one. It now leads with that
+ * derivative evaluated: a number, in this project's units, next to the member it came from.
  */
 import type { DiagramQuantity } from '../../types';
 import { pdfText, wrapText } from './pdfGlyphs';
@@ -15,6 +20,7 @@ import {
 import { drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
 import { drawGlobalQuantityDiagram } from './pdfDiagrams';
 import { drawFormulaCard, drawMathFormula } from './pdfMath';
+import { quantityConstructionSteps, quantitySlopeEquation } from './pdfSubstitution';
 import type { ReportContext } from './reportContext';
 
 export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuantity, index: string): void => {
@@ -32,15 +38,24 @@ export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuanti
   drawGlobalQuantityDiagram(context, quantity, margin + 8, 365, maxWidth - 16, 300);
   drawPanel(layout, margin, 60, maxWidth, 270);
   layout.page.drawText('OPERACIONES CLARAS', { x: margin + 14, y: 307, size: 9, font: fonts.bold, color: palette.forestDeep });
-  const relation = quantity === 'axial' ? 'dN/dx = -p(x)' : quantity === 'shear' ? 'dV/dx = q(x)' : 'dM/dx = V(x)';
-  const relationExplanation = quantity === 'axial'
-    ? 'La carga axial distribuida determina como cambia la fuerza normal N.'
-    : quantity === 'shear'
-      ? 'La carga transversal q determina la pendiente del diagrama de cortante V.'
-      : 'El cortante V determina la pendiente del diagrama de momento M.';
-  drawFormulaCard(layout, 'Relación fundamental', relation, relationExplanation, margin + 14, 248, maxWidth - 28, color);
-  let operationBottom = 174;
   const visibleResults = analysis.memberResults.filter((result) => result.diagramSegments.length).slice(0, 2);
+  // This card used to carry the differential relation — `dV/dx = q(x)` — which is true of
+  // every beam ever drawn and says nothing about this one. It now carries that same
+  // derivative already evaluated on the governing member: the real slope, in this project's
+  // units, next to the member and stretch it was measured on.
+  const governing = visibleResults[0];
+  const slope = governing ? quantitySlopeEquation(context, quantity, governing) : undefined;
+  if (governing && slope) {
+    const firstSegment = governing.diagramSegments[0];
+    drawFormulaCard(
+      layout,
+      `Pendiente real del diagrama - miembro ${governing.memberId}`,
+      slope,
+      `Medida en el primer tramo del miembro ${governing.memberId}, de ${display(project, firstSegment.x0, 'length')} a ${display(project, firstSegment.x1, 'length')}.`,
+      margin + 14, 248, maxWidth - 28, color,
+    );
+  }
+  let operationBottom = 174;
   visibleResults.forEach((result, resultIndex) => {
     const segment = result.diagramSegments[0];
     const coefficients = segment[quantity];
@@ -62,12 +77,10 @@ export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuanti
     operationBottom -= 70;
   });
   if (visibleResults.length === 1) {
-    layout.page.drawText('COMO SE CONSTRUYE', { x: margin + 14, y: 157, size: 7, font: fonts.bold, color: palette.forestDeep });
-    const steps = quantity === 'axial'
-      ? ['Partir de las fuerzas de extremo.', 'Aplicar dN/dx = -p(x).', 'Evaluar extremos, saltos y ceros.']
-      : quantity === 'shear'
-        ? ['Partir del cortante inicial.', 'Integrar la carga q(x).', 'Localizar cambios de signo y saltos.']
-        : ['Partir del momento inicial.', 'Integrar V(x) por cada tramo.', 'Resolver V=0 para hallar extremos.'];
+    layout.page.drawText(pdfText(`COMO SE CONSTRUYE - MIEMBRO ${visibleResults[0].memberId}`), { x: margin + 14, y: 157, size: 7, font: fonts.bold, color: palette.forestDeep });
+    // Three steps that used to name the operation ("Integrar la carga q(x)") and now report
+    // the number it produced on this member.
+    const steps = quantityConstructionSteps(context, quantity, visibleResults[0]);
     const stepWidth = (maxWidth - 48) / 3;
     steps.forEach((step, stepIndex) => {
       const stepX = margin + 14 + stepIndex * (stepWidth + 10);

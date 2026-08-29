@@ -13,6 +13,7 @@
  */
 import { drawGlobalDcl, drawMemberDiagrams } from './pdfDiagrams';
 import { drawMethodSection } from './pdfMethodSection';
+import { stepSubstitutions, type SubstitutionBlock } from './pdfSubstitution';
 import { memberAxis } from '../../graphics/structureGeometry';
 import {
   clearCell,
@@ -34,7 +35,7 @@ const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
 
 export const drawTechnicalAnnex = (context: ReportContext): void => {
   const { layout, project, analysis, payload, options, scenarioFactors, index } = context;
-  const { rgb, fonts } = layout;
+  const { rgb, fonts, palette } = layout;
 
   /** `label | value` grid: the summary rows keep their alignment without pretending to be data. */
   const summary = (entries: readonly (readonly [string, string])[]): void => {
@@ -368,6 +369,21 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
   }
 
   /**
+   * Draws one step's substituted relations: a caption naming what the arithmetic belongs to,
+   * then the numbered display equations themselves.
+   */
+  const drawSubstitutions = (blocks: readonly SubstitutionBlock[]): void => {
+    for (const block of blocks) {
+      if (block.caption) layout.text(block.caption, 7.9, fonts.bold, palette.forestDeep, 12);
+      for (const equation of block.equations) {
+        const height = layout.measureMathBlock(equation, 8.6, 16);
+        layout.ensure(height);
+        layout.y -= layout.drawMathBlockAt(equation, 8.6, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+      }
+    }
+  };
+
+  /**
    * Instantiates the geometry step's equations (`ΔX = Xⱼ − Xᵢ`, `L = √(ΔX²+ΔY²)`, `c = ΔX/L`,
    * `s = ΔY/L`) per member, straight from the project's own node coordinates via `memberAxis` —
    * the same geometry helper the canvas and the solver's own axis resolution use. This reads
@@ -409,15 +425,13 @@ export const drawTechnicalAnnex = (context: ReportContext): void => {
     for (const [stepIndex, step] of analysis.explanation.entries()) {
       layout.heading(`${stepIndex + 1}. ${step.title.replace(/^\d+\.\s*/, '')}`, 2);
       layout.text(step.summary, 8.7, fonts.regular, undefined, 8);
-      // The equations arrive from the solver already written as maths — `L = √(ΔX² + ΔY²)`,
-      // `dθ/dx = M/EI`. Drawn with `layout.text` they went through the WinAnsi transliteration
-      // and came out as `L = sqrt(DeltaX^2 + DeltaY^2)`, carets included. `drawMathBlock` keeps
-      // the symbols, stacks the fractions and folds a long relation instead of clipping it.
-      for (const equation of step.equations) {
-        const height = layout.measureMathBlock(equation, 8.6, 16);
-        layout.ensure(height);
-        layout.y -= layout.drawMathBlockAt(equation, 8.6, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
-      }
+      // The solver publishes each step's relation symbolically — `L = √(ΔX² + ΔY²)`,
+      // `dθ/dx = M/EI`. Those state the method and say nothing about this structure, so the
+      // annex no longer prints them: what it prints is the same relation already carried out,
+      // operand by operand, with this project's numbers (`pdfSubstitution.ts`). A step with
+      // nothing to substitute prints no equation at all rather than falling back to the
+      // symbol, which is exactly what this replaced.
+      drawSubstitutions(stepSubstitutions(context, step.id));
       // The values come from the engine, but the formatting is ours. Within one step,
       // entries sharing a unit are comparable, so each collapses against the largest of its
       // own family: an equilibrium sum of -1.06581e-14 kN beside a load of 22 kN is zero.
