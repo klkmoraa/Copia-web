@@ -32,7 +32,7 @@ const drawSubstitutions = (context: ReportContext, blocks: readonly Substitution
     for (const input of block.equations) {
       const equation = asWorkedEquation(input);
       layout.ensure(measureWorkedEquation(layout, equation, TYPE.body, 16));
-      layout.y -= drawWorkedEquation(layout, equation, TYPE.body, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
+      drawWorkedEquation(layout, equation, TYPE.body, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
     }
   }
 };

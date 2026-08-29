@@ -67,7 +67,7 @@ export const drawQuantityPart = (context: ReportContext, quantity: DiagramQuanti
       + 'este análisis, no la relación diferencial que los gobierna en cualquier viga.',
     );
     layout.ensure(layout.measureMathBlock(slope, TYPE.section, 12));
-    layout.y -= layout.drawMathBlockAt(slope, TYPE.section, 12, color, `(${layout.nextEquationNumber()})`);
+    layout.drawMathBlockAt(slope, TYPE.section, 12, color, `(${layout.nextEquationNumber()})`);
     layout.gap();
     layout.bullets(quantityConstructionSteps(context, quantity, governing));
   }

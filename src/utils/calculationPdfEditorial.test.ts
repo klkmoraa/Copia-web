@@ -99,8 +99,10 @@ describe('memoria de cálculo: calidad editorial', () => {
     expect(info.Creator).toBe('structureCo');
     expect(info.Language).toBe('es');
     // La fecha sale del `generatedAt` declarado, no del reloj: es lo que hace el archivo
-    // reproducible y lo que permite comparar dos exportaciones byte a byte.
-    expect(info.CreationDate).toBe('D:20260802120000Z');
+    // reproducible y lo que permite comparar dos exportaciones byte a byte. El desfase se
+    // escribe explícito (`+00'00'`), que es la forma que ISO 32000 §7.9.4 da para UTC.
+    expect(info.CreationDate).toBe("D:20260802120000+00'00'");
+    expect(info.ModDate).toBe(info.CreationDate);
     await document_.cleanup();
   }, 60_000);
 

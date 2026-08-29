@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { defineConfig } from 'vitest/config';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // Provenance stamped on exported documents must come from the package, never from a
@@ -41,6 +43,80 @@ const collectBuildFiles = async (relative = ''): Promise<string[]> => {
   return files.flat();
 };
 
+/**
+ * The Python runtime the calculation report is rendered by, served from the app's own origin.
+ *
+ * Since 0.8.4 the report is drawn by ReportLab running on Pyodide (`src/utils/pdf/
+ * pythonRuntime.ts`), which needs three files at run time: the WebAssembly interpreter, the
+ * Python standard library, and the ReportLab wheel. None of them may come from a CDN — the
+ * report has to be producible with no network at all, which is the property that keeps a model
+ * somebody is about to sign on their own machine — so they are emitted as ordinary build assets
+ * beside the chunk that loads them, and the service worker caches them with everything else.
+ *
+ * They are emitted rather than copied through `public/`: `pyodide.asm.wasm` alone is 8.6 MB,
+ * and `public/` files are copied on every dev start whether or not anybody exports a report.
+ * The dev server serves them from `node_modules` instead, through the middleware below.
+ */
+/**
+ * `pyodide-lock.json` is in the list because the interpreter reads it while booting, to learn
+ * which packages its distribution carries. It is not optional: without it the dev server and
+ * the SPA fallback both answer with `index.html`, and the boot dies on `Unexpected token '<'`.
+ */
+const PYODIDE_FILES = ['pyodide.asm.js', 'pyodide.asm.wasm', 'pyodide.mjs', 'pyodide-lock.json', 'python_stdlib.zip'];
+/** The name `pythonRuntime.ts` fetches, so the vendored wheel's version is not in the code. */
+const WHEEL_ASSET = 'reportlab.whl';
+
+const pythonRuntimeAssets = (): Plugin => {
+  const require = createRequire(import.meta.url);
+  const pyodideDir = path.dirname(require.resolve('pyodide/package.json'));
+  const wheelDir = new URL('./vendor/', import.meta.url);
+  const wheelFile = async () => {
+    const entries = await readdir(wheelDir);
+    const wheel = entries.find((entry) => /^reportlab-.*\.whl$/.test(entry));
+    if (!wheel) throw new Error('Falta vendor/reportlab-*.whl: el informe no se puede renderizar sin ReportLab.');
+    return new URL(wheel, wheelDir);
+  };
+  /** `assets/` is where Rollup puts the chunk whose `import.meta.url` resolves this directory. */
+  const target = (file: string) => `assets/pyodide/${file}`;
+
+  return {
+    name: 'structureco-python-runtime',
+    apply: () => true,
+    configureServer(server) {
+      server.middlewares.use(async (request, response, next) => {
+        const url = request.url ?? '';
+        const match = /\/pyodide\/([\w.-]+)$/.exec(url.split('?')[0]);
+        if (!match) return next();
+        const name = match[1];
+        try {
+          const source = name === WHEEL_ASSET
+            ? await wheelFile()
+            : PYODIDE_FILES.includes(name) ? new URL(`file://${path.join(pyodideDir, name)}`) : undefined;
+          if (!source) return next();
+          const body = await readFile(source);
+          response.setHeader('Content-Type', name.endsWith('.wasm')
+            ? 'application/wasm'
+            : name.endsWith('.js') || name.endsWith('.mjs') ? 'text/javascript'
+              : name.endsWith('.json') ? 'application/json' : 'application/octet-stream');
+          response.end(body);
+        } catch {
+          next();
+        }
+      });
+    },
+    async generateBundle() {
+      for (const file of PYODIDE_FILES) {
+        this.emitFile({
+          type: 'asset',
+          fileName: target(file),
+          source: await readFile(path.join(pyodideDir, file)),
+        });
+      }
+      this.emitFile({ type: 'asset', fileName: target(WHEEL_ASSET), source: await readFile(await wheelFile()) });
+    },
+  };
+};
+
 const pwaShellPlugin = () => ({
   name: 'structureco-pwa-shell',
   async closeBundle() {
@@ -77,7 +153,7 @@ self.addEventListener('fetch',event=>{
 });
 
 export default defineConfig({
-  plugins: [react(), pwaShellPlugin()],
+  plugins: [react(), pythonRuntimeAssets(), pwaShellPlugin()],
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(version),
@@ -118,7 +194,12 @@ export default defineConfig({
        arranque lo registra antes de la primera prueba para que las que rinden
        en inglés no tengan que volverse asíncronas. El instante sin catálogo se
        prueba aparte, con el registro limpio (`catalogs.test.ts`). */
-    setupFiles: ['src/i18n/testCatalogSetup.ts'],
+    setupFiles: [
+      'src/i18n/testCatalogSetup.ts',
+      /* El informe se rinde con el mismo ReportLab que usa el producto, sobre el mismo
+         Pyodide: las pruebas que leen el PDF de vuelta sólo valen si el PDF es el de verdad. */
+      'src/utils/pdf/testReportRenderer.ts',
+    ],
     // The quality gate must only observe the real product. Backups, worktrees and
     // vendored copies of the app live beside `src/` and would otherwise be collected,
     // reporting stale failures and inflating the suite by an order of magnitude.

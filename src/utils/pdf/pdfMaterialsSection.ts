@@ -126,7 +126,7 @@ const drawDimensionedSection = (
 ): void => {
   const { layout, project } = context;
   const { palette, fonts } = layout;
-  const page = layout.page;
+  const page = layout.surface;
   const geometry = resolveSectionGeometry({
     area: member.A, inertia: member.I, sectionId: member.sectionId, sectionOrigin: member.sectionOrigin,
   });

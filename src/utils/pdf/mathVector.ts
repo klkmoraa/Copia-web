@@ -1,18 +1,19 @@
 /**
- * Draws a `ParsedFormula` (see `mathTypeset.ts`) into a `pdf-lib` page as real vector paths.
+ * Places a `ParsedFormula` (see `mathTypeset.ts`) as real vector marks.
  *
- * `pdf-lib`'s `drawSvgPath(d, {x,y,scale})` hard-codes an internal `scale(s,-s)`, so it cannot
- * take an independent transform per axis on its own. Every glyph here is drawn by concatenating
- * the formula's own composed matrix as an *outer* transform (via `pushOperators` +
- * `concatTransformationMatrix`) and then calling `drawSvgPath` with the identity — the outer
- * concat supplies the real placement, and `drawSvgPath`'s own flip is folded into that
- * derivation rather than fought after the fact. See the plan this module was built from
- * (`docs/superpowers/plans/2026-08-28-pdf-formulas-mathjax-vector.md`) for the worked-through
- * derivation and the rendered proof it was checked against.
+ * MathJax hands over a size-independent tree of glyph outlines and fraction-bar rects in TeX
+ * design units; this turns that tree into `SceneMark`s at a chosen size and baseline, which is
+ * what both a displayed equation and a typeset table cell are made of.
+ *
+ * Doing the placement here — rather than handing the renderer a formula and a font size — is
+ * what keeps the two sides honest: there is no TeX engine in `python/structureco_report/`, and
+ * there must not be, or the same expression could be laid out one way in a Vitest run and
+ * another in the browser. The renderer strokes outlines; it never decides where a symbol goes.
  */
-import type { PDFPage } from 'pdf-lib';
-import type { AffineMatrix, FormulaOp, ParsedFormula } from './mathTypeset';
-import type { PdfColor, PdfVectorOps } from './reportContext';
+import { formulaMarks } from './reportDocument';
+import type { ParsedFormula } from './mathTypeset';
+import type { SceneMark, Tone } from './reportDocument';
+import type { Surface } from './pdfSurface';
 
 export interface FormulaBox {
   widthPt: number;
@@ -29,62 +30,24 @@ export const measureFormula = (parsed: ParsedFormula, fontSizePt: number): Formu
   };
 };
 
-const pdfPoint = (matrix: AffineMatrix, localX: number, localY: number, unitScale: number, baselineX: number, baselineY: number) => ({
-  x: baselineX + unitScale * (matrix.a * localX + matrix.e),
-  y: baselineY + unitScale * (-matrix.d * localY - matrix.f),
-});
-
-const drawPathOp = (
-  page: PDFPage,
-  ops: PdfVectorOps,
-  op: Extract<FormulaOp, { kind: 'path' }>,
-  unitScale: number,
-  baselineX: number,
-  baselineY: number,
-  color: PdfColor,
-): void => {
-  const sx = op.matrix.a * unitScale;
-  const sy = op.matrix.d * unitScale;
-  const tx = baselineX + op.matrix.e * unitScale;
-  const ty = baselineY - op.matrix.f * unitScale;
-  page.pushOperators(ops.pushGraphicsState(), ops.concatTransformationMatrix(sx, 0, 0, sy, tx, ty));
-  page.drawSvgPath(op.path, { x: 0, y: 0, scale: 1, color });
-  page.pushOperators(ops.popGraphicsState());
-};
-
-const drawRectOp = (
-  page: PDFPage,
-  op: Extract<FormulaOp, { kind: 'rect' }>,
-  unitScale: number,
-  baselineX: number,
-  baselineY: number,
-  color: PdfColor,
-): void => {
-  const corner1 = pdfPoint(op.matrix, op.x, op.y, unitScale, baselineX, baselineY);
-  const corner2 = pdfPoint(op.matrix, op.x + op.width, op.y + op.height, unitScale, baselineX, baselineY);
-  page.drawRectangle({
-    x: Math.min(corner1.x, corner2.x),
-    y: Math.min(corner1.y, corner2.y),
-    width: Math.abs(corner2.x - corner1.x),
-    height: Math.abs(corner2.y - corner1.y),
-    color,
-  });
-};
-
-/** Draws `parsed` with its baseline at `(x, baseline)` and returns the width consumed, in points. */
-export const drawFormula = (
-  page: PDFPage,
-  ops: PdfVectorOps,
+/** The marks `parsed` occupies with its baseline at `(x, baseline)`. */
+export const formulaToMarks = (
   parsed: ParsedFormula,
   x: number,
   baseline: number,
   fontSizePt: number,
-  color: PdfColor,
+  tone: Tone,
+): SceneMark[] => formulaMarks(parsed.ops, x, baseline, fontSizePt, tone);
+
+/** Draws `parsed` onto `surface` and returns the width consumed, in points. */
+export const drawFormula = (
+  surface: Surface,
+  parsed: ParsedFormula,
+  x: number,
+  baseline: number,
+  fontSizePt: number,
+  tone: Tone,
 ): number => {
-  const unitScale = fontSizePt / 1000;
-  for (const op of parsed.ops) {
-    if (op.kind === 'path') drawPathOp(page, ops, op, unitScale, x, baseline, color);
-    else drawRectOp(page, op, unitScale, x, baseline, color);
-  }
-  return parsed.widthUnits * unitScale;
+  surface.push(formulaToMarks(parsed, x, baseline, fontSizePt, tone));
+  return parsed.widthUnits * (fontSizePt / 1000);
 };

@@ -96,7 +96,7 @@ export const drawSummaryPart = (context: ReportContext): void => {
   );
   for (const sum of equilibriumSums(context)) {
     layout.ensure(layout.measureMathBlock(sum.equation, TYPE.body, 12));
-    layout.y -= layout.drawMathBlockAt(sum.equation, TYPE.body, 12, palette.ink, `(${layout.nextEquationNumber()})`);
+    layout.drawMathBlockAt(sum.equation, TYPE.body, 12, palette.ink, `(${layout.nextEquationNumber()})`);
   }
   layout.gap();
   layout.keyValues([

@@ -10,13 +10,17 @@
  * So the palette is no longer invented here. Every value below is lifted from
  * `src/design-system/tokens.css`, the product's single source of colour, in its light
  * appearance — the one that is correct on white paper. The hexes are duplicated rather than
- * parsed because this module runs in a worker-free, DOM-free path (`pdf-lib` only) where no
- * stylesheet exists to read; the comment beside each one names the token it mirrors, so the
- * two can be diffed by eye and by `pdfTheme.test.ts`.
+ * parsed because this module runs in a worker-free, DOM-free path where no stylesheet exists
+ * to read; the comment beside each one names the token it mirrors, so the two can be diffed by
+ * eye and by `pdfTheme.test.ts`.
+ *
+ * The renderer never sees a hex. A drawing names a *role* — `palette.ink`, `palette.quantity.
+ * moment` — which resolves to the token's own name, and `python/structureco_report/theme.py`
+ * turns that name into ink. One table of hexes, on this side of the seam.
  */
-import type { PdfColor, RgbFactory } from './reportContext';
+import type { Tone } from './reportDocument';
 
-/** `#1d1d1f` -> the three 0..1 components `pdf-lib`'s `rgb()` wants. */
+/** `#1d1d1f` -> the three 0..1 components a PDF colour operator wants. */
 export const fromHex = (hex: string): [number, number, number] => {
   const value = hex.replace('#', '');
   const full = value.length === 3 ? value.split('').map((c) => c + c).join('') : value;
@@ -102,44 +106,48 @@ export const TYPE = {
 /** Vertical rhythm. Every gap in the document is a multiple of this. */
 export const SPACE = 4;
 
+/**
+ * The palette, as a drawing names it.
+ *
+ * Every entry is the *token name*, not a colour: `palette.ink === 'ink'`. Roles exist so a
+ * diagram never reaches for a literal, and naming rather than resolving is what lets the same
+ * document be rendered by anything that knows `REPORT_TOKENS`.
+ */
 export interface ReportPalette {
-  readonly paper: PdfColor;
-  readonly tint: PdfColor;
-  readonly tintDeep: PdfColor;
-  readonly rule: PdfColor;
-  readonly inkFaint: PdfColor;
-  readonly inkSoft: PdfColor;
-  readonly ink: PdfColor;
-  readonly band: PdfColor;
-  readonly accent: PdfColor;
-  readonly reaction: PdfColor;
-  readonly load: PdfColor;
-  readonly deformed: PdfColor;
-  readonly ok: PdfColor;
-  readonly warn: PdfColor;
-  readonly danger: PdfColor;
+  readonly paper: Tone;
+  readonly tint: Tone;
+  readonly tintDeep: Tone;
+  readonly rule: Tone;
+  readonly inkFaint: Tone;
+  readonly inkSoft: Tone;
+  readonly ink: Tone;
+  readonly band: Tone;
+  readonly accent: Tone;
+  readonly reaction: Tone;
+  readonly load: Tone;
+  readonly deformed: Tone;
+  readonly ok: Tone;
+  readonly warn: Tone;
+  readonly danger: Tone;
   /** The three response quantities, in the product's own hues. */
-  readonly quantity: Readonly<Record<'axial' | 'shear' | 'moment', PdfColor>>;
+  readonly quantity: Readonly<Record<'axial' | 'shear' | 'moment', Tone>>;
 }
 
-export const createPalette = (rgb: RgbFactory): ReportPalette => {
-  const of = (name: ReportTokenName): PdfColor => rgb(...fromHex(REPORT_TOKENS[name]));
-  return {
-    paper: of('paper'),
-    tint: of('tint'),
-    tintDeep: of('tintDeep'),
-    rule: of('rule'),
-    inkFaint: of('inkFaint'),
-    inkSoft: of('inkSoft'),
-    ink: of('ink'),
-    band: of('band'),
-    accent: of('accent'),
-    reaction: of('reaction'),
-    load: of('load'),
-    deformed: of('deformed'),
-    ok: of('ok'),
-    warn: of('warn'),
-    danger: of('danger'),
-    quantity: { axial: of('axial'), shear: of('shear'), moment: of('moment') },
-  };
+export const PALETTE: ReportPalette = {
+  paper: 'paper',
+  tint: 'tint',
+  tintDeep: 'tintDeep',
+  rule: 'rule',
+  inkFaint: 'inkFaint',
+  inkSoft: 'inkSoft',
+  ink: 'ink',
+  band: 'band',
+  accent: 'accent',
+  reaction: 'reaction',
+  load: 'load',
+  deformed: 'deformed',
+  ok: 'ok',
+  warn: 'warn',
+  danger: 'danger',
+  quantity: { axial: 'axial', shear: 'shear', moment: 'moment' },
 };

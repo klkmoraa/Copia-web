@@ -1,10 +1,10 @@
 /**
- * Shared vocabulary of the calculation report renderer.
+ * Shared vocabulary of the calculation report composer.
  *
- * Every module under `utils/pdf/` receives one `ReportContext` and draws through it. Nothing
- * here imports `pdf-lib` as a value: the library is loaded with a dynamic `import()` inside
- * `createCalculationReport`, and its factories travel through this context. A static value
- * import anywhere in this folder would drag `pdf-lib` back into the entry chunk.
+ * Every module under `utils/pdf/` receives one `ReportContext` and writes through it. It no
+ * longer carries a PDF library's factories: since 0.8.4 the composer produces a
+ * `ReportDocument` and `python/structureco_report/` renders it, so the only renderer-shaped
+ * thing left in this context is `layout`, and even that draws into a `Surface`.
  */
 import type { AnalysisResult, MemberModel, MemberResult, NodeModel, ProjectModel } from '../../types';
 import type { StructureCoPortablePayload } from '../portableTypes';
@@ -40,36 +40,9 @@ export interface CalculationReportArtifact {
   payload: StructureCoPortablePayload;
 }
 
-/** A colour produced by `rgb()`; named so the signature does not repeat the inference. */
-export type PdfColor = ReturnType<typeof import('pdf-lib').rgb>;
-
-/** The `rgb` factory itself, handed to the renderer by the dynamic import. */
-export type RgbFactory = typeof import('pdf-lib').rgb;
-
-/**
- * The three `pdf-lib` operator functions `mathVector.ts` needs to draw a formula's outer
- * transform manually (see that file's header for why). All three are ordinary top-level
- * `pdf-lib` exports — its ESM entry re-exports `./api/operators` wholesale — so they travel
- * through the single dynamic `import('pdf-lib')` in `calculationPdf.ts`, the same way `rgb`
- * does. A static value import of `pdf-lib` anywhere under `utils/pdf/` would drag the library
- * back into the entry chunk, hence the `typeof import(...)` type queries.
- */
-export interface PdfVectorOps {
-  concatTransformationMatrix: typeof import('pdf-lib').concatTransformationMatrix;
-  pushGraphicsState: typeof import('pdf-lib').pushGraphicsState;
-  popGraphicsState: typeof import('pdf-lib').popGraphicsState;
-}
-
 export type { ReportPalette } from './pdfTheme';
-
-export interface ReportFonts {
-  readonly regular: import('pdf-lib').PDFFont;
-  readonly bold: import('pdf-lib').PDFFont;
-  readonly mathRegular: import('pdf-lib').PDFFont;
-  readonly mathItalic: import('pdf-lib').PDFFont;
-  /** Adobe Symbol: the Greek and the operators the WinAnsi faces cannot encode. */
-  readonly mathSymbol: import('pdf-lib').PDFFont;
-}
+export type { ReportFont, ReportFonts } from './pdfSurface';
+export type { Tone } from './reportDocument';
 
 /**
  * Identity lookups for the model.

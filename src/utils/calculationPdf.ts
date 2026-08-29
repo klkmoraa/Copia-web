@@ -6,15 +6,17 @@
  * a set of "visual pages" followed by an unnumbered annex with its own internal numbering, so
  * this list is literally the table of contents.
  *
- * `pdf-lib` stays behind a dynamic `import()` — that is what keeps it out of the entry chunk —
- * so the modules under `utils/pdf/` import it as types only and receive `rgb`, the fonts, and
- * the handful of operator functions `mathVector.ts` needs (`concatTransformationMatrix`,
- * `pushGraphicsState`, `popGraphicsState`) through the `ReportContext`/`PdfLayout`.
+ * Since 0.8.4 the two halves of "producing a PDF" are separated by a JSON document. Everything
+ * below composes a `ReportDocument` — parts, blocks, typeset equations, figures as vector marks
+ * — and hands it to `python/structureco_report/`, which runs on ReportLab and does the drawing.
+ * No page in this file, no font, no PDF library: `renderReportDocument` is the whole seam, and
+ * it stays behind a dynamic `import()` so neither the renderer nor its Python runtime is in the
+ * entry chunk.
  */
 import { createPortablePayload } from './portablePayload';
 import { PdfLayout } from './pdf/pdfBuilder';
-import { createPalette } from './pdf/pdfTheme';
 import { safeFilename } from './pdf/pdfFormat';
+import { pdfText } from './pdf/pdfGlyphs';
 import { drawSummaryPart } from './pdf/pdfSummarySection';
 import { drawQuantityPart } from './pdf/pdfQuantitySection';
 import { drawScopePart } from './pdf/pdfScopeSection';
@@ -23,15 +25,15 @@ import { drawModelPart } from './pdf/pdfModelSection';
 import { drawMaterialsPart } from './pdf/pdfMaterialsSection';
 import { drawResultsPart } from './pdf/pdfResultsSection';
 import { drawTracePart } from './pdf/pdfTraceSection';
-import { attachPortablePayload } from './pdf/pdfPayloadSection';
-import { drawCoverPage, drawContentsPage } from './pdf/pdfFrontMatter';
-import { attachOutline } from './pdf/pdfOutline';
+import { buildDocumentMetadata, buildPortableAttachment } from './pdf/pdfPayloadSection';
+import { buildCoverPage } from './pdf/pdfFrontMatter';
 import {
   createModelIndex,
   type CalculationReportArtifact,
   type CalculationReportOptions,
   type ReportContext,
 } from './pdf/reportContext';
+import type { ReportDocument } from './pdf/reportDocument';
 import type { AnalysisResult, ProjectModel } from '../types';
 
 export type { CalculationReportOptions, CalculationReportArtifact } from './pdf/reportContext';
@@ -48,31 +50,18 @@ const PROFESSIONAL_NOTE = 'structureCo es una ayuda de modelado y cálculo: no s
   + 'el criterio ni la certificación de un profesional. Los resultados dependen enteramente del '
   + 'modelo introducido, y su idoneidad es responsabilidad del ingeniero que firma.';
 
-export const createCalculationReport = async (
+/**
+ * Composes the normalized document. Exported so a test — or the renderer's own fixtures — can
+ * assert what the report *says* without paying for a PDF.
+ */
+export const createReportDocument = async (
   project: ProjectModel,
   analysis: AnalysisResult,
   options: CalculationReportOptions = {},
-): Promise<CalculationReportArtifact> => {
-  const [
-    {
-      PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString,
-      concatTransformationMatrix, pushGraphicsState, popGraphicsState,
-    },
-    payload,
-  ] = await Promise.all([
-    import('pdf-lib'),
-    createPortablePayload(project, analysis, options),
-  ]);
-  const pdf = await PDFDocument.create();
-  const fonts = {
-    regular: await pdf.embedFont(StandardFonts.Helvetica),
-    bold: await pdf.embedFont(StandardFonts.HelveticaBold),
-    mathRegular: await pdf.embedFont(StandardFonts.TimesRoman),
-    mathItalic: await pdf.embedFont(StandardFonts.TimesRomanItalic),
-    mathSymbol: await pdf.embedFont(StandardFonts.Symbol),
-  };
+): Promise<{ document: ReportDocument; payload: Awaited<ReturnType<typeof createPortablePayload>> }> => {
+  const payload = await createPortablePayload(project, analysis, options);
   const context: ReportContext = {
-    layout: new PdfLayout(pdf, fonts, createPalette(rgb), rgb, { concatTransformationMatrix, pushGraphicsState, popGraphicsState }),
+    layout: new PdfLayout(),
     project,
     analysis,
     payload,
@@ -83,13 +72,6 @@ export const createCalculationReport = async (
     index: createModelIndex(project, analysis),
   };
   const { layout } = context;
-
-  // The first two sheets are front matter and are written last: the cover needs nothing from
-  // the body, but the contents page cannot be set until every part knows the page it landed
-  // on — the same reason `stampChrome` waits for the final page to exist.
-  const coverIndex = layout.pages.indexOf(layout.page);
-  layout.newPage();
-  const contentsIndex = layout.pages.indexOf(layout.page);
 
   // Part one is the document: it is never dropped. Everything after it is a part the reader
   // may not need in this particular copy, and because the numbering is assigned by
@@ -110,11 +92,34 @@ export const createCalculationReport = async (
     if (options.includeEducationTrace !== false && analysis.educationTrace) drawTracePart(context);
   }
 
-  drawCoverPage(context, coverIndex, PROFESSIONAL_NOTE);
-  drawContentsPage(layout, contentsIndex);
-  attachOutline(pdf, { PDFName, PDFArray, PDFNumber, PDFHexString }, layout.sections);
-  layout.stampChrome(project.name, DOCUMENT_TITLE);
+  const { parts } = layout.build();
+  const document: ReportDocument = {
+    version: 1,
+    page: { width: layout.width, height: layout.height, margin: layout.margin },
+    cover: buildCoverPage(context, DOCUMENT_TITLE, PROFESSIONAL_NOTE),
+    contentsTitle: pdfText('Contenido'),
+    runningTitle: pdfText(project.name),
+    documentTitle: pdfText(DOCUMENT_TITLE),
+    parts,
+    metadata: buildDocumentMetadata(context),
+    attachment: buildPortableAttachment(context),
+  };
+  return { document, payload };
+};
 
-  const bytes = await attachPortablePayload(context);
-  return { bytes, filename: `${safeFilename(project.name)}-memoria-calculo.pdf`, payload };
+export const createCalculationReport = async (
+  project: ProjectModel,
+  analysis: AnalysisResult,
+  options: CalculationReportOptions = {},
+): Promise<CalculationReportArtifact> => {
+  const [{ renderReportDocument }, composed] = await Promise.all([
+    import('./pdf/reportlabRenderer'),
+    createReportDocument(project, analysis, options),
+  ]);
+  const bytes = await renderReportDocument(composed.document);
+  return {
+    bytes,
+    filename: `${safeFilename(project.name)}-memoria-calculo.pdf`,
+    payload: composed.payload,
+  };
 };

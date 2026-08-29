@@ -2,17 +2,22 @@
  * Fórmula typesetting over MathJax's SVG output.
  *
  * The solver's math DSL (`mathLatex.ts`) becomes LaTeX, MathJax lays it out headlessly
- * (`mathTypeset.ts`), and the result is drawn as real vector paths (`mathVector.ts`). This
- * module is now just the seam: it turns a DSL expression and a font size into a width or a
- * drawn box, exactly as it always has, so none of its nine call sites needed to change.
+ * (`mathTypeset.ts`), and the result is placed as real vector outlines (`mathVector.ts`). This
+ * module is just the seam: it turns a DSL expression and a font size into a width or a set of
+ * placed marks, exactly as it always has, so none of its nine call sites needed to change.
+ *
+ * Typesetting stays on this side of the ReportLab migration on purpose. There is no TeX engine
+ * in `python/structureco_report/`, and there must not be: the renderer strokes outlines it is
+ * handed, so the same expression reads identically in a Vitest run and in the browser.
  */
 import { atomize, translateExpression } from './mathLatex';
 import { MathTypesetError, typesetLatex } from './mathTypeset';
 import type { ParsedFormula } from './mathTypeset';
 import { drawFormula, measureFormula } from './mathVector';
 import { pdfText, wrapText } from './pdfGlyphs';
+import { REPORT_FONTS, type Surface } from './pdfSurface';
 import type { PdfLayout } from './pdfBuilder';
-import type { PdfColor } from './reportContext';
+import type { Tone } from './reportDocument';
 
 /** Expressions already reported by `safeTypeset`, so one bad string warns once, not per page. */
 const warnedExpressions = new Set<string>();
@@ -72,27 +77,27 @@ export const mathWidth = (layout: PdfLayout, expression: string, size: number): 
 
 /** Draws the expression on one line at `x`/`baseline` and returns the width it consumed. */
 export const drawMathFormula = (
-  layout: PdfLayout,
+  surface: Surface,
   expression: string,
   x: number,
   baseline: number,
   requestedSize: number,
-  color: PdfColor,
+  tone: Tone,
   maxFormulaWidth = Number.POSITIVE_INFINITY,
 ): number => {
   const parsed = safeTypeset(expression);
   if (!parsed) {
     // Plain-prose fallback, shrinking on the same schedule the vector path uses.
     const text = pdfText(expression);
-    const font = layout.fonts.mathRegular;
+    const font = REPORT_FONTS.mathRegular;
     let plainSize = requestedSize;
     while (plainSize > 7.5 && font.widthOfTextAtSize(text, plainSize) > maxFormulaWidth) plainSize -= 0.4;
-    layout.page.drawText(text, { x, y: baseline, size: plainSize, font, color });
+    surface.drawText(text, { x, y: baseline, size: plainSize, font, color: tone });
     return font.widthOfTextAtSize(text, plainSize);
   }
   let size = requestedSize;
   while (size > 7.5 && measureFormula(parsed, size).widthPt > maxFormulaWidth) size -= 0.4;
-  return drawFormula(layout.page, layout.vectorOps, parsed, x, baseline, size, color);
+  return drawFormula(surface, parsed, x, baseline, size, tone);
 };
 
 export interface MathBlockOptions {
@@ -163,13 +168,14 @@ export const packMathLines = (expression: string, width: number, size: number, i
  * relation costs only its own line.
  */
 export const drawMathBlock = (
+  surface: Surface,
   layout: PdfLayout,
   expression: string,
   x: number,
   top: number,
   width: number,
   size: number,
-  color: PdfColor,
+  tone: Tone,
   options: MathBlockOptions = {},
 ): number => {
   const indent = options.continuationIndent ?? size * 1.6;
@@ -184,7 +190,7 @@ export const drawMathBlock = (
     if (parsed) {
       const box = measureFormula(parsed, size);
       baseline = top - consumed - Math.max(size, box.heightPt);
-      drawFormula(layout.page, layout.vectorOps, parsed, cursor, baseline, size, color);
+      drawFormula(surface, parsed, cursor, baseline, size, tone);
       consumed += size * (hasFraction(lineExpression) ? 2.05 : 1.45);
     } else {
       // The packer only had a character-count estimate for this line, so re-wrap it against the
@@ -193,41 +199,23 @@ export const drawMathBlock = (
       baseline = top - consumed - size;
       for (const text of wrapped.length ? wrapped : [pdfText(lineExpression)]) {
         baseline = top - consumed - size;
-        layout.page.drawText(text, { x: cursor, y: baseline, size, font: layout.fonts.regular, color });
+        surface.drawText(text, { x: cursor, y: baseline, size, font: layout.fonts.regular, color: tone });
         consumed += size * 1.45;
       }
     }
     if (options.tag && index === lines.length - 1) {
       const tag = pdfText(options.tag);
       const tagWidth = layout.fonts.mathRegular.widthOfTextAtSize(tag, size * 0.9);
-      layout.page.drawText(tag, {
+      surface.drawText(tag, {
         x: x + width - tagWidth,
         y: baseline,
         size: size * 0.9,
         font: layout.fonts.mathRegular,
-        color,
+        color: tone,
       });
     }
   }
   return consumed;
-};
-
-/** Titled card holding one governing relation and its plain-language reading. */
-export const drawFormulaCard = (
-  layout: PdfLayout,
-  label: string,
-  expression: string,
-  explanation: string,
-  x: number,
-  bottom: number,
-  width: number,
-  color: PdfColor,
-): void => {
-  const { page, rgb, fonts } = layout;
-  page.drawRectangle({ x, y: bottom, width, height: 54, color: rgb(0.975, 0.985, 0.98), borderColor: color, borderWidth: 0.65 });
-  page.drawText(pdfText(label.toUpperCase()), { x: x + 10, y: bottom + 39, size: 6.3, font: fonts.bold, color });
-  drawMathFormula(layout, expression, x + 10, bottom + 21, 11.2, rgb(0.10, 0.15, 0.12), width - 20);
-  page.drawText(pdfText(explanation), { x: x + 10, y: bottom + 7, size: 6.2, font: fonts.regular, color: rgb(0.37, 0.43, 0.39) });
 };
 
 /**
@@ -265,31 +253,31 @@ export const rawMathWidth = (latex: string, size: number): number => {
  * one-line form rather than asking for it to be broken.
  */
 export const drawRawMath = (
-  layout: PdfLayout,
+  surface: Surface,
   latex: string,
   x: number,
   top: number,
   width: number,
   size: number,
-  color: PdfColor,
+  tone: Tone,
   tag?: string,
 ): number => {
   const parsed = safeTypesetLatex(latex);
   if (!parsed) return 0;
   const box = measureFormula(parsed, size);
   const baseline = top - box.heightPt;
-  drawFormula(layout.page, layout.vectorOps, parsed, x, baseline, size, color);
+  drawFormula(surface, parsed, x, baseline, size, tone);
   if (tag) {
     const text = pdfText(tag);
-    const tagWidth = layout.fonts.mathRegular.widthOfTextAtSize(text, size * 0.9);
+    const tagWidth = REPORT_FONTS.mathRegular.widthOfTextAtSize(text, size * 0.9);
     // Beside the vertical centre of the block, not its last row: the number tags the whole
     // relation, and hanging it off the bottom row reads as numbering that row alone.
-    layout.page.drawText(text, {
+    surface.drawText(text, {
       x: x + width - tagWidth,
       y: baseline + box.heightPt / 2 - size * 0.35,
       size: size * 0.9,
-      font: layout.fonts.mathRegular,
-      color,
+      font: REPORT_FONTS.mathRegular,
+      color: tone,
     });
   }
   return box.heightPt + box.depthPt + size * 0.45;

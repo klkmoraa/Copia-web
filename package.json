@@ -38,6 +38,7 @@
     "qa:illustration-studio:webkit": "npm run build && node scripts/qa-illustration-studio.mjs --webkit",
     "qa:structure-generator": "npm run build && node scripts/qa-structure-generator.mjs",
     "qa:structure-generator:webkit": "npm run build && node scripts/qa-structure-generator.mjs --webkit",
+    "qa:calculation-report": "npm run build && node scripts/qa-calculation-report.mjs",
     "qa:webkit": "npm run build && node qa-webkit.mjs",
     "verify:browser-bundle": "node scripts/check-browser-bundle.mjs"
   },
@@ -46,8 +47,8 @@
     "lucide-react": "^1.24.0",
     "mathjax-full": "^3.2.1",
     "motion": "^12.43.0",
-    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
+    "pyodide": "^0.28.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "three": "^0.185.1"

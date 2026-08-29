@@ -1,7 +1,7 @@
 /**
  * Model-space geometry shared by every renderer of the structure.
  *
- * The web canvas (React/SVG) and the calculation report (`pdf-lib`) draw the same structure
+ * The web canvas (React/SVG) and the calculation report (ReportLab) draw the same structure
  * with different vocabularies — SVG markers, Bézier segments and a pan/zoom camera on one
  * side; hand-built arrow barbs, sampled polylines and a fit-to-box transform on the other.
  * What they genuinely share is the geometry underneath: where a member points, where a load

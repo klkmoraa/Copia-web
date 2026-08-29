@@ -7,8 +7,10 @@
  * here now, unchanged in behaviour, plus the three the scenes needed and nobody had written:
  * a moment arc, a dashed line, and the ghosted whole model a free body is cut out of.
  *
- * Everything here draws through `layout.page`, which must always be read at the moment of use —
- * a page break replaces it — and takes its colours from the palette, never from a literal.
+ * Everything here draws into `layout.surface` — the figure being composed, in its own local
+ * coordinates — and takes its colours from the palette, never from a literal. Nothing reaches
+ * for a page: since the ReportLab migration a drawing does not know where it will land, which
+ * is what lets the same marks be correct on whichever sheet the renderer puts them.
  */
 import type { MemberLoad, NodeModel, SupportDefinition } from '../../types';
 import type { SectionGeometry } from '../../features/inspector/sectionGeometry';
@@ -24,7 +26,8 @@ import { number } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
 import { TYPE } from './pdfTheme';
 import type { PdfLayout } from './pdfBuilder';
-import type { PdfColor, ReportContext } from './reportContext';
+import type { ReportContext } from './reportContext';
+import type { Tone } from './reportDocument';
 
 export interface Point {
   x: number;
@@ -113,7 +116,7 @@ export const drawArrow = (
   location: Point,
   fx: number,
   fy: number,
-  color: PdfColor,
+  color: Tone,
   length: number,
   thickness = 1.15,
 ): Point | undefined => {
@@ -122,7 +125,7 @@ export const drawArrow = (
   const dx = fx / magnitude * length;
   const dy = fy / magnitude * length;
   const tail = { x: location.x - dx, y: location.y - dy };
-  const page = layout.page;
+  const page = layout.surface;
   page.drawLine({ start: tail, end: location, thickness, color });
   page.drawLine({ start: location, end: { x: location.x - dx * 0.30 - dy * 0.15, y: location.y - dy * 0.30 + dx * 0.15 }, thickness: thickness * 0.87, color });
   page.drawLine({ start: location, end: { x: location.x - dx * 0.30 + dy * 0.15, y: location.y - dy * 0.30 - dx * 0.15 }, thickness: thickness * 0.87, color });
@@ -134,10 +137,10 @@ export const drawDashedLine = (
   layout: PdfLayout,
   from: Point,
   to: Point,
-  color: PdfColor,
+  color: Tone,
   thickness = 0.9,
 ): void => {
-  layout.page.drawLine({ start: from, end: to, thickness, color, dashArray: [3.2, 2.4] });
+  layout.surface.drawLine({ start: from, end: to, thickness, color, dashArray: [3.2, 2.4] });
 };
 
 /**
@@ -145,18 +148,18 @@ export const drawDashedLine = (
  * paper. `sign > 0` turns counter-clockwise, which is the positive sense of the model's own
  * `Mz`, so the drawing and the number never disagree.
  *
- * `pdf-lib` has no arc operator exposed through its drawing API, so the arc is a polyline —
- * at this radius and this segment count the facets are well under the line width.
+ * The mark vocabulary carries no arc, so the arc is a polyline — at this radius and this
+ * segment count the facets are well under the line width.
  */
 export const drawMomentArc = (
   layout: PdfLayout,
   centre: Point,
   sign: number,
   radius: number,
-  color: PdfColor,
+  color: Tone,
   thickness = 1.1,
 ): Point => {
-  const page = layout.page;
+  const page = layout.surface;
   const direction = sign >= 0 ? 1 : -1;
   const from = Math.PI * 0.25;
   const sweep = Math.PI * 1.35;
@@ -212,10 +215,10 @@ export const drawSupportGlyph = (
   layout: PdfLayout,
   location: Point,
   support: SupportDefinition,
-  color: PdfColor,
+  color: Tone,
 ): void => {
   if (support.type === 'none') return;
-  const page = layout.page;
+  const page = layout.surface;
   page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x - 7, y: location.y - 13 }, thickness: 1, color });
   page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x + 7, y: location.y - 13 }, thickness: 1, color });
   if (support.type === 'roller') {
@@ -240,11 +243,11 @@ export const drawNodeDot = (
   layout: PdfLayout,
   location: Point,
   id: string,
-  color: PdfColor,
+  color: Tone,
   size = 3,
   labelSize = 6.5,
 ): void => {
-  const page = layout.page;
+  const page = layout.surface;
   page.drawCircle({ x: location.x, y: location.y, size, color: layout.palette.paper, borderColor: color, borderWidth: 1.1 });
   if (id) page.drawText(pdfText(id), { x: location.x + size + 2, y: location.y + size + 1, size: labelSize, font: layout.fonts.bold, color });
 };
@@ -277,7 +280,7 @@ export const drawGhostModel = (
 ): void => {
   const { layout, project, index } = context;
   const { palette } = layout;
-  const page = layout.page;
+  const page = layout.surface;
   const solidMembers = options.solidMemberIds;
   const solidNodes = options.solidNodeIds;
   for (const member of project.members) {
@@ -321,9 +324,9 @@ export const drawSectionShape = (
   layout: PdfLayout,
   rect: Rect,
   geometry: SectionGeometry,
-  color: PdfColor,
+  color: Tone,
 ): void => {
-  const page = layout.page;
+  const page = layout.surface;
   const scale = Math.min(
     rect.width / Math.max(geometry.width, 1e-6),
     rect.height / Math.max(geometry.depth, 1e-6),
@@ -429,7 +432,7 @@ export const drawMemberLoads = (
 ): Rect[] => {
   const { layout, project, index, scenarioFactors } = context;
   const { palette, fonts } = layout;
-  const page = layout.page;
+  const page = layout.surface;
   // The boxes these labels occupy, so a scene's own label placer can keep clear of them: a
   // load's name is drawn here, not by the placer, and values kept landing on top of it.
   const boxes: Rect[] = [];
@@ -511,9 +514,9 @@ export const drawDimension = (
   to: Point,
   offset: number,
   text: string,
-  color: PdfColor,
+  color: Tone,
 ): Rect | undefined => {
-  const page = layout.page;
+  const page = layout.surface;
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy);
@@ -557,9 +560,9 @@ export const drawDimension = (
 };
 
 /** Thin guide from a label to the thing it names, when the label could not sit beside it. */
-export const drawLeader = (layout: PdfLayout, from: Point, to: Point, color: PdfColor): void => {
-  layout.page.drawLine({ start: from, end: to, thickness: HAIRLINE, color, opacity: 0.8 });
-  layout.page.drawCircle({ x: to.x, y: to.y, size: 0.9, color });
+export const drawLeader = (layout: PdfLayout, from: Point, to: Point, color: Tone): void => {
+  layout.surface.drawLine({ start: from, end: to, thickness: HAIRLINE, color, opacity: 0.8 });
+  layout.surface.drawCircle({ x: to.x, y: to.y, size: 0.9, color });
 };
 
 /**
@@ -569,13 +572,13 @@ export const drawLeader = (layout: PdfLayout, from: Point, to: Point, color: Pdf
  * then reason about the piece below it as a free body. Drawing that assumption is the difference
  * between a diagram a reader can check and one they have to take on trust.
  */
-export const drawHinge = (layout: PdfLayout, at: Point, size: number, color: PdfColor): void => {
-  layout.page.drawCircle({ x: at.x, y: at.y, size, color: layout.palette.paper, borderColor: color, borderWidth: 0.9 });
+export const drawHinge = (layout: PdfLayout, at: Point, size: number, color: Tone): void => {
+  layout.surface.drawCircle({ x: at.x, y: at.y, size, color: layout.palette.paper, borderColor: color, borderWidth: 0.9 });
 };
 
 /** The cut itself: a bolder dash than the geometry, with a tick closing each end. */
-export const drawCutLine = (layout: PdfLayout, from: Point, to: Point, color: PdfColor): void => {
-  const page = layout.page;
+export const drawCutLine = (layout: PdfLayout, from: Point, to: Point, color: Tone): void => {
+  const page = layout.surface;
   page.drawLine({ start: from, end: to, thickness: 1.2, color, dashArray: [4.2, 2.6] });
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -597,8 +600,8 @@ export const drawCutLine = (layout: PdfLayout, from: Point, to: Point, color: Pd
  * Every arrow on these drawings carries a sign that only means something against a stated pair
  * of axes. Naming them costs a corner and makes the whole drawing checkable.
  */
-export const drawAxesIndicator = (layout: PdfLayout, at: Point, size: number, color: PdfColor): void => {
-  const page = layout.page;
+export const drawAxesIndicator = (layout: PdfLayout, at: Point, size: number, color: Tone): void => {
+  const page = layout.surface;
   drawArrow(layout, { x: at.x + size, y: at.y }, 1, 0, color, size, 0.6);
   drawArrow(layout, { x: at.x, y: at.y + size }, 0, 1, color, size, 0.6);
   page.drawText(pdfText('x'), { x: at.x + size + 1.5, y: at.y - 2, size: TYPE.micro, font: layout.fonts.regular, color });
@@ -637,10 +640,10 @@ export const drawPolynomialCurve = (
   domain: { x0: number; x1: number },
   baseline: { from: Point; to: Point },
   amplitude: number,
-  color: PdfColor,
+  color: Tone,
   options: PolynomialCurveOptions = {},
 ): { peak: number; peakAt: number } => {
-  const page = layout.page;
+  const page = layout.surface;
   const steps = options.steps ?? 48;
   const span = domain.x1 - domain.x0;
   if (!(span > 0)) return { peak: 0, peakAt: domain.x0 };
@@ -689,17 +692,17 @@ export const drawIsolationBoundary = (
   layout: PdfLayout,
   centre: Point,
   radius: number,
-  color: PdfColor,
+  color: Tone,
 ): void => {
-  // `pdf-lib` has no dashed-circle operator, so the circle is a dashed polygon; at this radius
-  // the facets are well under the line width.
+  // There is no dashed-circle mark, so the circle is a dashed polygon; at this radius the
+  // facets are well under the line width.
   const steps = 40;
   const dash = 2;
   for (let step = 0; step < steps; step += 1) {
     if (step % dash === 1) continue;
     const from = (step / steps) * Math.PI * 2;
     const to = ((step + 1) / steps) * Math.PI * 2;
-    layout.page.drawLine({
+    layout.surface.drawLine({
       start: { x: centre.x + radius * Math.cos(from), y: centre.y + radius * Math.sin(from) },
       end: { x: centre.x + radius * Math.cos(to), y: centre.y + radius * Math.sin(to) },
       thickness: HAIRLINE + 0.2,

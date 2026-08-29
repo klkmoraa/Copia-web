@@ -9,7 +9,7 @@
  * A scene is a plain object, built by `pdfMethodScenes.ts` from what the method already solved
  * and drawn here. Keeping the two apart is what makes the geometry testable: which nodes a cut
  * keeps, where the cut line lands and which way an axial arrow points are assertions about a
- * `FreeBodyScene`, with no `pdf-lib` page anywhere near them.
+ * `FreeBodyScene`, with no page or renderer anywhere near them.
  *
  * Nothing in this file computes structural results. Every force it draws was solved by
  * `src/analysis-methods/`, checked against the matrix analysis there, and handed over as a
@@ -52,7 +52,8 @@ import {
 } from './pdfScene';
 import type { PdfLayout } from './pdfBuilder';
 import type { NodeModel } from '../../types';
-import type { PdfColor, ReportContext } from './reportContext';
+import type { ReportContext } from './reportContext';
+import type { Tone } from './reportDocument';
 
 /** Where a scene mark is anchored: a node of the model, or a point in model coordinates. */
 export type ScenePlace = { readonly nodeId: string } | { readonly at: Point };
@@ -298,7 +299,7 @@ export const sceneExtentOf = (context: ReportContext, scene: FreeBodyScene): Sce
   };
 };
 
-const toneColor = (context: ReportContext, tone: SceneTone): PdfColor => {
+const toneColor = (context: ReportContext, tone: SceneTone): Tone => {
   const { palette } = context.layout;
   switch (tone) {
     case 'load': return palette.load;
@@ -395,7 +396,7 @@ const drawLabel = (
   anchor: Point,
   direction: Point,
   frame: Rect,
-  color: PdfColor,
+  color: Tone,
   metrics: SceneMetrics,
   taken: LabelBox[],
   bold = true,
@@ -419,7 +420,7 @@ const drawLabel = (
   if (placed.leader) {
     drawLeader(layout, { x: placed.box.x + placed.box.width / 2, y: placed.box.y + placed.box.height / 2 }, placed.leader, color);
   }
-  layout.page.drawText(label, { x: placed.box.x, y: placed.box.y, size, font, color });
+  layout.surface.drawText(label, { x: placed.box.x, y: placed.box.y, size, font, color });
 };
 
 export const drawFreeBodyScene = (
@@ -430,7 +431,7 @@ export const drawFreeBodyScene = (
   const { layout, project } = context;
   const { palette, fonts } = layout;
   if (!project.nodes.length) return;
-  const page = layout.page;
+  const page = layout.surface;
 
   // The border hugs the drawing, centred in the slot it was given, rather than boxing the whole
   // slot: a joint close-up or a narrow model used to float inside a 495 pt-wide rectangle.

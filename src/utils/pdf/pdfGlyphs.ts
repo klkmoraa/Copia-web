@@ -3,8 +3,13 @@
  *
  * Prose is drawn in Helvetica, which only carries WinAnsi, so `pdfText` transliterates
  * every engineering glyph explicitly instead of dropping to a replacement box.
+ *
+ * Wrapping still happens here even though the renderer paginates: a figure has to know how
+ * wide its caption is before it can be measured, and a scene has to size a label box before it
+ * can keep two of them apart. The ruler is `standardFontWidths.ts`, generated from ReportLab's
+ * own metrics, so both sides measure the same glyphs.
  */
-import type { PDFFont } from 'pdf-lib';
+import type { ReportFont } from './pdfSurface';
 
 /**
  * Unicode super/subscripts, as the `^x`/`_x` markers the fórmula typesetter understands.
@@ -58,7 +63,7 @@ const transliterate = (value: unknown, keep: (character: string) => boolean): st
 /** Prose for the WinAnsi faces: every glyph outside Latin-1 is spelled out. */
 export const pdfText = (value: unknown): string => transliterate(value, () => false);
 
-export const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): string[] => {
+export const wrapText = (text: string, font: ReportFont, size: number, maxWidth: number): string[] => {
   const paragraphs = pdfText(text).split(/\r?\n/);
   const lines: string[] = [];
   for (const paragraph of paragraphs) {

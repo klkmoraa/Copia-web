@@ -17,9 +17,9 @@
  */
 import { unitLabel, type UnitQuantity } from '../../engine/units';
 import { translateExpression } from './mathLatex';
-import { drawMathBlock, hasFraction, mathWidth } from './pdfMath';
+import { hasFraction, mathWidth } from './pdfMath';
 import type { PdfLayout } from './pdfBuilder';
-import type { PdfColor } from './reportContext';
+import type { Tone } from './reportDocument';
 
 export interface WorkedEquation {
   /** Left-hand side, written once: `M(x)`, `ΣF_y`, `D(AB)`. */
@@ -183,7 +183,7 @@ export const drawWorkedEquation = (
   equation: WorkedEquation,
   size: number,
   indent: number,
-  color: PdfColor,
+  color: Tone,
   tag?: string,
 ): number => {
   const latex = buildAlignedLatex(equation);
@@ -191,5 +191,7 @@ export const drawWorkedEquation = (
   if (latex && layout.rawMathWidth(latex, size) <= available) {
     return layout.drawRawMathAt(latex, size, indent, color, tag);
   }
-  return drawMathBlock(layout, inlineExpression(equation), layout.margin + indent, layout.y, available, size, color, { tag });
+  // The aligned block did not fit the measure. The one-line form folds instead, which is what
+  // `drawMathBlockAt` does, so the relation still reads rather than running into the margin.
+  return layout.drawMathBlockAt(inlineExpression(equation), size, indent, color, tag);
 };

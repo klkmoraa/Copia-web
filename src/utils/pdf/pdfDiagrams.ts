@@ -28,7 +28,8 @@ import {
   quantityUnit,
 } from './pdfFormat';
 import type { PdfLayout } from './pdfBuilder';
-import type { PdfColor, ReportContext } from './reportContext';
+import type { ReportContext } from './reportContext';
+import type { Tone } from './reportDocument';
 
 /** Framed free-body diagram: geometry, supports, applied actions and optional reactions. */
 export const drawGlobalDcl = (
@@ -41,7 +42,7 @@ export const drawGlobalDcl = (
   if (!project.nodes.length) return;
   // Rect-based rather than cursor-based: the caller reserves the space through
   // `layout.figure`, which is also what numbers and captions the drawing.
-  const page = layout.page;
+  const page = layout.surface;
   const left = rect.x;
   const right = rect.x + rect.width;
   const bottom = rect.y;
@@ -114,7 +115,7 @@ export const drawMemberDiagrams = (
   const { layout, project } = context;
   const { fonts, palette } = layout;
   if (result.diagram.length < 2 || result.length <= 0) return;
-  const page = layout.page;
+  const page = layout.surface;
   const gap = 9;
   const chartWidth = (rect.width - gap * 2) / 3;
   const chartTop = rect.y + rect.height - 12;
@@ -165,7 +166,7 @@ export const drawGlobalQuantityDiagram = (
   height: number,
 ): void => {
   const { layout, project, analysis, index } = context;
-  const { page, fonts, palette } = layout;
+  const { surface: page, fonts, palette } = layout;
   if (!project.nodes.length) return;
   const color = palette.quantity[quantity];
   const projection = createProjection(project.nodes, {
@@ -244,9 +245,9 @@ export const drawElasticCurve = (
   bottom: number,
   width: number,
   height: number,
-  color: PdfColor,
+  color: Tone,
 ): { peak: number; peakAt: number } => {
-  const { page, rgb, fonts } = layout;
+  const { surface: page, fonts } = layout;
   const baseline = bottom + height / 2;
   const plotLeft = left + 26;
   const plotWidth = Math.max(1, width - 52);
@@ -280,7 +281,7 @@ export const drawElasticCurve = (
     start: { x: plotLeft, y: baseline },
     end: { x: plotLeft + plotWidth, y: baseline },
     thickness: 1.1,
-    color: rgb(0.42, 0.49, 0.45),
+    color: layout.palette.inkSoft,
   });
   let previous = toPoint(samples[0]);
   for (const sample of samples.slice(1)) {
@@ -296,7 +297,7 @@ export const drawElasticCurve = (
     y: bottom + 4,
     size: 6.2,
     font: fonts.regular,
-    color: rgb(0.38, 0.44, 0.40),
+    color: layout.palette.inkSoft,
   });
   return { peak: peakSample.value, peakAt: peakSample.x };
 };

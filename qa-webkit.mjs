@@ -1,7 +1,7 @@
 import { devices, webkit } from 'playwright';
 import { preview } from 'vite';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { createHash } from 'node:crypto';
+import { renderReport } from './scripts/report-renderer.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -76,15 +76,51 @@ const nativePayload = {
     value: createHash('sha256').update(JSON.stringify(canonicalize(nativePayloadData))).digest('hex'),
   },
 };
-const nativePdf = await PDFDocument.create();
-const nativePage = nativePdf.addPage();
-const nativeFont = await nativePdf.embedFont(StandardFonts.Helvetica);
-nativePage.drawText('structureCo portable calculation report - N V M - procedures', { x: 40, y: 700, size: 14, font: nativeFont });
-await nativePdf.attach(Buffer.from(JSON.stringify(nativePayload)), 'structureco-payload.json', {
-  mimeType: 'application/vnd.structureco.project+json',
-  description: 'structureCo portable payload',
-});
-const nativePdfBuffer = Buffer.from(await nativePdf.save());
+/**
+ * The fixture the import dialog has to recognise as one of ours, made by the product's own
+ * renderer rather than by a second PDF writer kept around for the purpose. What is being
+ * checked is that a structureCo document round-trips back into the app, so it should be a
+ * structureCo document — payload attached exactly the way an export attaches one.
+ */
+const nativePdfBuffer = Buffer.from(await renderReport({
+  version: 1,
+  page: { width: 595.28, height: 841.89, margin: 50 },
+  cover: {
+    documentTitle: 'Memoria de cálculo estructural',
+    projectName: fixture.name,
+    facts: [['Escenario', 'Análisis activo']],
+    noticeTitle: 'Aviso profesional',
+    notice: 'structureCo es una ayuda de modelado y cálculo.',
+  },
+  contentsTitle: 'Contenido',
+  runningTitle: fixture.name,
+  documentTitle: 'Memoria de cálculo estructural',
+  parts: [{
+    title: 'Resumen del análisis',
+    number: 1,
+    blocks: [{
+      kind: 'text',
+      text: 'structureCo portable calculation report - N V M - procedures',
+      size: 8.6, face: 'regular', tone: 'ink', indent: 0,
+    }],
+  }],
+  metadata: {
+    title: `${fixture.name} - memoria de cálculo structureCo`,
+    author: 'structureCo',
+    subject: 'Modelo, DCL, diagramas N-V-M, resultados y procedimiento estructural',
+    keywords: ['structureCo'],
+    producer: 'structureCo 0.7.0',
+    creator: 'structureCo',
+    language: 'es',
+    stampedAt: nativePayload.provenance.generatedAt,
+  },
+  attachment: {
+    filename: 'structureco-payload.json',
+    mimeType: 'application/vnd.structureco.project+json',
+    description: 'structureCo portable payload',
+    text: JSON.stringify(nativePayload),
+  },
+}));
 
 const verifyWelcomeScroll = async (page) => {
   const welcome = page.locator('.welcome-screen');

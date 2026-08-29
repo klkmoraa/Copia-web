@@ -28,6 +28,7 @@ App / navegación
 | Comandos e historial | `src/commands/**`, `src/store/ProjectContext.tsx` | `ProjectCommand`, patches reversibles y undo/redo. |
 | Proyectos | `src/storage/projectRepository.ts`, `src/features/project-hub/**` | IndexedDB, migración y recuperaciones. |
 | Import/export y PDF | `src/utils/**`, `src/features/import-export/**`, `src/import/dxf/**` | Formatos validados, expediente portable y DXF ASCII experimental. |
+| Memoria de cálculo | `src/utils/calculationPdf.ts`, `src/utils/pdf/**`, `python/structureco_report/**` | Una costura: TypeScript compone un documento JSON normalizado (`reportDocument.ts`) y ReportLab lo dibuja sobre Pyodide, en local y sin red. Lo verifica `npm run qa:calculation-report` sobre la app construida. |
 | Datasheet | `src/features/datasheet/**` | Proyección tabular del modelo, sin store propio; consulta su [contrato canónico](structureco-datasheet.md). |
 | Aula | `src/education/**`, `src/features/classroom/**`, `src/store/ClassroomSessionContext.tsx` | Recorrido, predicciones, niveles y progreso local. |
 | Space 3D | `src/space3d/**`, `src/features/space3d/**` | Dominio separado S3D-1; consulta su [contrato canónico](structureco-space-3d-s3d1.md). |

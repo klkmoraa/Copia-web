@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { createHibbelerTributaryBeam } from '../data/defaultProject';
+import { blankPdf, foreignPdf } from './pdf/foreignPdfFixture';
 import { analyzeProject } from '../engine/solver';
 import { createCalculationReport } from './calculationPdf';
 import { inspectPdf } from './pdfImport';
@@ -83,18 +83,14 @@ describe('expediente portable structureCo', () => {
   }, 30_000);
 
   it('clasifica PDF digital externo y PDF sin texto sin inventar un modelo', async () => {
-    const external = await PDFDocument.create();
-    const externalPage = external.addPage();
-    const font = await external.embedFont(StandardFonts.Helvetica);
-    externalPage.drawText('External structural calculation with nodes, members, reactions, shear and bending moment results.', { x: 40, y: 700, size: 12, font });
-    const externalInspection = await inspectPdf(await external.save());
+    const externalInspection = await inspectPdf(foreignPdf(
+      'External structural calculation with nodes, members, reactions, shear and bending moment results.',
+    ));
     expect(externalInspection.kind).toBe('external');
     expect(externalInspection.payload).toBeUndefined();
     expect(externalInspection.text).toContain('External structural calculation');
 
-    const scanned = await PDFDocument.create();
-    scanned.addPage();
-    const scannedInspection = await inspectPdf(await scanned.save());
+    const scannedInspection = await inspectPdf(blankPdf());
     expect(scannedInspection.kind).toBe('scanned');
     expect(scannedInspection.payload).toBeUndefined();
     expect(scannedInspection.warnings.join(' ')).toMatch(/OCR/i);

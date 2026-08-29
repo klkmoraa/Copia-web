@@ -108,7 +108,7 @@ const drawWorked = (context: ReportContext, caption: string | undefined, equatio
   for (const input of equations) {
     const equation = asWorkedEquation(input);
     layout.ensure(measureWorkedEquation(layout, equation, 8.4, 16));
-    layout.y -= drawWorkedEquation(layout, equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawWorkedEquation(layout, equation, 8.4, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
   }
 };
 
@@ -117,7 +117,7 @@ const drawRelation = (context: ReportContext, equation: EquationInput): void => 
   const { layout } = context;
   const worked = asWorkedEquation(equation);
   layout.ensure(measureWorkedEquation(layout, worked, 8.4, 16));
-  layout.y -= drawWorkedEquation(layout, worked, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  drawWorkedEquation(layout, worked, 8.4, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
 };
 
 /**
@@ -277,9 +277,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     8.7, fonts.bold, palette.ink, 8,
   );
 
-  layout.ensure(120);
-  layout.y -= 8;
-  drawElasticCurve(
+  layout.plate(112, (rect) => drawElasticCurve(
     layout,
     solution.segments.map((segment) => ({
       x0: segment.x0,
@@ -287,13 +285,12 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
       deflection: segment.deflection,
     })),
     solution.axis.length,
-    layout.margin,
-    layout.y - 104,
-    layout.contentWidth,
+    rect.x,
+    rect.y,
+    rect.width,
     104,
     palette.quantity.moment,
-  );
-  layout.y -= 112;
+  ));
 };
 
 const CONJUGATE_KIND_LABEL: Record<ConjugateSupportKind, string> = {
@@ -428,9 +425,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     8.7, fonts.bold, palette.ink, 8,
   );
 
-  layout.ensure(120);
-  layout.y -= 8;
-  drawElasticCurve(
+  layout.plate(112, (rect) => drawElasticCurve(
     layout,
     solution.segments.map((segment) => ({
       x0: segment.x0,
@@ -438,13 +433,12 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
       deflection: segment.conjugateMoment,
     })),
     solution.axis.length,
-    layout.margin,
-    layout.y - 104,
-    layout.contentWidth,
+    rect.x,
+    rect.y,
+    rect.width,
     104,
     palette.quantity.moment,
-  );
-  layout.y -= 112;
+  ));
 };
 
 const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): void => {

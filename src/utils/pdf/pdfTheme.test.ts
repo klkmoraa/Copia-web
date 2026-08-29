@@ -10,14 +10,15 @@
  * twice.
  *
  * `pdfTheme.ts` duplicates the hexes because it runs in a DOM-free path with no stylesheet to
- * read. This gate is what keeps the duplicate honest: it parses the real stylesheet and
- * compares, so a token that changes in the app cannot silently stop matching the report.
+ * read, and `python/structureco_report/theme.py` duplicates them again because the renderer
+ * runs in a Python interpreter with no stylesheet either. This gate is what keeps both
+ * duplicates honest: it parses the real stylesheet and both tables and compares all three, so a
+ * token that changes in the app cannot silently stop matching the report — on either side.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { rgb } from 'pdf-lib';
-import { REPORT_TOKENS, TYPE, createPalette, fromHex } from './pdfTheme';
+import { PALETTE, REPORT_TOKENS, TYPE, fromHex } from './pdfTheme';
 
 const TOKENS_CSS = readFileSync(
   fileURLToPath(new URL('../../design-system/tokens.css', import.meta.url)),
@@ -66,7 +67,7 @@ describe('paleta de la memoria', () => {
     expect(new Set(responses).size).toBe(3);
   });
 
-  it('convierte el hex a los tres componentes que pdf-lib espera', () => {
+  it('convierte el hex a los tres componentes que un operador de color espera', () => {
     expect(fromHex('#ffffff')).toEqual([1, 1, 1]);
     expect(fromHex('#000000')).toEqual([0, 0, 0]);
     const [red, green, blue] = fromHex(REPORT_TOKENS.moment);
@@ -76,12 +77,24 @@ describe('paleta de la memoria', () => {
     expect(fromHex('#fff')).toEqual([1, 1, 1]);
   });
 
-  it('construye una paleta completa y con los tres tonos técnicos separados', () => {
-    const palette = createPalette(rgb);
-    expect(palette.quantity.axial).not.toEqual(palette.quantity.shear);
-    expect(palette.quantity.shear).not.toEqual(palette.quantity.moment);
-    expect(palette.paper).toEqual(rgb(1, 1, 1));
-    expect(palette.ink).toEqual(rgb(...fromHex(REPORT_TOKENS.ink)));
+  it('nombra un rol, nunca un color, y cada nombre existe en la tabla de tokens', () => {
+    // A drawing asks for `palette.ink`, not for `#1d1d1f`: naming rather than resolving is what
+    // lets the same composed document be rendered by anything that knows `REPORT_TOKENS`.
+    const named = [...Object.values(PALETTE).filter((value) => typeof value === 'string'), ...Object.values(PALETTE.quantity)];
+    for (const name of named) expect(Object.keys(REPORT_TOKENS)).toContain(name);
+    expect(PALETTE.quantity.axial).not.toBe(PALETTE.quantity.shear);
+    expect(PALETTE.quantity.shear).not.toBe(PALETTE.quantity.moment);
+  });
+
+  it('el renderizador de Python resuelve exactamente los mismos hexes', () => {
+    // `theme.py` cannot import this table, so it repeats it. Two copies of a palette drift the
+    // moment one is touched, and the drift would show as a report whose moment curve is a
+    // different orange from the app's — which is the very thing 0.8.3 set out to fix.
+    const source = readFileSync(fileURLToPath(new URL('../../../python/structureco_report/theme.py', import.meta.url)), 'utf8');
+    const table = source.slice(source.indexOf('REPORT_TOKENS = {'), source.indexOf('}', source.indexOf('REPORT_TOKENS = {')));
+    const python: Record<string, string> = {};
+    for (const [, name, hex] of table.matchAll(/"([\w]+)":\s*"(#[0-9a-fA-F]{3,8})"/g)) python[name] = hex;
+    expect(python).toEqual({ ...REPORT_TOKENS });
   });
 
   it('mantiene una escala tipográfica monótona, de la portada al pie', () => {
