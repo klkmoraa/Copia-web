@@ -62,6 +62,11 @@ jobs:
       - name: Chunk de entrada limpio
         run: npm run verify:entry
 
+      # Las pruebas corren en Node, donde `require` existe: no pueden ver que el bundle
+      # publicado lleve construcciones que sólo funcionan ahí. Este gate mira el artefacto.
+      - name: Bundle del navegador sin código de Node
+        run: npm run verify:browser-bundle
+
       - name: Conservar el build en caso de fallo
         if: failure()
         uses: actions/upload-artifact@v4
