@@ -8,7 +8,19 @@
 .menu-professional-note { margin:0; padding:var(--sc-space-3) var(--sc-space-4) 0; border-top:var(--sc-hairline); color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-caption); line-height:1.45; }
 
 .mobile-actions-wrap { display:block; position: relative; }
-.mobile-actions-menu { right: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
+/* `right:0` anclaba el menú al borde derecho de su disparador — el botón
+   «Más acciones», que en el layout compacto vive pegado al borde IZQUIERDO
+   de la Cinta (D-14 · CRI-95: es lo único que sobrevive ahí por debajo de
+   700 px). Con 320 px de ancho y un disparador a ~18 px del borde, el menú
+   se abría de -258 a 62: 258 px fuera de pantalla, sólo una astilla visible
+   a la derecha. `.project-menu` —el mismo patrón, el mismo disparador
+   pegado al borde— ya resuelve esto con `left:0` bajo 460 px; aquí se abre
+   igual, siempre, porque el disparador de este menú nunca vive fuera del
+   layout compacto (`.mobile-more-button` sólo existe por debajo de 1023 px,
+   medido en top: 187–554 px de izquierda en ese rango) y `left:0` cabe en
+   los 320 px que el propio `width` ya reserva en cualquier ancho de esa
+   franja. */
+.mobile-actions-menu { left: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
 .mobile-menu-field { display: grid; grid-template-columns: 1fr 1.3fr; align-items: center; gap: 10px; padding: 8px 10px; font-size: var(--sc-font-size-control); font-weight:550; color: var(--text); }
 .mobile-menu-field select { width: 100%; min-height:var(--sc-control-height-touch); border: 1px solid var(--border); border-radius:var(--sc-radius-control); background: var(--surface); padding: 8px; font-weight:550; color:var(--text); transition:background var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard); cursor:pointer; }
 .mobile-menu-field select:hover { background: var(--surface-2); }
@@ -19,3 +31,37 @@
 .pdelta-advanced-content { padding:4px 0 8px 0; border-top:1px solid var(--border-soft); background:var(--surface); }
 .pdelta-advanced-content input[type="number"] { width:100%; min-height:var(--sc-control-height-touch); border:1px solid var(--border); border-radius:var(--sc-radius-control); background:var(--surface-2); padding:8px; color:var(--text); font-variant-numeric:tabular-nums; }
 .pdelta-advanced-content .mobile-menu-field { padding:6px 10px; }
+
+/* Bajo 700 px `.sc-popover__surface` (ui.css) pasa a `position:fixed` para
+   comportarse como una bandeja anclada al pie de la pantalla — y en la
+   Cinta ESO deja de significar «pie de la pantalla». `.topbar` lleva
+   `backdrop-filter` (su cristal), y un descendiente `fixed` mide sus
+   coordenadas contra la caja del ANCESTRO con `backdrop-filter`/`transform`
+   más cercano, no contra el viewport: el mismo efecto que un `transform`.
+   Los popovers que la Cinta abre (norma de diseño, estado del análisis)
+   miden `bottom` contra el borde inferior de la Cinta —a ~50 px del real,
+   no contra la pantalla— y con 300+ px de contenido el panel se abre hacia
+   ARRIBA y sale casi entero por encima del viewport (medido: -330 px de
+   top con un disparador a 2 px del borde superior).
+   El eje horizontal no tiene este problema: la Cinta ocupa el ancho
+   COMPLETO del viewport, así que `left`/`right` contra su caja ya
+   coinciden con `left`/`right` contra la pantalla — de ahí que sólo se
+   toque `bottom` aquí. Reescribirlo contra `100dvh` (una unidad, no una
+   coordenada de la caja hijacked) devuelve la bandeja a la pantalla real
+   sin renunciar a `position:fixed` ni a la anchura ya resuelta.
+   La compensación sólo vale mientras `.topbar` secuestre de verdad el
+   bloque de contención: sin soporte de `backdrop-filter`, `material.css`
+   (§ fallback opaco) deja la Cinta sin esa propiedad, deja de ser el
+   contenedor de los `fixed` y `bottom` vuelve a medir contra la pantalla
+   real por sí solo. Aplicar la compensación ahí sería restarle un
+   `100dvh` a una coordenada que ya era correcta — el panel se iría casi
+   una pantalla entera por DEBAJO. El `@supports` de aquí es el inverso
+   exacto del que usa ese fallback, así que las dos ramas nunca compensan
+   la misma coordenada dos veces. */
+@media (max-width:700px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .topbar .sc-popover__surface {
+      bottom: calc(var(--topbar-h) + env(safe-area-inset-top) - 100dvh + var(--sc-space-3) + env(safe-area-inset-bottom));
+    }
+  }
+}
