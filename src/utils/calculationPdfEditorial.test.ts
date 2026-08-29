@@ -60,21 +60,28 @@ const buildReport = async () => {
 };
 
 describe('memoria de cálculo: calidad editorial', () => {
-  it('abre con una portada que identifica el documento y lo indexa', async () => {
+  it('abre con una portada de identidad y un índice en su propia página', async () => {
     const { report, pages } = await buildReport();
+    // Desde el rediseño la portada no comparte hoja con el índice: la primera identifica el
+    // documento, la segunda lo indexa sin tope de entradas.
     const cover = pages[0].text;
-    expect(cover).toMatch(/MEMORIA DE CÁLCULO ESTRUCTURAL/);
+    expect(cover).toMatch(/Memoria de cálculo estructural/);
     expect(cover).toMatch(/ESCENARIO/);
     expect(cover).toMatch(/INTEGRIDAD SHA-256/);
     // El aviso profesional vive donde de verdad se lee: la primera página de lo que
     // alguien va a firmar.
     expect(cover).toMatch(/no sustituye la revisión/i);
-    expect(cover).toMatch(/CONTENIDO/);
-    // El índice apunta a páginas reales, nunca a la portada misma.
-    const numbers = [...cover.matchAll(/(?:equilibrio|axial N|convenciones)\s+(\d+)/g)].map((match) => Number(match[1]));
+
+    const contents = pages[1].text;
+    expect(contents).toMatch(/Contenido/);
+    // Una sola secuencia de partes numeradas, y cada folio apunta a una página real que no
+    // es ni la portada ni el propio índice.
+    expect(contents).toMatch(/01\s+Resumen del análisis/);
+    expect(contents).toMatch(/Traza del sistema resuelto/);
+    const numbers = [...contents.matchAll(/(?:análisis|axial N|alcance)\s+(\d+)/g)].map((match) => Number(match[1]));
     expect(numbers.length).toBeGreaterThan(0);
     for (const number of numbers) {
-      expect(number).toBeGreaterThan(1);
+      expect(number).toBeGreaterThan(2);
       expect(number).toBeLessThanOrEqual(pages.length);
     }
     expect(report.bytes.byteLength).toBeGreaterThan(0);
@@ -85,7 +92,8 @@ describe('memoria de cálculo: calidad editorial', () => {
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const document_ = await pdfjs.getDocument({ data: report.bytes.slice(), useSystemFonts: true }).promise;
     const outline = await document_.getOutline();
-    expect(outline?.map((entry) => entry.title)).toContain('01. DCL global y equilibrio');
+    expect(outline?.map((entry) => entry.title)).toContain('Resumen del análisis');
+    expect(outline?.map((entry) => entry.title)).toContain('Traza del sistema resuelto');
     const info = (await document_.getMetadata()).info as Record<string, string>;
     expect(info.Producer).toMatch(/^structureCo /);
     expect(info.Creator).toBe('structureCo');
@@ -128,15 +136,27 @@ describe('memoria de cálculo: calidad editorial', () => {
     expect(Buffer.from(second.bytes)).toEqual(Buffer.from(first.bytes));
   }, 60_000);
 
-  it('produce un documento A4 paginado, con cabecera y pie en cada página', async () => {
-    const { pages } = await buildReport();
+  it('produce un documento A4 con el mismo cromo en toda la parte de cuerpo', async () => {
+    const { project, pages } = await buildReport();
     expect(pages.length).toBeGreaterThanOrEqual(9);
     for (const page of pages) {
       expect(Math.abs(page.width - A4_WIDTH)).toBeLessThan(1);
       expect(Math.abs(page.height - A4_HEIGHT)).toBeLessThan(1);
       expect(page.text).not.toBe('');
-      expect(page.text).toMatch(/structureCo/);
+    }
+    // El anexo era un segundo documento pegado al primero: sin cabecera, sin pie y sin
+    // número de página. Ahora toda hoja de cuerpo lleva el proyecto arriba, el título del
+    // documento abajo y su folio — desde la primera parte hasta la última matriz.
+    // El nombre viaja por `pdfText`, que pliega el guion largo del título sobre el de WinAnsi.
+    const runningName = project.name.replace(/[–—]/g, '-');
+    for (const page of pages.slice(2)) {
+      expect(page.text).toContain(runningName);
+      expect(page.text).toMatch(/Memoria de cálculo estructural/);
       expect(page.text).toMatch(new RegExp(`página ${page.number} de ${pages.length}`));
+    }
+    // La portada y el índice son portada e índice: no llevan folio ni cabecera corriente.
+    for (const page of pages.slice(0, 2)) {
+      expect(page.text).not.toMatch(/página \d+ de \d+/);
     }
   }, 60_000);
 
@@ -155,12 +175,13 @@ describe('memoria de cálculo: calidad editorial', () => {
   it('declara unidades, convenciones de signo, alcance y limitaciones', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/Unidades de presentacion/);
-    expect(all).toMatch(/Longitud y desplazamiento: ft/);
-    expect(all).toMatch(/Fuerza y reacción: kip/);
-    expect(all).toMatch(/Momento: kip x ft/);
+    expect(all).toMatch(/Unidades de presentación/);
+    expect(all).toMatch(/Longitud y desplazamiento\s+ft/);
+    expect(all).toMatch(/Fuerza y reacción\s+kip/);
+    // El punto medio es WinAnsi y se conserva: `kip·ft`, no `kip x ft`.
+    expect(all).toMatch(/Momento\s+kip·ft/);
     expect(all).toMatch(/Convenciones de signo/);
-    expect(all).toMatch(/N axial: positivo en traccion/);
+    expect(all).toMatch(/N axial\s+positivo en tracción/);
     expect(all).toMatch(/Alcance del análisis/);
     expect(all).toMatch(/Limitaciones declaradas/);
     expect(all).toMatch(/P-Delta/);
@@ -171,10 +192,9 @@ describe('memoria de cálculo: calidad editorial', () => {
   it('comunica calidad numérica sin convertir success en aprobación estructural', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/CALIDAD NUMÉRICA/);
-    expect(all).toMatch(/ESTABLE/);
-    expect(all).toMatch(/condición k1/i);
-    expect(all).toMatch(/no evalúa seguridad estructural/i);
+    expect(all).toMatch(/CALIDAD NUMÉRICA: ESTABLE/);
+    expect(all).toMatch(/Número de condición estimado/);
+    expect(all).toMatch(/no si la estructura es segura/i);
     expect(all).not.toMatch(/EQUILIBRIO APROBADO/);
   }, 60_000);
 
@@ -195,7 +215,7 @@ describe('memoria de cálculo: calidad editorial', () => {
     // column gap rather than by "min=/max=" labels. What is guarded is unchanged: both
     // extremes read as an exact 0.
     expect(all).toMatch(/N axial\s+0\s+0\s+kip/);
-    expect(all).toMatch(/Equilibrio\s+Fx=0, Fy=0, M=0/);
+    expect(all).toMatch(/Residuo normalizado del cierre\s+0/);
     // Only one context may legitimately carry a value that small: the solver's own
     // precisión figures, where the exponent *is* the information.
     //
@@ -219,14 +239,14 @@ describe('memoria de cálculo: calidad editorial', () => {
     // component now owns a column whose header carries the unit, so a force column and a
     // moment column cannot end up sharing one.
     expect(all).toMatch(/Fx_i \(kip\)/);
-    expect(all).toMatch(/M_i \(kip x ft\)/);
-    expect(all).toMatch(/M_j \(kip x ft\)/);
+    expect(all).toMatch(/M_i \(kip·ft\)/);
+    expect(all).toMatch(/M_j \(kip·ft\)/);
     // And the values under them stay converted: this beam's end shear is 2.5 kip, the same
-    // figure the cover reports, not the 11.1 kN the engine holds internally.
-    expect(all).toMatch(/M_j \(kip x ft\)\s+0\s+2\.5\s+0/);
-    expect(all).toMatch(/REACCIÓN MAX\. 2\.5 kip/);
+    // figure the summary reports, not the 11.1 kN the engine holds internally.
+    expect(all).toMatch(/M_j \(kip·ft\)\s+0\s+2\.5\s+0/);
+    expect(all).toMatch(/REACCIÓN MÁXIMA\s+2\.5 kip/);
     // Reactions and displacements likewise declare their unit once, in the header.
-    expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip x ft\)/);
+    expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip·ft\)/);
     expect(all).toMatch(/Ux \(ft\)\s+Uy \(ft\)\s+Rz \(rad\)/);
   }, 60_000);
 

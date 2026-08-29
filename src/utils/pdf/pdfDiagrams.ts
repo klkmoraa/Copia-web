@@ -75,23 +75,27 @@ const drawArrow = (
 };
 
 /** Framed free-body diagram: geometry, supports, applied actions and optional reactions. */
-export const drawGlobalDcl = (context: ReportContext, height = 168, includeReactions = false): void => {
+export const drawGlobalDcl = (
+  context: ReportContext,
+  rect: { x: number; y: number; width: number; height: number },
+  includeReactions = false,
+): void => {
   const { layout, project, analysis, scenarioFactors, index } = context;
-  const { rgb, fonts, palette, margin } = layout;
+  const { fonts, palette } = layout;
   if (!project.nodes.length) return;
-  layout.ensure(height + 22);
+  // Rect-based rather than cursor-based: the caller reserves the space through
+  // `layout.figure`, which is also what numbers and captions the drawing.
   const page = layout.page;
-  const top = layout.y;
-  const left = margin;
-  const right = layout.width - margin;
-  const bottom = top - height;
-  page.drawRectangle({ x: left, y: bottom, width: right - left, height, borderWidth: 0.7, borderColor: palette.rule, color: rgb(0.975, 0.985, 0.995) });
-  page.drawText('DCL global - geometría, apoyos y acciones', { x: left + 10, y: top - 15, size: 8.5, font: fonts.bold, color: palette.forestDeep });
+  const left = rect.x;
+  const right = rect.x + rect.width;
+  const bottom = rect.y;
+  const top = rect.y + rect.height;
+  page.drawRectangle({ x: left, y: bottom, width: rect.width, height: rect.height, borderWidth: 0.5, borderColor: palette.rule, color: palette.paper });
   const projection = createProjection(project.nodes, {
     left: left + 42,
     right: right - 42,
-    bottom: bottom + 32,
-    top: top - 34,
+    bottom: bottom + 30,
+    top: top - 22,
   });
   const point = (nodeId: string): { x: number; y: number } | undefined => {
     const node = index.node(nodeId);
@@ -100,24 +104,24 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
   for (const member of project.members) {
     const start = point(member.i); const end = point(member.j);
     if (!start || !end) continue;
-    page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3 : 2, color: rgb(0.12, 0.15, 0.19) });
-    page.drawText(pdfText(member.id), { x: (start.x + end.x) / 2 + 3, y: (start.y + end.y) / 2 + 3, size: 6.5, font: fonts.bold, color: rgb(0.22, 0.26, 0.31) });
+    page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3 : 2, color: palette.ink });
+    page.drawText(pdfText(member.id), { x: (start.x + end.x) / 2 + 3, y: (start.y + end.y) / 2 + 3, size: 6.5, font: fonts.bold, color: palette.inkSoft });
   }
   for (const node of project.nodes) {
     const location = point(node.id);
     if (!location) continue;
-    page.drawCircle({ x: location.x, y: location.y, size: 3, color: rgb(1, 1, 1), borderColor: rgb(0.04, 0.40, 0.82), borderWidth: 1.1 });
-    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 4, size: 6.5, font: fonts.regular, color: rgb(0.11, 0.17, 0.24) });
+    page.drawCircle({ x: location.x, y: location.y, size: 3, color: palette.paper, borderColor: palette.ink, borderWidth: 1.1 });
+    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 4, size: 6.5, font: fonts.bold, color: palette.ink });
     if (node.support.type !== 'none') {
       const isRoller = node.support.type === 'roller';
-      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x - 7, y: location.y - 13 }, thickness: 1, color: rgb(0.10, 0.48, 0.25) });
-      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x + 7, y: location.y - 13 }, thickness: 1, color: rgb(0.10, 0.48, 0.25) });
+      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x - 7, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
+      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x + 7, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
       if (isRoller) {
-        page.drawCircle({ x: location.x - 4, y: location.y - 15.5, size: 1.8, borderColor: rgb(0.10, 0.48, 0.25), borderWidth: 0.8 });
-        page.drawCircle({ x: location.x + 4, y: location.y - 15.5, size: 1.8, borderColor: rgb(0.10, 0.48, 0.25), borderWidth: 0.8 });
-        page.drawLine({ start: { x: location.x - 10, y: location.y - 19 }, end: { x: location.x + 10, y: location.y - 19 }, thickness: 1, color: rgb(0.10, 0.48, 0.25) });
+        page.drawCircle({ x: location.x - 4, y: location.y - 15.5, size: 1.8, borderColor: palette.inkSoft, borderWidth: 0.8 });
+        page.drawCircle({ x: location.x + 4, y: location.y - 15.5, size: 1.8, borderColor: palette.inkSoft, borderWidth: 0.8 });
+        page.drawLine({ start: { x: location.x - 10, y: location.y - 19 }, end: { x: location.x + 10, y: location.y - 19 }, thickness: 1, color: palette.inkSoft });
       } else {
-        page.drawLine({ start: { x: location.x - 9, y: location.y - 13 }, end: { x: location.x + 9, y: location.y - 13 }, thickness: 1, color: rgb(0.10, 0.48, 0.25) });
+        page.drawLine({ start: { x: location.x - 9, y: location.y - 13 }, end: { x: location.x + 9, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
       }
     }
   }
@@ -125,7 +129,7 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
     const factor = scenarioFactors[load.caseId] ?? 0;
     const location = point(load.nodeId);
     if (!location || factor === 0 || (load.fx === 0 && load.fy === 0)) continue;
-    drawArrow(layout, location, load.fx * factor, load.fy * factor, rgb(0.52, 0.18, 0.65), 24);
+    drawArrow(layout, location, load.fx * factor, load.fy * factor, palette.load, 24);
   }
   for (const load of project.memberLoads) {
     const factor = scenarioFactors[load.caseId] ?? 0;
@@ -143,7 +147,10 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
     const atFlexibleRatio = (ratio: number) => lerpPoint(screenStart, screenEnd, grossRatioFromFlexible(axis, ratio));
     const globalVector = (x: number, y: number): [number, number] =>
       toGlobalVector(axis, load.coordinateSystem, x, y);
-    const actionColor = rgb(0.05, 0.48, 0.23);
+    // Applied actions share one hue, the product's `--sc-color-load-point` indigo. Response
+    // quantities own teal, green and orange, and nothing applied may borrow one of those: on
+    // the free-body diagram a cause must never be mistakable for an effect.
+    const actionColor = palette.load;
     if (load.type === 'distributed') {
       const startRatio = Math.min(load.start, load.end);
       const endRatio = Math.max(load.start, load.end);
@@ -171,7 +178,7 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
     }
   }
   if (includeReactions) {
-    const reactionColor = rgb(0.04, 0.40, 0.72);
+    const reactionColor = palette.reaction;
     const reactionReference = Math.max(1, ...analysis.nodeResults.flatMap((result) => [Math.abs(result.rx), Math.abs(result.ry)]));
     for (const result of analysis.nodeResults) {
       const location = point(result.nodeId);
@@ -197,35 +204,36 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
       }
     }
   }
-  layout.y = bottom - 12;
 };
 
-/** Three small N/V/M strips printed under a member in the technical annex. */
-export const drawMemberDiagrams = (context: ReportContext, result: AnalysisResult['memberResults'][number]): void => {
+/** Three small N/V/M strips, side by side inside the rectangle the caller reserved. */
+export const drawMemberDiagrams = (
+  context: ReportContext,
+  result: AnalysisResult['memberResults'][number],
+  rect: { x: number; y: number; width: number; height: number },
+): void => {
   const { layout, project } = context;
-  const { rgb, fonts, margin } = layout;
+  const { fonts, palette } = layout;
   if (result.diagram.length < 2 || result.length <= 0) return;
-  const chartHeight = 58;
-  const blockHeight = 86;
-  layout.ensure(blockHeight + 8);
   const page = layout.page;
   const gap = 9;
-  const chartWidth = (layout.contentWidth - gap * 2) / 3;
-  const chartTop = layout.y - 14;
+  const chartWidth = (rect.width - gap * 2) / 3;
+  const chartTop = rect.y + rect.height - 12;
+  const chartHeight = rect.height - 16;
   const chartBottom = chartTop - chartHeight;
   const definitions = [
-    { key: 'axial' as const, label: 'N axial', color: rgb(0.02, 0.40, 0.82) },
-    { key: 'shear' as const, label: 'V cortante', color: rgb(0.08, 0.47, 0.20) },
-    { key: 'moment' as const, label: 'M momento', color: rgb(0.79, 0.17, 0.15) },
+    { key: 'axial' as const, label: 'N axial', color: palette.quantity.axial },
+    { key: 'shear' as const, label: 'V cortante', color: palette.quantity.shear },
+    { key: 'moment' as const, label: 'M momento', color: palette.quantity.moment },
   ];
   for (const [chartIndex, definition] of definitions.entries()) {
-    const left = margin + chartIndex * (chartWidth + gap);
+    const left = rect.x + chartIndex * (chartWidth + gap);
     const values = result.diagram.map((entry) => entry[definition.key]);
     const maximum = Math.max(1e-12, ...values.map((value) => Math.abs(value)));
     const baseline = chartBottom + chartHeight / 2;
     page.drawText(definition.label, { x: left, y: chartTop + 4, size: 7.3, font: fonts.bold, color: definition.color });
-    page.drawRectangle({ x: left, y: chartBottom, width: chartWidth, height: chartHeight, borderColor: rgb(0.80, 0.83, 0.87), borderWidth: 0.5 });
-    page.drawLine({ start: { x: left, y: baseline }, end: { x: left + chartWidth, y: baseline }, thickness: 0.45, color: rgb(0.55, 0.58, 0.62) });
+    page.drawRectangle({ x: left, y: chartBottom, width: chartWidth, height: chartHeight, borderColor: palette.rule, borderWidth: 0.5 });
+    page.drawLine({ start: { x: left, y: baseline }, end: { x: left + chartWidth, y: baseline }, thickness: 0.45, color: palette.inkFaint });
     for (let pointIndex = 1; pointIndex < result.diagram.length; pointIndex += 1) {
       const previous = result.diagram[pointIndex - 1];
       const current = result.diagram[pointIndex];
@@ -244,9 +252,8 @@ export const drawMemberDiagrams = (context: ReportContext, result: AnalysisResul
     const legendValue = (value: number) =>
       clearNumber(toDisplay(value, project.settings.units, quantityUnitKey), scale, 3);
     const legend = `min ${legendValue(Math.min(...values))} | max ${legendValue(Math.max(...values))} ${unitLabel(project.settings.units, quantityUnitKey)}`;
-    page.drawText(pdfText(legend), { x: left + 3, y: chartBottom + 3, size: 5.7, font: fonts.regular, color: rgb(0.34, 0.38, 0.43) });
+    page.drawText(pdfText(legend), { x: left + 3, y: chartBottom + 3, size: 5.7, font: fonts.regular, color: palette.inkSoft });
   }
-  layout.y = chartBottom - 14;
 };
 
 /** Full-page diagram of one quantity drawn normal to every member. */
@@ -259,7 +266,7 @@ export const drawGlobalQuantityDiagram = (
   height: number,
 ): void => {
   const { layout, project, analysis, index } = context;
-  const { page, rgb, fonts, palette } = layout;
+  const { page, fonts, palette } = layout;
   if (!project.nodes.length) return;
   const color = palette.quantity[quantity];
   const projection = createProjection(project.nodes, {
@@ -278,7 +285,7 @@ export const drawGlobalQuantityDiagram = (
     const nj = index.node(member.j);
     if (!ni || !nj) continue;
     const start = modelPoint(ni.x, ni.y); const end = modelPoint(nj.x, nj.y);
-    page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3.2 : 2.2, color: rgb(0.42, 0.49, 0.45) });
+    page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3.2 : 2.2, color: palette.inkSoft });
     const result = index.memberResult(member.id);
     const axis = memberAxis(member, ni, nj);
     const totalLength = axis.length;
@@ -308,8 +315,8 @@ export const drawGlobalQuantityDiagram = (
   }
   for (const node of project.nodes) {
     const location = modelPoint(node.x, node.y);
-    page.drawCircle({ x: location.x, y: location.y, size: 3.2, color: rgb(1, 1, 1), borderColor: rgb(0.30, 0.38, 0.33), borderWidth: 1.1 });
-    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 5, size: 6.4, font: fonts.bold, color: rgb(0.25, 0.31, 0.27) });
+    page.drawCircle({ x: location.x, y: location.y, size: 3.2, color: palette.paper, borderColor: palette.ink, borderWidth: 1.1 });
+    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 5, size: 6.4, font: fonts.bold, color: palette.ink });
   }
   labelCandidates.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 6).forEach((candidate, labelIndex) => {
     const value = clearDisplay(project, candidate.value, quantityUnit(quantity), maximum);
@@ -319,7 +326,7 @@ export const drawGlobalQuantityDiagram = (
     page.drawText(pdfText(label), { x: Math.min(left + width - 130, Math.max(left + 8, candidate.x + 5)), y: labelY, size: 6.2, font: fonts.bold, color });
   });
   page.drawLine({ start: { x: left + 14, y: bottom + 20 }, end: { x: left + 42, y: bottom + 20 }, thickness: 1.7, color });
-  page.drawText(pdfText(`${quantitySymbol(quantity)} positivo según los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: rgb(0.32, 0.39, 0.35) });
+  page.drawText(pdfText(`${quantitySymbol(quantity)} positivo según los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: palette.inkSoft });
 };
 
 /**

@@ -1,62 +1,113 @@
 /**
- * Editorial chrome shared by the visual pages: masthead, section band, panels and KPI cards.
+ * The document's fixed furniture: the cover ground and the summary rails.
  *
- * These draw at absolute coordinates on the page the caller has just created, so they never
- * touch the vertical cursor.
+ * The running head and the footer are not here — they belong to `PdfLayout.stampChrome`,
+ * which is the only thing that can know how many pages exist and which part each one sits in.
+ * What is left is the artwork the cover needs, drawn at absolute coordinates on a page the
+ * caller supplies, and the one shared frame the figures sit inside.
+ *
+ * The masthead, the numbered colour band, the bordered panels and the KPI cards that used to
+ * live here are gone: three of them existed only to say "these things belong together", which
+ * on a page with a grid is already said by alignment.
  */
 import { pdfText } from './pdfGlyphs';
+import { MARGIN } from './pdfBuilder';
+import { TYPE } from './pdfTheme';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor } from './reportContext';
+import type { PDFPage } from 'pdf-lib';
 
-/** Dark masthead with the brand mark, the section name and its subtitle. */
-export const drawVisualHeader = (layout: PdfLayout, section: string, subtitle: string): void => {
-  const { page, rgb, fonts, palette, width, height, margin } = layout;
-  page.drawRectangle({ x: 0, y: height - 72, width, height: 72, color: palette.forestDeep });
-  page.drawRectangle({ x: margin, y: height - 52, width: 30, height: 30, color: palette.forest });
-  page.drawText('S', { x: margin + 9, y: height - 44, size: 17, font: fonts.bold, color: rgb(1, 1, 1) });
-  page.drawText('structureCo', { x: margin + 42, y: height - 38, size: 17, font: fonts.bold, color: rgb(1, 1, 1) });
-  page.drawText('MEMORIA DE CÁLCULO ESTRUCTURAL', { x: margin + 42, y: height - 52, size: 6.5, font: fonts.bold, color: palette.forestSoft });
-  page.drawText(pdfText(section), { x: width - margin - fonts.bold.widthOfTextAtSize(pdfText(section), 12), y: height - 37, size: 12, font: fonts.bold, color: rgb(1, 1, 1) });
-  page.drawText(pdfText(subtitle), { x: width - margin - fonts.regular.widthOfTextAtSize(pdfText(subtitle), 7), y: height - 52, size: 7, font: fonts.regular, color: palette.forestSoft });
-};
-
-/** Numbered band that opens every visual section. */
-export const drawSectionBand = (layout: PdfLayout, index: string, title: string, subtitle: string): void => {
-  const { page, rgb, fonts, palette, margin } = layout;
-  // Every visual section opens with this band, so this is the one place that knows where a
-  // section starts — which is exactly what the table of contents and the outline need.
-  layout.markSection(`${index}. ${title}`);
-  page.drawRectangle({ x: margin, y: 724, width: 31, height: 22, color: palette.forest });
-  page.drawText(index, { x: margin + 9, y: 731, size: 7, font: fonts.bold, color: rgb(1, 1, 1) });
-  page.drawText(pdfText(title), { x: margin + 42, y: 732, size: 15, font: fonts.bold, color: palette.forestDeep });
-  page.drawText(pdfText(subtitle), { x: margin + 42, y: 719, size: 7.5, font: fonts.regular, color: rgb(0.38, 0.44, 0.40) });
-};
-
-/** Bordered container used to group content on the visual pages. */
-export const drawPanel = (
+/** The wordmark, set in the two weights the document owns. */
+export const drawWordmark = (
   layout: PdfLayout,
+  page: PDFPage,
   x: number,
-  bottom: number,
-  width: number,
-  height: number,
-  color: PdfColor = layout.palette.white,
+  y: number,
+  size: number,
+  color: PdfColor,
+): number => {
+  page.drawText('structure', { x, y, size, font: layout.fonts.regular, color });
+  const offset = layout.fonts.regular.widthOfTextAtSize('structure', size);
+  page.drawText('Co', { x: x + offset, y, size, font: layout.fonts.bold, color });
+  return offset + layout.fonts.bold.widthOfTextAtSize('Co', size);
+};
+
+/**
+ * Hairline frame for artwork.
+ *
+ * Figures used to sit in a filled, bordered panel with their own title inside. A single
+ * hairline on a white ground keeps the drawing the darkest thing in its own rectangle, which
+ * is the only reason the frame is there.
+ */
+export const drawFigureFrame = (
+  layout: PdfLayout,
+  rect: { x: number; y: number; width: number; height: number },
 ): void => {
   layout.page.drawRectangle({
-    x,
-    y: bottom,
-    width,
-    height,
-    color,
-    borderColor: layout.rgb(0.78, 0.84, 0.80),
-    borderWidth: 0.7,
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    color: layout.palette.paper,
+    borderColor: layout.palette.rule,
+    borderWidth: 0.5,
   });
 };
 
-/** Headline figure of the executive page, with its accent rail. */
-export const drawKpi = (layout: PdfLayout, x: number, label: string, value: string, color: PdfColor): void => {
-  const { page, rgb, fonts } = layout;
-  drawPanel(layout, x, 653, 118, 50);
-  page.drawRectangle({ x, y: 653, width: 4, height: 50, color });
-  page.drawText(pdfText(label.toUpperCase()), { x: x + 12, y: 683, size: 6.5, font: fonts.bold, color: rgb(0.38, 0.44, 0.40) });
-  page.drawText(pdfText(value), { x: x + 12, y: 663, size: 11.5, font: fonts.bold, color });
+/** Small caps label anchored inside a figure, where a caption would be too far away. */
+export const drawFigureTag = (
+  layout: PdfLayout,
+  x: number,
+  y: number,
+  text: string,
+  color: PdfColor,
+): void => {
+  layout.page.drawText(pdfText(text.toUpperCase()), {
+    x, y, size: TYPE.micro, font: layout.fonts.bold, color,
+  });
 };
+
+/** Left-aligned column of `label / value` pairs, used by the cover's identity block. */
+export const drawFactColumn = (
+  layout: PdfLayout,
+  page: PDFPage,
+  x: number,
+  top: number,
+  width: number,
+  facts: readonly (readonly [string, string])[],
+  labelColor: PdfColor,
+  valueColor: PdfColor,
+): number => {
+  let y = top;
+  for (const [label, value] of facts) {
+    page.drawText(pdfText(label.toUpperCase()), {
+      x, y: y - TYPE.micro, size: TYPE.micro, font: layout.fonts.bold, color: labelColor,
+    });
+    y -= TYPE.micro * 2.1;
+    // A 64-character checksum needs the full measure; anything else reads at the body size.
+    const size = value.length > 44 ? TYPE.micro : TYPE.small + 0.6;
+    // The checksum is one unbroken token, so wrapping it needs a character-level break; every
+    // other fact wraps on its spaces like ordinary prose.
+    const tokens = value.includes(' ') ? pdfText(value).split(' ') : (pdfText(value).match(/.{1,48}/g) ?? []);
+    const separator = value.includes(' ') ? ' ' : '';
+    const lines: string[] = [];
+    let line = '';
+    for (const token of tokens) {
+      const candidate = line ? line + separator + token : token;
+      if (layout.fonts.regular.widthOfTextAtSize(candidate, size) <= width) line = candidate;
+      else {
+        if (line) lines.push(line);
+        line = token;
+      }
+    }
+    if (line) lines.push(line);
+    for (const entry of lines.slice(0, 2)) {
+      page.drawText(entry, { x, y: y - size, size, font: layout.fonts.regular, color: valueColor });
+      y -= size * 1.35;
+    }
+    y -= TYPE.micro * 1.4;
+  }
+  return y;
+};
+
+export { MARGIN };

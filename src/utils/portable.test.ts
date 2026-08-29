@@ -60,7 +60,7 @@ describe('expediente portable structureCo', () => {
     expect(inspection.confidence).toBeGreaterThan(0.95);
     expect(inspection.payload?.project).toEqual(report.payload.project);
     expect(inspection.payload?.analysis).toEqual(report.payload.analysis);
-    expect(inspection.text).toMatch(/Diagramas N, V y M/i);
+    expect(inspection.text).toMatch(/Diagrama de momento M/i);
     expect(inspection.text).toMatch(/Procedimiento y cálculos/i);
     expect(inspection.text).toMatch(/dominio x\/L=0\s*->\s*0\.7/i);
     expect(inspection.text).toMatch(/x=0 ft\s*->\s*7 ft/i);
@@ -68,14 +68,14 @@ describe('expediente portable structureCo', () => {
     expect(inspection.text).toMatch(/longitud real cargada=/i);
     expect(inspection.text).toMatch(/cobertura=70%/i);
     expect(inspection.text).toMatch(/base=longitud real/i);
-    expect(inspection.text).toMatch(/Factores del escenario\s+LC1=1/i);
+    expect(inspection.text).toMatch(/Factores del escenario\s+LC1 = 1/i);
     // `d_local = T d_global` is drawn by `drawMathBlockAt`, which since the MathJax vector
     // rewrite is real SVG path geometry, not PDF text — extraction can no longer see the
     // formula's own characters (subscripts included). The step around it is still real text.
     expect(inspection.text).toMatch(/Transformación y ensamblaje global/i);
     expect(inspection.text).toMatch(/\[U_x, U_y, R_z\]/i);
     expect(inspection.text).toMatch(/Auditoría independiente de cargas/i);
-    expect(inspection.text).toMatch(/Auditoría por trabajo virtual/i);
+    expect(inspection.text).toMatch(/Reintegración por trabajo virtual/i);
     // The per-member residuals are a table since AG-014, so the label is a column header
     // rather than a `nombre=valor` pair. The audit itself is unchanged.
     expect(inspection.text).toMatch(/Residuo mecánico\s+Residuo inicial\s+Residuo total/i);

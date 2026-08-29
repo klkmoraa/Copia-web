@@ -60,7 +60,7 @@ const expression = (coefficients: readonly number[], variable = 'x'): string => 
 const drawWorked = (context: ReportContext, caption: string | undefined, equations: readonly string[]): void => {
   if (!equations.length) return;
   const { layout } = context;
-  if (caption) layout.text(caption, 7.9, layout.fonts.bold, layout.palette.forestDeep, 12);
+  if (caption) layout.text(caption, 7.9, layout.fonts.bold, layout.palette.ink, 12);
   for (const equation of equations) {
     layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
     layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
@@ -163,7 +163,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     layout.ensure(58);
     layout.text(
       `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
-      8, fonts.bold, palette.forestDeep, 8,
+      8, fonts.bold, palette.ink, 8,
     );
     for (const relation of [
       `M(x) = ${expression(segment.moment)}`,
@@ -215,7 +215,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
   const peakAbsolute = Math.abs(solution.maxDeflection.value);
   layout.text(
     `Flecha máxima ${displayCell(project, peakAbsolute, 'length')} ${lengthUnit} en x = ${number(solution.maxDeflection.x, 5)} ${lengthUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 
   layout.ensure(120);
@@ -307,7 +307,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     layout.ensure(70);
     layout.text(
       `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
-      8, fonts.bold, palette.forestDeep, 8,
+      8, fonts.bold, palette.ink, 8,
     );
     for (const relation of [
       `M(x) = ${expression(segment.moment)}`,
@@ -360,7 +360,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
   const peakAbsolute = Math.abs(solution.maxDeflection.value);
   layout.text(
     `Flecha máxima ${displayCell(project, peakAbsolute, 'length')} ${lengthUnit} en x = ${number(solution.maxDeflection.x, 5)} ${lengthUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 
   layout.ensure(120);
@@ -420,7 +420,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
       + ` + ${dimensionalFigure(project, right.firstMomentRight, 1, 3)}/${dimensionalFigure(project, right.EI * right.length, 1, 3)})`;
     layout.text(
       `Apoyo interior ${moments[k + 1]?.nodeId ?? k + 1}: los coeficientes van en 1/(${unitFor(project, 'force')}·${lengthUnit}) y los momentos en ${momentUnit}.`,
-      7.9, fonts.bold, palette.forestDeep, 12,
+      7.9, fonts.bold, palette.ink, 12,
     );
     layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
     layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
@@ -489,7 +489,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
     layout.ensure(40);
     layout.text(
       `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
-      8, fonts.bold, palette.forestDeep, 8,
+      8, fonts.bold, palette.ink, 8,
     );
     const expressionText = `M(x) = ${expression(segment.moment)}`;
     layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
@@ -505,7 +505,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
   );
   layout.text(
     `Diferencia máxima: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -542,7 +542,7 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
     layout.text(
       `Nudo ${solution.narrated.nodeId}, componente ${componentLabel(solution.narrated.component)}:`
       + ` fuerzas en ${forceUnit}, longitudes en ${lengthUnit}, áreas en ${dimensionalUnit(project, 0, 2)}, E en ${dimensionalUnit(project, 1, -2)}.`,
-      7.9, fonts.bold, palette.forestDeep, 12,
+      7.9, fonts.bold, palette.ink, 12,
     );
     layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
     layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
@@ -597,7 +597,7 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
   layout.heading('5.3 Verificación contra el análisis matricial', 2);
   layout.text(
     `Diferencia máxima entre este método y el análisis matricial, en cualquier grado de libertad: ${clearNumber(solution.residual, 1)} ${lengthUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -705,7 +705,7 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
   layout.text(
     `Diferencia máxima: ${clearNumber(solution.reactionResidual, 1)} ${forceUnit} en las reacciones redundantes, `
     + `${clearNumber(solution.forceResidual, 1)} ${forceUnit} en la fuerza de barra.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -802,7 +802,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
     layout.ensure(40);
     layout.text(
       `Tramo ${index + 1}: de x = ${number(segment.x0, 5)} a x = ${number(segment.x1, 5)} ${lengthUnit}`,
-      8, fonts.bold, palette.forestDeep, 8,
+      8, fonts.bold, palette.ink, 8,
     );
     const expressionText = `M(x) = ${expression(segment.moment)}`;
     layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
@@ -818,7 +818,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
   );
   layout.text(
     `Diferencia máxima: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -859,7 +859,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
     const stiffness = (value: number) => dimensionalFigure(project, value, 1, 2, total);
     layout.text(
       `Nudo ${nodeId}: rigideces K = EI/L en ${dimensionalUnit(project, 1, 2)}.`,
-      7.9, fonts.bold, palette.forestDeep, 12,
+      7.9, fonts.bold, palette.ink, 12,
     );
     const sumEquation = `ΣK(${nodeId}) = ${bars.map((bar) => stiffness(bar.k)).join(' + ')} = ${stiffness(total)}`;
     layout.ensure(layout.measureMathBlock(sumEquation, 8.4, 16));
@@ -876,7 +876,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
     + 'desplaza lateralmente bajo esta carga. Eso no se supone por la geometría — se comprueba '
     + 'contrastando el resultado contra el análisis matricial, y si la brecha no es del tamaño '
     + 'del ruido numérico, el método se retira en vez de narrar una aproximación sin decirlo.',
-    8.3, fonts.regular, palette.forestDeep, 8,
+    8.3, fonts.regular, palette.ink, 8,
   );
 
   layout.heading('5.1 Momento de empotramiento perfecto y momento final por barra', 2);
@@ -913,7 +913,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
   layout.heading('5.2 Verificación contra el análisis matricial', 2);
   layout.text(
     `Diferencia máxima, en cualquier extremo de cualquier barra: ${clearNumber(solution.momentResidual, 1)} ${momentUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -942,7 +942,7 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
     layout.ensure(40);
     layout.text(
       `Corte ${cutIndex + 1}: lado conservado {${cut.keptNodeIds.join(', ')}}`,
-      8, fonts.bold, palette.forestDeep, 8,
+      8, fonts.bold, palette.ink, 8,
     );
     layout.table(
       [
@@ -978,7 +978,7 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
   layout.heading('5.2 Verificación contra el análisis matricial', 2);
   layout.text(
     `Diferencia máxima, en cualquier barra resuelta: ${clearNumber(solution.residual, 1)} ${forceUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -1008,7 +1008,7 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
   );
   for (const [stepIndex, step] of solution.steps.entries()) {
     layout.ensure(40);
-    layout.text(`Nudo ${stepIndex + 1}: ${step.nodeId}`, 8, fonts.bold, palette.forestDeep, 8);
+    layout.text(`Nudo ${stepIndex + 1}: ${step.nodeId}`, 8, fonts.bold, palette.ink, 8);
     layout.table(
       [
         { header: 'Barra', width: 70 },
@@ -1045,7 +1045,7 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
   layout.heading('5.2 Verificación contra el análisis matricial', 2);
   layout.text(
     `Diferencia máxima, en cualquier barra resuelta: ${clearNumber(solution.residual, 1)} ${forceUnit}.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -1076,7 +1076,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     + 'es una simplificación deliberada. Por eso esta sección no exige que las reacciones '
     + 'coincidan — las contrasta, y declara la brecha, para que nadie firme una aproximación '
     + 'creyéndola exacta.',
-    8.3, fonts.regular, palette.forestDeep, 8,
+    8.3, fonts.regular, palette.ink, 8,
   );
 
   layout.heading('5.1 Retícula y cortante por planta', 2);
@@ -1221,7 +1221,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
   layout.text(
     `Mayor diferencia: ${clearNumber(solution.reactionGap.force, 1)} ${forceUnit} en fuerza, `
     + `${clearNumber(solution.reactionGap.moment, 1)} ${momentUnit} en momento — el precio de la aproximación, a la vista.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 
@@ -1252,7 +1252,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
     'Como el Método del Portal, no tiene por qué coincidir con el análisis matricial: es una '
     + 'simplificación deliberada, y esta sección contrasta sus reacciones en la base contra el '
     + 'modelo lateral exacto en vez de exigir que coincidan.',
-    8.3, fonts.regular, palette.forestDeep, 8,
+    8.3, fonts.regular, palette.ink, 8,
   );
 
   layout.heading('5.1 Columnas: axial por flexión, cortante y momento', 2);
@@ -1375,7 +1375,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
   layout.text(
     `Mayor diferencia: ${clearNumber(solution.reactionGap.force, 1)} ${forceUnit} en fuerza, `
     + `${clearNumber(solution.reactionGap.moment, 1)} ${momentUnit} en momento — el precio de la aproximación, a la vista.`,
-    8.7, fonts.bold, palette.forestDeep, 8,
+    8.7, fonts.bold, palette.ink, 8,
   );
 };
 

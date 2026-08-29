@@ -24,7 +24,11 @@ const SCRIPT_GLYPHS = new Map<string, string>([
 /** Standard PDF fonts use WinAnsi; transliterate engineering glyphs explicitly. */
 const PDF_GLYPHS = new Map<string, string>([
   ...SCRIPT_GLYPHS,
-  ['−', '-'], ['–', '-'], ['—', '-'], ['·', ' x '], ['⋅', ' x '],
+  ['−', '-'], ['–', '-'], ['—', '-'],
+  // U+00B7 MIDDLE DOT is WinAnsi, so it needs no transliteration at all — it used to be
+  // rewritten to ` x `, which turned `kN·m` into `kN x m` and every `A · B` separator in the
+  // prose into a multiplication sign. Its non-WinAnsi twin U+22C5 folds onto it.
+  ['⋅', '·'],
   ['Σ', 'Sum'], ['∑', 'Sum'], ['Δ', 'Delta'], ['δ', 'delta'], ['θ', 'theta'], ['Θ', 'Theta'], ['ξ', 'xi'], ['Ξ', 'Xi'],
   ['α', 'alpha'], ['β', 'beta'], ['γ', 'gamma'], ['Γ', 'Gamma'], ['ε', 'epsilon'], ['ζ', 'zeta'], ['η', 'eta'],
   ['κ', 'kappa'], ['λ', 'lambda'], ['Λ', 'Lambda'], ['μ', 'mu'], ['ν', 'nu'], ['π', 'pi'], ['Π', 'Pi'],

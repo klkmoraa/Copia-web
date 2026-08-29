@@ -52,6 +52,8 @@ export interface PdfVectorOps {
   popGraphicsState: typeof import('pdf-lib').popGraphicsState;
 }
 
+export type { ReportPalette } from './pdfTheme';
+
 export interface ReportFonts {
   readonly regular: import('pdf-lib').PDFFont;
   readonly bold: import('pdf-lib').PDFFont;
@@ -59,17 +61,6 @@ export interface ReportFonts {
   readonly mathItalic: import('pdf-lib').PDFFont;
   /** Adobe Symbol: the Greek and the operators the WinAnsi faces cannot encode. */
   readonly mathSymbol: import('pdf-lib').PDFFont;
-}
-
-export interface ReportPalette {
-  readonly forest: PdfColor;
-  readonly forestDeep: PdfColor;
-  readonly forestSoft: PdfColor;
-  /** Default body text. */
-  readonly ink: PdfColor;
-  readonly rule: PdfColor;
-  readonly white: PdfColor;
-  readonly quantity: Readonly<Record<'axial' | 'shear' | 'moment', PdfColor>>;
 }
 
 /**

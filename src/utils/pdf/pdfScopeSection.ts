@@ -1,72 +1,82 @@
 /**
  * Units, sign conventions, scope and declared limitations.
  *
- * An engineering memoir has to state, on its own pages, the units it uses, the sign
- * convention behind every N-V-M figure, what the analysis does and does not cover, and
- * any warning the solver raised. Until 0.8.1 the document jumped straight from the
- * executive page to the diagrams and left all of that implicit.
+ * An engineering memoir has to state, on its own pages, the units it uses, the sign convention
+ * behind every N-V-M figure, what the analysis does and does not cover, and any warning the
+ * solver raised. This part carries all four, and it is the one place in the document where a
+ * reader who disagrees with a number can find out what the number was even claiming.
+ *
+ * It used to print `label: value` prose under a coloured band; the pairs are a ruled grid now,
+ * which is what lets a reader scan the column rather than read the sentences.
  */
 import { unitLabel } from '../../engine/units';
-import { drawSectionBand, drawVisualHeader } from './pdfChrome';
 import type { ReportContext } from './reportContext';
 
-export const drawScopePage = (context: ReportContext, band = '05'): void => {
+export const drawScopePart = (context: ReportContext): void => {
   const { layout, project, analysis } = context;
-  const { rgb } = layout;
-  layout.newPage();
-  drawVisualHeader(layout, 'Unidades y convenciones', 'Como debe leerse este documento');
-  drawSectionBand(layout, band, 'Unidades y convenciones', 'Base de lectura de todas las cifras del documento');
-  layout.y = 700;
-
-  layout.heading('Unidades de presentacion');
   const units = project.settings.units;
-  for (const [label, quantity] of [
-    ['Longitud y desplazamiento', 'length'],
-    ['Fuerza y reacción', 'force'],
-    ['Momento', 'moment'],
-    ['Carga distribuida', 'distributedForce'],
-  ] as const) {
-    layout.row(label, unitLabel(units, quantity));
-  }
-  layout.row('Rotación', 'rad');
-  layout.row('Precisión interna', 'doble precisión IEEE-754; el redondeo es solo de presentacion');
-  layout.row('Cero mostrado', 'un valor por debajo de la tolerancia relativa del solver se presenta como 0');
+
+  layout.part(
+    'Unidades, convenciones y alcance',
+    'La base de lectura de todas las cifras del documento, y lo que el análisis deliberadamente no cubre.',
+  );
+
+  layout.heading('Unidades de presentación');
+  layout.keyValues([
+    ['Longitud y desplazamiento', unitLabel(units, 'length')],
+    ['Fuerza y reacción', unitLabel(units, 'force')],
+    ['Momento', unitLabel(units, 'moment')],
+    ['Carga distribuida', unitLabel(units, 'distributedForce')],
+    ['Rotación', 'rad'],
+    ['Precisión interna', 'doble precisión IEEE-754; el redondeo es sólo de presentación'],
+    ['Cero mostrado', 'un valor por debajo de la tolerancia relativa del solver se presenta como 0'],
+  ]);
 
   layout.heading('Convenciones de signo');
-  layout.text('+X apunta a la derecha y +Y hacia arriba. El eje local x de cada miembro va del nodo i al nodo j, y el eje local y gira 90 grados en sentido antihorario respecto de x.', 8.7);
-  layout.row('N axial', 'positivo en traccion, según el eje local x del miembro');
-  layout.row('V cortante', 'positivo según el eje local y del miembro');
-  layout.row('M momento', 'positivo cuando tracciona la fibra del lado local -y');
-  layout.row('Reacciones', 'expresadas en ejes globales, con el signo de la fuerza que el apoyo ejerce sobre la estructura');
-  layout.row('Deformada', 'desplazamientos nodales en ejes globales; la escala del dibujo es ilustrativa');
+  layout.text(
+    '+X apunta a la derecha y +Y hacia arriba. El eje local x de cada miembro va del nodo i al nodo j, '
+    + 'y el eje local y gira 90 grados en sentido antihorario respecto de x.',
+  );
+  layout.gap();
+  layout.keyValues([
+    ['N axial', 'positivo en tracción, según el eje local x del miembro'],
+    ['V cortante', 'positivo según el eje local y del miembro'],
+    ['M momento', 'positivo cuando tracciona la fibra del lado local -y'],
+    ['Reacciones', 'en ejes globales, con el signo de la fuerza que el apoyo ejerce sobre la estructura'],
+    ['Deformada', 'desplazamientos nodales en ejes globales; la escala del dibujo es ilustrativa'],
+  ]);
 
   layout.heading('Alcance del análisis');
-  layout.row('Formulacion', analysis.educationTrace?.formulation ?? 'análisis estático lineal 2D');
-  layout.row('Elemento de marco', 'Euler-Bernoulli con deformación axial y flexión');
-  layout.row('Elemento de armadura', 'rigidez axial exclusivamente');
-  layout.row('Hipótesis', 'comportamiento elástico lineal, pequeñas deformaciones y propiedades prismáticas por miembro');
+  layout.keyValues([
+    ['Formulación', analysis.educationTrace?.formulation ?? 'análisis estático lineal 2D'],
+    ['Elemento de marco', 'Euler-Bernoulli con deformación axial y flexión'],
+    ['Elemento de armadura', 'rigidez axial exclusivamente'],
+    ['Hipótesis', 'comportamiento elástico lineal, pequeñas deformaciones y propiedades prismáticas por miembro'],
+  ]);
 
   layout.heading('Limitaciones declaradas');
-  for (const limitation of [
+  layout.bullets([
     'No se consideran efectos de segundo orden (P-Delta) ni no linealidad geométrica.',
     'No se considera plasticidad, fluencia, fisuración ni degradación de rigidez.',
     'No se realiza análisis modal, dinámico, de historia en el tiempo ni espectral.',
     'No se aplica ninguna norma de diseño: el documento reporta solicitaciones, no verificaciones normativas.',
     'El pandeo, la torsión fuera del plano y el comportamiento tridimensional quedan fuera del modelo 2D.',
     'Los resultados dependen enteramente del modelo introducido; su idoneidad es responsabilidad del ingeniero que firma.',
-  ]) {
-    layout.text(`- ${limitation}`, 8.5, layout.fonts.regular, rgb(0.24, 0.28, 0.34), 10);
-  }
+  ]);
 
   layout.heading('Advertencias del análisis');
   if (analysis.issues.length === 0) {
-    layout.text('Las comprobaciones de entrada, estabilidad y equilibrio no detectaron incidencias.', 8.7, layout.fonts.regular, rgb(0.10, 0.35, 0.22), 10);
-  } else {
-    for (const issue of analysis.issues) {
-      const severity = issue.severity === 'error' ? 'ERROR' : issue.severity === 'warning' ? 'AVISO' : 'INFO';
-      const color = issue.severity === 'error' ? rgb(0.75, 0.20, 0.16) : issue.severity === 'warning' ? rgb(0.62, 0.42, 0.05) : rgb(0.24, 0.28, 0.34);
-      layout.text(`[${severity}] ${issue.title}${issue.objectId ? ` (${issue.objectId})` : ''}: ${issue.message}`, 8.5, layout.fonts.regular, color, 10);
-      if (issue.suggestedFix) layout.text(`Solucion sugerida: ${issue.suggestedFix}`, 8, layout.fonts.regular, rgb(0.37, 0.43, 0.39), 20);
-    }
+    layout.callout(
+      'ok',
+      'Sin incidencias',
+      'Las comprobaciones de entrada, estabilidad y equilibrio no detectaron incidencias.',
+    );
+    return;
+  }
+  for (const issue of analysis.issues) {
+    const tone = issue.severity === 'error' ? 'danger' : issue.severity === 'warning' ? 'warn' : 'neutral';
+    const heading = `${issue.severity === 'error' ? 'Error' : issue.severity === 'warning' ? 'Aviso' : 'Info'}`
+      + ` · ${issue.title}${issue.objectId ? ` (${issue.objectId})` : ''}`;
+    layout.callout(tone, heading, issue.suggestedFix ? `${issue.message} Solución sugerida: ${issue.suggestedFix}` : issue.message);
   }
 };

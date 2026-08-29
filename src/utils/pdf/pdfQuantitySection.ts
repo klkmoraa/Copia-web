@@ -1,97 +1,126 @@
 /**
- * One full page per quantity: the N, V or M diagram over the structure, the slope that
- * diagram was actually measured to have on the governing member, and the exact segment
- * functions of the first members.
+ * One part per response quantity: the diagram over the whole structure, the slope it was
+ * measured to have, and the exact segment function of *every* member.
  *
- * The page used to lead with the differential relation — `dV/dx = q(x)` — which holds for
- * every beam ever drawn and tells the reader nothing about this one. It now leads with that
- * derivative evaluated: a number, in this project's units, next to the member it came from.
+ * The page this replaces was a fixed 346-point artwork panel over a 270-point panel of
+ * "operaciones", into which exactly two members fit — a limit the page then reported as if it
+ * were an editorial choice ("se muestran los primeros 2"). The functions now flow into a
+ * table that pages by itself, so a forty-member model prints forty members.
+ *
+ * The colours are no longer invented here either: axial is the product's teal, shear its
+ * green, moment its orange (`pdfTheme.ts`), so a curve keeps its identity between the canvas
+ * and the signed document.
  */
 import type { DiagramQuantity } from '../../types';
-import { pdfText, wrapText } from './pdfGlyphs';
 import {
-  clearDisplay,
+  clearCell,
   display,
   formatPolynomial,
   quantitySymbol,
   quantityTitle,
   quantityUnit,
+  unitFor,
 } from './pdfFormat';
-import { drawPanel, drawSectionBand, drawVisualHeader } from './pdfChrome';
+import { drawFigureFrame, drawFigureTag } from './pdfChrome';
 import { drawGlobalQuantityDiagram } from './pdfDiagrams';
-import { drawFormulaCard, drawMathFormula } from './pdfMath';
 import { quantityConstructionSteps, quantitySlopeEquation } from './pdfSubstitution';
+import { TYPE } from './pdfTheme';
+import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
 
-export const drawQuantityPage = (context: ReportContext, quantity: DiagramQuantity, index: string): void => {
+const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
+
+const STANDFIRST: Record<DiagramQuantity, string> = {
+  axial: 'Fuerza normal a lo largo de la estructura, con la función exacta de cada tramo.',
+  shear: 'Fuerza cortante a lo largo de la estructura, con la función exacta de cada tramo.',
+  moment: 'Momento flector a lo largo de la estructura, con la función exacta de cada tramo.',
+};
+
+export const drawQuantityPart = (context: ReportContext, quantity: DiagramQuantity): void => {
   const { layout, project, analysis } = context;
-  const { rgb, fonts, palette, margin } = layout;
-  const maxWidth = layout.contentWidth;
+  const { palette } = layout;
   const color = palette.quantity[quantity];
-  layout.newPage();
-  layout.page.drawRectangle({ x: 0, y: 0, width: layout.width, height: layout.height, color: rgb(0.965, 0.975, 0.968) });
-  drawVisualHeader(layout, project.name, quantityTitle(quantity));
-  drawSectionBand(layout, index, quantityTitle(quantity), 'Diagrama global, valores gobernantes y ecuaciones exactas por tramo');
-  drawPanel(layout, margin, 352, maxWidth, 346);
-  layout.page.drawRectangle({ x: margin + 12, y: 670, width: 78, height: 20, color });
-  layout.page.drawText(pdfText(`DIAGRAMA ${quantitySymbol(quantity)}`), { x: margin + 23, y: 677, size: 7, font: fonts.bold, color: rgb(1, 1, 1) });
-  drawGlobalQuantityDiagram(context, quantity, margin + 8, 365, maxWidth - 16, 300);
-  drawPanel(layout, margin, 60, maxWidth, 270);
-  layout.page.drawText('OPERACIONES CLARAS', { x: margin + 14, y: 307, size: 9, font: fonts.bold, color: palette.forestDeep });
-  const visibleResults = analysis.memberResults.filter((result) => result.diagramSegments.length).slice(0, 2);
-  // This card used to carry the differential relation — `dV/dx = q(x)` — which is true of
-  // every beam ever drawn and says nothing about this one. It now carries that same
-  // derivative already evaluated on the governing member: the real slope, in this project's
-  // units, next to the member and stretch it was measured on.
-  const governing = visibleResults[0];
+  const symbol = quantitySymbol(quantity);
+  const unit = quantityUnit(quantity);
+
+  layout.part(quantityTitle(quantity), STANDFIRST[quantity]);
+
+  layout.figure(
+    272,
+    (rect) => {
+      drawFigureFrame(layout, rect);
+      drawFigureTag(layout, rect.x + 10, rect.y + rect.height - 14, `diagrama ${symbol}`, color);
+      drawGlobalQuantityDiagram(context, quantity, rect.x + 6, rect.y + 6, rect.width - 12, rect.height - 26);
+    },
+    `Diagrama ${symbol} dibujado normal a cada miembro; ${symbol} positivo según los ejes locales.`,
+  );
+
+  const governing = analysis.memberResults.find((result) => result.diagramSegments.length);
   const slope = governing ? quantitySlopeEquation(context, quantity, governing) : undefined;
   if (governing && slope) {
-    const firstSegment = governing.diagramSegments[0];
-    drawFormulaCard(
-      layout,
-      `Pendiente real del diagrama - miembro ${governing.memberId}`,
-      slope,
-      `Medida en el primer tramo del miembro ${governing.memberId}, de ${display(project, firstSegment.x0, 'length')} a ${display(project, firstSegment.x1, 'length')}.`,
-      margin + 14, 248, maxWidth - 28, color,
+    layout.heading('Cómo se construye este diagrama');
+    const first = governing.diagramSegments[0];
+    layout.text(
+      `Sobre el miembro ${governing.memberId}, en su primer tramo — de `
+      + `${display(project, first.x0, 'length')} a ${display(project, first.x1, 'length')} — el diagrama `
+      + 'parte de un valor, avanza con una pendiente medida y cierra en otro. Los tres son números de '
+      + 'este análisis, no la relación diferencial que los gobierna en cualquier viga.',
     );
+    layout.ensure(layout.measureMathBlock(slope, TYPE.section, 12));
+    layout.y -= layout.drawMathBlockAt(slope, TYPE.section, 12, color, `(${layout.nextEquationNumber()})`);
+    layout.gap();
+    layout.bullets(quantityConstructionSteps(context, quantity, governing));
   }
-  let operationBottom = 174;
-  visibleResults.forEach((result, resultIndex) => {
-    const segment = result.diagramSegments[0];
-    const coefficients = segment[quantity];
-    const formula = `${quantitySymbol(quantity)}(s) = ${formatPolynomial(project, quantity, coefficients)}`;
-    const minValue = quantity === 'axial' ? result.minAxial : quantity === 'shear' ? result.minShear : result.minMoment;
-    const maxValue = quantity === 'axial' ? result.maxAxial : quantity === 'shear' ? result.maxShear : result.maxMoment;
-    const unit = quantityUnit(quantity);
-    layout.page.drawRectangle({ x: margin + 14, y: operationBottom, width: maxWidth - 28, height: 63, color: rgb(1, 1, 1), borderColor: rgb(0.82, 0.87, 0.84), borderWidth: 0.6 });
-    layout.page.drawCircle({ x: margin + 29, y: operationBottom + 45, size: 8, color: palette.forest });
-    layout.page.drawText(String(resultIndex + 1), { x: margin + 26.5, y: operationBottom + 42.5, size: 6.5, font: fonts.bold, color: rgb(1, 1, 1) });
-    layout.page.drawText(pdfText(`MIEMBRO ${result.memberId} | FUNCIÓN DEL TRAMO`), { x: margin + 45, y: operationBottom + 46, size: 6.3, font: fonts.bold, color: palette.forestDeep });
-    drawMathFormula(layout, formula, margin + 45, operationBottom + 27, 10.6, rgb(0.10, 0.15, 0.12), 300);
-    layout.page.drawText(pdfText(`s = distancia local; válida de ${display(project, segment.x0, 'length')} a ${display(project, segment.x1, 'length')}.`), { x: margin + 45, y: operationBottom + 10, size: 6.2, font: fonts.regular, color: rgb(0.40, 0.46, 0.42) });
-    const extremaReference = Math.max(1e-12, Math.abs(minValue), Math.abs(maxValue));
-    layout.page.drawRectangle({ x: margin + 370, y: operationBottom + 12, width: 111, height: 39, color: rgb(0.95, 0.98, 0.96), borderColor: color, borderWidth: 0.7 });
-    layout.page.drawText('RESULTADOS', { x: margin + 378, y: operationBottom + 40, size: 5.2, font: fonts.bold, color });
-    layout.page.drawText(pdfText(`min: ${clearDisplay(project, minValue, unit, extremaReference)}`), { x: margin + 378, y: operationBottom + 27, size: 6.3, font: fonts.bold, color });
-    layout.page.drawText(pdfText(`max: ${clearDisplay(project, maxValue, unit, extremaReference)}`), { x: margin + 378, y: operationBottom + 16, size: 6.3, font: fonts.bold, color });
-    operationBottom -= 70;
-  });
-  if (visibleResults.length === 1) {
-    layout.page.drawText(pdfText(`COMO SE CONSTRUYE - MIEMBRO ${visibleResults[0].memberId}`), { x: margin + 14, y: 157, size: 7, font: fonts.bold, color: palette.forestDeep });
-    // Three steps that used to name the operation ("Integrar la carga q(x)") and now report
-    // the number it produced on this member.
-    const steps = quantityConstructionSteps(context, quantity, visibleResults[0]);
-    const stepWidth = (maxWidth - 48) / 3;
-    steps.forEach((step, stepIndex) => {
-      const stepX = margin + 14 + stepIndex * (stepWidth + 10);
-      layout.page.drawRectangle({ x: stepX, y: 78, width: stepWidth, height: 65, color: rgb(0.96, 0.98, 0.97), borderColor: rgb(0.82, 0.87, 0.84), borderWidth: 0.6 });
-      layout.page.drawCircle({ x: stepX + 15, y: 124, size: 8, color });
-      layout.page.drawText(String(stepIndex + 1), { x: stepX + 12.5, y: 121.5, size: 6.5, font: fonts.bold, color: rgb(1, 1, 1) });
-      const lines = wrapText(step, fonts.regular, 6.8, stepWidth - 20).slice(0, 3);
-      lines.forEach((entry, lineIndex) => layout.page.drawText(entry, { x: stepX + 10, y: 105 - lineIndex * 10, size: 6.8, font: fonts.regular, color: rgb(0.26, 0.33, 0.28) }));
-    });
+
+  layout.heading('Extremos por miembro');
+  const extremaScale = Math.max(
+    1e-12,
+    ...analysis.memberResults.flatMap((result) => [
+      Math.abs(quantity === 'axial' ? result.minAxial : quantity === 'shear' ? result.minShear : result.minMoment),
+      Math.abs(quantity === 'axial' ? result.maxAxial : quantity === 'shear' ? result.maxShear : result.maxMoment),
+    ]),
+  );
+  layout.table(
+    [
+      { header: 'Miembro', width: 96 },
+      { header: `${symbol} mínimo (${unitFor(project, unit)})`, ...NUMERIC },
+      { header: `${symbol} máximo (${unitFor(project, unit)})`, ...NUMERIC },
+      { header: 'Tramos', width: 62, ...NUMERIC },
+    ],
+    analysis.memberResults.map((result) => {
+      const minimum = quantity === 'axial' ? result.minAxial : quantity === 'shear' ? result.minShear : result.minMoment;
+      const maximum = quantity === 'axial' ? result.maxAxial : quantity === 'shear' ? result.maxShear : result.maxMoment;
+      return [
+        result.memberId,
+        clearCell(project, minimum, unit, extremaScale),
+        clearCell(project, maximum, unit, extremaScale),
+        String(result.diagramSegments.length),
+      ];
+    }),
+  );
+
+  layout.heading(`Función ${symbol}(s) de cada tramo`);
+  layout.text(
+    'La variable s se mide desde el inicio del tramo. Los coeficientes son los del análisis: '
+    + 'polinomios exactos, no una interpolación de puntos muestreados.',
+  );
+  const rows = analysis.memberResults.flatMap((result) => result.diagramSegments.map((segment, index) => [
+    index === 0 ? result.memberId : '',
+    String(index + 1),
+    `${display(project, segment.x0, 'length')} → ${display(project, segment.x1, 'length')}`,
+    `${symbol}(s) = ${formatPolynomial(project, quantity, segment[quantity])}`,
+  ]));
+  if (!rows.length) {
+    layout.note('El análisis no produjo tramos para esta magnitud.');
+    return;
   }
-  if (analysis.memberResults.length > visibleResults.length) {
-    layout.page.drawText(pdfText(`Se muestran los primeros ${visibleResults.length}; el anexo conserva las ecuaciones y extremos de los ${analysis.memberResults.length} miembros.`), { x: margin + 14, y: 77, size: 6.4, font: fonts.bold, color: rgb(0.36, 0.43, 0.38) });
-  }
+  layout.table(
+    [
+      { header: 'Miembro', width: 76 },
+      { header: 'Tramo', width: 42, ...NUMERIC },
+      { header: 'Estación', width: 128 },
+      { header: 'Función exacta', flex: 3, math: true },
+    ],
+    rows,
+  );
 };

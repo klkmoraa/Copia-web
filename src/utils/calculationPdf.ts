@@ -1,10 +1,10 @@
 /**
  * Calculation report — orchestrator.
  *
- * Until 0.8.2 this file was a single 1.058-line closure: every drawing routine captured the
- * same mutable `page`/`y` cursor, so no section could be read, tested or changed on its own.
- * The layout now lives in `utils/pdf/`, and this module only decides *which* sections the
- * document has and in *what* order.
+ * This module decides *which* parts the document has and in *what* order; the layout lives in
+ * `utils/pdf/`. Since the 0.8.3 redesign there is one sequence of numbered parts rather than
+ * a set of "visual pages" followed by an unnumbered annex with its own internal numbering, so
+ * this list is literally the table of contents.
  *
  * `pdf-lib` stays behind a dynamic `import()` — that is what keeps it out of the entry chunk —
  * so the modules under `utils/pdf/` import it as types only and receive `rgb`, the fonts, and
@@ -13,25 +13,29 @@
  */
 import { createPortablePayload } from './portablePayload';
 import { PdfLayout } from './pdf/pdfBuilder';
+import { createPalette } from './pdf/pdfTheme';
 import { safeFilename } from './pdf/pdfFormat';
-import { drawExecutivePage } from './pdf/pdfCover';
-import { drawQuantityPage } from './pdf/pdfQuantitySection';
-import { drawScopePage } from './pdf/pdfScopeSection';
-import { drawProcedureSummary } from './pdf/pdfProcedureSection';
-import { drawTechnicalAnnex } from './pdf/pdfAnnexSection';
+import { drawSummaryPart } from './pdf/pdfSummarySection';
+import { drawQuantityPart } from './pdf/pdfQuantitySection';
+import { drawScopePart } from './pdf/pdfScopeSection';
+import { drawProcedurePart } from './pdf/pdfProcedureSection';
+import { drawModelPart } from './pdf/pdfModelSection';
+import { drawResultsPart } from './pdf/pdfResultsSection';
+import { drawTracePart } from './pdf/pdfTraceSection';
 import { attachPortablePayload } from './pdf/pdfPayloadSection';
-import { drawCoverPage, drawTableOfContents } from './pdf/pdfFrontMatter';
+import { drawCoverPage, drawContentsPage } from './pdf/pdfFrontMatter';
 import { attachOutline } from './pdf/pdfOutline';
 import {
   createModelIndex,
   type CalculationReportArtifact,
   type CalculationReportOptions,
   type ReportContext,
-  type ReportPalette,
 } from './pdf/reportContext';
 import type { AnalysisResult, ProjectModel } from '../types';
 
 export type { CalculationReportOptions, CalculationReportArtifact } from './pdf/reportContext';
+
+const DOCUMENT_TITLE = 'Memoria de cálculo estructural';
 
 /**
  * Repeated on the cover because that is the one page of a signed document everybody reads.
@@ -66,21 +70,8 @@ export const createCalculationReport = async (
     mathItalic: await pdf.embedFont(StandardFonts.TimesRomanItalic),
     mathSymbol: await pdf.embedFont(StandardFonts.Symbol),
   };
-  const palette: ReportPalette = {
-    forest: rgb(0.07, 0.38, 0.21),
-    forestDeep: rgb(0.04, 0.24, 0.14),
-    forestSoft: rgb(0.86, 0.95, 0.89),
-    ink: rgb(0.12, 0.16, 0.22),
-    rule: rgb(0.73, 0.78, 0.84),
-    white: rgb(1, 1, 1),
-    quantity: {
-      axial: rgb(0.03, 0.40, 0.75),
-      shear: rgb(0.05, 0.51, 0.27),
-      moment: rgb(0.86, 0.20, 0.18),
-    },
-  };
   const context: ReportContext = {
-    layout: new PdfLayout(pdf, fonts, palette, rgb, { concatTransformationMatrix, pushGraphicsState, popGraphicsState }),
+    layout: new PdfLayout(pdf, fonts, createPalette(rgb), rgb, { concatTransformationMatrix, pushGraphicsState, popGraphicsState }),
     project,
     analysis,
     payload,
@@ -90,32 +81,37 @@ export const createCalculationReport = async (
     ),
     index: createModelIndex(project, analysis),
   };
+  const { layout } = context;
 
-  // Page one is reserved for the cover before anything is drawn on it. Its contents list
-  // can only be written once every section knows where it landed, so it is stamped at the
-  // end — the same reason `stampFooters` waits for the last page to exist.
-  const coverIndex = context.layout.pages.indexOf(context.layout.page);
-  context.layout.newPage();
+  // The first two sheets are front matter and are written last: the cover needs nothing from
+  // the body, but the contents page cannot be set until every part knows the page it landed
+  // on — the same reason `stampChrome` waits for the final page to exist.
+  const coverIndex = layout.pages.indexOf(layout.page);
+  layout.newPage();
+  const contentsIndex = layout.pages.indexOf(layout.page);
 
-  // The executive page is the document: it is never dropped. Everything after it is a
-  // section the reader may not need in this particular copy, and the numbered bands stay
-  // consecutive so a shortened report never shows a gap where a section used to be.
-  drawExecutivePage(context);
-  let band = 2;
-  const nextBand = (): string => String(band++).padStart(2, '0');
+  // Part one is the document: it is never dropped. Everything after it is a part the reader
+  // may not need in this particular copy, and because the numbering is assigned by
+  // `layout.part` as each one opens, a shortened report never shows a gap where a part used
+  // to be.
+  drawSummaryPart(context);
   if (options.includeDiagrams !== false) {
-    drawQuantityPage(context, 'axial', nextBand());
-    drawQuantityPage(context, 'shear', nextBand());
-    drawQuantityPage(context, 'moment', nextBand());
+    drawQuantityPart(context, 'axial');
+    drawQuantityPart(context, 'shear');
+    drawQuantityPart(context, 'moment');
   }
-  if (options.includeScope !== false) drawScopePage(context, nextBand());
-  if (options.includeProcedure !== false) drawProcedureSummary(context, nextBand());
-  if (options.includeAnnex !== false) drawTechnicalAnnex(context);
+  if (options.includeScope !== false) drawScopePart(context);
+  if (options.includeProcedure !== false) drawProcedurePart(context);
+  if (options.includeAnnex !== false) {
+    drawModelPart(context);
+    drawResultsPart(context);
+    if (options.includeEducationTrace !== false && analysis.educationTrace) drawTracePart(context);
+  }
 
   drawCoverPage(context, coverIndex, PROFESSIONAL_NOTE);
-  drawTableOfContents(context.layout, coverIndex);
-  attachOutline(pdf, { PDFName, PDFArray, PDFNumber, PDFHexString }, context.layout.sections);
-  context.layout.stampFooters();
+  drawContentsPage(layout, contentsIndex);
+  attachOutline(pdf, { PDFName, PDFArray, PDFNumber, PDFHexString }, layout.sections);
+  layout.stampChrome(project.name, DOCUMENT_TITLE);
 
   const bytes = await attachPortablePayload(context);
   return { bytes, filename: `${safeFilename(project.name)}-memoria-calculo.pdf`, payload };

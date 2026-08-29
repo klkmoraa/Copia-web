@@ -7,8 +7,14 @@ import { pdfText } from './pdfGlyphs';
 
 describe('pdfText', () => {
   it('conserva intactas las tildes, la eñe y los signos de Latin-1', () => {
+    // The middle dot is WinAnsi, so it survives as itself: it used to be rewritten to ` x `,
+    // which turned `kN·m` into `kN x m` on every unit label in the document.
     expect(pdfText('Análisis · cálculo pequeñas ¿qué? ¡90° máximo! ünïcode'))
-      .toBe('Análisis  x  cálculo pequeñas ¿qué? ¡90° máximo! ünïcode');
+      .toBe('Análisis · cálculo pequeñas ¿qué? ¡90° máximo! ünïcode');
+  });
+
+  it('pliega el punto medio matemático sobre el de Latin-1 en vez de perderlo', () => {
+    expect(pdfText('a ⋅ b')).toBe('a · b');
   });
 
   it('deletrea los símbolos que las caras WinAnsi no pueden dibujar', () => {
