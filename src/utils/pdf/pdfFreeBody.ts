@@ -16,23 +16,42 @@
  * number with a label.
  */
 import { memberAxis } from '../../graphics/structureGeometry';
-import { pdfText, wrapText } from './pdfGlyphs';
+import { pdfText } from './pdfGlyphs';
+import {
+  placeLabelBox,
+  sceneFrame,
+  sceneMetrics,
+  scenePlot,
+  type LabelBox,
+  type SceneExtent,
+  type SceneMetrics,
+} from './pdfSceneLayout';
 import { TYPE } from './pdfTheme';
 import {
+  GHOST_OPACITY,
+  GHOST_WEIGHT,
   createFocusProjection,
   createProjection,
   drawArrow,
-  drawDashedLine,
+  drawAxesIndicator,
+  drawCutLine,
+  drawDimension,
   drawGhostModel,
+  drawHinge,
+  drawIsolationBoundary,
+  drawLeader,
   drawMemberLoads,
   drawMomentArc,
   drawNodeDot,
+  drawPolynomialCurve,
   drawSupportGlyph,
+  SUPPORT_DEPTH,
   type Point,
   type Projection,
   type Rect,
 } from './pdfScene';
 import type { PdfLayout } from './pdfBuilder';
+import type { NodeModel } from '../../types';
 import type { PdfColor, ReportContext } from './reportContext';
 
 /** Where a scene mark is anchored: a node of the model, or a point in model coordinates. */
@@ -54,7 +73,12 @@ export interface SceneForce {
   readonly fy: number;
   readonly label: string;
   readonly tone: SceneTone;
-  /** Longer arrows for the governing action of the scene. */
+  /**
+   * Arrow length as a multiple of the scene's own scaled arrow. Absent is 1.
+   *
+   * It used to be an absolute point value, which is why the marks looked like toys on a large
+   * drawing and buried a small one: `sceneMetrics` sizes the base arrow to the plot now.
+   */
   readonly length?: number;
   /**
    * Which end of the arrow `place` names.
@@ -95,11 +119,13 @@ export interface SceneCut {
 }
 
 /**
- * A member the cut passes *through*, rather than between: the part beyond `ratio` is greyed
- * out so the free body is the portion actually retained.
+ * A member the cut passes *through*, rather than between.
  *
- * Without this a beam cut mid-span drew the whole beam in ink, which says the free body is the
- * entire member — the opposite of what the section is about.
+ * Both halves are drawn: the retained one in ink, because the stub from the body out to the cut
+ * face is *part of the free body* and is where the bar's own force acts; the discarded one as a
+ * ghost. Getting this wrong in either direction misdraws the body — leaving the whole member in
+ * ink says the free body is the entire bar, and ghosting the whole member leaves a truss cut at
+ * two bars with nothing in ink but a single node, which is what the first version did.
  */
 export interface ScenePartialMember {
   readonly memberId: string;
@@ -107,6 +133,40 @@ export interface ScenePartialMember {
   readonly ratio: number;
   /** Which side of the cut stays in ink. */
   readonly keep: 'start' | 'end';
+}
+
+/** A measured distance drawn on the scene, in model coordinates. */
+export interface SceneDimension {
+  readonly from: Point;
+  readonly to: Point;
+  /** Perpendicular offset in points; the sign picks the side of the measured line. */
+  readonly offset: number;
+  readonly text: string;
+}
+
+/**
+ * A polynomial of the analysis drawn over a straight baseline: the free moment of a span, the
+ * fictitious `M/EI` load of a conjugate beam.
+ *
+ * The coefficients come from what the method already solved, and the vertical scale is chosen to
+ * fill the room available — the shape and its area are what the arithmetic beside the figure
+ * integrates, and the caption says as much rather than claiming a scale.
+ */
+export interface SceneCurve {
+  readonly coefficients: readonly number[];
+  readonly domain: { readonly x0: number; readonly x1: number };
+  /** Baseline ends, in model coordinates. */
+  readonly from: Point;
+  readonly to: Point;
+  readonly tone: SceneTone;
+  /** Hatch the area between the curve and the baseline. */
+  readonly fill?: boolean;
+  readonly label?: string;
+}
+
+/** A hinge symbol: a point of inflection, or an internal hinge of the model. */
+export interface SceneHinge {
+  readonly place: ScenePlace;
 }
 
 export interface FreeBodyScene {
@@ -119,7 +179,20 @@ export interface FreeBodyScene {
   /** Discarded geometry is dropped rather than ghosted. */
   readonly hideGhost?: boolean;
   readonly cut?: SceneCut;
-  readonly partialMember?: ScenePartialMember;
+  /** Members the cut passes through, each drawn half in ink and half as a ghost. */
+  readonly severed?: readonly ScenePartialMember[];
+  readonly dimensions?: readonly SceneDimension[];
+  readonly curves?: readonly SceneCurve[];
+  readonly hinges?: readonly SceneHinge[];
+  /** The corner axes indicator. On by default; a close-up of one joint may not need it. */
+  readonly axes?: boolean;
+  /**
+   * A dashed circle marking what has been isolated, drawn around the focus node.
+   *
+   * The Method of Joints cuts a pin free of the truss; without the boundary the drawing shows
+   * bars in ink and leaves the reader to infer where the body ends.
+   */
+  readonly isolation?: { readonly nodeId: string; readonly radius: number };
   /**
    * Draw the applied member loads of the retained portion.
    *
@@ -132,9 +205,98 @@ export interface FreeBodyScene {
   readonly notes?: readonly SceneNote[];
   /** Frame the drawing on one node instead of the whole model. */
   readonly focus?: { readonly nodeId: string; readonly radius: number };
-  /** Legend line under the drawing, naming what the marks mean. */
+  /**
+   * Reading of the drawing.
+   *
+   * It is printed by `layout.figure` as part of the numbered caption, not inside the frame: the
+   * grey block it used to occupy cost ~21 pt of drawing height and competed with the marks it
+   * was explaining.
+   */
   readonly legend?: string;
+  /**
+   * Model extent this scene needs to frame. Absent means "the nodes it keeps", which is what a
+   * cut wants — sizing a two-node free body to the whole truss is one of the reasons these
+   * drawings came out small.
+   */
+  readonly extent?: SceneExtent;
 }
+
+/**
+ * Extent a scene needs, in model units.
+ *
+ * Falls back through: what the scene declared, the box of the nodes it keeps, and finally the
+ * whole model. A degenerate span (a straight beam has zero depth) stays zero, which is exactly
+ * what `sceneFigureHeight` wants in order to ask for a short, wide figure.
+ */
+/**
+ * Nodes the scene is framed around.
+ *
+ * A scene that hides the rest of the model — one span of a continuous beam, the real and
+ * conjugate beams — is framed on what it keeps, so that span fills the figure. A scene that
+ * shows the model as context is framed on the whole model, or the ghost would run off the page.
+ *
+ * `sceneExtentOf` and the projection both read this, because sizing the figure to one span
+ * while projecting the whole model into it is what drew a span in half its own frame.
+ */
+const framedNodes = (context: ReportContext, scene: FreeBodyScene): readonly NodeModel[] => {
+  const kept = scene.keptNodeIds?.length
+    ? context.project.nodes.filter((node) => scene.keptNodeIds!.includes(node.id))
+    : [];
+  return scene.hideGhost && kept.length > 1 ? kept : context.project.nodes;
+};
+
+/**
+ * Model-space box a focused scene actually draws: the joint and the far end of every stub
+ * leaving it.
+ *
+ * Assuming a square of `radius × radius` was right for a truss joint and wrong for a beam one,
+ * where both stubs run horizontally: the drawing came out as a line across the middle of a
+ * square frame, three quarters of it empty.
+ */
+const focusBounds = (
+  context: ReportContext,
+  scene: FreeBodyScene,
+): { spanX: number; spanY: number } | undefined => {
+  const node = scene.focus ? context.index.node(scene.focus.nodeId) : undefined;
+  if (!node) return undefined;
+  const xs = [node.x];
+  const ys = [node.y];
+  for (const entry of scene.severed ?? []) {
+    const member = context.index.member(entry.memberId);
+    const ni = member ? context.index.node(member.i) : undefined;
+    const nj = member ? context.index.node(member.j) : undefined;
+    if (!ni || !nj) continue;
+    const ratio = Math.min(1, Math.max(0, entry.ratio));
+    xs.push(ni.x + (nj.x - ni.x) * ratio);
+    ys.push(ni.y + (nj.y - ni.y) * ratio);
+  }
+  if (xs.length < 2) return undefined;
+  // Measured symmetrically about the joint, because the projection is centred there. Taking the
+  // plain bounding box understated the half-span whenever the stubs leave to one side — which
+  // scaled the drawing up until the model ran off the frame and across the page.
+  return {
+    spanX: Math.max(...xs.map((x) => Math.abs(x - node.x))) * 2,
+    spanY: Math.max(...ys.map((y) => Math.abs(y - node.y))) * 2,
+  };
+};
+
+export const sceneExtentOf = (context: ReportContext, scene: FreeBodyScene): SceneExtent => {
+  if (scene.extent) return scene.extent;
+  if (scene.focus) {
+    const bounds = focusBounds(context, scene);
+    if (bounds && bounds.spanX > 1e-9) return bounds;
+    const radius = Math.max(scene.focus.radius, 1e-6);
+    return { spanX: radius * 2, spanY: radius * 2 };
+  }
+  const nodes = framedNodes(context, scene);
+  if (!nodes.length) return { spanX: 1, spanY: 0 };
+  const xs = nodes.map((node) => node.x);
+  const ys = nodes.map((node) => node.y);
+  return {
+    spanX: Math.max(...xs) - Math.min(...xs),
+    spanY: Math.max(...ys) - Math.min(...ys),
+  };
+};
 
 const toneColor = (context: ReportContext, tone: SceneTone): PdfColor => {
   const { palette } = context.layout;
@@ -197,37 +359,67 @@ export const axialDirection = (
   return { fx: axis.c * sign, fy: axis.s * sign };
 };
 
-const LABEL_SIZE = 5.9;
+/**
+ * A drawn segment as obstacles the label placer must clear.
+ *
+ * Sampled into small boxes along its length rather than reserved as one bounding box: a
+ * diagonal bar's bounding box covers the whole triangle it spans, which would reject nearly
+ * every candidate position and push every label out to a leader. What has to stay clear is the
+ * stroke itself, and that is what these cover.
+ */
+const segmentBoxes = (from: Point, to: Point): LabelBox[] => {
+  const length = Math.hypot(to.x - from.x, to.y - from.y);
+  const steps = Math.max(1, Math.round(length / 7));
+  const half = 2.2;
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const ratio = index / steps;
+    return {
+      x: from.x + (to.x - from.x) * ratio - half,
+      y: from.y + (to.y - from.y) * ratio - half,
+      width: half * 2,
+      height: half * 2,
+    };
+  });
+};
 
 /**
- * Writes a mark's label beside it without letting it run out of the frame.
+ * Draws one label where it fits, and a leader back to what it names when nothing was free.
  *
- * The offset is perpendicular to the mark's own direction — an arrow's shaft, a cut's line —
- * because a label placed along that direction lands on top of the member the mark springs
- * from, which is exactly where a reader is looking. The clamp is what keeps a long value on a
- * bar near the right edge from being sliced off by the figure border.
+ * The placement itself is `pdfSceneLayout.placeLabelBox`, which is pure geometry and tested as
+ * such; this only turns its answer into ink. `taken` is the running list of boxes already on the
+ * drawing, so it stays local to one scene rather than global state.
  */
-const placeLabel = (
+const drawLabel = (
   layout: PdfLayout,
   text: string,
-  at: Point,
+  anchor: Point,
   direction: Point,
   frame: Rect,
   color: PdfColor,
-  font = layout.fonts.bold,
+  metrics: SceneMetrics,
+  taken: LabelBox[],
+  bold = true,
 ): void => {
   const label = pdfText(text);
-  const width = font.widthOfTextAtSize(label, LABEL_SIZE);
-  const normal = { x: -direction.y, y: direction.x };
-  const x = at.x + direction.x * 6 + normal.x * 5 - (direction.x < -0.4 ? width : 0);
-  const y = at.y + direction.y * 6 + normal.y * 5 - LABEL_SIZE * 0.35;
-  layout.page.drawText(label, {
-    x: Math.min(Math.max(x, frame.x + 4), frame.x + frame.width - width - 4),
-    y: Math.min(Math.max(y, frame.y + 4), frame.y + frame.height - LABEL_SIZE - 4),
-    size: LABEL_SIZE,
-    font,
-    color,
-  });
+  const font = bold ? layout.fonts.bold : layout.fonts.regular;
+  const size = metrics.label;
+  const placed = placeLabelBox(
+    {
+      text: label,
+      width: font.widthOfTextAtSize(label, size),
+      height: size,
+      anchor,
+      direction,
+      gap: metrics.arrow * 0.28,
+    },
+    taken,
+    frame,
+  );
+  taken.push(placed.box);
+  if (placed.leader) {
+    drawLeader(layout, { x: placed.box.x + placed.box.width / 2, y: placed.box.y + placed.box.height / 2 }, placed.leader, color);
+  }
+  layout.page.drawText(label, { x: placed.box.x, y: placed.box.y, size, font, color });
 };
 
 export const drawFreeBodyScene = (
@@ -239,80 +431,129 @@ export const drawFreeBodyScene = (
   const { palette, fonts } = layout;
   if (!project.nodes.length) return;
   const page = layout.page;
+
+  // The border hugs the drawing, centred in the slot it was given, rather than boxing the whole
+  // slot: a joint close-up or a narrow model used to float inside a 495 pt-wide rectangle.
+  const frame = sceneFrame(rect, sceneExtentOf(context, scene));
   page.drawRectangle({
-    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    x: frame.x, y: frame.y, width: frame.width, height: frame.height,
     borderWidth: 0.5, borderColor: palette.rule, color: palette.paper,
   });
 
-  // A support glyph hangs ~19pt below its node and an arrow label another ~8pt, so the plot
-  // floor sits well clear of the legend band rather than writing into it.
-  const legendHeight = scene.legend ? TYPE.micro * 2.4 + 6 : 0;
-  const plot = {
-    left: rect.x + 58,
-    right: rect.x + rect.width - 58,
-    bottom: rect.y + 44 + legendHeight,
-    top: rect.y + rect.height - 30,
-  };
+  const plot = scenePlot(frame);
+  const metrics = sceneMetrics(plot.right - plot.left, plot.top - plot.bottom);
+  const taken: LabelBox[] = [];
+
   const focusNode = scene.focus ? context.index.node(scene.focus.nodeId) : undefined;
-  const projection = focusNode && scene.focus
-    ? createFocusProjection({ x: focusNode.x, y: focusNode.y }, scene.focus.radius, plot)
-    : createProjection(project.nodes, plot);
+  // The projection frames exactly the box the figure was sized for; sizing to one thing and
+  // projecting another is what drew a span in half its own frame.
+  const focusExtent = focusBounds(context, scene)
+    ?? (scene.focus ? { spanX: scene.focus.radius * 2, spanY: scene.focus.radius * 2 } : undefined);
+  const projection = focusNode && focusExtent
+    ? createFocusProjection(
+      { x: focusNode.x, y: focusNode.y },
+      // A little air around the stubs, so an arrow leaving one does not start on the frame.
+      { spanX: focusExtent.spanX * 1.14, spanY: focusExtent.spanY * 1.14 },
+      plot,
+    )
+    : createProjection(framedNodes(context, scene), plot);
 
   if (scene.title) {
-    page.drawText(pdfText(scene.title.toUpperCase()), {
-      x: rect.x + 10, y: rect.y + rect.height - 14, size: TYPE.micro, font: fonts.bold, color: palette.inkSoft,
+    const tag = pdfText(scene.title.toUpperCase());
+    page.drawText(tag, {
+      x: frame.x + 8, y: frame.y + frame.height - 12, size: TYPE.micro, font: fonts.bold, color: palette.inkSoft,
+    });
+    taken.push({
+      x: frame.x + 8, y: frame.y + frame.height - 13,
+      width: fonts.bold.widthOfTextAtSize(tag, TYPE.micro), height: TYPE.micro + 2,
     });
   }
 
+  const severed = scene.severed ?? [];
   drawGhostModel(context, projection, {
     solidMemberIds: scene.keptMemberIds ? new Set(scene.keptMemberIds) : undefined,
     solidNodeIds: scene.keptNodeIds ? new Set(scene.keptNodeIds) : undefined,
-    hideGhost: scene.hideGhost,
+    // A close-up is scaled to its stubs, so the rest of the model would land far outside the
+    // frame — and there is nothing here that clips a drawing to one.
+    hideGhost: scene.hideGhost || scene.focus !== undefined,
+    // A severed member is neither wholly kept nor wholly discarded, so the ghost pass leaves it
+    // alone and the block below draws its two halves.
+    skipMemberIds: new Set(severed.map((entry) => entry.memberId)),
+    weight: metrics.memberWeight,
+    nodeSize: metrics.nodeDot,
+    labelSize: metrics.label,
   });
+
+  if (scene.isolation) {
+    const node = context.index.node(scene.isolation.nodeId);
+    if (node) {
+      const centre = projection.at(node.x, node.y);
+      const edge = projection.at(node.x + scene.isolation.radius, node.y);
+      // Clamped in points, not left in model units: on a joint whose stubs are collinear the
+      // horizontal scale is large and the same model radius drew a circle taller than the frame.
+      const radius = Math.min(Math.max(Math.abs(edge.x - centre.x), 9), (plot.top - plot.bottom) * 0.34);
+      drawIsolationBoundary(layout, centre, radius, palette.inkFaint);
+    }
+  }
 
   // A focused scene draws the joint itself on top of the ghost, so it never disappears under
   // the bars that meet there.
   if (focusNode) {
     const at = projection.at(focusNode.x, focusNode.y);
-    drawNodeDot(layout, at, focusNode.id, palette.ink, 3.6, 7);
+    drawNodeDot(layout, at, focusNode.id, palette.ink, metrics.nodeDot * 1.15, metrics.label);
     drawSupportGlyph(layout, at, focusNode.support, palette.inkSoft);
   }
 
-  // The severed member's discarded half: painted out and redrawn in the ghost style, so what
-  // is left in ink is exactly the free body the equations below belong to.
-  if (scene.partialMember) {
-    const member = context.index.member(scene.partialMember.memberId);
+  // Each severed member, in two halves: the stub the body keeps, in ink, and the rest as a
+  // ghost. The ink strokes double as obstacles for the label placer, so a value never lands on
+  // the bar it belongs to.
+  const strokes: LabelBox[] = [];
+  for (const entry of severed) {
+    const member = context.index.member(entry.memberId);
     const ni = member ? context.index.node(member.i) : undefined;
     const nj = member ? context.index.node(member.j) : undefined;
-    if (member && ni && nj) {
-      const ratio = Math.min(1, Math.max(0, scene.partialMember.ratio));
-      const start = projection.at(ni.x, ni.y);
-      const end = projection.at(nj.x, nj.y);
-      const at = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
-      const discarded = scene.partialMember.keep === 'start' ? end : start;
-      page.drawLine({ start: at, end: discarded, thickness: 4, color: palette.paper });
-      page.drawLine({ start: at, end: discarded, thickness: 0.8, color: palette.inkFaint, opacity: 0.5, dashArray: [2.4, 2.4] });
+    if (!member || !ni || !nj) continue;
+    const ratio = Math.min(1, Math.max(0, entry.ratio));
+    const start = projection.at(ni.x, ni.y);
+    const end = projection.at(nj.x, nj.y);
+    const at = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
+    const kept = entry.keep === 'start' ? start : end;
+    const discarded = entry.keep === 'start' ? end : start;
+    page.drawLine({ start: kept, end: at, thickness: metrics.memberWeight, color: palette.ink });
+    // The discarded half is context, and a close-up has no room for it: scaled to its stubs, the
+    // far end of a bar lands well outside the frame, and nothing here clips a drawing to one.
+    if (!scene.hideGhost && scene.focus === undefined) {
+      page.drawLine({ start: at, end: discarded, thickness: GHOST_WEIGHT, color: palette.inkFaint, opacity: GHOST_OPACITY });
     }
+    strokes.push(...segmentBoxes(kept, at));
   }
+  for (const memberId of scene.keptMemberIds ?? []) {
+    const member = context.index.member(memberId);
+    const ni = member ? context.index.node(member.i) : undefined;
+    const nj = member ? context.index.node(member.j) : undefined;
+    if (member && ni && nj) strokes.push(...segmentBoxes(projection.at(ni.x, ni.y), projection.at(nj.x, nj.y)));
+  }
+  taken.push(...strokes);
 
   if (scene.includeMemberLoads) {
-    const partial = scene.partialMember;
-    drawMemberLoads(context, projection, {
+    const partial = severed[0];
+    taken.push(...drawMemberLoads(context, projection, {
       onlyMemberIds: scene.keptMemberIds
-        ? new Set([...scene.keptMemberIds, ...(partial ? [partial.memberId] : [])])
+        ? new Set([...scene.keptMemberIds, ...severed.map((entry) => entry.memberId)])
         : undefined,
       // On the severed member the load stops at the cut, because past the cut it acts on the
       // portion that was removed.
       upTo: (memberId) => partial && memberId === partial.memberId
         ? (partial.keep === 'start' ? partial.ratio : 1)
         : 1,
-    });
+      arrow: metrics.arrow * 0.62,
+    }));
   }
 
   if (scene.cut) {
     const from = projection.at(scene.cut.from.x, scene.cut.from.y);
     const to = projection.at(scene.cut.to.x, scene.cut.to.y);
-    drawDashedLine(layout, from, to, palette.ink, 1.1);
+    drawCutLine(layout, from, to, palette.ink);
     if (scene.cut.label) {
       const along = Math.hypot(to.x - from.x, to.y - from.y) || 1;
       const where = scene.cut.labelAt ?? 'end';
@@ -322,36 +563,76 @@ export const drawFreeBodyScene = (
       const direction = where === 'start'
         ? { x: (from.x - to.x) / along, y: (from.y - to.y) / along }
         : { x: (to.x - from.x) / along, y: (to.y - from.y) / along };
-      placeLabel(layout, scene.cut.label, anchor, direction, rect, palette.ink);
+      drawLabel(layout, scene.cut.label, anchor, direction, frame, palette.ink, metrics, taken);
     }
+  }
+
+  // Dimensions before the arrows: they are the quietest ink on the drawing and must not be the
+  // thing a label gets pushed off to make room for.
+  for (const dimension of scene.dimensions ?? []) {
+    const from = projection.at(dimension.from.x, dimension.from.y);
+    const to = projection.at(dimension.to.x, dimension.to.y);
+    const box = drawDimension(layout, from, to, dimension.offset, dimension.text, palette.inkFaint);
+    if (box) taken.push(box);
+  }
+
+  // Curves before the arrows and after the geometry: they are the subject of the figures that
+  // carry them, and the labels must be free to move around them.
+  for (const curve of scene.curves ?? []) {
+    const from = projection.at(curve.from.x, curve.from.y);
+    const to = projection.at(curve.to.x, curve.to.y);
+    const color = toneColor(context, curve.tone);
+    // Half the room above the baseline, so the curve never climbs out of its own frame.
+    const amplitude = Math.min((plot.top - plot.bottom) * 0.42, frame.y + frame.height - Math.max(from.y, to.y) - 14);
+    const peak = drawPolynomialCurve(
+      layout, curve.coefficients, curve.domain, { from, to }, Math.max(amplitude, 12), color,
+      { fill: curve.fill },
+    );
+    if (curve.label) {
+      const span = curve.domain.x1 - curve.domain.x0;
+      const ratio = span > 0 ? (peak.peakAt - curve.domain.x0) / span : 0.5;
+      const at = {
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio + Math.max(amplitude, 12) * 0.55,
+      };
+      drawLabel(layout, curve.label, at, { x: 0, y: 1 }, frame, color, metrics, taken, false);
+    }
+  }
+
+  for (const marker of scene.hinges ?? []) {
+    const at = resolvePlace(context, marker.place, projection);
+    if (at) drawHinge(layout, at, metrics.nodeDot * 1.1, palette.ink);
   }
 
   for (const force of scene.forces ?? []) {
     const anchored = resolvePlace(context, force.place, projection);
     if (!anchored) continue;
     const color = toneColor(context, force.tone);
-    const length = force.length ?? 22;
+    const length = force.length === undefined ? metrics.arrow : metrics.arrow * force.length;
     const magnitude = Math.hypot(force.fx, force.fy);
     if (!(magnitude > 1e-12)) continue;
     // A tail-anchored arrow starts where it was placed and grows outward, so the head lands a
     // full arrow-length beyond the anchor in the force's own direction.
+    // A reaction pointing up at a supported node would otherwise be drawn straight through its
+    // own support glyph; it starts below the glyph instead.
+    const clearance = force.tone === 'reaction' && force.fy > 0 && 'nodeId' in force.place
+      && (context.index.node(force.place.nodeId)?.support.type ?? 'none') !== 'none'
+      ? SUPPORT_DEPTH
+      : 0;
+    const base = { x: anchored.x, y: anchored.y - clearance };
     const head = force.anchor === 'tail'
-      ? { x: anchored.x + force.fx / magnitude * length, y: anchored.y + force.fy / magnitude * length }
-      : anchored;
-    const tail = drawArrow(layout, head, force.fx, force.fy, color, length);
+      ? { x: base.x + force.fx / magnitude * length, y: base.y + force.fy / magnitude * length }
+      : base;
+    const tail = drawArrow(layout, head, force.fx, force.fy, color, length, metrics.memberWeight * 0.7);
     if (!tail || !force.label) continue;
-    // The label goes at the far end of the arrow from the body it belongs to — the head for a
-    // force leaving, the tail for one arriving — nudged perpendicular to the shaft so it never
-    // lies along the member the arrow springs from.
     // Both ends push the label *away* from the body: at the head an arrow leaving continues in
-    // its own direction, at the tail an arrow arriving continues backwards along it. Without
-    // the flip a vertical reaction wrote its value straight over its own support glyph.
+    // its own direction, at the tail an arrow arriving continues backwards along it.
     const outward = force.anchor === 'tail' ? 1 : -1;
-    placeLabel(
+    drawLabel(
       layout, force.label,
       force.anchor === 'tail' ? head : tail,
       { x: force.fx / magnitude * outward, y: force.fy / magnitude * outward },
-      rect, color,
+      frame, color, metrics, taken,
     );
   }
 
@@ -359,17 +640,15 @@ export const drawFreeBodyScene = (
     const at = resolvePlace(context, moment.place, projection);
     if (!at) continue;
     const color = toneColor(context, moment.tone);
-    const radius = 9.5;
-    const head = drawMomentArc(layout, at, moment.sign, radius, color);
-    // Clear of the arc it names: the label hangs a full radius out along the head's own
-    // outward direction, not on the circle where the stroke already is.
+    const radius = metrics.momentRadius;
+    const head = drawMomentArc(layout, at, moment.sign, radius, color, metrics.memberWeight * 0.65);
     const out = Math.hypot(head.x - at.x, head.y - at.y) || 1;
     if (moment.label) {
-      placeLabel(
+      drawLabel(
         layout, moment.label,
-        { x: at.x + (head.x - at.x) / out * (radius + 4), y: at.y + (head.y - at.y) / out * (radius + 4) },
+        { x: at.x + (head.x - at.x) / out * (radius + 3), y: at.y + (head.y - at.y) / out * (radius + 3) },
         { x: (head.x - at.x) / out, y: (head.y - at.y) / out },
-        rect, color,
+        frame, color, metrics, taken,
       );
     }
   }
@@ -377,24 +656,10 @@ export const drawFreeBodyScene = (
   for (const note of scene.notes ?? []) {
     const at = resolvePlace(context, note.place, projection);
     if (!at) continue;
-    placeLabel(layout, note.text, at, { x: 0.6, y: -1 }, rect, toneColor(context, note.tone ?? 'faint'), fonts.regular);
+    drawLabel(layout, note.text, at, { x: 0.6, y: -1 }, frame, toneColor(context, note.tone ?? 'faint'), metrics, taken, false);
   }
 
-  if (scene.legend) {
-    const lines = wrapText(scene.legend, fonts.regular, TYPE.micro, rect.width - 20);
-    const shown = lines.slice(0, 3);
-    const top = rect.y + 8 + shown.length * TYPE.micro * 1.35;
-    // A hairline separates the reading of the drawing from the drawing itself, so the legend
-    // never looks like another annotation floating in the frame.
-    page.drawLine({
-      start: { x: rect.x + 10, y: top + 4 }, end: { x: rect.x + rect.width - 10, y: top + 4 },
-      thickness: 0.4, color: palette.rule,
-    });
-    shown.forEach((line, index) => {
-      page.drawText(line, {
-        x: rect.x + 10, y: top - (index + 1) * TYPE.micro * 1.35 + TYPE.micro * 0.35,
-        size: TYPE.micro, font: fonts.regular, color: palette.inkSoft,
-      });
-    });
+  if (scene.axes !== false) {
+    drawAxesIndicator(layout, { x: frame.x + frame.width - 26, y: frame.y + 12 }, 11, palette.inkFaint);
   }
 };

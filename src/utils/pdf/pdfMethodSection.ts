@@ -23,7 +23,8 @@ import { solveMethodOfSections, type MethodOfSectionsResult } from '../../analys
 import { solveMethodOfJoints, type MethodOfJointsResult } from '../../analysis-methods/methodOfJoints';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
-import { drawFreeBodyScene, type FreeBodyScene } from './pdfFreeBody';
+import { drawFreeBodyScene, sceneExtentOf, type FreeBodyScene } from './pdfFreeBody';
+import { sceneFigureHeight } from './pdfSceneLayout';
 import {
   cantileverScenes,
   castiglianoScenes,
@@ -53,15 +54,15 @@ import type { ReportContext } from './reportContext';
 
 const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
 
-/** Height of a free-body figure. Tall enough for a truss, short enough that two share a page. */
-const SCENE_HEIGHT = 186;
-
 /**
  * Draws the free bodies of one method step, or nothing when the reader dropped them.
  *
- * Every scene goes through `layout.figure`, so it is numbered, captioned and page-broken by the
- * same primitive as every other drawing in the document — a method figure can be referred to
- * from the prose exactly like the free-body diagram of part one.
+ * Each scene sizes its own figure: `sceneFigureHeight` makes the plot's aspect ratio match the
+ * model's, so the drawing fills the box instead of floating in it. Under the old fixed 186 pt
+ * frame a 6×4 m truss occupied 27.5 % of its own figure's width and a beam 0.5 % of its height.
+ *
+ * The scene's legend rides in the numbered caption rather than inside the frame, where it used
+ * to cost ~21 pt of drawing height and compete with the marks it explains.
  */
 const drawScenes = (
   context: ReportContext,
@@ -69,11 +70,14 @@ const drawScenes = (
   caption: (scene: FreeBodyScene, index: number) => string,
 ): void => {
   if (context.options.includeMethodFreeBodies === false) return;
+  const { layout } = context;
   for (const [index, scene] of scenes.entries()) {
-    context.layout.figure(
-      SCENE_HEIGHT,
+    const height = sceneFigureHeight(sceneExtentOf(context, scene), layout.contentWidth);
+    const reading = caption(scene, index);
+    layout.figure(
+      height,
       (rect) => drawFreeBodyScene(context, rect, scene),
-      caption(scene, index),
+      scene.legend ? `${reading} ${scene.legend}` : reading,
     );
   }
 };
@@ -361,7 +365,9 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
   drawScenes(
     context,
     conjugateBeamScenes(context, solution),
-    (_scene, index) => `Tramo ${index + 1}: el corte del que sale M(x), la carga ficticia w* = M/EI de la viga conjugada.`,
+    (scene) => scene.title === 'viga real'
+      ? 'Viga real: las cargas y los apoyos de los que sale M(x).'
+      : 'Viga conjugada: la misma luz cargada con w* = M/EI y con cada apoyo ya convertido.',
   );
   for (const [index, segment] of solution.segments.entries()) {
     layout.ensure(70);
@@ -539,7 +545,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
   drawScenes(
     context,
     threeMomentScenes(context, solution),
-    (_scene, index) => `Vano ${index + 1}: aislado bajo sus propias cargas, con los momentos de apoyo que Clapeyron resolvió.`,
+    (_scene, index) => `Vano ${index + 1}: el diagrama de momento libre del que salen Aₙaₙ y Aₙbₙ.`,
   );
 
   layout.heading('5.4 Momento final por tramo', 2);
@@ -888,7 +894,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
   drawScenes(
     context,
     hardyCrossScenes(context, solution),
-    (_scene, index) => `Vano ${index + 1}: los momentos de extremo ya convergidos, junto al empotramiento perfecto del que partió el reparto.`,
+    (scene) => `${scene.title}: el desequilibrio que llega al nudo y el factor con que cada vano se lleva su parte.`,
   );
 
   layout.heading('5.3 Momento final por tramo', 2);
@@ -1019,7 +1025,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
   drawScenes(
     context,
     kaniScenes(context, solution),
-    (_scene, index) => `Barra ${solution.members[index]?.memberId ?? index + 1}: los momentos de extremo convergidos y el empotramiento perfecto de partida.`,
+    (scene) => `${scene.title}: el momento final de cada barra que concurre, tras converger el reparto.`,
   );
 
   layout.heading('5.2 Verificación contra el análisis matricial', 2);

@@ -24,12 +24,20 @@ import type { MethodOfSectionsResult } from '../../analysis-methods/methodOfSect
 import type { PortalMethodResult } from '../../analysis-methods/portalMethod';
 import type { ThreeMomentResult } from '../../analysis-methods/threeMoment';
 import type { VirtualWorkResult } from '../../analysis-methods/virtualWork';
-import { clearCell, displayCell, unitFor } from './pdfFormat';
+import { clearCell, displayCell, number, unitFor } from './pdfFormat';
 import { axialDirection, memberMidpoint, type FreeBodyScene, type SceneForce } from './pdfFreeBody';
-import type { Point } from './pdfScene';
+import { evaluatePolynomial, type Point } from './pdfScene';
 import type { ReportContext } from './reportContext';
 
 /** `N(AB) = 12.4 kN (T)` — the one label format every bar force in these scenes carries. */
+/** Support kinds, in the words the conversion table of the method uses. */
+const CONJUGATE_KIND_LABEL: Record<ConjugateBeamResult['ends'][number]['realKind'], string> = {
+  fixed: 'empotramiento',
+  simple: 'apoyo simple',
+  guided: 'deslizante',
+  free: 'extremo libre',
+};
+
 const barLabel = (
   context: ReportContext,
   symbol: string,
@@ -72,13 +80,13 @@ const externalActionsOn = (
     const reaction = analysis.nodeResults.find((entry) => entry.nodeId === nodeId);
     if (reaction && Math.abs(reaction.rx) > reactionScale * 1e-9) {
       forces.push({
-        place: { nodeId }, fx: reaction.rx, fy: 0, tone: 'reaction', length: 24,
+        place: { nodeId }, fx: reaction.rx, fy: 0, tone: 'reaction', length: 1.0,
         label: forceLabel(context, `Rx(${nodeId})`, reaction.rx, reactionScale),
       });
     }
     if (reaction && Math.abs(reaction.ry) > reactionScale * 1e-9) {
       forces.push({
-        place: { nodeId }, fx: 0, fy: reaction.ry, tone: 'reaction', length: 24,
+        place: { nodeId }, fx: 0, fy: reaction.ry, tone: 'reaction', length: 1.0,
         label: forceLabel(context, `Ry(${nodeId})`, reaction.ry, reactionScale),
       });
     }
@@ -89,7 +97,7 @@ const externalActionsOn = (
     if (factor === 0 || (load.fx === 0 && load.fy === 0)) continue;
     forces.push({
       place: { nodeId: load.nodeId }, fx: load.fx * factor, fy: load.fy * factor, tone: 'load',
-      length: 24, label: load.id,
+      length: 1.0, label: load.id,
     });
   }
   return forces;
@@ -142,9 +150,10 @@ export const cutLineThrough = (
     }
   }
   if (!(widest > 0)) return undefined;
-  // Overrun past the outermost bars, so the cut visibly crosses them instead of stopping on
-  // their axes.
-  const overrun = 0.25;
+  // Just enough overrun that the cut visibly crosses the outermost bars instead of stopping on
+  // their axes. It was a quarter of the span, which on a full-size drawing shot far outside the
+  // structure and made the cut look like a stray line.
+  const overrun = 0.12;
   const dx = (to.x - from.x) * overrun;
   const dy = (to.y - from.y) * overrun;
   return { from: { x: from.x - dx, y: from.y - dy }, to: { x: to.x + dx, y: to.y + dy } };
@@ -185,17 +194,32 @@ export const sectionCutScenes = (
         label: barLabel(context, 'N', bar.memberId, bar.value, scale),
         tone: 'axial',
         anchor: 'tail',
-        length: 26,
+        length: 1.08,
       });
     }
     if (!forces.length) return [];
     forces.push(...externalActionsOn(context, cut.keptNodeIds));
 
+    // The stub of each severed bar, from the node the cut kept out to the cut face, is part of
+    // the free body: it is where the bar's own force acts. Ghosting the whole bar left a truss
+    // cut at two members with nothing in ink but a single node.
+    const severedStubs = cut.members.flatMap((bar) => {
+      const model = context.index.member(bar.memberId);
+      if (!model) return [];
+      const keep = kept.has(model.i) ? 'start' as const : kept.has(model.j) ? 'end' as const : undefined;
+      return keep ? [{ memberId: bar.memberId, ratio: 0.5, keep }] : [];
+    });
+
+    // `freeBodyEquations` reduces its moment sum about the first retained node, so the drawing
+    // names that point: a `ΣM(O)` under a figure with no O on it is a sum about nowhere.
+    const origin = cut.keptNodeIds[0];
     return [{
       title: `corte ${cut.cutIndex + 1}`,
       keptNodeIds: cut.keptNodeIds,
       keptMemberIds,
+      notes: origin ? [{ place: { nodeId: origin }, text: `O · punto de reducción de ΣM`, tone: 'ink' as const }] : undefined,
       cut: line ? { ...line, label: 'corte' } : undefined,
+      severed: severedStubs,
       forces,
       legend: 'Trazo discontinuo: el corte imaginario. En azul, la fuerza axial que cada barra seccionada '
         + 'ejerce sobre la porción conservada — hacia fuera en tracción (T), hacia dentro en compresión (C). '
@@ -238,31 +262,51 @@ export const jointScenes = (
         label: barLabel(context, justSolved ? 'N' : 'N ya conocida', member.id, value, scale),
         tone: 'axial',
         anchor: 'tail',
-        length: justSolved ? 30 : 24,
+        length: justSolved ? 1.25 : 1,
       });
     }
 
     forces.push(...externalActionsOn(context, [step.nodeId]));
     if (!forces.length) return [];
 
-    // A frame wide enough to hold the longest bar stub without the far joints crowding in.
-    const radius = Math.max(
+    // The free body of the Method of Joints is the pin, not the truss. Every concurrent bar is
+    // therefore drawn as a *stub* running out of the joint and cut short, with the rest of it
+    // ghosted — which is what "isolate the joint" means, and what showing whole bars in ink did
+    // not say.
+    const reach = Math.max(
       ...meeting.map((member) => {
         const far = context.index.node(member.i === step.nodeId ? member.j : member.i);
         return far ? Math.hypot(far.x - node.x, far.y - node.y) : 0;
       }),
       1e-6,
-    ) * 0.86;
+    );
+    const stubs = meeting.flatMap((member) => {
+      const far = context.index.node(member.i === step.nodeId ? member.j : member.i);
+      if (!far) return [];
+      const length = Math.hypot(far.x - node.x, far.y - node.y);
+      if (!(length > 0)) return [];
+      // Every stub reaches the same distance from the joint, whatever the bar's own length, so
+      // the drawing reads as a star of directions rather than as a fragment of the truss.
+      const fraction = Math.min(0.9, (reach * 0.42) / length);
+      const fromStart = member.i === step.nodeId;
+      return [{
+        memberId: member.id,
+        ratio: fromStart ? fraction : 1 - fraction,
+        keep: fromStart ? 'start' as const : 'end' as const,
+      }];
+    });
 
     return [{
       title: `nudo ${step.nodeId}`,
-      focus: { nodeId: step.nodeId, radius },
+      focus: { nodeId: step.nodeId, radius: reach * 0.62 },
       keptNodeIds: [step.nodeId],
-      keptMemberIds: meeting.map((member) => member.id),
+      keptMemberIds: [],
+      severed: stubs,
+      isolation: { nodeId: step.nodeId, radius: reach * 0.16 },
       forces,
-      legend: 'Cuerpo libre del nudo: cada barra que concurre, con la fuerza que ejerce sobre él '
-        + '—hacia fuera en tracción, hacia dentro en compresión—, más la reacción y la carga aplicadas ahí. '
-        + 'Las dos sumas de fuerzas de abajo son exactamente este dibujo.',
+      legend: 'El nudo aislado: el círculo de trazos es el corte que lo separa de la armadura, y cada '
+        + 'muñón es una barra que concurre en él, con la fuerza que ejerce sobre el nudo — hacia fuera en '
+        + 'tracción, hacia dentro en compresión. Las dos sumas de abajo son exactamente este dibujo.',
     }];
   });
 };
@@ -292,7 +336,7 @@ export const virtualWorkScenes = (
         label: symbol === 'n'
           ? `n(${entry.memberId}) = ${value.toFixed(3)}`
           : barLabel(context, 'N', entry.memberId, value, scale),
-        length: 20,
+        length: 0.83,
       }];
     });
 
@@ -311,7 +355,7 @@ export const virtualWorkScenes = (
       title: 'sistema virtual (carga unitaria)',
       forces: [
         {
-          place: { nodeId: narrated.nodeId }, ...direction, tone: 'load', length: 30,
+          place: { nodeId: narrated.nodeId }, ...direction, tone: 'load', length: 1.25,
           label: `1 (${narrated.component === 'ux' ? 'horizontal' : 'vertical'}) en ${narrated.nodeId}`,
         },
         ...barForces((entry) => entry.virtualForce, 'n', virtualScale),
@@ -342,7 +386,7 @@ export const castiglianoScenes = (
       if (!direction) return [];
       return [{
         place: { at: midpoint }, fx: direction.fx, fy: direction.fy, tone: 'axial' as const, anchor: 'tail' as const,
-        label: barLabel(context, 'N₀', entry.memberId, entry.primaryForce, primaryScale), length: 20,
+        label: barLabel(context, 'N₀', entry.memberId, entry.primaryForce, primaryScale), length: 0.83,
       }];
     }),
     notes: [...releasedNodes].map((nodeId) => ({ place: { nodeId }, text: 'apoyo liberado' })),
@@ -358,7 +402,7 @@ export const castiglianoScenes = (
       fy: redundant.component === 'uy' ? 1 : 0,
       tone: 'reaction',
       anchor: 'tail',
-      length: 30,
+      length: 1.25,
       label: `${redundant.symbol} = ${displayCell(context.project, redundant.value, 'force')} ${unitFor(context.project, 'force')}`,
     }],
     notes: [{ place: { nodeId: redundant.nodeId }, text: 'desplazamiento impuesto nulo' }],
@@ -451,8 +495,16 @@ export const beamSegmentScenes = (
       title: title(index),
       keptNodeIds: axisNodeIds.slice(0, spanIndex),
       keptMemberIds: [...keptMemberIds, member.id],
-      partialMember: { memberId: member.id, ratio, keep: declaredLeftToRight ? 'start' : 'end' },
+      severed: [{ memberId: member.id, ratio, keep: declaredLeftToRight ? 'start' : 'end' }],
       includeMemberLoads: true,
+      // The station is what `x` means in every expression below the figure, so it is measured
+      // on the drawing rather than only named in the cut's own label.
+      dimensions: [{
+        from: { x: start.x, y: start.y },
+        to: at,
+        offset: -26,
+        text: `x = ${displayCell(context.project, station, 'length')} ${unitFor(context.project, 'length')}`,
+      }],
       cut: {
         from: { x: at.x - normal.x, y: at.y - normal.y },
         to: { x: at.x + normal.x, y: at.y + normal.y },
@@ -461,7 +513,7 @@ export const beamSegmentScenes = (
       },
       forces: [
         ...externalActionsOn(context, axisNodeIds.slice(0, spanIndex)),
-        { place: { at: face }, fx: 0, fy: -1, tone: 'shear', anchor: 'tail', length: 20, label: 'V(x)' },
+        { place: { at: face }, fx: 0, fy: -1, tone: 'shear', anchor: 'tail', length: 0.83, label: 'V(x)' },
       ],
       moments: [{ place: { at: face }, sign: 1, label: 'M(x)', tone: 'moment' }],
       legend,
@@ -483,18 +535,76 @@ export const doubleIntegrationScenes = (
   + 'las dos integraciones resuelven, con los coeficientes que se listan al lado.',
 );
 
+/**
+ * The two beams the method is about.
+ *
+ * The cut this replaces was a copy of Double Integration's, which showed where `M(x)` comes
+ * from and nothing of the conjugate beam — the whole point of the method. What a reader needs
+ * to see is the pair: the real beam with its supports, and beneath it the fictitious beam
+ * carrying `w* = M/EI` with every support already converted.
+ */
 export const conjugateBeamScenes = (
   context: ReportContext,
   solution: ConjugateBeamResult,
-): FreeBodyScene[] => beamSegmentScenes(
-  context,
-  solution.axis.stations.map((station) => station.nodeId),
-  solution.segments,
-  solution.axis.length,
-  (index) => `tramo ${index + 1}`,
-  'El corte del que sale M(x), la carga ficticia w* = M/EI de la viga conjugada. El giro y la flecha reales '
-  + 'son el cortante y el momento de esa viga ficticia en este mismo punto.',
-);
+): FreeBodyScene[] => {
+  const stations = solution.axis.stations;
+  const first = context.index.node(stations[0]?.nodeId ?? '');
+  const last = context.index.node(stations[stations.length - 1]?.nodeId ?? '');
+  if (!first || !last || !(solution.axis.length > 0)) return [];
+  const axisNodeIds = stations.map((station) => station.nodeId);
+  const members = context.project.members
+    .filter((member) => axisNodeIds.includes(member.i) && axisNodeIds.includes(member.j))
+    .map((member) => member.id);
+
+  const real: FreeBodyScene = {
+    title: 'viga real',
+    keptNodeIds: axisNodeIds,
+    keptMemberIds: members,
+    includeMemberLoads: true,
+    hideGhost: true,
+    notes: solution.ends.map((end) => ({
+      place: { nodeId: end.nodeId },
+      text: CONJUGATE_KIND_LABEL[end.realKind],
+      tone: 'ink' as const,
+    })),
+    legend: 'La viga real con sus cargas y sus apoyos: de ella sale el diagrama de momentos M(x) que la '
+      + 'viga conjugada va a cargar.',
+  };
+
+  // The fictitious load is a polynomial per stretch, so each stretch draws its own piece of the
+  // curve over the same baseline.
+  const curves = solution.segments.flatMap((segment) => {
+    const peak = Math.max(...[0, 0.5, 1].map((t) =>
+      Math.abs(evaluatePolynomial(segment.fictitiousLoad, segment.x0 + (segment.x1 - segment.x0) * t))));
+    if (!(peak > 1e-12)) return [];
+    return [{
+      coefficients: segment.fictitiousLoad,
+      domain: { x0: segment.x0, x1: segment.x1 },
+      from: { x: first.x, y: first.y },
+      to: { x: last.x, y: last.y },
+      tone: 'moment' as const,
+      fill: true,
+    }];
+  });
+
+  const conjugate: FreeBodyScene = {
+    title: 'viga conjugada',
+    keptNodeIds: axisNodeIds,
+    keptMemberIds: members,
+    hideGhost: true,
+    curves: curves.length ? [{ ...curves[0], label: 'w*(x) = M(x)/EI' }, ...curves.slice(1)] : undefined,
+    notes: solution.ends.map((end) => ({
+      place: { nodeId: end.nodeId },
+      text: `${CONJUGATE_KIND_LABEL[end.realKind]} → ${CONJUGATE_KIND_LABEL[end.conjugateKind]}`,
+      tone: 'ink' as const,
+    })),
+    legend: 'La misma luz, cargada con w* = M/EI y con cada apoyo ya convertido por la tabla fija. El '
+      + 'cortante de esta viga ficticia es el giro de la real, y su momento es la flecha: por eso el '
+      + 'problema se cierra con pura estática, sin integrar la ecuación de la elástica.',
+  };
+
+  return [real, conjugate];
+};
 
 interface SpanEnds {
   readonly leftNodeId: string;
@@ -521,6 +631,7 @@ export const spanMomentScenes = (
     keptNodeIds: [span.leftNodeId, span.rightNodeId],
     keptMemberIds: [member.id],
     includeMemberLoads: true,
+    hideGhost: true,
     moments: [
       { place: { nodeId: span.leftNodeId }, sign: span.momentLeft, label: momentLabel(context, 'M', span.momentLeft), tone: 'moment' },
       { place: { nodeId: span.rightNodeId }, sign: span.momentRight, label: momentLabel(context, 'M', span.momentRight), tone: 'moment' },
@@ -530,72 +641,263 @@ export const spanMomentScenes = (
   }];
 });
 
+/**
+ * Coefficients of a span's *free* moment: what it would carry as a simply supported beam under
+ * its own loads, with the support moments taken back out.
+ *
+ * The final moment of a span is the free moment plus a straight line between the two solved
+ * support moments. Subtracting that line is therefore how the free diagram is recovered from
+ * what `threeMoment.ts` publishes — no re-integration, and nothing this module decides.
+ */
+export const freeMomentCoefficients = (
+  moment: readonly number[],
+  x0: number,
+  x1: number,
+  momentLeft: number,
+  momentRight: number,
+): number[] => {
+  const span = x1 - x0;
+  if (!(span > 0)) return [...moment];
+  // The correction line, written in the same global x the polynomial uses:
+  //   c(x) = mL + (mR − mL)(x − x0)/L  =  [mL − (mR − mL)x0/L]  +  [(mR − mL)/L] x
+  const slope = (momentRight - momentLeft) / span;
+  const free = [...moment];
+  while (free.length < 2) free.push(0);
+  free[0] -= momentLeft - slope * x0;
+  free[1] -= slope;
+  return free;
+};
+
+/**
+ * The drawing the Three Moments equation is about.
+ *
+ * Clapeyron's equation carries `Aₙaₙ` and `Aₙbₙ` — the first moments of each span's *free*
+ * moment diagram about its two ends. The table beside this figure states those two numbers; the
+ * figure is where they come from. Drawing the span with two end-moment arcs, as this used to,
+ * showed the answer and hid the thing being integrated.
+ */
 export const threeMomentScenes = (
   context: ReportContext,
   solution: ThreeMomentResult,
 ): FreeBodyScene[] => {
   const moments = new Map(solution.supportMoments.map((entry) => [entry.nodeId, entry.value]));
-  return spanMomentScenes(
-    context,
-    solution.spans.map((span) => ({
-      leftNodeId: span.leftNodeId,
-      rightNodeId: span.rightNodeId,
-      momentLeft: moments.get(span.leftNodeId) ?? 0,
-      momentRight: moments.get(span.rightNodeId) ?? 0,
-    })),
-    (index) => `vano ${index + 1}`,
-    'El vano aislado bajo sus propias cargas, con los momentos de apoyo que la ecuación de Clapeyron '
-    + 'resolvió aplicados en sus extremos. El sentido del arco es el signo del momento: antihorario positivo.',
-  );
+  const stations = solution.axis.stations;
+
+  return solution.spans.flatMap((span, index) => {
+    const member = context.project.members.find(
+      (entry) => (entry.i === span.leftNodeId && entry.j === span.rightNodeId)
+        || (entry.i === span.rightNodeId && entry.j === span.leftNodeId),
+    );
+    const left = context.index.node(span.leftNodeId);
+    const right = context.index.node(span.rightNodeId);
+    if (!member || !left || !right) return [];
+    const x0 = stations.find((station) => station.nodeId === span.leftNodeId)?.x;
+    const x1 = stations.find((station) => station.nodeId === span.rightNodeId)?.x;
+    // The narrated segments are per stretch, not per span; the one that opens this span is the
+    // one whose own domain starts where the span does.
+    const segment = x0 === undefined ? undefined : solution.segments.find((entry) => Math.abs(entry.x0 - x0) < 1e-9);
+    if (x0 === undefined || x1 === undefined || !segment) return [];
+
+    const free = freeMomentCoefficients(
+      segment.moment, x0, x1,
+      moments.get(span.leftNodeId) ?? 0,
+      moments.get(span.rightNodeId) ?? 0,
+    );
+    // A span whose free moment is identically zero — no load on it — has nothing to draw and no
+    // first moment to explain, so it is skipped rather than given a flat line labelled as a
+    // diagram.
+    const peak = Math.max(...[0, 0.25, 0.5, 0.75, 1].map((t) => Math.abs(evaluatePolynomial(free, x0 + (x1 - x0) * t))));
+    if (!(peak > 1e-9)) return [];
+
+    // `Aₙaₙ = A·a` and `Aₙbₙ = A·b` with `a + b = L`, so the two published first moments locate
+    // the centroid without this module integrating anything itself.
+    const total = span.firstMomentLeft + span.firstMomentRight;
+    const a = Math.abs(total) > 1e-12 ? (span.firstMomentLeft / total) * span.length : span.length / 2;
+
+    const along = (distance: number): Point => ({
+      x: left.x + (right.x - left.x) * (distance / Math.max(span.length, 1e-9)),
+      y: left.y + (right.y - left.y) * (distance / Math.max(span.length, 1e-9)),
+    });
+
+    return [{
+      title: `vano ${index + 1}: momento libre`,
+      keptNodeIds: [span.leftNodeId, span.rightNodeId],
+      keptMemberIds: [member.id],
+      includeMemberLoads: true,
+      hideGhost: true,
+      curves: [{
+        coefficients: free,
+        domain: { x0, x1 },
+        from: { x: left.x, y: left.y },
+        to: { x: right.x, y: right.y },
+        tone: 'moment',
+        fill: true,
+        label: 'A = área del momento libre',
+      }],
+      dimensions: [
+        {
+          from: { x: left.x, y: left.y }, to: along(a), offset: -22,
+          text: `a = ${displayCell(context.project, a, 'length')} ${unitFor(context.project, 'length')}`,
+        },
+        {
+          from: along(a), to: { x: right.x, y: right.y }, offset: -22,
+          text: `b = ${displayCell(context.project, span.length - a, 'length')} ${unitFor(context.project, 'length')}`,
+        },
+      ],
+      notes: [{ place: { at: along(a) }, text: 'centroide de A', tone: 'moment' }],
+      legend: 'El vano resuelto como viga simplemente apoyada bajo sus propias cargas: el área sombreada '
+        + 'es su diagrama de momento libre, y a y b son las distancias de su centroide a cada apoyo. '
+        + `Aₙaₙ y Aₙbₙ de la tabla son el primer momento de esa área respecto de cada extremo — lo único `
+        + 'que la ecuación de Clapeyron necesita de este vano.',
+    }];
+  });
 };
 
+/**
+ * Hardy Cross balances a joint, so its drawing is a joint.
+ *
+ * The span-with-two-arcs this replaces showed the converged answer and left the method — the
+ * fixed-end moments meeting at a support, the share each span takes of the imbalance, and the
+ * half that is carried to the far end — entirely to the table.
+ */
 export const hardyCrossScenes = (
   context: ReportContext,
   solution: HardyCrossResult,
 ): FreeBodyScene[] => {
-  const moments = new Map(solution.joints.map((entry) => [entry.nodeId, entry.value]));
-  return spanMomentScenes(
-    context,
-    solution.spans.map((span) => ({
-      leftNodeId: span.leftNodeId,
-      rightNodeId: span.rightNodeId,
-      momentLeft: moments.get(span.leftNodeId) ?? span.finalMomentLeft,
-      momentRight: moments.get(span.rightNodeId) ?? span.finalMomentRight,
-      extra: `FEM ${displayCell(context.project, span.fixedEndMomentLeft, 'moment')} / `
-        + `${displayCell(context.project, span.fixedEndMomentRight, 'moment')} ${unitFor(context.project, 'moment')}`,
-    })),
-    (index) => `vano ${index + 1}`,
-    'El vano con los momentos ya convergidos en sus extremos. La nota recuerda el momento de empotramiento '
-    + 'perfecto del que partió el reparto, antes de distribuir y transmitir.',
-  );
-};
+  const momentUnit = unitFor(context.project, 'moment');
+  return solution.spans.slice(0, -1).flatMap((span, index) => {
+    const right = solution.spans[index + 1];
+    const nodeId = span.rightNodeId;
+    const joint = context.index.node(nodeId);
+    if (!joint) return [];
+    const leftMember = context.project.members.find(
+      (entry) => (entry.i === span.leftNodeId && entry.j === nodeId) || (entry.i === nodeId && entry.j === span.leftNodeId),
+    );
+    const rightMember = context.project.members.find(
+      (entry) => (entry.i === nodeId && entry.j === right.rightNodeId) || (entry.i === right.rightNodeId && entry.j === nodeId),
+    );
+    if (!leftMember || !rightMember) return [];
+    const total = span.stiffnessRight + right.stiffnessLeft;
+    if (!(total > 0)) return [];
 
-/** One scene per bar: the two end moments Kani converged on. */
-export const kaniScenes = (context: ReportContext, solution: KaniResult): FreeBodyScene[] =>
-  solution.members.flatMap((member) => {
-    if (!context.index.member(member.memberId)) return [];
+    const reach = Math.min(span.length, right.length);
+    const stub = (member: typeof leftMember, farNodeId: string) => {
+      const far = context.index.node(farNodeId);
+      if (!far) return [];
+      const length = Math.hypot(far.x - joint.x, far.y - joint.y);
+      if (!(length > 0)) return [];
+      const fraction = Math.min(0.9, (reach * 0.45) / length);
+      const fromStart = member.i === nodeId;
+      return [{
+        memberId: member.id,
+        ratio: fromStart ? fraction : 1 - fraction,
+        keep: fromStart ? 'start' as const : 'end' as const,
+      }];
+    };
+
+    const share = (stiffness: number) => (stiffness / total);
     return [{
-      title: `barra ${member.memberId}`,
-      keptNodeIds: [member.nodeI, member.nodeJ],
-      keptMemberIds: [member.memberId],
+      title: `nudo ${nodeId}: reparto`,
+      focus: { nodeId, radius: reach * 0.58 },
+      keptNodeIds: [nodeId],
+      keptMemberIds: [],
+      severed: [...stub(leftMember, span.leftNodeId), ...stub(rightMember, right.rightNodeId)],
+      isolation: { nodeId, radius: reach * 0.14 },
       moments: [
-        { place: { nodeId: member.nodeI }, sign: member.finalMomentI, label: momentLabel(context, 'Mᵢ', member.finalMomentI), tone: 'moment' },
-        { place: { nodeId: member.nodeJ }, sign: member.finalMomentJ, label: momentLabel(context, 'Mⱼ', member.finalMomentJ), tone: 'moment' },
+        {
+          place: { nodeId }, sign: span.fixedEndMomentRight, tone: 'moment',
+          label: `FEM ${displayCell(context.project, span.fixedEndMomentRight, 'moment')} / `
+            + `${displayCell(context.project, right.fixedEndMomentLeft, 'moment')} ${momentUnit}`,
+        },
       ],
-      notes: [{
-        place: { nodeId: member.nodeI },
-        text: `FEM ${displayCell(context.project, member.fixedEndMomentI, 'moment')} / `
-          + `${displayCell(context.project, member.fixedEndMomentJ, 'moment')} ${unitFor(context.project, 'moment')}`,
-      }],
-      legend: 'La barra con los momentos de extremo que el reparto de Kani dejó, junto al momento de '
-        + 'empotramiento perfecto del que partió. Las dos últimas columnas de la tabla son lo que el análisis '
-        + 'matricial obtiene en esos mismos extremos.',
+      notes: [
+        {
+          place: { nodeId },
+          text: `D(${leftMember.id}) = ${number(share(span.stiffnessRight), 4)}  ·  `
+            + `D(${rightMember.id}) = ${number(share(right.stiffnessLeft), 4)}`,
+          tone: 'ink' as const,
+        },
+        {
+          place: { nodeId },
+          text: `M(${nodeId}) = ${displayCell(context.project, solution.joints.find((entry) => entry.nodeId === nodeId)?.value ?? 0, 'moment')} ${momentUnit}`,
+          tone: 'moment' as const,
+        },
+      ],
+      legend: 'El nudo interior con el momento de empotramiento perfecto que le llega por cada vano y el '
+        + 'factor de reparto D con que se lleva su parte del desequilibrio — proporcional a la rigidez '
+        + 'relativa de cada vano. La mitad de lo repartido se transmite al extremo lejano, y el ciclo se '
+        + 'repite hasta que no queda desequilibrio medible.',
     }];
   });
+};
 
-// ---------------------------------------------------------------------------------------
-// Frames
-// ---------------------------------------------------------------------------------------
+/**
+ * Kani rotates joints, so its drawing is a joint.
+ *
+ * The bar-with-two-arcs this replaces is the answer, not the method: what Kani does is give
+ * every bar meeting a joint a rotation moment, recomputed pass after pass from the ones at the
+ * far ends. The drawing that explains it is the joint with all its bars at once — which is also
+ * the difference between Kani and Hardy Cross, and why Kani handles a frame joint with three or
+ * four bars in a single step.
+ */
+export const kaniScenes = (context: ReportContext, solution: KaniResult): FreeBodyScene[] => {
+  const momentUnit = unitFor(context.project, 'moment');
+  const byJoint = new Map<string, { memberId: string; moment: number; farId: string }[]>();
+  for (const member of solution.members) {
+    for (const [nodeId, moment, farId] of [
+      [member.nodeI, member.finalMomentI, member.nodeJ],
+      [member.nodeJ, member.finalMomentJ, member.nodeI],
+    ] as const) {
+      byJoint.set(nodeId, [...(byJoint.get(nodeId) ?? []), { memberId: member.memberId, moment, farId }]);
+    }
+  }
+
+  return [...byJoint.entries()]
+    // A joint with one bar is an end, not a joint: it has no distribution to show.
+    .filter(([, bars]) => bars.length > 1)
+    .flatMap(([nodeId, bars]) => {
+      const joint = context.index.node(nodeId);
+      if (!joint) return [];
+      const reach = Math.max(...bars.map((bar) => {
+        const far = context.index.node(bar.farId);
+        return far ? Math.hypot(far.x - joint.x, far.y - joint.y) : 0;
+      }), 1e-6);
+
+      const severed = bars.flatMap((bar) => {
+        const member = context.index.member(bar.memberId);
+        const far = context.index.node(bar.farId);
+        if (!member || !far) return [];
+        const length = Math.hypot(far.x - joint.x, far.y - joint.y);
+        if (!(length > 0)) return [];
+        const fraction = Math.min(0.9, (reach * 0.44) / length);
+        const fromStart = member.i === nodeId;
+        return [{
+          memberId: member.id,
+          ratio: fromStart ? fraction : 1 - fraction,
+          keep: fromStart ? 'start' as const : 'end' as const,
+        }];
+      });
+      if (!severed.length) return [];
+
+      return [{
+        title: `nudo ${nodeId}`,
+        focus: { nodeId, radius: reach * 0.6 },
+        keptNodeIds: [nodeId],
+        keptMemberIds: [],
+        severed,
+        isolation: { nodeId, radius: reach * 0.15 },
+        moments: bars.map((bar) => ({
+          place: { nodeId },
+          sign: bar.moment,
+          tone: 'moment' as const,
+          label: `M(${bar.memberId}) = ${displayCell(context.project, bar.moment, 'moment')} ${momentUnit}`,
+        })),
+        legend: 'El nudo con el momento final de cada barra que concurre en él. Kani no reparte y acarrea: '
+          + 'cada barra lleva un momento de rotación que se recalcula en cada pasada a partir de los del '
+          + 'otro extremo, y por eso resuelve de una vez un nudo con más de dos barras.',
+      }];
+    });
+};
 
 interface ApproximateColumn {
   readonly columnIndex: number;
@@ -638,12 +940,12 @@ export const storeyCutScenes = (
       const at = { x: bottom.x + (top.x - bottom.x) * ratio, y: bottom.y + (top.y - bottom.y) * ratio };
       cutPoints.push(at);
       forces.push({
-        place: { at }, fx: column.shear >= 0 ? 1 : -1, fy: 0, tone: 'shear', anchor: 'tail', length: 22,
+        place: { at }, fx: column.shear >= 0 ? 1 : -1, fy: 0, tone: 'shear', anchor: 'tail', length: 0.92,
         label: forceLabel(context, `V${column.columnIndex + 1}`, column.shear, shearScale),
       });
       if (Math.abs(column.axial) > axialScale * 1e-9) {
         forces.push({
-          place: { at }, fx: 0, fy: column.axial >= 0 ? 1 : -1, tone: 'axial', anchor: 'tail', length: 20,
+          place: { at }, fx: 0, fy: column.axial >= 0 ? 1 : -1, tone: 'axial', anchor: 'tail', length: 0.83,
           label: forceLabel(context, `N${column.columnIndex + 1}`, column.axial, axialScale),
         });
       }
@@ -659,6 +961,10 @@ export const storeyCutScenes = (
       .filter((node) => node.y >= y - 1e-9)
       .map((node) => node.id);
     const keptSet = new Set(keptNodeIds);
+    // Windward top corner of the retained portion: where the storey resultant is drawn from.
+    const topLeftNodeId = context.project.nodes
+      .filter((node) => keptSet.has(node.id))
+      .sort((left, right) => (right.y - left.y) || (left.x - right.x))[0]?.id;
 
     return [{
       title: `planta ${story}`,
@@ -670,11 +976,26 @@ export const storeyCutScenes = (
         from: { x: Math.min(...xs) - overrun, y },
         to: { x: Math.max(...xs) + overrun, y },
         label: 'corte',
+        labelAt: 'middle',
       },
+      // The method *assumes* the moment vanishes here. Drawing the hinge is what turns that
+      // assumption from something the prose claims into something the figure states.
+      hinges: cutPoints.map((at) => ({ place: { at } })),
+      dimensions: storyColumns.length > 1
+        ? [{
+          from: cutPoints[0],
+          to: cutPoints[cutPoints.length - 1],
+          offset: -24,
+          text: `${displayCell(context.project, Math.abs(cutPoints[cutPoints.length - 1].x - cutPoints[0].x), 'length')} ${unitFor(context.project, 'length')}`,
+        }]
+        : undefined,
       forces: [
-        ...(shear === undefined ? [] : [{
-          place: { at: { x: Math.min(...xs) - overrun, y: y + Math.max(width * 0.12, 0.3) } },
-          fx: shear >= 0 ? 1 : -1, fy: 0, tone: 'load' as const, length: 30,
+        // The storey resultant is applied at storey level and pushes the body sideways, so it
+        // starts at the windward top node and grows along the beam. Anchoring it outside the
+        // model's own bounds put it beyond the frame the drawing is now sized to.
+        ...(shear === undefined || !topLeftNodeId ? [] : [{
+          place: { nodeId: topLeftNodeId },
+          fx: shear >= 0 ? 1 : -1, fy: 0, tone: 'load' as const, length: 1.3, anchor: 'tail' as const,
           label: forceLabel(context, 'V planta', shear, Math.max(1e-12, Math.abs(shear))),
         }]),
         ...forces,
@@ -700,12 +1021,19 @@ export const columnFreeBodyScenes = (
       keptMemberIds: [column.memberId],
       forces: [{
         place: { nodeId: column.topNodeId }, fx: column.shear >= 0 ? 1 : -1, fy: 0, tone: 'shear',
-        anchor: 'tail', length: 24, label: forceLabel(context, 'V', column.shear, shearScale),
+        anchor: 'tail', length: 1.0, label: forceLabel(context, 'V', column.shear, shearScale),
       }],
       moments: [
         { place: { nodeId: column.bottomNodeId }, sign: column.bottomMoment, label: momentLabel(context, 'M base', column.bottomMoment), tone: 'moment' },
         { place: { nodeId: column.topNodeId }, sign: column.topMoment, label: momentLabel(context, 'M cabeza', column.topMoment), tone: 'moment' },
       ],
+      hinges: (() => {
+        const bottom = context.index.node(column.bottomNodeId);
+        const top = context.index.node(column.topNodeId);
+        if (!bottom || !top) return undefined;
+        const ratio = Math.min(1, Math.max(0, column.inflectionFraction));
+        return [{ place: { at: { x: bottom.x + (top.x - bottom.x) * ratio, y: bottom.y + (top.y - bottom.y) * ratio } } }];
+      })(),
       notes: [{
         place: { nodeId: column.bottomNodeId },
         text: `punto de inflexión a ${(column.inflectionFraction * 100).toFixed(0)} % de la altura`,

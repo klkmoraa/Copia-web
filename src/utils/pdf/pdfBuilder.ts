@@ -398,20 +398,29 @@ export class PdfLayout {
    * in one sequence, the same way displayed equations are.
    */
   figure(height: number, draw: (rect: { x: number; y: number; width: number; height: number }) => void, caption?: string): number {
-    const captionHeight = caption ? TYPE.small * 1.5 : 0;
+    // The caption wraps. It used to be one `drawText` call, which silently ran a long caption
+    // past the right margin — and a figure's caption is now where the reading of the drawing
+    // lives, so they are no longer short.
+    const captionLines = caption
+      ? wrapText(pdfText(`Figura ${this.figureCount + 1} — ${caption}`), this.fonts.regular, TYPE.small, this.contentWidth)
+      : [];
+    const captionHeight = captionLines.length ? captionLines.length * TYPE.small * 1.35 + SPACE * 0.5 : 0;
     this.ensure(height + captionHeight + SPACE * 3);
     const top = this.y;
     const bottom = top - height;
     draw({ x: MARGIN, y: bottom, width: this.contentWidth, height });
     this.figureCount += 1;
     this.y = bottom - SPACE;
-    if (caption) {
-      const text = pdfText(`Figura ${this.figureCount} — ${caption}`);
-      this.page.drawText(text, {
-        x: MARGIN, y: this.y - TYPE.small, size: TYPE.small, font: this.fonts.regular, color: this.palette.inkSoft,
+    captionLines.forEach((line, index) => {
+      this.page.drawText(line, {
+        x: MARGIN,
+        y: this.y - TYPE.small - index * TYPE.small * 1.35,
+        size: TYPE.small,
+        font: this.fonts.regular,
+        color: this.palette.inkSoft,
       });
-      this.y -= captionHeight;
-    }
+    });
+    this.y -= captionHeight;
     this.y -= SPACE * 2;
     return this.figureCount;
   }

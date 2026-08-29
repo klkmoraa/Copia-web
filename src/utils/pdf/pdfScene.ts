@@ -22,6 +22,7 @@ import {
 } from '../../graphics/structureGeometry';
 import { number } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
+import { TYPE } from './pdfTheme';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor, ReportContext } from './reportContext';
 
@@ -29,6 +30,18 @@ export interface Point {
   x: number;
   y: number;
 }
+
+/**
+ * Line weights of the technical drawings, in one place.
+ *
+ * The discarded portion used to be a dashed grey at half opacity, which reads as noise rather
+ * than as context — the eye spends effort deciding whether the dashes mean something. It is a
+ * continuous hairline now: present, obviously secondary, and quiet.
+ */
+export const GHOST_WEIGHT = 0.5;
+export const GHOST_OPACITY = 0.55;
+/** Dimension lines, witness lines and leaders: the quietest ink on the drawing. */
+export const HAIRLINE = 0.4;
 
 export interface Rect {
   x: number;
@@ -69,12 +82,23 @@ export const createProjection = (nodes: readonly NodeModel[], plot: PlotBox): Pr
  * Projection centred on one point rather than on the whole model.
  *
  * The Method of Joints draws one pin at a time: fitting the whole truss in the frame would
- * leave the joint a three-point dot with three arrows on top of each other. `radius` is the
- * model-space half-width the frame should cover.
+ * leave the joint a three-point dot with three arrows on top of each other.
+ *
+ * The two spans are separate on purpose. Fitting a single radius to both axes is right for a
+ * truss joint, whose bars leave in every direction, and wrong for a joint on a continuous beam,
+ * whose two stubs are collinear: there the vertical span is zero, and scaling by it shrank the
+ * drawing to a quarter of the frame it had just been given.
  */
-export const createFocusProjection = (centre: Point, radius: number, plot: PlotBox): Projection => {
-  const span = Math.max(radius, 1e-6) * 2;
-  const scale = Math.min((plot.right - plot.left) / span, (plot.top - plot.bottom) / span);
+export const createFocusProjection = (
+  centre: Point,
+  extent: { spanX: number; spanY: number },
+  plot: PlotBox,
+): Projection => {
+  const spanX = Math.max(extent.spanX, 1e-9);
+  const scale = Math.min(
+    (plot.right - plot.left) / spanX,
+    extent.spanY > 1e-9 ? (plot.top - plot.bottom) / extent.spanY : Number.POSITIVE_INFINITY,
+  );
   const midX = (plot.left + plot.right) / 2;
   const midY = (plot.bottom + plot.top) / 2;
   return {
@@ -172,6 +196,12 @@ export const drawMomentArc = (
 };
 
 /**
+ * Vertical room a support glyph occupies below its node, so a reaction arrow can start clear of
+ * it instead of being drawn straight through the triangle.
+ */
+export const SUPPORT_DEPTH = 20;
+
+/**
  * The support symbol under `location`: the triangle every support shares, plus the rollers and
  * the ground line that tell a pin from a roller from a fixed end.
  *
@@ -226,6 +256,12 @@ export interface GhostOptions {
   readonly solidNodeIds?: ReadonlySet<string>;
   /** Ghosted geometry is dropped entirely rather than drawn faint. */
   readonly hideGhost?: boolean;
+  /** Members this pass must not draw at all, because the caller draws them in two halves. */
+  readonly skipMemberIds?: ReadonlySet<string>;
+  /** Stroke of a retained member, scaled to the plot by `sceneMetrics`. */
+  readonly weight?: number;
+  readonly nodeSize?: number;
+  readonly labelSize?: number;
 }
 
 /**
@@ -248,15 +284,16 @@ export const drawGhostModel = (
     const ni = index.node(member.i);
     const nj = index.node(member.j);
     if (!ni || !nj) continue;
+    if (options.skipMemberIds?.has(member.id)) continue;
     const solid = solidMembers === undefined || solidMembers.has(member.id);
     if (!solid && options.hideGhost) continue;
+    const weight = options.weight ?? 2;
     page.drawLine({
       start: projection.at(ni.x, ni.y),
       end: projection.at(nj.x, nj.y),
-      thickness: solid ? (member.type === 'rigid' ? 3 : 2) : 0.8,
+      thickness: solid ? (member.type === 'rigid' ? weight * 1.5 : weight) : GHOST_WEIGHT,
       color: solid ? palette.ink : palette.inkFaint,
-      opacity: solid ? 1 : 0.5,
-      dashArray: solid ? undefined : [2.4, 2.4],
+      opacity: solid ? 1 : GHOST_OPACITY,
     });
   }
   for (const node of project.nodes) {
@@ -264,10 +301,10 @@ export const drawGhostModel = (
     if (!solid && options.hideGhost) continue;
     const location = projection.at(node.x, node.y);
     if (!solid) {
-      page.drawCircle({ x: location.x, y: location.y, size: 1.6, color: palette.inkFaint, opacity: 0.5 });
+      page.drawCircle({ x: location.x, y: location.y, size: 1.5, color: palette.inkFaint, opacity: GHOST_OPACITY });
       continue;
     }
-    drawNodeDot(layout, location, node.id, palette.ink);
+    drawNodeDot(layout, location, node.id, palette.ink, options.nodeSize, options.labelSize);
     drawSupportGlyph(layout, location, node.support, palette.inkSoft);
   }
 };
@@ -372,6 +409,8 @@ export interface MemberLoadOptions {
   readonly onlyMemberIds?: ReadonlySet<string>;
   /** Station, 0..1 along the member, past which a load is not drawn. */
   readonly upTo?: (memberId: string) => number;
+  /** Arrow length of a distributed run, scaled to the plot. */
+  readonly arrow?: number;
 }
 
 /**
@@ -387,10 +426,13 @@ export const drawMemberLoads = (
   context: ReportContext,
   projection: Projection,
   options: MemberLoadOptions = {},
-): void => {
+): Rect[] => {
   const { layout, project, index, scenarioFactors } = context;
   const { palette, fonts } = layout;
   const page = layout.page;
+  // The boxes these labels occupy, so a scene's own label placer can keep clear of them: a
+  // load's name is drawn here, not by the placer, and values kept landing on top of it.
+  const boxes: Rect[] = [];
   for (const load of project.memberLoads) {
     if (options.onlyMemberIds && !options.onlyMemberIds.has(load.memberId)) continue;
     const factor = scenarioFactors[load.caseId] ?? 0;
@@ -420,27 +462,248 @@ export const drawMemberLoads = (
         const ratio = startRatio + (endRatio - startRatio) * t;
         const intensity = distributedIntensityAt(load, t);
         const [gx, gy] = globalVector(intensity.qx * factor, intensity.qy * factor);
-        const tail = drawArrow(layout, atFlexibleRatio(ratio), gx, gy, actionColor, 16);
+        const tail = drawArrow(layout, atFlexibleRatio(ratio), gx, gy, actionColor, options.arrow ?? 16);
         if (tail) arrowTails.push(tail);
       }
       if (arrowTails.length > 1) page.drawLine({ start: arrowTails[0], end: arrowTails.at(-1)!, thickness: 0.9, color: actionColor });
       const label = atFlexibleRatio((startRatio + endRatio) / 2);
-      page.drawText(pdfText(`${load.id} [${number(startRatio)}-${number(endRatio)}]`), { x: label.x + 3, y: label.y + 20, size: 6, font: fonts.bold, color: actionColor });
+      const text = pdfText(`${load.id} [${number(startRatio)}-${number(endRatio)}]`);
+      page.drawText(text, { x: label.x + 3, y: label.y + 20, size: 6, font: fonts.bold, color: actionColor });
+      boxes.push({ x: label.x + 3, y: label.y + 20, width: fonts.bold.widthOfTextAtSize(text, 6), height: 6 });
     } else if (load.type === 'point') {
       const position = Math.min(1, Math.max(0, load.position ?? 0.5));
       if (position > limit) continue;
       const [gx, gy] = globalVector((load.px ?? 0) * factor, (load.py ?? 0) * factor);
       const location = atFlexibleRatio(position);
-      const tail = drawArrow(layout, location, gx, gy, actionColor, 22) ?? location;
+      const tail = drawArrow(layout, location, gx, gy, actionColor, (options.arrow ?? 16) * 1.35) ?? location;
       page.drawText(pdfText(load.id), { x: tail.x + 2, y: tail.y + 5, size: 6, font: fonts.bold, color: actionColor });
+      boxes.push({ x: tail.x + 2, y: tail.y + 5, width: fonts.bold.widthOfTextAtSize(pdfText(load.id), 6), height: 6 });
     } else {
       const position = Math.min(1, Math.max(0, load.position ?? 0.5));
       if (position > limit) continue;
       const location = atFlexibleRatio(position);
-      page.drawText(pdfText(`${load.id}: M x ${number(factor)}`), { x: location.x + 4, y: location.y + 8, size: 6, font: fonts.bold, color: actionColor });
+      const text = pdfText(`${load.id}: M x ${number(factor)}`);
+      page.drawText(text, { x: location.x + 4, y: location.y + 8, size: 6, font: fonts.bold, color: actionColor });
+      boxes.push({ x: location.x + 4, y: location.y + 8, width: fonts.bold.widthOfTextAtSize(text, 6), height: 6 });
     }
   }
+  return boxes;
 };
 
 /** A `MemberLoad`'s own type, re-exported so callers need not reach into `types.ts`. */
 export type { MemberLoad };
+
+// ---------------------------------------------------------------------------------------
+// Technical drawing vocabulary
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A dimension, drawn the way a technical drawing draws one: witness lines out to the measured
+ * points, a dimension line between them offset clear of the geometry, ticks at 45° on both
+ * ends, and the value centred on it.
+ *
+ * Returns the box the text occupies so the caller can keep other labels out of it — a dimension
+ * is the quietest ink on the drawing and must not be what a value gets written over.
+ */
+export const drawDimension = (
+  layout: PdfLayout,
+  from: Point,
+  to: Point,
+  offset: number,
+  text: string,
+  color: PdfColor,
+): Rect | undefined => {
+  const page = layout.page;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (!(length > 1e-6)) return undefined;
+  // Offset perpendicular to the measured direction; the sign of `offset` picks the side.
+  const normal = { x: -dy / length * offset, y: dx / length * offset };
+  const a = { x: from.x + normal.x, y: from.y + normal.y };
+  const b = { x: to.x + normal.x, y: to.y + normal.y };
+  const witness = 3;
+  const overshoot = { x: normal.x === 0 && normal.y === 0 ? 0 : normal.x / offset * witness, y: normal.x === 0 && normal.y === 0 ? 0 : normal.y / offset * witness };
+
+  // Witness lines run from just clear of the geometry to just past the dimension line.
+  page.drawLine({ start: from, end: { x: a.x + overshoot.x, y: a.y + overshoot.y }, thickness: HAIRLINE, color });
+  page.drawLine({ start: to, end: { x: b.x + overshoot.x, y: b.y + overshoot.y }, thickness: HAIRLINE, color });
+  page.drawLine({ start: a, end: b, thickness: HAIRLINE, color });
+
+  // Ticks at 45° to the dimension line — the ISO alternative to arrowheads, and the one that
+  // stays legible at this size.
+  const unit = { x: dx / length, y: dy / length };
+  const tick = 2.6;
+  for (const end of [a, b]) {
+    page.drawLine({
+      start: { x: end.x - (unit.x + unit.y) * tick, y: end.y - (unit.y - unit.x) * tick },
+      end: { x: end.x + (unit.x + unit.y) * tick, y: end.y + (unit.y - unit.x) * tick },
+      thickness: HAIRLINE,
+      color,
+    });
+  }
+
+  const label = pdfText(text);
+  const size = TYPE.micro;
+  const width = layout.fonts.regular.widthOfTextAtSize(label, size);
+  const box: Rect = {
+    x: (a.x + b.x) / 2 - width / 2,
+    y: (a.y + b.y) / 2 + 2,
+    width,
+    height: size,
+  };
+  page.drawText(label, { x: box.x, y: box.y, size, font: layout.fonts.regular, color });
+  return box;
+};
+
+/** Thin guide from a label to the thing it names, when the label could not sit beside it. */
+export const drawLeader = (layout: PdfLayout, from: Point, to: Point, color: PdfColor): void => {
+  layout.page.drawLine({ start: from, end: to, thickness: HAIRLINE, color, opacity: 0.8 });
+  layout.page.drawCircle({ x: to.x, y: to.y, size: 0.9, color });
+};
+
+/**
+ * An open circle: the hinge at a point of inflection, and the internal hinge of a model.
+ *
+ * The approximate frame methods put the moment at zero at a definite height of every column and
+ * then reason about the piece below it as a free body. Drawing that assumption is the difference
+ * between a diagram a reader can check and one they have to take on trust.
+ */
+export const drawHinge = (layout: PdfLayout, at: Point, size: number, color: PdfColor): void => {
+  layout.page.drawCircle({ x: at.x, y: at.y, size, color: layout.palette.paper, borderColor: color, borderWidth: 0.9 });
+};
+
+/** The cut itself: a bolder dash than the geometry, with a tick closing each end. */
+export const drawCutLine = (layout: PdfLayout, from: Point, to: Point, color: PdfColor): void => {
+  const page = layout.page;
+  page.drawLine({ start: from, end: to, thickness: 1.2, color, dashArray: [4.2, 2.6] });
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const normal = { x: -dy / length * 3, y: dx / length * 3 };
+  for (const end of [from, to]) {
+    page.drawLine({
+      start: { x: end.x - normal.x, y: end.y - normal.y },
+      end: { x: end.x + normal.x, y: end.y + normal.y },
+      thickness: 1.2,
+      color,
+    });
+  }
+};
+
+/**
+ * The global axes, in a corner.
+ *
+ * Every arrow on these drawings carries a sign that only means something against a stated pair
+ * of axes. Naming them costs a corner and makes the whole drawing checkable.
+ */
+export const drawAxesIndicator = (layout: PdfLayout, at: Point, size: number, color: PdfColor): void => {
+  const page = layout.page;
+  drawArrow(layout, { x: at.x + size, y: at.y }, 1, 0, color, size, 0.6);
+  drawArrow(layout, { x: at.x, y: at.y + size }, 0, 1, color, size, 0.6);
+  page.drawText(pdfText('x'), { x: at.x + size + 1.5, y: at.y - 2, size: TYPE.micro, font: layout.fonts.regular, color });
+  page.drawText(pdfText('y'), { x: at.x - 4.5, y: at.y + size + 0.5, size: TYPE.micro, font: layout.fonts.regular, color });
+};
+
+/** Evaluates a polynomial given lowest-power-first coefficients, by Horner's rule. */
+export const evaluatePolynomial = (coefficients: readonly number[], x: number): number => {
+  let value = 0;
+  for (let power = coefficients.length - 1; power >= 0; power -= 1) value = value * x + coefficients[power];
+  return value;
+};
+
+export interface PolynomialCurveOptions {
+  /** Samples across the interval. */
+  readonly steps?: number;
+  /** Fills the area between the curve and the baseline, which is what an area diagram wants. */
+  readonly fill?: boolean;
+  readonly thickness?: number;
+}
+
+/**
+ * A polynomial of the analysis, drawn over a straight baseline.
+ *
+ * The free-moment diagram of a span and the fictitious `M/EI` load of a conjugate beam are both
+ * polynomials the method already solved; this draws them where the beam is, at a stated
+ * amplitude, so a reader sees the shape the arithmetic beside it integrates. It is deliberately
+ * shape-only — the vertical scale is chosen to fill the space given and is never claimed to be
+ * to scale, exactly as `drawElasticCurve` says of the elastic curve.
+ *
+ * Returns the peak value and where it fell, which is what a caller needs to hang a label on.
+ */
+export const drawPolynomialCurve = (
+  layout: PdfLayout,
+  coefficients: readonly number[],
+  domain: { x0: number; x1: number },
+  baseline: { from: Point; to: Point },
+  amplitude: number,
+  color: PdfColor,
+  options: PolynomialCurveOptions = {},
+): { peak: number; peakAt: number } => {
+  const page = layout.page;
+  const steps = options.steps ?? 48;
+  const span = domain.x1 - domain.x0;
+  if (!(span > 0)) return { peak: 0, peakAt: domain.x0 };
+  const dx = baseline.to.x - baseline.from.x;
+  const dy = baseline.to.y - baseline.from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const normal = { x: -dy / length, y: dx / length };
+
+  const samples: { x: number; value: number }[] = [];
+  for (let step = 0; step <= steps; step += 1) {
+    const x = domain.x0 + (span * step) / steps;
+    samples.push({ x, value: evaluatePolynomial(coefficients, x) });
+  }
+  const peakSample = samples.reduce((best, sample) => Math.abs(sample.value) > Math.abs(best.value) ? sample : best, samples[0]);
+  const peak = Math.abs(peakSample.value) || 1;
+
+  const pointAt = (sample: { x: number; value: number }) => {
+    const ratio = (sample.x - domain.x0) / span;
+    const base = { x: baseline.from.x + dx * ratio, y: baseline.from.y + dy * ratio };
+    const rise = (sample.value / peak) * amplitude;
+    return { base, curve: { x: base.x + normal.x * rise, y: base.y + normal.y * rise } };
+  };
+
+  let previous = pointAt(samples[0]);
+  for (const sample of samples.slice(1)) {
+    const point = pointAt(sample);
+    if (options.fill) {
+      // Vertical hatch to the baseline: the area is what the method integrates, so it is shown
+      // as an area rather than as an outline.
+      page.drawLine({ start: point.base, end: point.curve, thickness: HAIRLINE, color, opacity: 0.28 });
+    }
+    page.drawLine({ start: previous.curve, end: point.curve, thickness: options.thickness ?? 1.3, color });
+    previous = point;
+  }
+  return { peak: peakSample.value, peakAt: peakSample.x };
+};
+
+/**
+ * The boundary of what has been isolated: a dashed circle around a joint.
+ *
+ * The Method of Joints cuts one pin free of the truss. Without the boundary drawn, the figure
+ * shows some bars in ink and leaves the reader to work out where the free body ends — which is
+ * the one thing the drawing exists to state.
+ */
+export const drawIsolationBoundary = (
+  layout: PdfLayout,
+  centre: Point,
+  radius: number,
+  color: PdfColor,
+): void => {
+  // `pdf-lib` has no dashed-circle operator, so the circle is a dashed polygon; at this radius
+  // the facets are well under the line width.
+  const steps = 40;
+  const dash = 2;
+  for (let step = 0; step < steps; step += 1) {
+    if (step % dash === 1) continue;
+    const from = (step / steps) * Math.PI * 2;
+    const to = ((step + 1) / steps) * Math.PI * 2;
+    layout.page.drawLine({
+      start: { x: centre.x + radius * Math.cos(from), y: centre.y + radius * Math.sin(from) },
+      end: { x: centre.x + radius * Math.cos(to), y: centre.y + radius * Math.sin(to) },
+      thickness: HAIRLINE + 0.2,
+      color,
+    });
+  }
+};

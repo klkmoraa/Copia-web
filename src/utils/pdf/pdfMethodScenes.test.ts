@@ -24,6 +24,8 @@ import {
   sectionCutScenes,
   storeyCutScenes,
 } from './pdfMethodScenes';
+import { sceneExtentOf } from './pdfFreeBody';
+import { sceneFigureHeight, sceneFrame, scenePlot } from './pdfSceneLayout';
 import { createModelIndex, type ReportContext } from './reportContext';
 import type { ProjectModel } from '../../types';
 
@@ -184,7 +186,9 @@ describe('sectionCutScenes', () => {
 });
 
 describe('jointScenes', () => {
-  it('encuadra cada nudo y le trae todas sus barras concurrentes', () => {
+  it('aísla el nudo: cada barra concurrente entra como muñón, no entera', () => {
+    // The free body of this method is the pin. Drawing whole bars in ink said the free body was
+    // a piece of the truss, which is the one thing the figure exists to deny.
     const project = createHibbelerStyleTrussPractice();
     const context = contextFor(project);
     const solution = solveMethodOfJoints(project, context.analysis, null);
@@ -197,8 +201,18 @@ describe('jointScenes', () => {
       const step = solution.steps[index];
       expect(scene.focus?.nodeId).toBe(step.nodeId);
       expect(scene.focus!.radius).toBeGreaterThan(0);
+      // The boundary that says where the body ends.
+      expect(scene.isolation?.nodeId).toBe(step.nodeId);
+      // Every concurrent bar is present, and every one of them as a stub.
       const meeting = project.members.filter((member) => member.i === step.nodeId || member.j === step.nodeId);
-      expect(new Set(scene.keptMemberIds)).toEqual(new Set(meeting.map((member) => member.id)));
+      expect(new Set((scene.severed ?? []).map((entry) => entry.memberId)))
+        .toEqual(new Set(meeting.map((member) => member.id)));
+      expect(scene.keptMemberIds).toEqual([]);
+      // The stub is the half that touches the joint, never the far half.
+      for (const entry of scene.severed ?? []) {
+        const member = context.index.member(entry.memberId)!;
+        expect(entry.keep).toBe(member.i === step.nodeId ? 'start' : 'end');
+      }
     }
   });
 });
@@ -215,7 +229,8 @@ describe('doubleIntegrationScenes', () => {
     expect(scenes).toHaveLength(solution.segments.length);
     for (const [index, scene] of scenes.entries()) {
       const segment = solution.segments[index];
-      const partial = scene.partialMember!;
+      const [partial] = scene.severed!;
+      expect(scene.severed).toHaveLength(1);
       expect(partial.memberId).toBe('AB');
       // The station is inside the stretch, and the ratio locates it along the member.
       const station = partial.ratio * 6;
@@ -253,5 +268,70 @@ describe('storeyCutScenes', () => {
     // One shear arrow per column of the storey.
     const shears = (scene.forces ?? []).filter((force) => force.label.startsWith('V') && force.tone === 'shear');
     expect(shears).toHaveLength(solution.columns.filter((column) => column.story === 1).length);
+  });
+});
+
+describe('ocupación de la figura', () => {
+  /** Share of its own figure the drawing fills, in each direction. */
+  const occupancy = (context: ReportContext, scene: Parameters<typeof sceneExtentOf>[1]) => {
+    const measure = 595.28 - 50 * 2;
+    const extent = sceneExtentOf(context, scene);
+    const height = sceneFigureHeight(extent, measure);
+    const plot = scenePlot(sceneFrame({ x: 50, y: 0, width: measure, height }, extent));
+    const plotWidth = plot.right - plot.left;
+    const plotHeight = plot.top - plot.bottom;
+    const scale = Math.min(
+      plotWidth / Math.max(extent.spanX, 1e-9),
+      extent.spanY > 0 ? plotHeight / extent.spanY : Number.POSITIVE_INFINITY,
+    );
+    return {
+      width: (extent.spanX * scale) / plotWidth,
+      height: extent.spanY > 0 ? (extent.spanY * scale) / plotHeight : 1,
+    };
+  };
+
+  /**
+   * The measurement that motivated this redesign, turned into a gate.
+   *
+   * Under the old fixed 495x186 frame a 6x4 m truss filled 27.5 % of its own figure's width and
+   * a beam 0.5 % of its height. An impression is not something a test can hold, so the number is.
+   */
+  it('cada escena llena su propia figura, en las dos direcciones', () => {
+    const truss = createHibbelerStyleTrussPractice();
+    const trussContext = contextFor(truss);
+    const sections = solveMethodOfSections(truss, trussContext.analysis, null);
+    expect(sections.applicable).toBe(true);
+    if (sections.applicable) {
+      for (const scene of sectionCutScenes(trussContext, sections)) {
+        const filled = occupancy(trussContext, scene);
+        expect(filled.width, scene.title).toBeGreaterThan(0.6);
+        expect(filled.height, scene.title).toBeGreaterThan(0.6);
+      }
+    }
+
+    const beam = proppedCantilever();
+    const beamContext = contextFor(beam);
+    const integration = solveDoubleIntegration(beam, beamContext.analysis, null);
+    expect(integration.applicable).toBe(true);
+    if (integration.applicable) {
+      for (const scene of doubleIntegrationScenes(beamContext, integration)) {
+        // A beam has no depth to fill, so only the measure is asserted — and its figure is short
+        // rather than a tall box with a hairline across the middle.
+        expect(occupancy(beamContext, scene).width, scene.title).toBeGreaterThan(0.85);
+        expect(sceneFigureHeight(sceneExtentOf(beamContext, scene), 495)).toBeLessThan(160);
+      }
+    }
+
+    const frame = lateralFrame();
+    const frameContext = contextFor(frame);
+    const portal = solvePortalMethod(frame, null);
+    expect(portal.applicable).toBe(true);
+    if (portal.applicable) {
+      for (const scene of storeyCutScenes(frameContext, portal.columns, portal.storyShear)) {
+        const filled = occupancy(frameContext, scene);
+        expect(filled.width, scene.title).toBeGreaterThan(0.6);
+        expect(filled.height, scene.title).toBeGreaterThan(0.6);
+      }
+    }
   });
 });
