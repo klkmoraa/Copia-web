@@ -31,3 +31,26 @@
 .pdelta-advanced-content { padding:4px 0 8px 0; border-top:1px solid var(--border-soft); background:var(--surface); }
 .pdelta-advanced-content input[type="number"] { width:100%; min-height:var(--sc-control-height-touch); border:1px solid var(--border); border-radius:var(--sc-radius-control); background:var(--surface-2); padding:8px; color:var(--text); font-variant-numeric:tabular-nums; }
 .pdelta-advanced-content .mobile-menu-field { padding:6px 10px; }
+
+/* Bajo 700 px `.sc-popover__surface` (ui.css) pasa a `position:fixed` para
+   comportarse como una bandeja anclada al pie de la pantalla — y en la
+   Cinta ESO deja de significar «pie de la pantalla». `.topbar` lleva
+   `backdrop-filter` (su cristal), y un descendiente `fixed` mide sus
+   coordenadas contra la caja del ANCESTRO con `backdrop-filter`/`transform`
+   más cercano, no contra el viewport: el mismo efecto que un `transform`.
+   Los popovers que la Cinta abre (norma de diseño, estado del análisis)
+   miden `bottom` contra el borde inferior de la Cinta —a ~50 px del real,
+   no contra la pantalla— y con 300+ px de contenido el panel se abre hacia
+   ARRIBA y sale casi entero por encima del viewport (medido: -330 px de
+   top con un disparador a 2 px del borde superior).
+   El eje horizontal no tiene este problema: la Cinta ocupa el ancho
+   COMPLETO del viewport, así que `left`/`right` contra su caja ya
+   coinciden con `left`/`right` contra la pantalla — de ahí que sólo se
+   toque `bottom` aquí. Reescribirlo contra `100dvh` (una unidad, no una
+   coordenada de la caja hijacked) devuelve la bandeja a la pantalla real
+   sin renunciar a `position:fixed` ni a la anchura ya resuelta. */
+@media (max-width:700px) {
+  .topbar .sc-popover__surface {
+    bottom: calc(var(--topbar-h) + env(safe-area-inset-top) - 100dvh + var(--sc-space-3) + env(safe-area-inset-bottom));
+  }
+}
