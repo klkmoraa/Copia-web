@@ -8,7 +8,19 @@
 .menu-professional-note { margin:0; padding:var(--sc-space-3) var(--sc-space-4) 0; border-top:var(--sc-hairline); color:var(--sc-color-text-secondary); font-size:var(--sc-font-size-caption); line-height:1.45; }
 
 .mobile-actions-wrap { display:block; position: relative; }
-.mobile-actions-menu { right: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
+/* `right:0` anclaba el menú al borde derecho de su disparador — el botón
+   «Más acciones», que en el layout compacto vive pegado al borde IZQUIERDO
+   de la Cinta (D-14 · CRI-95: es lo único que sobrevive ahí por debajo de
+   700 px). Con 320 px de ancho y un disparador a ~18 px del borde, el menú
+   se abría de -258 a 62: 258 px fuera de pantalla, sólo una astilla visible
+   a la derecha. `.project-menu` —el mismo patrón, el mismo disparador
+   pegado al borde— ya resuelve esto con `left:0` bajo 460 px; aquí se abre
+   igual, siempre, porque el disparador de este menú nunca vive fuera del
+   layout compacto (`.mobile-more-button` sólo existe por debajo de 1023 px,
+   medido en top: 187–554 px de izquierda en ese rango) y `left:0` cabe en
+   los 320 px que el propio `width` ya reserva en cualquier ancho de esa
+   franja. */
+.mobile-actions-menu { left: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
 .mobile-menu-field { display: grid; grid-template-columns: 1fr 1.3fr; align-items: center; gap: 10px; padding: 8px 10px; font-size: var(--sc-font-size-control); font-weight:550; color: var(--text); }
 .mobile-menu-field select { width: 100%; min-height:var(--sc-control-height-touch); border: 1px solid var(--border); border-radius:var(--sc-radius-control); background: var(--surface); padding: 8px; font-weight:550; color:var(--text); transition:background var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard); cursor:pointer; }
 .mobile-menu-field select:hover { background: var(--surface-2); }
