@@ -16,8 +16,15 @@ name: GitHub Pages
 on:
   push:
     branches: [main]
-  # Permite publicar a mano desde cualquier rama mientras el rediseño no esté en
-  # `main`, sin tener que fusionar para poder ver el resultado.
+  # Publicación a mano. Ojo: **sólo funciona desde `main`**, aunque el disparador
+  # acepte cualquier rama. El entorno `github-pages` del repositorio restringe las
+  # ramas que pueden desplegar, así que desde una rama de trabajo el `build` pasa
+  # entero —construye y sube el artefacto— y es `deploy` el que muere en un segundo.
+  # Está comprobado sobre los cinco despliegues manuales que existen: los dos
+  # desde `main` en verde, y los tres desde una rama muertos en `deploy`.
+  #
+  # Para publicar una rama sin fusionarla hay que añadirla en Settings → Environments
+  # → `github-pages` → «Deployment branches and tags».
   workflow_dispatch:
 
 permissions:
