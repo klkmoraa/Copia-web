@@ -3,76 +3,32 @@
  * the full-page N, V or M diagram drawn over the structure, and the elastic curve.
  *
  * All three project the model onto the page with the same transform — bounding box, uniform
- * scale, centred offsets — so it lives in one place and each caller only declares its plot
- * padding.
+ * scale, centred offsets. That transform, the arrow, the node dot and the support glyph now
+ * live in `pdfScene.ts`, because the free-body scenes of the method sections draw the same
+ * structure with the same marks and must not reinvent any of them.
  */
-import type { AnalysisResult, DiagramQuantity, NodeModel } from '../../types';
+import type { AnalysisResult, DiagramQuantity } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { readCanvasViewSettings } from '../../features/view/canvasViewSettings';
+import { lerpPoint, memberAxis } from '../../graphics/structureGeometry';
 import {
-  distributedIntensityAt,
-  grossRatioFromFlexible,
-  lerpPoint,
-  memberAxis,
-  modelBounds,
-  toGlobalVector,
-} from '../../graphics/structureGeometry';
+  createProjection,
+  drawArrow,
+  drawMemberLoads,
+  drawNodeDot,
+  drawSupportGlyph,
+  type Point,
+} from './pdfScene';
 import { pdfText } from './pdfGlyphs';
 import {
   clearDisplay,
   clearNumber,
   display,
-  number,
   quantitySymbol,
   quantityUnit,
 } from './pdfFormat';
 import type { PdfLayout } from './pdfBuilder';
 import type { PdfColor, ReportContext } from './reportContext';
-
-interface PlotBox {
-  left: number;
-  right: number;
-  bottom: number;
-  top: number;
-}
-
-interface Projection {
-  at(x: number, y: number): { x: number; y: number };
-}
-
-/** Uniform model -> page transform that centres the structure inside `plot`. */
-const createProjection = (nodes: readonly NodeModel[], plot: PlotBox): Projection => {
-  const { minX, maxX, minY, maxY } = modelBounds(nodes);
-  const scale = Math.min(
-    (plot.right - plot.left) / Math.max(maxX - minX, 1),
-    (plot.top - plot.bottom) / Math.max(maxY - minY, 1),
-  );
-  const offsetX = (plot.left + plot.right - (maxX - minX) * scale) / 2;
-  const offsetY = (plot.bottom + plot.top - (maxY - minY) * scale) / 2;
-  return {
-    at: (x, y) => ({ x: offsetX + (x - minX) * scale, y: offsetY + (y - minY) * scale }),
-  };
-};
-
-/** Arrow head-first at `location`; returns the tail, where labels are anchored. */
-const drawArrow = (
-  layout: PdfLayout,
-  location: { x: number; y: number },
-  fx: number,
-  fy: number,
-  color: PdfColor,
-  length: number,
-): { x: number; y: number } | undefined => {
-  const magnitude = Math.hypot(fx, fy);
-  if (!(magnitude > 1e-12)) return undefined;
-  const dx = fx / magnitude * length;
-  const dy = fy / magnitude * length;
-  const tail = { x: location.x - dx, y: location.y - dy };
-  layout.page.drawLine({ start: tail, end: location, thickness: 1.15, color });
-  layout.page.drawLine({ start: location, end: { x: location.x - dx * 0.30 - dy * 0.15, y: location.y - dy * 0.30 + dx * 0.15 }, thickness: 1, color });
-  layout.page.drawLine({ start: location, end: { x: location.x - dx * 0.30 + dy * 0.15, y: location.y - dy * 0.30 - dx * 0.15 }, thickness: 1, color });
-  return tail;
-};
 
 /** Framed free-body diagram: geometry, supports, applied actions and optional reactions. */
 export const drawGlobalDcl = (
@@ -97,7 +53,7 @@ export const drawGlobalDcl = (
     bottom: bottom + 30,
     top: top - 22,
   });
-  const point = (nodeId: string): { x: number; y: number } | undefined => {
+  const point = (nodeId: string): Point | undefined => {
     const node = index.node(nodeId);
     return node ? projection.at(node.x, node.y) : undefined;
   };
@@ -110,20 +66,8 @@ export const drawGlobalDcl = (
   for (const node of project.nodes) {
     const location = point(node.id);
     if (!location) continue;
-    page.drawCircle({ x: location.x, y: location.y, size: 3, color: palette.paper, borderColor: palette.ink, borderWidth: 1.1 });
-    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 4, size: 6.5, font: fonts.bold, color: palette.ink });
-    if (node.support.type !== 'none') {
-      const isRoller = node.support.type === 'roller';
-      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x - 7, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
-      page.drawLine({ start: { x: location.x, y: location.y - 3 }, end: { x: location.x + 7, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
-      if (isRoller) {
-        page.drawCircle({ x: location.x - 4, y: location.y - 15.5, size: 1.8, borderColor: palette.inkSoft, borderWidth: 0.8 });
-        page.drawCircle({ x: location.x + 4, y: location.y - 15.5, size: 1.8, borderColor: palette.inkSoft, borderWidth: 0.8 });
-        page.drawLine({ start: { x: location.x - 10, y: location.y - 19 }, end: { x: location.x + 10, y: location.y - 19 }, thickness: 1, color: palette.inkSoft });
-      } else {
-        page.drawLine({ start: { x: location.x - 9, y: location.y - 13 }, end: { x: location.x + 9, y: location.y - 13 }, thickness: 1, color: palette.inkSoft });
-      }
-    }
+    drawNodeDot(layout, location, node.id, palette.ink);
+    drawSupportGlyph(layout, location, node.support, palette.inkSoft);
   }
   for (const load of project.nodalLoads) {
     const factor = scenarioFactors[load.caseId] ?? 0;
@@ -131,52 +75,7 @@ export const drawGlobalDcl = (
     if (!location || factor === 0 || (load.fx === 0 && load.fy === 0)) continue;
     drawArrow(layout, location, load.fx * factor, load.fy * factor, palette.load, 24);
   }
-  for (const load of project.memberLoads) {
-    const factor = scenarioFactors[load.caseId] ?? 0;
-    if (factor === 0) continue;
-    const member = index.member(load.memberId);
-    if (!member) continue;
-    const startNode = index.node(member.i);
-    const endNode = index.node(member.j);
-    const screenStart = point(member.i);
-    const screenEnd = point(member.j);
-    if (!startNode || !endNode || !screenStart || !screenEnd) continue;
-    const axis = memberAxis(member, startNode, endNode);
-    if (!(axis.length > 0)) continue;
-    if (!(axis.flexibleLength > 0)) continue;
-    const atFlexibleRatio = (ratio: number) => lerpPoint(screenStart, screenEnd, grossRatioFromFlexible(axis, ratio));
-    const globalVector = (x: number, y: number): [number, number] =>
-      toGlobalVector(axis, load.coordinateSystem, x, y);
-    // Applied actions share one hue, the product's `--sc-color-load-point` indigo. Response
-    // quantities own teal, green and orange, and nothing applied may borrow one of those: on
-    // the free-body diagram a cause must never be mistakable for an effect.
-    const actionColor = palette.load;
-    if (load.type === 'distributed') {
-      const startRatio = Math.min(load.start, load.end);
-      const endRatio = Math.max(load.start, load.end);
-      const arrowTails: Array<{ x: number; y: number }> = [];
-      const count = 7;
-      for (let arrowIndex = 0; arrowIndex < count; arrowIndex += 1) {
-        const t = arrowIndex / (count - 1);
-        const ratio = startRatio + (endRatio - startRatio) * t;
-        const intensity = distributedIntensityAt(load, t);
-        const [gx, gy] = globalVector(intensity.qx * factor, intensity.qy * factor);
-        const tail = drawArrow(layout, atFlexibleRatio(ratio), gx, gy, actionColor, 16);
-        if (tail) arrowTails.push(tail);
-      }
-      if (arrowTails.length > 1) page.drawLine({ start: arrowTails[0], end: arrowTails.at(-1)!, thickness: 0.9, color: actionColor });
-      const label = atFlexibleRatio((startRatio + endRatio) / 2);
-      page.drawText(pdfText(`${load.id} [${number(startRatio)}-${number(endRatio)}]`), { x: label.x + 3, y: label.y + 20, size: 6, font: fonts.bold, color: actionColor });
-    } else if (load.type === 'point') {
-      const [gx, gy] = globalVector((load.px ?? 0) * factor, (load.py ?? 0) * factor);
-      const location = atFlexibleRatio(Math.min(1, Math.max(0, load.position ?? 0.5)));
-      const tail = drawArrow(layout, location, gx, gy, actionColor, 22) ?? location;
-      page.drawText(pdfText(load.id), { x: tail.x + 2, y: tail.y + 5, size: 6, font: fonts.bold, color: actionColor });
-    } else {
-      const location = atFlexibleRatio(Math.min(1, Math.max(0, load.position ?? 0.5)));
-      page.drawText(pdfText(`${load.id}: M x ${number(factor)}`), { x: location.x + 4, y: location.y + 8, size: 6, font: fonts.bold, color: actionColor });
-    }
-  }
+  drawMemberLoads(context, projection);
   if (includeReactions) {
     const reactionColor = palette.reaction;
     const reactionReference = Math.max(1, ...analysis.nodeResults.flatMap((result) => [Math.abs(result.rx), Math.abs(result.ry)]));
@@ -314,9 +213,7 @@ export const drawGlobalQuantityDiagram = (
     }
   }
   for (const node of project.nodes) {
-    const location = modelPoint(node.x, node.y);
-    page.drawCircle({ x: location.x, y: location.y, size: 3.2, color: palette.paper, borderColor: palette.ink, borderWidth: 1.1 });
-    page.drawText(pdfText(node.id), { x: location.x + 5, y: location.y + 5, size: 6.4, font: fonts.bold, color: palette.ink });
+    drawNodeDot(layout, modelPoint(node.x, node.y), node.id, palette.ink, 3.2, 6.4);
   }
   labelCandidates.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 6).forEach((candidate, labelIndex) => {
     const value = clearDisplay(project, candidate.value, quantityUnit(quantity), maximum);

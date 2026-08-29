@@ -17,7 +17,7 @@
  */
 import type { PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 import { pdfText, wrapText } from './pdfGlyphs';
-import { drawMathBlock, mathWidth, hasFraction, needsMath } from './pdfMath';
+import { drawMathBlock, drawRawMath, mathWidth, rawMathWidth, hasFraction, needsMath } from './pdfMath';
 import { SPACE, TYPE, type ReportPalette } from './pdfTheme';
 import type { PdfColor, PdfVectorOps, ReportFonts, RgbFactory } from './reportContext';
 
@@ -535,6 +535,16 @@ export class PdfLayout {
   /** Displayed equation at the current cursor. Returns the height it consumed. */
   drawMathBlockAt(expression: string, size: number, indent: number, color: PdfColor, tag?: string): number {
     return drawMathBlock(this, expression, MARGIN + indent, this.y, this.contentWidth - indent, size, color, { tag });
+  }
+
+  /** Drawn width of LaTeX a caller assembled itself (`pdfEquation.ts`'s aligned blocks). */
+  rawMathWidth(latex: string, size: number): number {
+    return rawMathWidth(latex, size);
+  }
+
+  /** That same LaTeX, drawn at the current cursor as one box. Returns the height consumed. */
+  drawRawMathAt(latex: string, size: number, indent: number, color: PdfColor, tag?: string): number {
+    return drawRawMath(this, latex, MARGIN + indent, this.y, this.contentWidth - indent, size, color, tag);
   }
 
   /**

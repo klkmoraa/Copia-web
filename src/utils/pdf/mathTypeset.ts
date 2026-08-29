@@ -159,10 +159,10 @@ const findTypesetError = (element: LiteElement): string | undefined => {
   return undefined;
 };
 
-const compute = (latex: string): ParsedFormula => {
+const compute = (latex: string, display: boolean): ParsedFormula => {
   let node: LiteElement;
   try {
-    node = html.convert(latex, { display: false }) as unknown as LiteElement;
+    node = html.convert(latex, { display }) as unknown as LiteElement;
   } catch (error) {
     throw new MathTypesetError(`No se pudo tipografiar «${latex}»: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -188,10 +188,20 @@ const compute = (latex: string): ParsedFormula => {
 
 const cache = new Map<string, ParsedFormula>();
 
-export const typesetLatex = (latex: string): ParsedFormula => {
-  const cached = cache.get(latex);
+/**
+ * Typesets `latex`, memoised by source.
+ *
+ * `display` is TeX's own distinction between a formula set inline and one set on its own line:
+ * in display style a `\\sum` or an `\\int` carries its limits above and below rather than
+ * beside, and a `\\frac` is set at full size. The report's numbered relations are display
+ * equations, so they ask for it; a symbol inside a table cell does not. It is part of the cache
+ * key because the two styles are genuinely different layouts of the same source.
+ */
+export const typesetLatex = (latex: string, display = false): ParsedFormula => {
+  const key = `${display ? 'D' : 'I'}|${latex}`;
+  const cached = cache.get(key);
   if (cached) return cached;
-  const parsed = compute(latex);
-  cache.set(latex, parsed);
+  const parsed = compute(latex, display);
+  cache.set(key, parsed);
   return parsed;
 };

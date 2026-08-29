@@ -52,8 +52,9 @@ describe('memoria de cálculo: estructura del documento', () => {
       /04\s+Diagrama de momento M/,
       /05\s+Unidades, convenciones y alcance/,
       /06\s+Procedimiento y cálculos/,
-      /07\s+Modelo y acciones/,
-      /08\s+Resultados nodales y por miembro/,
+      /07\s+Materiales y secciones/,
+      /08\s+Modelo y acciones/,
+      /09\s+Resultados nodales y por miembro/,
     ];
     const indices = titles.map((title) => body.findIndex((text) => title.test(text)));
     expect(indices.every((index) => index >= 0)).toBe(true);
@@ -222,7 +223,8 @@ describe('memoria de cálculo: estructura del documento', () => {
     expect(shortText).toMatch(/01\s+Resumen del análisis/);
     expect(shortText).toMatch(/02\s+Unidades, convenciones y alcance/);
     expect(shortText).toMatch(/03\s+Procedimiento y cálculos/);
-    expect(shortText).not.toMatch(/\b04\s+/);
+    expect(shortText).toMatch(/04\s+Materiales y secciones/);
+    expect(shortText).not.toMatch(/\b05\s+/);
 
     // El expediente adjunto no depende de qué partes se imprimieron.
     expect(trimmed.payload.checksum.value).toBe(complete.payload.checksum.value);

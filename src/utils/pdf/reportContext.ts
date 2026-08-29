@@ -24,6 +24,14 @@ export interface CalculationReportOptions extends PortablePayloadOptions {
   includeScope?: boolean;
   includeProcedure?: boolean;
   includeAnnex?: boolean;
+  /** The material and section specification part. */
+  includeMaterials?: boolean;
+  /**
+   * The free-body diagram of every step of the chosen method — one per cut, per joint, per
+   * storey, per span. Complete by default; a reader who only wants the arithmetic can drop
+   * the drawings without losing the procedure they belong to.
+   */
+  includeMethodFreeBodies?: boolean;
 }
 
 export interface CalculationReportArtifact {

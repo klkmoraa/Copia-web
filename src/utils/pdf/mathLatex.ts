@@ -20,6 +20,11 @@ const SYMBOLS: ReadonlyMap<string, string> = new Map([
   ['∈', '\\in'], ['∉', '\\notin'], ['∅', '\\varnothing'], ['⊂', '\\subset'], ['⊃', '\\supset'], ['∩', '\\cap'],
   ['∪', '\\cup'], ['∀', '\\forall'], ['∃', '\\exists'], ['¬', '\\neg'], ['∧', '\\wedge'], ['∨', '\\vee'],
   ['′', "'"], ['″', "''"], ['ƒ', 'f'], ['°', '^\\circ'], ['∥', '\\parallel'], ['⟨', '\\langle'], ['⟩', '\\rangle'],
+  ['‖', '\\|'], ['≅', '\\cong'], ['≪', '\\ll'], ['≫', '\\gg'], ['∆', '\\Delta'], ['∓', '\\mp'],
+  ['⌊', '\\lfloor'], ['⌋', '\\rfloor'], ['⌈', '\\lceil'], ['⌉', '\\rceil'], ['√', '\\surd'],
+  // A moment's sense of rotation, which the free-body captions name in prose and the equations
+  // beside them were spelling out as a literal arrow.
+  ['↺', '\\circlearrowleft'], ['↻', '\\circlearrowright'],
 ]);
 
 /**
@@ -158,21 +163,101 @@ const translateRun = (text: string): string =>
     })
     .join('');
 
-/** A word is an implicit fraction when it holds exactly one `/` between two non-empty, bracket-free operands. */
-const asFraction = (word: string): { numerator: string; denominator: string } | undefined => {
-  const parts = word.split('/');
-  if (parts.length !== 2) return undefined;
-  const [numerator, denominator] = parts;
-  if (!numerator || !denominator) return undefined;
-  if (/[()[\]]/.test(word)) return undefined;
-  return { numerator, denominator };
+/**
+ * Spans of the expression that are a quotient, and where each operand starts and ends.
+ *
+ * The old rule looked for a `/` inside a single space-delimited word and refused any word
+ * carrying a bracket, which ruled out nearly every quotient the report actually prints:
+ * `(2 · 45.0)/(6.0)`, `(0.003)(2e+8)/(5.0)`, `EI/L`. Those came out as a slash in running text,
+ * which is the one shape a reader has to parse twice.
+ *
+ * An operand runs from the slash out to the nearest space *at bracket depth zero* — a space
+ * inside `(2 · 45.0)` belongs to the operand, a space around the whole quotient ends it. Two
+ * cases are deliberately refused rather than guessed at: a second top-level slash in either
+ * operand (`a/b/c` does not associate on its own) and an operand that is empty or unbalanced.
+ */
+interface FractionSpan {
+  readonly start: number;
+  readonly slash: number;
+  readonly end: number;
+}
+
+/** True when `text` carries a `/` outside every bracket. */
+const hasTopLevelSlash = (text: string): boolean => {
+  let depth = 0;
+  for (const character of text) {
+    if (character === '(' || character === '[') depth += 1;
+    else if (character === ')' || character === ']') depth -= 1;
+    else if (character === '/' && depth === 0) return true;
+  }
+  return false;
 };
 
-const translateWord = (word: string): string => {
-  const fraction = asFraction(word);
-  if (fraction) return `\\frac{${translateRun(fraction.numerator)}}{${translateRun(fraction.denominator)}}`;
-  return translateRun(word);
+const findFractionSpans = (expression: string): FractionSpan[] => {
+  const spans: FractionSpan[] = [];
+  let depth = 0;
+  let index = 0;
+  while (index < expression.length) {
+    const character = expression[index];
+    if (character === '(' || character === '[') depth += 1;
+    else if (character === ')' || character === ']') depth -= 1;
+    else if (character === '/' && depth === 0) {
+      // Backwards to the space that ends the numerator, counting brackets in reverse.
+      let start = index;
+      let backDepth = 0;
+      while (start > 0) {
+        const previous = expression[start - 1];
+        if (previous === ')' || previous === ']') backDepth += 1;
+        else if (previous === '(' || previous === '[') backDepth -= 1;
+        else if (previous === ' ' && backDepth === 0) break;
+        start -= 1;
+      }
+      // Forwards to the space that ends the denominator.
+      let end = index + 1;
+      let forwardDepth = 0;
+      while (end < expression.length) {
+        const next = expression[end];
+        if (next === '(' || next === '[') forwardDepth += 1;
+        else if (next === ')' || next === ']') forwardDepth -= 1;
+        else if (next === ' ' && forwardDepth === 0) break;
+        end += 1;
+      }
+      const numerator = expression.slice(start, index);
+      const denominator = expression.slice(index + 1, end);
+      const usable = numerator.length > 0 && denominator.length > 0
+        && !hasTopLevelSlash(numerator) && !hasTopLevelSlash(denominator)
+        && !(spans.length && start < spans[spans.length - 1].end);
+      if (usable) spans.push({ start, slash: index, end });
+      index = end;
+      continue;
+    }
+    if (depth < 0) return spans;
+    index += 1;
+  }
+  return spans;
 };
+
+/**
+ * Strips one layer of parentheses that wraps a whole operand.
+ *
+ * Inside a stacked fraction the bracket has no work left to do — the rule already groups the
+ * numerator — and `\dfrac{(2 \cdot 45.0)}{(6.0)}` reads as if the brackets meant something.
+ */
+const unwrap = (operand: string): string => {
+  if (!operand.startsWith('(') || !operand.endsWith(')')) return operand;
+  let depth = 0;
+  for (let index = 0; index < operand.length; index += 1) {
+    if (operand[index] === '(') depth += 1;
+    else if (operand[index] === ')') {
+      depth -= 1;
+      // The opening bracket closes before the end, so it does not wrap the whole operand.
+      if (depth === 0 && index !== operand.length - 1) return operand;
+    }
+  }
+  return depth === 0 ? operand.slice(1, -1) : operand;
+};
+
+const translateWord = (word: string): string => translateRun(word);
 
 /** Index just past the `)` matching the `(` at `openIndex`, or -1 if the expression never closes it. */
 const matchParen = (expression: string, openIndex: number): number => {
@@ -192,10 +277,22 @@ const translateRunOfWords = (run: string): string => {
   // collapses multi-word prose labels (e.g. "q uniforme transversal") into one illegible
   // run. '\ ' is TeX's explicit "insert an interword space" command.
   const words = run.split(' ').filter((word) => word.length > 0).map(translateWord).join('\\ ');
-  return words + (run.endsWith(' ') ? ' ' : '');
+  if (!words) return run.length ? '\\ ' : '';
+  // A run can now begin as well as end at a space, because `translateExpression` hands over
+  // the text *between* two structural spans: `dθ/dx = M/EI` leaves ' = ' in the middle, and
+  // dropping its leading space would butt the relation against the fraction before it.
+  const lead = run.startsWith(' ') ? '\\ ' : '';
+  const tail = run.endsWith(' ') ? '\\ ' : '';
+  return lead + words + tail;
 };
 
-export const translateExpression = (expression: string): string => {
+/**
+ * Translates the run between two structural features — no radical, no quotient — as words.
+ *
+ * Kept separate so `translateExpression` reads as what it is: a walk over the spans that need
+ * their own LaTeX structure, with plain prose in between.
+ */
+const translatePlain = (expression: string): string => {
   let result = '';
   let index = 0;
   while (index < expression.length) {
@@ -215,6 +312,24 @@ export const translateExpression = (expression: string): string => {
     result += translateRunOfWords(expression.slice(index, next));
     index = next;
   }
+  return result;
+};
+
+export const translateExpression = (expression: string): string => {
+  const spans = findFractionSpans(expression);
+  if (!spans.length) return translatePlain(expression);
+  let result = '';
+  let cursor = 0;
+  for (const span of spans) {
+    result += translatePlain(expression.slice(cursor, span.start));
+    const numerator = unwrap(expression.slice(span.start, span.slash));
+    const denominator = unwrap(expression.slice(span.slash + 1, span.end));
+    // `\dfrac` rather than `\frac`: a quotient inside a numbered relation *is* the relation,
+    // and shrinking it to script size is what made these unreadable at 8.4 pt.
+    result += `\\dfrac{${translateExpression(numerator)}}{${translateExpression(denominator)}}`;
+    cursor = span.end;
+  }
+  result += translatePlain(expression.slice(cursor));
   return result;
 };
 

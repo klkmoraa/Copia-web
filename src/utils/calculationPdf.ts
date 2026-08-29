@@ -20,6 +20,7 @@ import { drawQuantityPart } from './pdf/pdfQuantitySection';
 import { drawScopePart } from './pdf/pdfScopeSection';
 import { drawProcedurePart } from './pdf/pdfProcedureSection';
 import { drawModelPart } from './pdf/pdfModelSection';
+import { drawMaterialsPart } from './pdf/pdfMaterialsSection';
 import { drawResultsPart } from './pdf/pdfResultsSection';
 import { drawTracePart } from './pdf/pdfTraceSection';
 import { attachPortablePayload } from './pdf/pdfPayloadSection';
@@ -102,6 +103,7 @@ export const createCalculationReport = async (
   }
   if (options.includeScope !== false) drawScopePart(context);
   if (options.includeProcedure !== false) drawProcedurePart(context);
+  if (options.includeMaterials !== false) drawMaterialsPart(context);
   if (options.includeAnnex !== false) {
     drawModelPart(context);
     drawResultsPart(context);

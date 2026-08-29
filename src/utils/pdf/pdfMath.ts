@@ -33,9 +33,9 @@ const warnedExpressions = new Set<string>();
  * genuine regression in the engine's own equations still shows up in a dev console and a CI log
  * instead of hiding behind the fallback.
  */
-const safeTypeset = (expression: string): ParsedFormula | null => {
+const safeTypeset = (expression: string, display = false): ParsedFormula | null => {
   try {
-    return typesetLatex(translateExpression(expression));
+    return typesetLatex(translateExpression(expression), display);
   } catch (error) {
     if (!(error instanceof MathTypesetError)) throw error;
     if (!warnedExpressions.has(expression)) {
@@ -56,8 +56,13 @@ const safeTypeset = (expression: string): ParsedFormula | null => {
  */
 export const needsMath = (value: string): boolean => translateExpression(value).split('\\ ').join(' ') !== pdfText(value);
 
-/** True when the expression will stack something above and below its baseline. */
-export const hasFraction = (expression: string): boolean => /\\frac\{/.test(translateExpression(expression));
+/**
+ * True when the expression will stack something above and below its baseline.
+ *
+ * Matches `\dfrac` as well as `\frac`: quotients are set in display style now, and a block
+ * measured as a single-height line would have its next neighbour drawn over its denominator.
+ */
+export const hasFraction = (expression: string): boolean => /\\d?frac\{/.test(translateExpression(expression));
 
 export const mathWidth = (layout: PdfLayout, expression: string, size: number): number => {
   const parsed = safeTypeset(expression);
@@ -223,4 +228,69 @@ export const drawFormulaCard = (
   page.drawText(pdfText(label.toUpperCase()), { x: x + 10, y: bottom + 39, size: 6.3, font: fonts.bold, color });
   drawMathFormula(layout, expression, x + 10, bottom + 21, 11.2, rgb(0.10, 0.15, 0.12), width - 20);
   page.drawText(pdfText(explanation), { x: x + 10, y: bottom + 7, size: 6.2, font: fonts.regular, color: rgb(0.37, 0.43, 0.39) });
+};
+
+/**
+ * The same seam, for LaTeX that a caller has already assembled.
+ *
+ * `pdfEquation.ts` builds an `aligned` environment out of several translated relations, which
+ * is LaTeX structure rather than solver notation — running it back through
+ * `translateExpression` would escape its own backslashes. These two functions are that path,
+ * and they typeset in display style, which is what a numbered relation on its own line is.
+ */
+const safeTypesetLatex = (latex: string): ParsedFormula | null => {
+  try {
+    return typesetLatex(latex, true);
+  } catch (error) {
+    if (!(error instanceof MathTypesetError)) throw error;
+    if (!warnedExpressions.has(latex)) {
+      warnedExpressions.add(latex);
+      console.warn(`[pdfMath] el bloque «${latex}» no se pudo tipografiar; se dibuja en una sola línea. ${error.message}`);
+    }
+    return null;
+  }
+};
+
+/** Drawn width of already-built LaTeX, or `Infinity` when it cannot be typeset at all. */
+export const rawMathWidth = (latex: string, size: number): number => {
+  const parsed = safeTypesetLatex(latex);
+  return parsed ? measureFormula(parsed, size).widthPt : Number.POSITIVE_INFINITY;
+};
+
+/**
+ * Draws already-built LaTeX as one indivisible box, and returns the height it consumed.
+ *
+ * Unlike `drawMathBlock` this never wraps: an `aligned` environment is a single box whose whole
+ * point is that its rows line up, so a caller that does not have room for it falls back to the
+ * one-line form rather than asking for it to be broken.
+ */
+export const drawRawMath = (
+  layout: PdfLayout,
+  latex: string,
+  x: number,
+  top: number,
+  width: number,
+  size: number,
+  color: PdfColor,
+  tag?: string,
+): number => {
+  const parsed = safeTypesetLatex(latex);
+  if (!parsed) return 0;
+  const box = measureFormula(parsed, size);
+  const baseline = top - box.heightPt;
+  drawFormula(layout.page, layout.vectorOps, parsed, x, baseline, size, color);
+  if (tag) {
+    const text = pdfText(tag);
+    const tagWidth = layout.fonts.mathRegular.widthOfTextAtSize(text, size * 0.9);
+    // Beside the vertical centre of the block, not its last row: the number tags the whole
+    // relation, and hanging it off the bottom row reads as numbering that row alone.
+    layout.page.drawText(text, {
+      x: x + width - tagWidth,
+      y: baseline + box.heightPt / 2 - size * 0.35,
+      size: size * 0.9,
+      font: layout.fonts.mathRegular,
+      color,
+    });
+  }
+  return box.heightPt + box.depthPt + size * 0.45;
 };

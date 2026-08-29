@@ -23,6 +23,8 @@ export const PREVIEW_SECTIONS = [
   'includeDiagrams',
   'includeScope',
   'includeProcedure',
+  'includeMethodFreeBodies',
+  'includeMaterials',
   'includeAnnex',
   'includeEducationTrace',
 ] as const;
@@ -35,8 +37,22 @@ export const DEFAULT_PREVIEW_SELECTION: PreviewSelection = {
   includeDiagrams: true,
   includeScope: true,
   includeProcedure: true,
+  includeMethodFreeBodies: true,
+  includeMaterials: true,
   includeAnnex: true,
   includeEducationTrace: true,
+};
+
+/**
+ * Sections that are drawn *inside* another one, and cannot outlive it.
+ *
+ * The free-body diagrams of the method belong to the procedure part, the same way the solved
+ * matrices belong to the annex: leaving either switch on while its host is off would promise a
+ * page the document does not carry.
+ */
+const HOSTED_BY: Partial<Record<PreviewSection, PreviewSection>> = {
+  includeMethodFreeBodies: 'includeProcedure',
+  includeEducationTrace: 'includeAnnex',
 };
 
 export interface PdfPreviewDialogProps {
@@ -198,13 +214,16 @@ export const PdfPreviewDialog = ({
             <input
               type="checkbox"
               checked={selection[section]}
-              // The trace is drawn by the annex, so it cannot outlive it.
-              disabled={section === 'includeEducationTrace' && !selection.includeAnnex}
+              disabled={(() => {
+                const host = HOSTED_BY[section];
+                return host !== undefined && !selection[host];
+              })()}
               onChange={() => toggle(section)}
             />
             <span>{t(`pdfPreview.${section}`)}</span>
           </label>
         ))}
+        <p className="pdf-preview-note">{t('pdfPreview.freeBodyNote')}</p>
         <p className="pdf-preview-note">{t('pdfPreview.annexNote')}</p>
         <p className="pdf-preview-note">{t('pdfPreview.alwaysIncluded')}</p>
       </aside>

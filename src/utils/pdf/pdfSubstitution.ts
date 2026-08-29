@@ -27,6 +27,7 @@
 import { toDisplay, unitLabel } from '../../engine/units';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { clearNumber, number } from './pdfFormat';
+import { asWorkedEquation, type EquationInput } from './pdfEquation';
 import type { ReportContext } from './reportContext';
 import type {
   DiagramQuantity,
@@ -40,7 +41,15 @@ import type {
 export interface SubstitutionBlock {
   /** Which member, node or load the arithmetic below belongs to. */
   readonly caption?: string;
-  readonly equations: readonly string[];
+  /**
+   * The relations themselves.
+   *
+   * A plain string is one already-assembled `lhs = … = …`; a `WorkedEquation` splits the rule
+   * from its substitution so the two can be stacked on the same `=`. Both are accepted because
+   * the eleven method sections build hundreds of these, and converting them wholesale in one
+   * change would be a very large diff with no way to check it a piece at a time.
+   */
+  readonly equations: readonly EquationInput[];
 }
 
 /** Members and loads developed in full before the section falls back to a pointer. */
@@ -158,11 +167,11 @@ const geometryBlocks = (context: ReportContext): SubstitutionBlock[] => {
     blocks.push({
       caption: `Miembro ${member.id}: de ${member.i} (${xi}, ${yi}) a ${member.j} (${xj}, ${yj}) ${lengthUnit}`,
       equations: [
-        `ΔX = ${xj} − ${xi} = ${dx} ${lengthUnit}`,
-        `ΔY = ${yj} − ${yi} = ${dy} ${lengthUnit}`,
-        `L = √(${operand(dx)}² + ${operand(dy)}²) = ${length} ${lengthUnit}`,
-        `c = ${dx}/${length} = ${number(axis.c, 6)}`,
-        `s = ${dy}/${length} = ${number(axis.s, 6)}`,
+        { lhs: 'ΔX', symbolic: `X_j − X_i`, substituted: `${xj} − ${xi}`, result: dx, unit: lengthUnit },
+        { lhs: 'ΔY', symbolic: `Y_j − Y_i`, substituted: `${yj} − ${yi}`, result: dy, unit: lengthUnit },
+        { lhs: 'L', symbolic: '√(ΔX² + ΔY²)', substituted: `√(${operand(dx)}² + ${operand(dy)}²)`, result: length, unit: lengthUnit },
+        { lhs: 'c', symbolic: 'ΔX/L', substituted: `${dx}/${length}`, result: number(axis.c, 6) },
+        { lhs: 's', symbolic: 'ΔY/L', substituted: `${dy}/${length}`, result: number(axis.s, 6) },
       ],
     });
   }
@@ -413,15 +422,38 @@ const stiffnessBlocks = (context: ReportContext): SubstitutionBlock[] => {
     const Atext = dim(project, A, 0, 2);
     const Itext = dim(project, I, 0, 4);
     const Ltext = dim(project, L, 0, 1);
-    const equations: string[] = [
-      `EA/L = ${Etext} · ${Atext} / ${Ltext} = ${dim(project, E * A / L, 1, -1)} ${dimensionalUnit(project, 1, -1)}`,
+    // Each stiffness term names itself on the left, states its rule, and then does it: the
+    // quotients are set as stacked fractions, which is the shape `EA/L` has in every textbook
+    // and the shape this section printed as an inline slash until now.
+    const equations: EquationInput[] = [
+      {
+        lhs: 'k_axial', symbolic: 'EA/L',
+        substituted: `(${Etext})(${Atext})/(${Ltext})`,
+        result: dim(project, E * A / L, 1, -1), unit: dimensionalUnit(project, 1, -1),
+      },
     ];
     if (member.type !== 'truss' && I > 0) {
       equations.push(
-        `12EI/L³ = 12 · ${Etext} · ${Itext} / ${Ltext}³ = ${dim(project, 12 * E * I / L ** 3, 1, -1)} ${dimensionalUnit(project, 1, -1)}`,
-        `6EI/L² = 6 · ${Etext} · ${Itext} / ${Ltext}² = ${dim(project, 6 * E * I / L ** 2, 1, 0)} ${unitLabel(project.settings.units, 'force')}`,
-        `4EI/L = 4 · ${Etext} · ${Itext} / ${Ltext} = ${dim(project, 4 * E * I / L, 1, 1)} ${dimensionalUnit(project, 1, 1)}`,
-        `2EI/L = 2 · ${Etext} · ${Itext} / ${Ltext} = ${dim(project, 2 * E * I / L, 1, 1)} ${dimensionalUnit(project, 1, 1)}`,
+        {
+          lhs: 'k_v', symbolic: '12EI/L³',
+          substituted: `12(${Etext})(${Itext})/(${Ltext})³`,
+          result: dim(project, 12 * E * I / L ** 3, 1, -1), unit: dimensionalUnit(project, 1, -1),
+        },
+        {
+          lhs: 'k_vθ', symbolic: '6EI/L²',
+          substituted: `6(${Etext})(${Itext})/(${Ltext})²`,
+          result: dim(project, 6 * E * I / L ** 2, 1, 0), unit: unitLabel(project.settings.units, 'force'),
+        },
+        {
+          lhs: 'k_θ', symbolic: '4EI/L',
+          substituted: `4(${Etext})(${Itext})/(${Ltext})`,
+          result: dim(project, 4 * E * I / L, 1, 1), unit: dimensionalUnit(project, 1, 1),
+        },
+        {
+          lhs: 'k_carry', symbolic: '2EI/L',
+          substituted: `2(${Etext})(${Itext})/(${Ltext})`,
+          result: dim(project, 2 * E * I / L, 1, 1), unit: dimensionalUnit(project, 1, 1),
+        },
       );
     }
     blocks.push({
@@ -894,9 +926,19 @@ export const stepSubstitutions = (context: ReportContext, stepId: string): Subst
   }
 };
 
-/** First substituted relation of a step, for surfaces with room for exactly one. */
-export const leadSubstitution = (context: ReportContext, stepId: string): string | undefined =>
-  stepSubstitutions(context, stepId).flatMap((block) => block.equations)[0];
+/**
+ * First substituted relation of a step, for surfaces with room for exactly one.
+ *
+ * Flattened back to a single line: a caller with room for one relation has no room for a
+ * three-row aligned block.
+ */
+export const leadSubstitution = (context: ReportContext, stepId: string): string | undefined => {
+  const first = stepSubstitutions(context, stepId).flatMap((block) => block.equations)[0];
+  if (first === undefined) return undefined;
+  const worked = asWorkedEquation(first);
+  const tail = [worked.substituted, worked.result].filter((part) => part !== undefined).join(' = ');
+  return tail ? `${worked.lhs} = ${tail}${worked.result !== undefined && worked.unit ? ` ${worked.unit}` : ''}` : worked.lhs;
+};
 
 /** Dimensions of a diagram quantity as force^a · length^b. */
 const quantityDimension = (quantity: DiagramQuantity): readonly [number, number] => quantity === 'moment' ? [1, 1] : [1, 0];

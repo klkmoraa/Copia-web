@@ -11,13 +11,30 @@ describe('translateExpression', () => {
     expect(translateExpression('ΔX ≤ Σ λ ± ∂ω')).toBe('\\Delta X\\ \\le\\ \\Sigma\\ \\lambda\\ \\pm\\ \\partial \\omega');
   });
 
-  it('stacks an implicit a/b word as \\frac, leaving a spaced division alone', () => {
-    expect(translateExpression('dθ/dx = M/EI')).toBe('\\frac{d\\theta}{dx}\\ =\\ \\frac{M}{EI}');
+  it('stacks an implicit a/b word as \\dfrac, leaving a spaced division alone', () => {
+    expect(translateExpression('dθ/dx = M/EI')).toBe('\\dfrac{d\\theta}{dx}\\ =\\ \\dfrac{M}{EI}');
     expect(translateExpression('||r|| / max(1, ||F||)')).toBe('||r||\\ /\\ max(1,\\ ||F||)');
   });
 
+  it('stacks a quotient whose operands are parenthesised, which is most of the real arithmetic', () => {
+    // The old rule refused any word carrying a bracket, so the quotients the method sections
+    // actually print stayed as an inline slash. The wrapping brackets are dropped: inside a
+    // stacked fraction the rule already groups each operand.
+    expect(translateExpression('(2 · 45.0)/(6.0)')).toBe('\\dfrac{2\\ \\cdot\\ 45.0}{6.0}');
+    expect(translateExpression('(0.003)(2e+8)/(5.0)')).toBe('\\dfrac{(0.003)(2e+8)}{5.0}');
+  });
+
+  it('leaves a word alone when the division it carries is ambiguous or nested', () => {
+    // `a/b/c` does not associate on its own, and a slash inside a bracket is not the division
+    // that governs the word — guessing either would silently restructure the reader's formula.
+    expect(translateExpression('a/b/c')).toBe('a/b/c');
+    expect(translateExpression('f(a/b)')).toBe('f(a/b)');
+  });
+
   it('wraps a radical whose argument spans a space, matching the engine\'s own equation', () => {
-    expect(translateExpression('L = √(ΔX² + ΔY²)')).toBe('L\\ = \\sqrt{\\Delta X^{2}\\ +\\ \\Delta Y^{2}}');
+    // The space before the radical is `\\ `, not a bare ' ': TeX math mode ignores raw
+    // whitespace, so the old output butted `=` straight against the root sign.
+    expect(translateExpression('L = √(ΔX² + ΔY²)')).toBe('L\\ =\\ \\sqrt{\\Delta X^{2}\\ +\\ \\Delta Y^{2}}');
   });
 
   it('joins multi-word prose labels with \\ instead of a bare space, so words stay visibly separated', () => {

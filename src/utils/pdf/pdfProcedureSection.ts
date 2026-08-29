@@ -14,6 +14,7 @@ import { drawMethodSection } from './pdfMethodSection';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import { stepSubstitutions, type SubstitutionBlock } from './pdfSubstitution';
+import { asWorkedEquation, drawWorkedEquation, measureWorkedEquation } from './pdfEquation';
 import { TYPE } from './pdfTheme';
 import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
@@ -28,9 +29,10 @@ const drawSubstitutions = (context: ReportContext, blocks: readonly Substitution
   const { layout } = context;
   for (const block of blocks) {
     if (block.caption) layout.text(block.caption, TYPE.small, layout.fonts.bold, layout.palette.ink, 12);
-    for (const equation of block.equations) {
-      layout.ensure(layout.measureMathBlock(equation, TYPE.body, 16));
-      layout.y -= layout.drawMathBlockAt(equation, TYPE.body, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
+    for (const input of block.equations) {
+      const equation = asWorkedEquation(input);
+      layout.ensure(measureWorkedEquation(layout, equation, TYPE.body, 16));
+      layout.y -= drawWorkedEquation(layout, equation, TYPE.body, 16, layout.palette.ink, `(${layout.nextEquationNumber()})`);
     }
   }
 };

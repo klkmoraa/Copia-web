@@ -15,6 +15,7 @@ import {
 import { analyzeProject } from '../../engine/solver';
 import { createPortablePayload } from '../portablePayload';
 import { createModelIndex, type ReportContext } from './reportContext';
+import { asWorkedEquation } from './pdfEquation';
 import {
   equilibriumSums,
   freeBodyEquations,
@@ -40,8 +41,20 @@ const buildContext = async (project: ProjectModel): Promise<ReportContext> => {
   };
 };
 
+/**
+ * Every relation of a step as one line each.
+ *
+ * A block may now carry a `WorkedEquation` — the rule, its substitution and the result on three
+ * aligned rows — so the assertions below, which are about *which numbers* were substituted,
+ * read the substituted row rather than the shape of the block.
+ */
 const equations = (context: ReportContext, stepId: string): string[] =>
-  stepSubstitutions(context, stepId).flatMap((block) => block.equations);
+  stepSubstitutions(context, stepId).flatMap((block) => block.equations).map((input) => {
+    const worked = asWorkedEquation(input);
+    const tail = [worked.substituted, worked.result].filter((part) => part !== undefined).join(' = ');
+    const unit = worked.result !== undefined && worked.unit ? ` ${worked.unit}` : '';
+    return tail ? `${worked.lhs} = ${tail}${unit}` : worked.lhs;
+  });
 
 describe('ecuaciones sustituidas de la memoria', () => {
   it('escribe la geometría con las coordenadas reales, no con Xⱼ − Xᵢ', async () => {
@@ -58,8 +71,10 @@ describe('ecuaciones sustituidas de la memoria', () => {
     const context = await buildContext(createHibbelerStyleDiagramPractice());
     const stiffness = equations(context, 'stiffness');
     // E·A/L = 2e8 · 0.01 / 8 = 250000 kN/m, and the same figure the annex's own K reports.
-    expect(stiffness).toContain('EA/L = 2e+8 · 0.01 / 8 = 250000 kN/m');
-    expect(stiffness.some((equation) => equation.startsWith('12EI/L³ = 12 · 2e+8 · 8e-5 / 8³ ='))).toBe(true);
+    // Each operand is bracketed so the quotient sets as one stacked fraction rather than as a
+    // slash in running text; the rule itself (`EA/L`) rides along as the block's symbolic row.
+    expect(stiffness).toContain('k_axial = (2e+8)(0.01)/(8) = 250000 kN/m');
+    expect(stiffness.some((equation) => equation.startsWith('k_v = 12(2e+8)(8e-5)/(8)³ ='))).toBe(true);
   });
 
   it('localiza el extremo del momento resolviendo V = 0 con los números del tramo', async () => {
@@ -136,9 +151,9 @@ describe('ecuaciones sustituidas de la memoria', () => {
     const context = await buildContext(createHibbelerTributaryBeam());
     expect(context.project.settings.units).toBe('kip-ft');
     const stiffness = equations(context, 'stiffness');
-    const axial = stiffness.find((equation) => equation.startsWith('EA/L'));
+    const axial = stiffness.find((equation) => equation.startsWith('k_axial'));
     expect(axial).toBeDefined();
-    const [, left, right] = /EA\/L = (\S+) · (\S+) \/ (\S+) = (\S+) kip\/ft/.exec(axial ?? '') ?? [];
+    const [, left, right] = /k_axial = \((\S+?)\)\((\S+?)\)\/\((\S+?)\) = (\S+) kip\/ft/.exec(axial ?? '') ?? [];
     expect(left).toBeDefined();
     expect(right).toBeDefined();
     expect(axial).toMatch(/kip\/ft$/);

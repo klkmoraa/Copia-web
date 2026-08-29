@@ -18,6 +18,7 @@ import {
 import { analyzeProject } from '../../engine/solver';
 import { createCalculationReport } from '../calculationPdf';
 import { inspectPdf } from '../pdfImport';
+import type { CalculationReportOptions } from './reportContext';
 import type { ProjectModel, ProjectSettings } from '../../types';
 
 const FRAME = { type: 'frame' as const, E: 200e6, A: 0.01, I: 8e-5 };
@@ -119,12 +120,16 @@ const cases: Array<[Method, () => ProjectModel, RegExp]> = [
   ['cantilever-method', lateralPortal, /Método del Voladizo/],
 ];
 
-const report = async (build: () => ProjectModel, method: Method): Promise<string> => {
+const report = async (
+  build: () => ProjectModel,
+  method: Method,
+  options: CalculationReportOptions = {},
+): Promise<string> => {
   const base = build();
   const project: ProjectModel = { ...base, settings: { ...base.settings, solutionMethod: method } };
   const analysis = analyzeProject(project);
   expect(analysis.success).toBe(true);
-  const artifact = await createCalculationReport(project, analysis, { generatedAt: '2026-07-16T12:00:00.000Z' });
+  const artifact = await createCalculationReport(project, analysis, { generatedAt: '2026-07-16T12:00:00.000Z', ...options });
   return (await inspectPdf(artifact.bytes)).text.replace(/\s+/g, ' ');
 };
 
@@ -138,6 +143,22 @@ describe('sección 5: cada método desarrolla sus propios números', () => {
       expect(text).toMatch(/\(1\)/);
       // And the generic procedure never ran in its place.
       expect(text).not.toMatch(/5\. Procedimiento y cálculos/);
+    }, 120_000);
+
+    it(`${method} dibuja el cuerpo libre de cada paso, y lo suelta si el lector lo apaga`, async () => {
+      // Every method now draws its own free bodies — one per cut, joint, storey, span or
+      // stretch. The caption is real PDF text even though the drawing beside it is vector
+      // geometry, so a numbered `Figura` inside the procedure part is the evidence that the
+      // scene was drawn at all.
+      const [drawn, plain] = await Promise.all([
+        report(build, method),
+        report(build, method, { includeMethodFreeBodies: false }),
+      ]);
+      const captions = (text: string) => (text.match(/Figura \d+ -/g) ?? []).length;
+      expect(captions(drawn)).toBeGreaterThan(captions(plain));
+      // Dropping the drawings never drops the arithmetic they illustrate.
+      expect(plain).toMatch(marker);
+      expect(plain).toMatch(/\(1\)/);
     }, 120_000);
   }
 

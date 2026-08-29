@@ -23,6 +23,20 @@ import { solveMethodOfSections, type MethodOfSectionsResult } from '../../analys
 import { solveMethodOfJoints, type MethodOfJointsResult } from '../../analysis-methods/methodOfJoints';
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
+import { drawFreeBodyScene, type FreeBodyScene } from './pdfFreeBody';
+import {
+  cantileverScenes,
+  castiglianoScenes,
+  conjugateBeamScenes,
+  doubleIntegrationScenes,
+  hardyCrossScenes,
+  jointScenes,
+  kaniScenes,
+  portalScenes,
+  sectionCutScenes,
+  threeMomentScenes,
+  virtualWorkScenes,
+} from './pdfMethodScenes';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import {
   agrees,
@@ -33,10 +47,36 @@ import {
   signedSum,
 } from './pdfSubstitution';
 import { pdfText } from './pdfGlyphs';
+import { asWorkedEquation, drawWorkedEquation, measureWorkedEquation, type EquationInput } from './pdfEquation';
 import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
 
 const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
+
+/** Height of a free-body figure. Tall enough for a truss, short enough that two share a page. */
+const SCENE_HEIGHT = 186;
+
+/**
+ * Draws the free bodies of one method step, or nothing when the reader dropped them.
+ *
+ * Every scene goes through `layout.figure`, so it is numbered, captioned and page-broken by the
+ * same primitive as every other drawing in the document — a method figure can be referred to
+ * from the prose exactly like the free-body diagram of part one.
+ */
+const drawScenes = (
+  context: ReportContext,
+  scenes: readonly FreeBodyScene[],
+  caption: (scene: FreeBodyScene, index: number) => string,
+): void => {
+  if (context.options.includeMethodFreeBodies === false) return;
+  for (const [index, scene] of scenes.entries()) {
+    context.layout.figure(
+      SCENE_HEIGHT,
+      (rect) => drawFreeBodyScene(context, rect, scene),
+      caption(scene, index),
+    );
+  }
+};
 
 /** `32.5 − 5x + 0.5x²` from coefficient array, in the global axis variable. */
 const expression = (coefficients: readonly number[], variable = 'x'): string => {
@@ -57,14 +97,23 @@ const expression = (coefficients: readonly number[], variable = 'x'): string => 
  * display equations. Every method section reaches for this, so that "the real calculation"
  * looks the same wherever the reader finds it.
  */
-const drawWorked = (context: ReportContext, caption: string | undefined, equations: readonly string[]): void => {
+const drawWorked = (context: ReportContext, caption: string | undefined, equations: readonly EquationInput[]): void => {
   if (!equations.length) return;
   const { layout } = context;
   if (caption) layout.text(caption, 7.9, layout.fonts.bold, layout.palette.ink, 12);
-  for (const equation of equations) {
-    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
-    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  for (const input of equations) {
+    const equation = asWorkedEquation(input);
+    layout.ensure(measureWorkedEquation(layout, equation, 8.4, 16));
+    layout.y -= drawWorkedEquation(layout, equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
   }
+};
+
+/** A single relation drawn the same way, for the sections that write one at a time. */
+const drawRelation = (context: ReportContext, equation: EquationInput): void => {
+  const { layout } = context;
+  const worked = asWorkedEquation(equation);
+  layout.ensure(measureWorkedEquation(layout, worked, 8.4, 16));
+  layout.y -= drawWorkedEquation(layout, worked, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
 };
 
 /**
@@ -84,24 +133,26 @@ const beamShearEquations = (
   context: ReportContext,
   beams: readonly ApproximateBeam[],
   lineLabel: (index: number) => string,
-): string[] => {
+): EquationInput[] => {
   const { project } = context;
   const scale = Math.max(1, ...beams.map((beam) => Math.abs(beam.shear)));
   return beams.flatMap((beam) => {
     if (!(beam.span > 0)) return [];
     const derived = 2 * beam.moment / beam.span;
     if (!agrees(Math.abs(derived), Math.abs(beam.shear), scale)) return [];
-    return [
-      `V(${lineLabel(beam.bayIndex)}–${lineLabel(beam.bayIndex + 1)}, planta ${beam.story})`
-      + ` = 2 · ${dimensionalFigure(project, Math.abs(beam.moment), 1, 1)}/${dimensionalFigure(project, beam.span, 0, 1)}`
-      + ` = ${dimensionalFigure(project, Math.abs(beam.shear), 1, 0, scale)} ${unitFor(project, 'force')}`,
-    ];
+    return [{
+      lhs: `V(${lineLabel(beam.bayIndex)}–${lineLabel(beam.bayIndex + 1)}, planta ${beam.story})`,
+      symbolic: '2M/L',
+      substituted: `2(${dimensionalFigure(project, Math.abs(beam.moment), 1, 1)})/(${dimensionalFigure(project, beam.span, 0, 1)})`,
+      result: dimensionalFigure(project, Math.abs(beam.shear), 1, 0, scale),
+      unit: unitFor(project, 'force'),
+    }];
   });
 };
 
 const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrationResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const scaleLabel = solution.uniformEI ? 'EI ' : '';
 
@@ -159,6 +210,11 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
       : 'La rigidez cambia entre tramos, así que EI no se puede factorizar: las expresiones son directamente θ(x) e y(x). La variable x se mide desde el extremo izquierdo de la viga.',
     8.3, fonts.regular, undefined, 8,
   );
+  drawScenes(
+    context,
+    doubleIntegrationScenes(context, solution),
+    (_scene, index) => `Tramo ${index + 1}: el corte del que sale M(x), la ecuación que las dos integraciones resuelven.`,
+  );
   for (const [index, segment] of solution.segments.entries()) {
     layout.ensure(58);
     layout.text(
@@ -170,8 +226,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
       `${scaleLabel}θ(x) = ${expression(segment.slope)}`,
       `${scaleLabel}y(x) = ${expression(segment.deflection)}`,
     ]) {
-      layout.ensure(layout.measureMathBlock(relation, 8.4, 20));
-      layout.y -= layout.drawMathBlockAt(relation, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+      drawRelation(context, relation);
     }
   }
 
@@ -246,7 +301,7 @@ const CONJUGATE_KIND_LABEL: Record<ConjugateSupportKind, string> = {
 
 const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const scaleLabel = solution.uniformEI ? 'EI ' : '';
 
@@ -303,6 +358,11 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
       : 'La rigidez cambia entre tramos, así que EI no se puede factorizar: las expresiones son directamente θ(x) e y(x). La variable x se mide desde el extremo izquierdo de la viga.',
     8.3, fonts.regular, undefined, 8,
   );
+  drawScenes(
+    context,
+    conjugateBeamScenes(context, solution),
+    (_scene, index) => `Tramo ${index + 1}: el corte del que sale M(x), la carga ficticia w* = M/EI de la viga conjugada.`,
+  );
   for (const [index, segment] of solution.segments.entries()) {
     layout.ensure(70);
     layout.text(
@@ -315,8 +375,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
       `${scaleLabel}θ(x) = V*(x) = ${expression(segment.conjugateShear)}`,
       `${scaleLabel}y(x) = M*(x) = ${expression(segment.conjugateMoment)}`,
     ]) {
-      layout.ensure(layout.measureMathBlock(relation, 8.4, 20));
-      layout.y -= layout.drawMathBlockAt(relation, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+      drawRelation(context, relation);
     }
   }
 
@@ -384,7 +443,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
 
 const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const momentUnit = unitFor(project, 'moment');
 
@@ -422,8 +481,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
       `Apoyo interior ${moments[k + 1]?.nodeId ?? k + 1}: los coeficientes van en 1/(${unitFor(project, 'force')}·${lengthUnit}) y los momentos en ${momentUnit}.`,
       7.9, fonts.bold, palette.ink, 12,
     );
-    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
-    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawRelation(context, equation);
   }
 
   layout.heading('5.1 Clasificación estática', 2);
@@ -478,6 +536,12 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
     { size: 7.8 },
   );
 
+  drawScenes(
+    context,
+    threeMomentScenes(context, solution),
+    (_scene, index) => `Vano ${index + 1}: aislado bajo sus propias cargas, con los momentos de apoyo que Clapeyron resolvió.`,
+  );
+
   layout.heading('5.4 Momento final por tramo', 2);
   layout.text(
     'El momento libre de cada vano, más la corrección lineal entre los momentos de apoyo que ya se '
@@ -492,8 +556,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
       8, fonts.bold, palette.ink, 8,
     );
     const expressionText = `M(x) = ${expression(segment.moment)}`;
-    layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
-    layout.y -= layout.drawMathBlockAt(expressionText, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawRelation(context, expressionText);
   }
 
   layout.heading('5.5 Verificación contra el análisis matricial', 2);
@@ -538,14 +601,19 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
       + `((${dimensionalFigure(project, entry.A, 0, 2)})(${dimensionalFigure(project, entry.E, 1, -2)}))`
     ));
     const shown = contributions.length > 8 ? [...terms, '...'] : terms;
-    const equation = `Δ = ${shown.join(' + ')} = ${dimensionalFigure(project, solution.narrated.total, 0, 1)} ${lengthUnit}`;
+    const equation = {
+      lhs: 'Δ',
+      symbolic: 'Σ nNL/AE',
+      substituted: shown.join(' + '),
+      result: dimensionalFigure(project, solution.narrated.total, 0, 1),
+      unit: lengthUnit,
+    };
     layout.text(
       `Nudo ${solution.narrated.nodeId}, componente ${componentLabel(solution.narrated.component)}:`
       + ` fuerzas en ${forceUnit}, longitudes en ${lengthUnit}, áreas en ${dimensionalUnit(project, 0, 2)}, E en ${dimensionalUnit(project, 1, -2)}.`,
       7.9, fonts.bold, palette.ink, 12,
     );
-    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
-    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawRelation(context, equation);
   }
 
   layout.heading('5.1 Desplazamientos en cada nudo libre', 2);
@@ -568,6 +636,14 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
       displayCell(project, entry.solverValue, 'length'),
     ]),
     { size: 7.8 },
+  );
+
+  drawScenes(
+    context,
+    virtualWorkScenes(context, solution),
+    (scene) => scene.title === 'sistema real'
+      ? 'Sistema real: la armadura bajo las cargas del proyecto, con la fuerza axial N de cada barra.'
+      : `Sistema virtual: la misma armadura con una única carga unitaria en ${solution.narrated.nodeId}, con la fuerza n de cada barra.`,
   );
 
   layout.heading(`5.2 Detalle por barra: ${solution.narrated.nodeId}, componente ${componentLabel(solution.narrated.component)}`, 2);
@@ -653,6 +729,14 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
     { size: 7.8 },
   );
 
+  drawScenes(
+    context,
+    castiglianoScenes(context, solution),
+    (scene) => scene.title === 'estructura primaria'
+      ? 'Estructura primaria: la armadura con las redundantes liberadas, con la fuerza N₀ de cada barra.'
+      : `${scene.title}: la incógnita que la condición de desplazamiento nulo en ese apoyo determina.`,
+  );
+
   layout.heading('5.3 Fuerza final en cada barra', 2);
   layout.text(
     'Fuerza en la estructura primaria bajo las cargas reales, más la contribución de cada '
@@ -711,7 +795,7 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
 
 const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const momentUnit = unitFor(project, 'moment');
 
@@ -764,9 +848,19 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
     if (!(total > 0)) continue;
     const stiffness = (value: number) => dimensionalFigure(project, value, 1, 2, total);
     drawWorked(context, `Apoyo interior ${span.rightNodeId}: rigideces en ${dimensionalUnit(project, 1, 2)}.`, [
-      `ΣK(${span.rightNodeId}) = ${stiffness(kLeft)} + ${stiffness(kRight)} = ${stiffness(total)}`,
-      `D(${span.leftNodeId}–${span.rightNodeId}) = ${stiffness(kLeft)}/${stiffness(total)} = ${number(kLeft / total, 6)}`,
-      `D(${right.leftNodeId}–${right.rightNodeId}) = ${stiffness(kRight)}/${stiffness(total)} = ${number(kRight / total, 6)}`,
+      {
+        lhs: `ΣK(${span.rightNodeId})`, symbolic: 'K_izq + K_der',
+        substituted: `${stiffness(kLeft)} + ${stiffness(kRight)}`, result: stiffness(total),
+        unit: dimensionalUnit(project, 1, 2),
+      },
+      {
+        lhs: `D(${span.leftNodeId}–${span.rightNodeId})`, symbolic: 'K_izq/ΣK',
+        substituted: `(${stiffness(kLeft)})/(${stiffness(total)})`, result: number(kLeft / total, 6),
+      },
+      {
+        lhs: `D(${right.leftNodeId}–${right.rightNodeId})`, symbolic: 'K_der/ΣK',
+        substituted: `(${stiffness(kRight)})/(${stiffness(total)})`, result: number(kRight / total, 6),
+      },
     ]);
   }
 
@@ -791,6 +885,12 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
     { size: 7.8 },
   );
 
+  drawScenes(
+    context,
+    hardyCrossScenes(context, solution),
+    (_scene, index) => `Vano ${index + 1}: los momentos de extremo ya convergidos, junto al empotramiento perfecto del que partió el reparto.`,
+  );
+
   layout.heading('5.3 Momento final por tramo', 2);
   layout.text(
     'El momento libre de cada vano —el que tendría como viga simplemente apoyada bajo sus '
@@ -805,8 +905,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
       8, fonts.bold, palette.ink, 8,
     );
     const expressionText = `M(x) = ${expression(segment.moment)}`;
-    layout.ensure(layout.measureMathBlock(expressionText, 8.4, 20));
-    layout.y -= layout.drawMathBlockAt(expressionText, 8.4, 20, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawRelation(context, expressionText);
   }
 
   layout.heading('5.4 Verificación contra el análisis matricial', 2);
@@ -824,7 +923,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
 
 const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
   const { layout, project } = context;
-  const { fonts, rgb, palette } = layout;
+  const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const momentUnit = unitFor(project, 'moment');
 
@@ -861,14 +960,21 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
       `Nudo ${nodeId}: rigideces K = EI/L en ${dimensionalUnit(project, 1, 2)}.`,
       7.9, fonts.bold, palette.ink, 12,
     );
-    const sumEquation = `ΣK(${nodeId}) = ${bars.map((bar) => stiffness(bar.k)).join(' + ')} = ${stiffness(total)}`;
-    layout.ensure(layout.measureMathBlock(sumEquation, 8.4, 16));
-    layout.y -= layout.drawMathBlockAt(sumEquation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+    drawRelation(context, {
+      lhs: `ΣK(${nodeId})`,
+      symbolic: 'Σ EI/L',
+      substituted: bars.map((bar) => stiffness(bar.k)).join(' + '),
+      result: stiffness(total),
+      unit: dimensionalUnit(project, 1, 2),
+    });
     for (const bar of bars) {
       const factor = -0.5 * (bar.k / total);
-      const equation = `μ(${bar.memberId}) = −½ · ${stiffness(bar.k)}/${stiffness(total)} = ${number(factor, 6)}`;
-      layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
-      layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+      drawRelation(context, {
+        lhs: `μ(${bar.memberId})`,
+        symbolic: '−½ (K_ij/ΣK_i)',
+        substituted: `−½ (${stiffness(bar.k)})/(${stiffness(total)})`,
+        result: number(factor, 6),
+      });
     }
   }
   layout.text(
@@ -908,6 +1014,12 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
       displayCell(project, member.solverMomentJ, 'moment'),
     ]),
     { size: 7 },
+  );
+
+  drawScenes(
+    context,
+    kaniScenes(context, solution),
+    (_scene, index) => `Barra ${solution.members[index]?.memberId ?? index + 1}: los momentos de extremo convergidos y el empotramiento perfecto de partida.`,
   );
 
   layout.heading('5.2 Verificación contra el análisis matricial', 2);
@@ -956,6 +1068,13 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
         displayCell(project, member.solverValue, 'force'),
       ]),
       { size: 7.6 },
+    );
+    // The cut itself, before its arithmetic: which side was kept, where the imaginary line
+    // runs, and the axial force each severed bar exerts on that side.
+    drawScenes(
+      context,
+      sectionCutScenes(context, { ...solution, cuts: [cut] }),
+      () => `Corte ${cutIndex + 1}: cuerpo libre de {${cut.keptNodeIds.join(', ')}} y las fuerzas de barra que el corte expone.`,
     );
     // The same equilibrium the cut was solved with, added up: each severed bar's force times
     // its own direction cosine, plus the reactions and loads of the retained nodes.
@@ -1021,6 +1140,11 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
         displayCell(project, member.solverValue, 'force'),
       ]),
       { size: 7.6 },
+    );
+    drawScenes(
+      context,
+      jointScenes(context, { ...solution, steps: [step] }),
+      () => `Nudo ${step.nodeId}: cuerpo libre del nudo con cada barra concurrente, su reacción y su carga.`,
     );
     // Every bar meeting this joint — the ones just solved and the ones already known — times
     // its direction cosine, plus the reaction and the load applied there: the two sums the
@@ -1108,6 +1232,14 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
       return `V(planta ${position + 1}) = ${signedSum(above.map((value) => dimensionalFigure(project, value, 1, 0, shearScale)))}`
         + ` = ${dimensionalFigure(project, shear, 1, 0, shearScale)} ${forceUnit}`;
     }),
+  );
+
+  drawScenes(
+    context,
+    portalScenes(context, solution),
+    (scene) => scene.title?.startsWith('planta') === true
+      ? `${scene.title}: corte horizontal por los puntos de inflexión, con el cortante de planta y lo que cada columna toma.`
+      : `${scene.title}: la columna aislada con su cortante y los momentos que ese cortante produce en sus extremos.`,
   );
 
   layout.heading('5.2 Columnas: cortante, momento y axial', 2);
@@ -1321,6 +1453,14 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
         + ` = ${displayCell(project, Math.abs(column.bottomMoment), 'moment')} ${momentUnit}`,
       ];
     }),
+  );
+
+  drawScenes(
+    context,
+    cantileverScenes(context, solution),
+    (scene) => scene.title?.startsWith('planta') === true
+      ? `${scene.title}: corte horizontal por los puntos de inflexión, con la resultante lateral y lo que cada columna toma.`
+      : `${scene.title}: la columna aislada con su cortante y los momentos que ese cortante produce en sus extremos.`,
   );
 
   layout.heading('5.2 Vigas: momento y cortante', 2);
