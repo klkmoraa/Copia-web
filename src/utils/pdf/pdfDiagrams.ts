@@ -10,15 +10,21 @@
 import type { AnalysisResult, DiagramQuantity } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { readCanvasViewSettings } from '../../features/view/canvasViewSettings';
-import { lerpPoint, memberAxis } from '../../graphics/structureGeometry';
+import { lerpPoint, memberAxis, modelBounds } from '../../graphics/structureGeometry';
 import {
   createProjection,
   drawArrow,
+  drawLeader,
   drawMemberLoads,
   drawNodeDot,
   drawSupportGlyph,
   type Point,
+  type Rect,
 } from './pdfScene';
+import { placeLabelBox } from './pdfSceneLayout';
+import { PathBuilder } from './pdfSurface';
+
+const clamp = (value: number, low: number, high: number): number => Math.min(Math.max(value, low), high);
 import { pdfText } from './pdfGlyphs';
 import {
   clearDisplay,
@@ -30,6 +36,34 @@ import {
 import type { PdfLayout } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
 import type { Tone } from './reportDocument';
+
+/**
+ * Room the global free-body diagram keeps for what hangs off the structure rather than being
+ * part of it: load arrows and their names above, support glyphs and reaction values below, node
+ * ids at the sides.
+ */
+const DCL_PADDING = { side: 46, top: 46, bottom: 46 } as const;
+
+/** How far an arrowhead stops short of the node it acts on, so the two stay tellable apart. */
+const NODE_DOT_CLEARANCE = 4.5;
+
+/**
+ * Figure height that makes the free-body diagram's plot as tall as the model is deep.
+ *
+ * A fixed height is what left this drawing floating in the middle of a mostly empty box: a
+ * straight beam spans nothing vertically, so centring it in a band sized for a two-dimensional
+ * frame put a line across the middle and white everywhere else. Matching the plot's proportion
+ * to the model's is the same rule `sceneFigureHeight` applies to the free-body scenes of the
+ * method — a beam asks for a wide, short figure and a portal for a tall one.
+ */
+export const globalDclHeight = (context: ReportContext, frameWidth: number): number => {
+  const { project } = context;
+  if (!project.nodes.length) return 150;
+  const { minX, maxX, minY, maxY } = modelBounds(project.nodes);
+  const plotWidth = Math.max(frameWidth - DCL_PADDING.side * 2, 1);
+  const ratio = (maxY - minY) / Math.max(maxX - minX, 1e-9);
+  return clamp(plotWidth * ratio + DCL_PADDING.top + DCL_PADDING.bottom, 128, 310);
+};
 
 /** Framed free-body diagram: geometry, supports, applied actions and optional reactions. */
 export const drawGlobalDcl = (
@@ -49,10 +83,10 @@ export const drawGlobalDcl = (
   const top = rect.y + rect.height;
   page.drawRectangle({ x: left, y: bottom, width: rect.width, height: rect.height, borderWidth: 0.5, borderColor: palette.rule, color: palette.paper });
   const projection = createProjection(project.nodes, {
-    left: left + 42,
-    right: right - 42,
-    bottom: bottom + 30,
-    top: top - 22,
+    left: left + DCL_PADDING.side,
+    right: right - DCL_PADDING.side,
+    bottom: bottom + DCL_PADDING.bottom,
+    top: top - DCL_PADDING.top,
   });
   const point = (nodeId: string): Point | undefined => {
     const node = index.node(nodeId);
@@ -74,7 +108,15 @@ export const drawGlobalDcl = (
     const factor = scenarioFactors[load.caseId] ?? 0;
     const location = point(load.nodeId);
     if (!location || factor === 0 || (load.fx === 0 && load.fy === 0)) continue;
-    drawArrow(layout, location, load.fx * factor, load.fy * factor, palette.load, 24);
+    // The head stops just clear of the node dot instead of on top of it. Centred on the dot it
+    // disappeared into it, and what was left read as a bare line leaving the drawing — which
+    // is the opposite of what an applied action should look like.
+    const magnitude = Math.hypot(load.fx, load.fy);
+    const tip = {
+      x: location.x - (load.fx / magnitude) * NODE_DOT_CLEARANCE,
+      y: location.y - (load.fy / magnitude) * NODE_DOT_CLEARANCE,
+    };
+    drawArrow(layout, tip, load.fx * factor, load.fy * factor, palette.load, 24);
   }
   drawMemberLoads(context, projection);
   if (includeReactions) {
@@ -92,14 +134,21 @@ export const drawGlobalDcl = (
         const tail = drawArrow(layout, location, component.fx, component.fy, reactionColor, 25);
         if (!tail) continue;
         const value = clearDisplay(project, component.value, 'force', reactionReference);
-        const labelX = component.fx === 0 ? tail.x + 4 : Math.min(location.x, tail.x) - 2;
+        const text = pdfText(`${component.label} ${value}`);
+        const textWidth = fonts.bold.widthOfTextAtSize(text, 6.2);
+        // A reaction at the last node used to write its value off the right edge of the frame.
+        // The label goes on whichever side of its own arrow has room, and is knocked out of
+        // whatever it crosses — a support glyph, most often — rather than moved away from it.
+        const preferred = component.fx === 0 ? tail.x + 4 : Math.min(location.x, tail.x) - 2;
+        const labelX = clamp(preferred, left + 3, right - textWidth - 3);
         const labelY = component.fy === 0 ? tail.y + 5 : tail.y + (component.value < 0 ? -8 : 4);
-        page.drawText(pdfText(`${component.label} ${value}`), {
+        page.drawText(text, {
           x: labelX,
           y: labelY,
           size: 6.2,
           font: fonts.bold,
           color: reactionColor,
+          halo: palette.paper,
         });
       }
     }
@@ -134,16 +183,20 @@ export const drawMemberDiagrams = (
     page.drawText(definition.label, { x: left, y: chartTop + 4, size: 7.3, font: fonts.bold, color: definition.color });
     page.drawRectangle({ x: left, y: chartBottom, width: chartWidth, height: chartHeight, borderColor: palette.rule, borderWidth: 0.5 });
     page.drawLine({ start: { x: left, y: baseline }, end: { x: left + chartWidth, y: baseline }, thickness: 0.45, color: palette.inkFaint });
-    for (let pointIndex = 1; pointIndex < result.diagram.length; pointIndex += 1) {
-      const previous = result.diagram[pointIndex - 1];
-      const current = result.diagram[pointIndex];
-      page.drawLine({
-        start: { x: left + previous.x / result.length * chartWidth, y: baseline + previous[definition.key] / maximum * (chartHeight * 0.40) },
-        end: { x: left + current.x / result.length * chartWidth, y: baseline + current[definition.key] / maximum * (chartHeight * 0.40) },
-        thickness: 1.2,
-        color: definition.color,
-      });
-    }
+    // The same area these quantities are drawn as at full page size. A strip small enough to
+    // read at a glance is exactly where a bare polyline loses its sign: the tint says which
+    // side of the axis the quantity is on before the reader has found the curve.
+    const curve = result.diagram.map((entry) => ({
+      x: left + entry.x / result.length * chartWidth,
+      y: baseline + entry[definition.key] / maximum * (chartHeight * 0.40),
+    }));
+    const strip = new PathBuilder()
+      .polyline(curve)
+      .lineTo(curve[curve.length - 1].x, baseline)
+      .lineTo(curve[0].x, baseline)
+      .close();
+    page.drawPath(strip, { fill: definition.color, opacity: 0.18 });
+    page.drawPolyline({ points: curve, thickness: 1.2, color: definition.color });
     // These legends printed raw base-unit numbers with no label, next to tables stating
     // the same quantities in the project's display units. Convert, collapse the noise
     // against the curve's own magnitude, and name the unit.
@@ -169,27 +222,53 @@ export const drawGlobalQuantityDiagram = (
   const { surface: page, fonts, palette } = layout;
   if (!project.nodes.length) return;
   const color = palette.quantity[quantity];
+  const maximum = Math.max(1e-12, ...analysis.memberResults.flatMap((result) => result.diagram.map((entry) => Math.abs(entry[quantity]))));
+  const side = readCanvasViewSettings(project).diagramSide === 'negative' ? -1 : 1;
+
+  /*
+   * How tall the ordinates may grow, and therefore how much of the frame the drawing uses.
+   *
+   * This was a flat `min(62, …)` cap, which is why a straight beam — a model of zero depth —
+   * printed a line across the middle of the box with a curve reaching a fifth of the way to
+   * either edge, and left two thirds of the figure white. The band is sized from what is
+   * actually left over once the structure has been projected: a deep frame keeps its ordinates
+   * modest because the geometry already fills the box, and a flat beam is allowed to spend the
+   * room nothing else wants.
+   */
+  // The margins the drawing keeps for what is not the drawing: the legend at the foot, the
+  // small-caps tag at the head, the node ids at the sides. They were 58/52/48 — sized when the
+  // governing values were parked in a band along the top and bottom rather than placed beside
+  // the ordinates they name — and between them they gave a third of the figure away.
+  const chrome = { side: 44, bottom: 34, top: 18 };
+  const plotHeight = Math.max(1, height - chrome.bottom - chrome.top);
+  const { minY, maxY } = modelBounds(project.nodes);
+  const plotWidth = Math.max(1, width - chrome.side * 2);
+  const { minX, maxX } = modelBounds(project.nodes);
+  const modelScale = Math.min(plotWidth / Math.max(maxX - minX, 1), plotHeight / Math.max(maxY - minY, 1));
+  const modelDepth = (maxY - minY) * modelScale;
+  const amplitude = clamp((plotHeight - modelDepth) / 2 - 6, 30, 96);
+
   const projection = createProjection(project.nodes, {
-    left: left + 58,
-    right: left + width - 58,
-    bottom: bottom + 52,
-    top: bottom + height - 48,
+    left: left + chrome.side,
+    right: left + width - chrome.side,
+    bottom: bottom + chrome.bottom,
+    top: bottom + height - chrome.top,
   });
   const modelPoint = (xValue: number, yValue: number) => projection.at(xValue, yValue);
-  const maximum = Math.max(1e-12, ...analysis.memberResults.flatMap((result) => result.diagram.map((entry) => Math.abs(entry[quantity]))));
-  const amplitude = Math.min(62, Math.max(34, Math.min(width, height) * 0.18));
-  const side = readCanvasViewSettings(project).diagramSide === 'negative' ? -1 : 1;
-  const labelCandidates: Array<{ value: number; x: number; y: number; memberId: string; station: number }> = [];
+  const labelCandidates: Array<{ value: number; anchor: Point; memberId: string; station: number }> = [];
+
   for (const member of project.members) {
     const ni = index.node(member.i);
     const nj = index.node(member.j);
     if (!ni || !nj) continue;
     const start = modelPoint(ni.x, ni.y); const end = modelPoint(nj.x, nj.y);
-    page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3.2 : 2.2, color: palette.inkSoft });
     const result = index.memberResult(member.id);
     const axis = memberAxis(member, ni, nj);
     const totalLength = axis.length;
-    if (!result || result.diagram.length < 2 || totalLength <= 0 || member.type === 'rigid') continue;
+    if (!result || result.diagram.length < 2 || totalLength <= 0 || member.type === 'rigid') {
+      page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3.2 : 2.2, color: palette.inkSoft });
+      continue;
+    }
     const normal = axis.normal;
     const startOffset = result.startOffset ?? member.rigidOffsetI ?? 0;
     const diagramPoints = result.diagram.map((entry) => {
@@ -198,31 +277,74 @@ export const drawGlobalQuantityDiagram = (
       const diagramOffset = side * entry[quantity] / maximum * amplitude;
       return { entry, base, curve: { x: base.x + normal.x * diagramOffset, y: base.y + normal.y * diagramOffset } };
     });
-    const stride = Math.max(1, Math.floor(diagramPoints.length / 18));
+
+    // The area, filled. Every diagram in this report used to be a fringe of hatch lines to the
+    // member axis, because the previous renderer could not fill an arbitrary shape — so a
+    // quantity that *is* an area was drawn as a comb. The tint is light enough that the
+    // ordinates, the member and the labels over it all stay readable.
+    const area = new PathBuilder()
+      .polyline(diagramPoints.map((item) => item.curve))
+      .lineTo(diagramPoints[diagramPoints.length - 1].base.x, diagramPoints[diagramPoints.length - 1].base.y)
+      .lineTo(diagramPoints[0].base.x, diagramPoints[0].base.y)
+      .close();
+    page.drawPath(area, { fill: color, opacity: 0.18 });
+
+    // Ordinates: the reading marks a technical drawing keeps even over a filled area, because
+    // they are what let a value be measured off the page rather than guessed from the tint.
+    const stride = Math.max(1, Math.floor(diagramPoints.length / 14));
     diagramPoints.forEach((item, pointIndex) => {
-      if (pointIndex % stride === 0 || pointIndex === diagramPoints.length - 1) {
-        page.drawLine({ start: item.base, end: item.curve, thickness: 0.45, color, opacity: 0.48 });
-      }
-      if (pointIndex > 0) page.drawLine({ start: diagramPoints[pointIndex - 1].curve, end: item.curve, thickness: 1.55, color });
+      if (pointIndex % stride !== 0 && pointIndex !== diagramPoints.length - 1) return;
+      page.drawLine({ start: item.base, end: item.curve, thickness: 0.4, color, opacity: 0.55 });
     });
+
+    // The member goes over its own area, not under it: the axis is the datum every ordinate is
+    // measured from, so it has to stay the darkest line in the figure.
+    page.drawLine({ start, end, thickness: 2.2, color: palette.inkSoft });
+    page.drawPolyline({ points: diagramPoints.map((item) => item.curve), thickness: 1.55, color });
+
     const critical = result.criticalPoints.filter((point) => point.quantity === quantity).sort((a, b) => Math.abs(b.value) - Math.abs(a.value))[0];
     if (critical) {
       const ratio = Math.min(1, Math.max(0, (startOffset + critical.x) / totalLength));
       const base = lerpPoint(start, end, ratio);
       const diagramOffset = side * critical.value / maximum * amplitude;
-      labelCandidates.push({ value: critical.value, x: base.x + normal.x * diagramOffset, y: base.y + normal.y * diagramOffset, memberId: member.id, station: critical.x });
+      labelCandidates.push({
+        value: critical.value,
+        anchor: { x: base.x + normal.x * diagramOffset, y: base.y + normal.y * diagramOffset },
+        memberId: member.id,
+        station: critical.x,
+      });
     }
   }
+
   for (const node of project.nodes) {
     drawNodeDot(layout, modelPoint(node.x, node.y), node.id, palette.ink, 3.2, 6.4);
   }
-  labelCandidates.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 6).forEach((candidate, labelIndex) => {
+
+  /*
+   * The governing values, each beside the ordinate it belongs to.
+   *
+   * They used to be nudged up or down by a fixed amount and clamped into the frame, which on a
+   * flat beam parked them all in a column that named nothing. Now each label is placed clear of
+   * the ones already down, a dot marks the peak it reports, and a leader runs back to it when
+   * the label could not sit right beside it — the same vocabulary the free-body scenes use.
+   */
+  const taken: Rect[] = [];
+  labelCandidates.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 6).forEach((candidate) => {
     const value = clearDisplay(project, candidate.value, quantityUnit(quantity), maximum);
-    const station = display(project, candidate.station, 'length');
-    const label = `${candidate.memberId}: ${value} @ ${station}`;
-    const labelY = Math.min(bottom + height - 28, Math.max(bottom + 18, candidate.y + (labelIndex % 2 === 0 ? 8 : -12)));
-    page.drawText(pdfText(label), { x: Math.min(left + width - 130, Math.max(left + 8, candidate.x + 5)), y: labelY, size: 6.2, font: fonts.bold, color });
+    const label = pdfText(`${candidate.memberId}: ${value} @ ${display(project, candidate.station, 'length')}`);
+    const size = 6.2;
+    const box = { width: fonts.bold.widthOfTextAtSize(label, size), height: size };
+    const placed = placeLabelBox(
+      { text: label, width: box.width, height: box.height, anchor: candidate.anchor, direction: { x: 0, y: side }, gap: 9 },
+      taken,
+      { x: left + 6, y: bottom + 26, width: width - 12, height: height - 34 },
+    );
+    taken.push({ ...placed.box, x: placed.box.x - 2, width: placed.box.width + 4 });
+    page.drawCircle({ x: candidate.anchor.x, y: candidate.anchor.y, size: 1.7, color });
+    if (placed.leader) drawLeader(layout, { x: placed.box.x + placed.box.width / 2, y: placed.box.y - 1.5 }, placed.leader, color);
+    page.drawText(label, { x: placed.box.x, y: placed.box.y, size, font: fonts.bold, color, halo: palette.paper });
   });
+
   page.drawLine({ start: { x: left + 14, y: bottom + 20 }, end: { x: left + 42, y: bottom + 20 }, thickness: 1.7, color });
   page.drawText(pdfText(`${quantitySymbol(quantity)} positivo según los ejes locales de cada miembro`), { x: left + 50, y: bottom + 17, size: 6.8, font: fonts.regular, color: palette.inkSoft });
 };

@@ -13,7 +13,7 @@
 import type { DiagramQuantity } from '../../types';
 import { resolveNumericQualityState } from '../../engine/reliability';
 import { clearCell, clearDisplay, clearNumber, display, unitFor } from './pdfFormat';
-import { drawGlobalDcl } from './pdfDiagrams';
+import { drawGlobalDcl, globalDclHeight } from './pdfDiagrams';
 import { equilibriumSums } from './pdfSubstitution';
 import { TYPE } from './pdfTheme';
 import type { PdfTableColumn } from './pdfBuilder';
@@ -84,7 +84,7 @@ export const drawSummaryPart = (context: ReportContext): void => {
   ]);
 
   layout.figure(
-    206,
+    globalDclHeight(context, layout.contentWidth),
     (rect) => drawGlobalDcl(context, rect, true),
     'Diagrama de cuerpo libre: geometría, apoyos, acciones aplicadas y reacciones obtenidas.',
   );

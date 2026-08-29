@@ -24,6 +24,7 @@ import {
 } from '../../graphics/structureGeometry';
 import { number } from './pdfFormat';
 import { pdfText } from './pdfGlyphs';
+import { PathBuilder, arcOps } from './pdfSurface';
 import { TYPE } from './pdfTheme';
 import type { PdfLayout } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
@@ -110,6 +111,37 @@ export const createFocusProjection = (
   };
 };
 
+/**
+ * A solid arrowhead pointing along `unit`, with its tip at `at`. Returns where the shaft should
+ * stop, which is just inside the head so no stroke pokes through its point.
+ *
+ * The head is a filled triangle. It used to be two barb strokes meeting at the tip — an open
+ * `V` — because the previous renderer's drawing API could not fill an arbitrary shape; at the
+ * sizes these drawings use, that read as noise rather than as a direction. A closed head is
+ * also what every technical drawing standard specifies.
+ */
+export const arrowHead = (
+  layout: PdfLayout,
+  at: Point,
+  unit: Point,
+  color: Tone,
+  thickness: number,
+): Point => {
+  const length = Math.max(4.4, thickness * 3.9);
+  const half = length * 0.36;
+  const normal = { x: -unit.y, y: unit.x };
+  const base = { x: at.x - unit.x * length, y: at.y - unit.y * length };
+  const head = new PathBuilder()
+    .moveTo(at.x, at.y)
+    .lineTo(base.x + normal.x * half, base.y + normal.y * half)
+    .lineTo(base.x - normal.x * half, base.y - normal.y * half)
+    .close();
+  // Mitre the head's own corners: a round join would blunt the point the arrow is made of.
+  layout.surface.drawPath(head, { fill: color, join: 0 });
+  // Stop the shaft a whisker short of the base so the two never disagree about the edge.
+  return { x: at.x - unit.x * length * 0.92, y: at.y - unit.y * length * 0.92 };
+};
+
 /** Arrow head-first at `location`; returns the tail, where labels are anchored. */
 export const drawArrow = (
   layout: PdfLayout,
@@ -122,13 +154,10 @@ export const drawArrow = (
 ): Point | undefined => {
   const magnitude = Math.hypot(fx, fy);
   if (!(magnitude > 1e-12)) return undefined;
-  const dx = fx / magnitude * length;
-  const dy = fy / magnitude * length;
-  const tail = { x: location.x - dx, y: location.y - dy };
-  const page = layout.surface;
-  page.drawLine({ start: tail, end: location, thickness, color });
-  page.drawLine({ start: location, end: { x: location.x - dx * 0.30 - dy * 0.15, y: location.y - dy * 0.30 + dx * 0.15 }, thickness: thickness * 0.87, color });
-  page.drawLine({ start: location, end: { x: location.x - dx * 0.30 + dy * 0.15, y: location.y - dy * 0.30 - dx * 0.15 }, thickness: thickness * 0.87, color });
+  const unit = { x: fx / magnitude, y: fy / magnitude };
+  const tail = { x: location.x - unit.x * length, y: location.y - unit.y * length };
+  const shaftEnd = arrowHead(layout, location, unit, color, thickness);
+  layout.surface.drawLine({ start: tail, end: shaftEnd, thickness, color });
   return tail;
 };
 
@@ -148,8 +177,9 @@ export const drawDashedLine = (
  * paper. `sign > 0` turns counter-clockwise, which is the positive sense of the model's own
  * `Mz`, so the drawing and the number never disagree.
  *
- * The mark vocabulary carries no arc, so the arc is a polyline — at this radius and this
- * segment count the facets are well under the line width.
+ * A real arc, in cubic Béziers. It was twenty-four straight segments before, which faceted
+ * visibly on the larger symbols: at a 15 pt radius each chord fell ~0.13 pt short of the true
+ * curve, a fifth of the hairline it was drawn with.
  */
 export const drawMomentArc = (
   layout: PdfLayout,
@@ -159,42 +189,26 @@ export const drawMomentArc = (
   color: Tone,
   thickness = 1.1,
 ): Point => {
-  const page = layout.surface;
   const direction = sign >= 0 ? 1 : -1;
   const from = Math.PI * 0.25;
   const sweep = Math.PI * 1.35;
-  const steps = 24;
+  const endAngle = from + direction * sweep;
   const at = (angle: number): Point => ({
     x: centre.x + radius * Math.cos(angle),
     y: centre.y + radius * Math.sin(angle),
   });
-  let previous = at(from);
-  let last = previous;
-  for (let step = 1; step <= steps; step += 1) {
-    const angle = from + direction * sweep * (step / steps);
-    const point = at(angle);
-    page.drawLine({ start: previous, end: point, thickness, color });
-    previous = point;
-    last = point;
-  }
+
+  // The arc stops short of the tip so the stroke ends under the head rather than through it.
+  const headLength = Math.max(4.4, thickness * 3.9);
+  const backOff = (headLength * 0.92) / Math.max(radius, 1e-6);
+  const arc = new PathBuilder();
+  arc.ops.push(...arcOps(centre, radius, from, endAngle - direction * backOff));
+  layout.surface.drawPath(arc, { stroke: color, thickness });
+
   // Head tangent to the arc at its leading end: rotating the radius by a quarter turn in the
   // direction of travel is the tangent, which is what makes the arrow read as a rotation.
-  const endAngle = from + direction * sweep;
-  const tangent = { x: -Math.sin(endAngle) * direction, y: Math.cos(endAngle) * direction };
-  const head = 4.6;
-  const normal = { x: -tangent.y, y: tangent.x };
-  page.drawLine({
-    start: last,
-    end: { x: last.x - tangent.x * head + normal.x * head * 0.5, y: last.y - tangent.y * head + normal.y * head * 0.5 },
-    thickness,
-    color,
-  });
-  page.drawLine({
-    start: last,
-    end: { x: last.x - tangent.x * head - normal.x * head * 0.5, y: last.y - tangent.y * head - normal.y * head * 0.5 },
-    thickness,
-    color,
-  });
+  const last = at(endAngle);
+  arrowHead(layout, last, { x: -Math.sin(endAngle) * direction, y: Math.cos(endAngle) * direction }, color, thickness);
   return last;
 };
 
@@ -555,7 +569,9 @@ export const drawDimension = (
     width,
     height: size,
   };
-  page.drawText(label, { x: box.x, y: box.y, size, font: layout.fonts.regular, color });
+  // The value sits on its own dimension line, so it is knocked out of it: that is exactly what
+  // a technical drawing does, and it is why the line may run edge to edge instead of breaking.
+  page.drawText(label, { x: box.x, y: box.y, size, font: layout.fonts.regular, color, halo: layout.palette.paper });
   return box;
 };
 
@@ -667,17 +683,24 @@ export const drawPolynomialCurve = (
     return { base, curve: { x: base.x + normal.x * rise, y: base.y + normal.y * rise } };
   };
 
-  let previous = pointAt(samples[0]);
-  for (const sample of samples.slice(1)) {
-    const point = pointAt(sample);
-    if (options.fill) {
-      // Vertical hatch to the baseline: the area is what the method integrates, so it is shown
-      // as an area rather than as an outline.
-      page.drawLine({ start: point.base, end: point.curve, thickness: HAIRLINE, color, opacity: 0.28 });
-    }
-    page.drawLine({ start: previous.curve, end: point.curve, thickness: options.thickness ?? 1.3, color });
-    previous = point;
+  const placed = samples.map(pointAt);
+  if (options.fill) {
+    // A real filled region between the curve and its baseline. It used to be a comb of hairlines
+    // to the baseline, because the previous renderer could not fill an arbitrary shape — and a
+    // comb is not what the method integrates. The tint is light enough that the ordinates and
+    // the labels over it stay readable.
+    const area = new PathBuilder()
+      .polyline(placed.map((item) => item.curve))
+      .lineTo(placed[placed.length - 1].base.x, placed[placed.length - 1].base.y)
+      .lineTo(placed[0].base.x, placed[0].base.y)
+      .close();
+    page.drawPath(area, { fill: color, opacity: 0.16 });
   }
+  page.drawPolyline({
+    points: placed.map((item) => item.curve),
+    thickness: options.thickness ?? 1.3,
+    color,
+  });
   return { peak: peakSample.value, peakAt: peakSample.x };
 };
 
@@ -694,19 +717,15 @@ export const drawIsolationBoundary = (
   radius: number,
   color: Tone,
 ): void => {
-  // There is no dashed-circle mark, so the circle is a dashed polygon; at this radius the
-  // facets are well under the line width.
-  const steps = 40;
-  const dash = 2;
-  for (let step = 0; step < steps; step += 1) {
-    if (step % dash === 1) continue;
-    const from = (step / steps) * Math.PI * 2;
-    const to = ((step + 1) / steps) * Math.PI * 2;
-    layout.surface.drawLine({
-      start: { x: centre.x + radius * Math.cos(from), y: centre.y + radius * Math.sin(from) },
-      end: { x: centre.x + radius * Math.cos(to), y: centre.y + radius * Math.sin(to) },
-      thickness: HAIRLINE + 0.2,
-      color,
-    });
-  }
+  // One dashed circle. It was forty chords with every other one omitted, which put the gaps at
+  // fixed angles rather than at a fixed arc length — so the dashes visibly crowded on a small
+  // boundary and spread on a large one.
+  layout.surface.drawCircle({
+    x: centre.x,
+    y: centre.y,
+    size: radius,
+    borderColor: color,
+    borderWidth: HAIRLINE + 0.2,
+    dashArray: [3.4, 2.6],
+  });
 };

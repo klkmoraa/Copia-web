@@ -422,6 +422,15 @@ const shift = (mark: SceneMark, dy: number): SceneMark => {
       return { ...mark, from: { x: mark.from.x, y: mark.from.y + dy }, to: { x: mark.to.x, y: mark.to.y + dy } };
     case 'polyline':
       return { ...mark, points: mark.points.map((point) => ({ x: point.x, y: point.y + dy })) };
+    case 'path':
+      return {
+        ...mark,
+        d: mark.d.map((op) => op.o === 'z'
+          ? op
+          : op.o === 'c'
+            ? { ...op, y1: op.y1 + dy, y2: op.y2 + dy, y: op.y + dy }
+            : { ...op, y: op.y + dy }),
+      };
     case 'rect':
       return { ...mark, rect: { ...mark.rect, y: mark.rect.y + dy } };
     case 'circle':

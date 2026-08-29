@@ -11,7 +11,7 @@
  * because the point of this seam is that `pdfScene.ts` and its callers kept their geometry
  * unchanged through the migration — only where the marks land changed.
  */
-import type { FaceName, Rect, SceneMark, Tone } from './reportDocument';
+import type { FaceName, LineCap, LineJoin, PathOp, Rect, SceneMark, Tone } from './reportDocument';
 import { widthOfTextAtSize, type StandardFontName } from './standardFontWidths';
 
 export interface Point {
@@ -58,6 +58,7 @@ export interface LineOptions {
   color: Tone;
   dashArray?: readonly number[];
   opacity?: number;
+  cap?: LineCap;
 }
 
 export interface TextOptions {
@@ -66,6 +67,29 @@ export interface TextOptions {
   size: number;
   font?: ReportFont;
   color: Tone;
+  align?: 'left' | 'right';
+  /** Knock the glyphs out of what they sit on, so a value over its own curve stays readable. */
+  halo?: Tone;
+}
+
+export interface PolylineOptions {
+  points: readonly Point[];
+  thickness?: number;
+  color: Tone;
+  dashArray?: readonly number[];
+  opacity?: number;
+  cap?: LineCap;
+  join?: LineJoin;
+}
+
+export interface PathOptions {
+  fill?: Tone;
+  stroke?: Tone;
+  thickness?: number;
+  dashArray?: readonly number[];
+  opacity?: number;
+  cap?: LineCap;
+  join?: LineJoin;
 }
 
 export interface RectangleOptions {
@@ -87,8 +111,88 @@ export interface CircleOptions {
   color?: Tone;
   borderColor?: Tone;
   borderWidth?: number;
+  dashArray?: readonly number[];
   opacity?: number;
 }
+
+/**
+ * Builds one path, in figure-local points.
+ *
+ * Cubic segments only: a caller with a quadratic raises it first, and a circular arc arrives as
+ * the Béziers `arcOps` derives. Keeping the curve maths on this side is deliberate — the
+ * renderer strokes and fills what it is given and decides no geometry of its own.
+ */
+export class PathBuilder {
+  readonly ops: PathOp[] = [];
+
+  moveTo(x: number, y: number): this {
+    this.ops.push({ o: 'm', x, y });
+    return this;
+  }
+
+  lineTo(x: number, y: number): this {
+    this.ops.push({ o: 'l', x, y });
+    return this;
+  }
+
+  curveTo(x1: number, y1: number, x2: number, y2: number, x: number, y: number): this {
+    this.ops.push({ o: 'c', x1, y1, x2, y2, x, y });
+    return this;
+  }
+
+  /** A run of points as straight segments, continuing the current subpath if one is open. */
+  polyline(points: readonly Point[]): this {
+    points.forEach((point, index) => {
+      if (index === 0 && !this.ops.length) this.moveTo(point.x, point.y);
+      else this.lineTo(point.x, point.y);
+    });
+    return this;
+  }
+
+  close(): this {
+    this.ops.push({ o: 'z' });
+    return this;
+  }
+}
+
+/**
+ * A circular arc as cubic Béziers: centre, radius, and the angles it runs between, in radians.
+ *
+ * Split so no segment exceeds a quarter turn, where the standard `k = 4/3·tan(Δ/4)` control
+ * offset is accurate to about one part in ten thousand of the radius — far below a hairline at
+ * any size this document draws. The previous renderer had no arc at all and approximated one
+ * with twenty-four straight segments, which faceted visibly on the larger moment symbols.
+ */
+export const arcOps = (centre: Point, radius: number, from: number, to: number): PathOp[] => {
+  const sweep = to - from;
+  const steps = Math.max(1, Math.ceil(Math.abs(sweep) / (Math.PI / 2)));
+  const step = sweep / steps;
+  const k = (4 / 3) * Math.tan(step / 4);
+  const at = (angle: number): Point => ({
+    x: centre.x + radius * Math.cos(angle),
+    y: centre.y + radius * Math.sin(angle),
+  });
+  const ops: PathOp[] = [];
+  let angle = from;
+  let point = at(angle);
+  ops.push({ o: 'm', x: point.x, y: point.y });
+  for (let index = 0; index < steps; index += 1) {
+    const next = angle + step;
+    const end = at(next);
+    ops.push({
+      o: 'c',
+      x1: point.x - k * radius * Math.sin(angle),
+      y1: point.y + k * radius * Math.cos(angle),
+      x2: end.x + k * radius * Math.sin(next),
+      y2: end.y - k * radius * Math.cos(next),
+      x: end.x,
+      y: end.y,
+    });
+    angle = next;
+    point = end;
+  }
+  return ops;
+};
 
 const dashOf = (dashArray?: readonly number[]): readonly [number, number] | undefined =>
   dashArray && dashArray.length >= 2 ? [dashArray[0], dashArray[1]] : undefined;
@@ -112,6 +216,7 @@ export class Surface {
       width: options.thickness,
       dash: dashOf(options.dashArray),
       opacity: options.opacity,
+      cap: options.cap,
     });
   }
 
@@ -124,6 +229,39 @@ export class Surface {
       size: options.size,
       tone: options.color,
       face: options.font?.face ?? 'regular',
+      align: options.align,
+      halo: options.halo,
+    });
+  }
+
+  /** A run of segments as one stroke, so its corners join instead of butting against each other. */
+  drawPolyline(options: PolylineOptions): void {
+    if (options.points.length < 2) return;
+    this.marks.push({
+      t: 'polyline',
+      points: options.points.map((point) => ({ x: point.x, y: point.y })),
+      tone: options.color,
+      width: options.thickness,
+      dash: dashOf(options.dashArray),
+      opacity: options.opacity,
+      cap: options.cap,
+      join: options.join,
+    });
+  }
+
+  /** An arbitrary path — the only mark that can be *filled*. */
+  drawPath(path: PathBuilder, options: PathOptions): void {
+    if (!path.ops.length || (options.fill === undefined && options.stroke === undefined)) return;
+    this.marks.push({
+      t: 'path',
+      d: path.ops,
+      fill: options.fill,
+      stroke: options.stroke,
+      width: options.thickness,
+      dash: dashOf(options.dashArray),
+      opacity: options.opacity,
+      cap: options.cap,
+      join: options.join,
     });
   }
 
@@ -147,6 +285,7 @@ export class Surface {
       fill: options.color,
       stroke: options.borderColor,
       width: options.borderWidth,
+      dash: dashOf(options.dashArray),
       opacity: options.opacity,
     });
   }

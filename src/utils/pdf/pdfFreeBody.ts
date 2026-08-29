@@ -420,7 +420,11 @@ const drawLabel = (
   if (placed.leader) {
     drawLeader(layout, { x: placed.box.x + placed.box.width / 2, y: placed.box.y + placed.box.height / 2 }, placed.leader, color);
   }
-  layout.surface.drawText(label, { x: placed.box.x, y: placed.box.y, size, font, color });
+  // Knocked out of whatever it lands on. A scene's marks, its ghost, its dimension lines and
+  // its title tag are all placed by different rules, so two of them meeting is a matter of
+  // which structure is being drawn — and a value that has to stay beside the arrow it names is
+  // better read over a small plate than moved somewhere emptier.
+  layout.surface.drawText(label, { x: placed.box.x, y: placed.box.y, size, font, color, halo: layout.palette.paper });
 };
 
 export const drawFreeBodyScene = (
