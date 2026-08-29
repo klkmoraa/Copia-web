@@ -24,7 +24,14 @@ import { solveMethodOfJoints, type MethodOfJointsResult } from '../../analysis-m
 import { solveCastiglianoTruss, type CastiglianoTrussResult } from '../../analysis-methods/castiglianoTruss';
 import { drawElasticCurve } from './pdfDiagrams';
 import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
-import { dimensionalFigure, dimensionalUnit } from './pdfSubstitution';
+import {
+  agrees,
+  dimensionalFigure,
+  dimensionalUnit,
+  dimensionalValue,
+  freeBodyEquations,
+  signedSum,
+} from './pdfSubstitution';
 import { pdfText } from './pdfGlyphs';
 import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
@@ -43,6 +50,53 @@ const expression = (coefficients: readonly number[], variable = 'x'): string => 
     terms.push(terms.length === 0 ? `${coefficient < 0 ? '−' : ''}${factor}` : `${sign} ${factor}`);
   });
   return terms.join(' ') || '0';
+};
+
+/**
+ * A worked block: the caption naming what the arithmetic belongs to, then the numbered
+ * display equations. Every method section reaches for this, so that "the real calculation"
+ * looks the same wherever the reader finds it.
+ */
+const drawWorked = (context: ReportContext, caption: string | undefined, equations: readonly string[]): void => {
+  if (!equations.length) return;
+  const { layout } = context;
+  if (caption) layout.text(caption, 7.9, layout.fonts.bold, layout.palette.forestDeep, 12);
+  for (const equation of equations) {
+    layout.ensure(layout.measureMathBlock(equation, 8.4, 16));
+    layout.y -= layout.drawMathBlockAt(equation, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+  }
+};
+
+/**
+ * Both approximate frame methods close a beam the same way: the two end moments over the span.
+ * The quotient is printed only where it really returns the shear the method reported, so a
+ * beam whose ends were resolved by some other route never gets a made-up derivation.
+ */
+interface ApproximateBeam {
+  readonly bayIndex: number;
+  readonly story: number;
+  readonly span: number;
+  readonly moment: number;
+  readonly shear: number;
+}
+
+const beamShearEquations = (
+  context: ReportContext,
+  beams: readonly ApproximateBeam[],
+  lineLabel: (index: number) => string,
+): string[] => {
+  const { project } = context;
+  const scale = Math.max(1, ...beams.map((beam) => Math.abs(beam.shear)));
+  return beams.flatMap((beam) => {
+    if (!(beam.span > 0)) return [];
+    const derived = 2 * beam.moment / beam.span;
+    if (!agrees(Math.abs(derived), Math.abs(beam.shear), scale)) return [];
+    return [
+      `V(${lineLabel(beam.bayIndex)}–${lineLabel(beam.bayIndex + 1)}, planta ${beam.story})`
+      + ` = 2 · ${dimensionalFigure(project, Math.abs(beam.moment), 1, 1)}/${dimensionalFigure(project, beam.span, 0, 1)}`
+      + ` = ${dimensionalFigure(project, Math.abs(beam.shear), 1, 0, scale)} ${unitFor(project, 'force')}`,
+    ];
+  });
 };
 
 const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrationResult): void => {
@@ -624,6 +678,29 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
     { size: 7.4 },
   );
 
+  // The final force of every bar, as the sum that produced it. With a single redundant the
+  // influence coefficient is recoverable exactly — it is the change per unit of X — so the
+  // product is written out; with several redundants only their combined contribution is
+  // separable, and that is what gets printed rather than a factor nobody could check.
+  const single = solution.redundants.length === 1 ? solution.redundants[0] : undefined;
+  const forceScale = Math.max(1, ...solution.members.map((member) => Math.abs(member.force)));
+  drawWorked(
+    context,
+    single
+      ? `Fuerza final de cada barra: la primaria más la contribución de ${single.symbol} = ${displayCell(project, single.value, 'force')} ${forceUnit}.`
+      : `Fuerza final de cada barra: la primaria más la contribución conjunta de las ${solution.redundants.length} redundantes, en ${forceUnit}.`,
+    solution.members.slice(0, 10).map((member) => {
+      const contribution = member.force - member.primaryForce;
+      const primary = dimensionalFigure(project, member.primaryForce, 1, 0, forceScale);
+      const total = dimensionalFigure(project, member.force, 1, 0, forceScale);
+      if (single && Math.abs(single.value) > 1e-9) {
+        const influence = contribution / single.value;
+        return `N(${member.memberId}) = ${primary} + (${number(influence, 6)})(${dimensionalFigure(project, single.value, 1, 0, forceScale)}) = ${total} ${forceUnit}`;
+      }
+      return `N(${member.memberId}) = ${primary} + ${dimensionalFigure(project, contribution, 1, 0, forceScale)} = ${total} ${forceUnit}`;
+    }),
+  );
+
   layout.heading('5.4 Verificación contra el análisis matricial', 2);
   layout.text(
     `Diferencia máxima: ${clearNumber(solution.reactionResidual, 1)} ${forceUnit} en las reacciones redundantes, `
@@ -650,8 +727,9 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
   );
   layout.text(
     'En los dos extremos simples de la viga, el momento de empotramiento perfecto se libera de '
-    + 'una vez: se transmite la mitad al apoyo vecino y ese extremo no vuelve a tocarse, con la '
-    + 'rigidez de ese vano reducida a 3EI/L en vez de 4EI/L para reflejarlo.',
+    + 'una vez: se transmite la mitad al apoyo vecino y ese extremo no vuelve a tocarse, y la '
+    + 'rigidez de ese vano baja una cuarta parte para reflejarlo. Las rigideces que la tabla de '
+    + 'abajo lista son ya las usadas en el reparto.',
     8.3, fonts.regular, undefined, 8,
   );
 
@@ -675,6 +753,22 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
     ]),
     { size: 7.6 },
   );
+
+  // The distribution factor is the whole method, and it is a quotient of two numbers that are
+  // already in the table above. Written out per joint, the reader can repeat the split by hand.
+  for (const [k, span] of solution.spans.slice(0, -1).entries()) {
+    const right = solution.spans[k + 1];
+    const kLeft = span.stiffnessRight;
+    const kRight = right.stiffnessLeft;
+    const total = kLeft + kRight;
+    if (!(total > 0)) continue;
+    const stiffness = (value: number) => dimensionalFigure(project, value, 1, 2, total);
+    drawWorked(context, `Apoyo interior ${span.rightNodeId}: rigideces en ${dimensionalUnit(project, 1, 2)}.`, [
+      `ΣK(${span.rightNodeId}) = ${stiffness(kLeft)} + ${stiffness(kRight)} = ${stiffness(total)}`,
+      `D(${span.leftNodeId}–${span.rightNodeId}) = ${stiffness(kLeft)}/${stiffness(total)} = ${number(kLeft / total, 6)}`,
+      `D(${right.leftNodeId}–${right.rightNodeId}) = ${stiffness(kRight)}/${stiffness(total)} = ${number(kRight / total, 6)}`,
+    ]);
+  }
 
   layout.heading('5.2 Momentos de apoyo tras converger', 2);
   layout.text(
@@ -778,7 +872,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
     }
   }
   layout.text(
-    'La fórmula no lleva término de bamboleo lateral: sólo es exacta si el pórtico no se '
+    'El método no lleva término de bamboleo lateral: sólo es exacto si el pórtico no se '
     + 'desplaza lateralmente bajo esta carga. Eso no se supone por la geometría — se comprueba '
     + 'contrastando el resultado contra el análisis matricial, y si la brecha no es del tamaño '
     + 'del ruido numérico, el método se retira en vez de narrar una aproximación sin decirlo.',
@@ -824,16 +918,17 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
 };
 
 const drawMethodOfSections = (context: ReportContext, solution: MethodOfSectionsResult): void => {
-  const { layout, project } = context;
+  const { layout, project, index } = context;
   const { fonts, palette } = layout;
   const forceUnit = unitFor(project, 'force');
 
   layout.heading('5. Procedimiento: Método de los Cortes');
   layout.text(
     'Un corte imaginario divide la armadura en dos, atravesando como mucho tres barras. El '
-    + 'equilibrio del lado que se conserva —ΣFx = 0, ΣFy = 0, ΣM = 0, con las reacciones y cargas '
-    + 'ya conocidas de ese lado— basta para hallar las tres fuerzas de barra que el corte dejó '
-    + 'como incógnitas, sin recorrer la armadura nudo por nudo.',
+    + 'equilibrio del lado que se conserva —las dos sumas de fuerzas y la de momentos, con las '
+    + 'reacciones y cargas ya conocidas de ese lado— basta para hallar las tres fuerzas de barra '
+    + 'que el corte dejó como incógnitas, sin recorrer la armadura nudo por nudo. Debajo de cada '
+    + 'corte van esas sumas ya efectuadas, con las fuerzas y los cosenos directores reales.',
     8.7, fonts.regular, undefined, 8,
   );
 
@@ -843,10 +938,10 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
     + 'y el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  for (const [index, cut] of solution.cuts.entries()) {
+  for (const [cutIndex, cut] of solution.cuts.entries()) {
     layout.ensure(40);
     layout.text(
-      `Corte ${index + 1}: lado conservado {${cut.keptNodeIds.join(', ')}}`,
+      `Corte ${cutIndex + 1}: lado conservado {${cut.keptNodeIds.join(', ')}}`,
       8, fonts.bold, palette.forestDeep, 8,
     );
     layout.table(
@@ -862,6 +957,16 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
       ]),
       { size: 7.6 },
     );
+    // The same equilibrium the cut was solved with, added up: each severed bar's force times
+    // its own direction cosine, plus the reactions and loads of the retained nodes.
+    const kept = new Set(cut.keptNodeIds);
+    const bars = cut.members.flatMap((member) => {
+      const model = index.member(member.memberId);
+      if (!model) return [];
+      const nodeId = kept.has(model.i) ? model.i : kept.has(model.j) ? model.j : undefined;
+      return nodeId ? [{ memberId: member.memberId, nodeId, force: member.value }] : [];
+    });
+    drawWorked(context, undefined, freeBodyEquations(context, cut.keptNodeIds, bars));
   }
   if (solution.unresolvedMemberIds.length) {
     layout.text(
@@ -884,7 +989,8 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
 
   layout.heading('5. Procedimiento: Método de los Nudos');
   layout.text(
-    'Cada nudo de la armadura tiene sólo dos ecuaciones de equilibrio, ΣFx = 0 y ΣFy = 0, así que '
+    'Cada nudo de la armadura tiene sólo dos ecuaciones de equilibrio —la suma horizontal y la '
+    + 'vertical de las fuerzas que concurren en él—, así que '
     + 'un nudo sólo se resuelve de una vez cuando le quedan como mucho dos fuerzas de barra por '
     + 'conocer. El procedimiento recorre los nudos en el orden en que esa condición se va '
     + 'cumpliendo —normalmente empezando en un apoyo o un extremo libre— resolviendo en cada uno '
@@ -900,9 +1006,9 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
     + 'pudo resolverlos, no el orden en que aparecen en el modelo.',
     8.3, fonts.regular, undefined, 8,
   );
-  for (const [index, step] of solution.steps.entries()) {
+  for (const [stepIndex, step] of solution.steps.entries()) {
     layout.ensure(40);
-    layout.text(`Nudo ${index + 1}: ${step.nodeId}`, 8, fonts.bold, palette.forestDeep, 8);
+    layout.text(`Nudo ${stepIndex + 1}: ${step.nodeId}`, 8, fonts.bold, palette.forestDeep, 8);
     layout.table(
       [
         { header: 'Barra', width: 70 },
@@ -916,6 +1022,18 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
       ]),
       { size: 7.6 },
     );
+    // Every bar meeting this joint — the ones just solved and the ones already known — times
+    // its direction cosine, plus the reaction and the load applied there: the two sums the
+    // reader would write by hand, closed on zero.
+    const meeting = project.members
+      .filter((member) => member.i === step.nodeId || member.j === step.nodeId)
+      .flatMap((member) => {
+        const force = solution.steps
+          .flatMap((entry) => entry.members)
+          .find((entry) => entry.memberId === member.id);
+        return force ? [{ memberId: member.id, nodeId: step.nodeId, force: force.value }] : [];
+      });
+    drawWorked(context, undefined, freeBodyEquations(context, [step.nodeId], meeting));
   }
   if (solution.unresolvedMemberIds.length) {
     layout.text(
@@ -978,6 +1096,20 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     { size: 7.8 },
   );
 
+  // The storey shear is an accumulation, so it is written as one: the lateral load of this
+  // storey plus everything already carried down from above.
+  const storyLoads = solution.storyShear.map((shear, position) => shear - (solution.storyShear[position + 1] ?? 0));
+  const shearScale = Math.max(1, ...solution.storyShear.map((value) => Math.abs(value)));
+  drawWorked(
+    context,
+    `Cortante acumulado de cada planta, en ${forceUnit}.`,
+    solution.storyShear.map((shear, position) => {
+      const above = storyLoads.slice(position);
+      return `V(planta ${position + 1}) = ${signedSum(above.map((value) => dimensionalFigure(project, value, 1, 0, shearScale)))}`
+        + ` = ${dimensionalFigure(project, shear, 1, 0, shearScale)} ${forceUnit}`;
+    }),
+  );
+
   layout.heading('5.2 Columnas: cortante, momento y axial', 2);
   layout.table(
     [
@@ -1000,6 +1132,36 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     ]),
     { size: 7.4 },
   );
+  // Every column's shear is its own tributary share of the storey shear, and its two end
+  // moments are that shear times the distance to the point of inflection. Both are written as
+  // the product that produced them, and only where that product really gives the figure the
+  // table above lists.
+  for (const story of [...new Set(solution.columns.map((column) => column.story))]) {
+    const columns = solution.columns.filter((column) => column.story === story);
+    const widthTotal = columns.reduce((sum, column) => sum + column.tributaryWidth, 0);
+    const storyShear = solution.storyShear[story - 1] ?? 0;
+    if (!(widthTotal > 0)) continue;
+    const equations: string[] = [];
+    for (const column of columns) {
+      const share = storyShear * column.tributaryWidth / widthTotal;
+      if (agrees(share, column.shear, storyShear)) {
+        equations.push(
+          `V(${lineLabel(column.columnIndex)}, planta ${story}) = ${displayCell(project, storyShear, 'force')}`
+          + ` · ${number(column.tributaryWidth, 6)}/${number(widthTotal, 6)}`
+          + ` = ${displayCell(project, column.shear, 'force')} ${forceUnit}`,
+        );
+      }
+      const lever = column.height * column.inflectionFraction;
+      if (Math.abs(column.bottomMoment) > 1e-9 && agrees(Math.abs(column.bottomMoment), Math.abs(column.shear * lever), Math.abs(column.bottomMoment))) {
+        equations.push(
+          `M_inf(${lineLabel(column.columnIndex)}, planta ${story}) = ${displayCell(project, Math.abs(column.shear), 'force')}`
+          + ` · ${number(column.height, 6)} · ${number(column.inflectionFraction, 6)}`
+          + ` = ${displayCell(project, Math.abs(column.bottomMoment), 'moment')} ${momentUnit}`,
+        );
+      }
+    }
+    drawWorked(context, `Planta ${story}: ancho tributario total ${number(widthTotal, 6)} ${lengthUnit}.`, equations);
+  }
   layout.text(
     'Axial positiva es tracción: en carga lateral unidireccional, las columnas de un lado del '
     + 'pórtico entran en tracción y las del lado contrario en compresión — es la pareja de '
@@ -1025,6 +1187,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     ]),
     { size: 7.4 },
   );
+  drawWorked(context, `Cortante de cada viga, desde los dos momentos de sus extremos (${momentUnit} y ${forceUnit}).`, beamShearEquations(context, solution.beams, lineLabel));
 
   layout.heading('5.4 Contraste en la base: método aproximado frente al modelo lateral exacto', 2);
   layout.text(
@@ -1063,7 +1226,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
 };
 
 const drawCantileverMethod = (context: ReportContext, solution: CantileverMethodResult): void => {
-  const { layout, project } = context;
+  const { layout, project, index } = context;
   const { fonts, palette } = layout;
   const lengthUnit = unitFor(project, 'length');
   const forceUnit = unitFor(project, 'force');
@@ -1119,6 +1282,46 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
     ]),
     { size: 7.4 },
   );
+  // The hypothesis of the method is that the axial force of a column is proportional to its
+  // own area times its distance to the storey's centroid. Instead of restating that as a
+  // formula, each column's quotient is divided out: if the hypothesis holds — and it does,
+  // because it is how the solution was built — every column of a storey lands on the same
+  // number, and the reader can see it land.
+  for (const story of [...new Set(solution.columns.map((column) => column.story))]) {
+    const columns = solution.columns.filter((column) => column.story === story);
+    const quotients = columns.flatMap((column) => {
+      const member = index.member(column.memberId);
+      const denominator = member ? member.A * column.centroidDistance : 0;
+      if (!member || Math.abs(denominator) < 1e-12) return [];
+      return [{ column, area: member.A, quotient: column.axial / denominator }];
+    });
+    if (quotients.length < 2) continue;
+    drawWorked(
+      context,
+      `Planta ${story}: la axial dividida por el área y la distancia al centroide da el mismo número en cada columna — la hipótesis del método, comprobada sobre este pórtico.`,
+      quotients.map(({ column, area, quotient }) => (
+        `N(${lineLabel(column.columnIndex)})/(A · d) = ${displayCell(project, column.axial, 'force')}`
+        + `/((${number(dimensionalValue(project, area, 0, 2), 6)})(${number(column.centroidDistance, 6)}))`
+        + ` = ${number(dimensionalValue(project, quotient, 1, -3), 6)} ${dimensionalUnit(project, 1, -3)}`
+      )),
+    );
+  }
+  // And the two end moments of every column, as the shear times the distance to its own
+  // inflection point.
+  drawWorked(
+    context,
+    `Momento de extremo de cada columna, desde su cortante y su punto de inflexión (${momentUnit}).`,
+    solution.columns.flatMap((column) => {
+      const lever = column.height * column.inflectionFraction;
+      if (Math.abs(column.bottomMoment) <= 1e-9) return [];
+      if (!agrees(Math.abs(column.bottomMoment), Math.abs(column.shear * lever), Math.abs(column.bottomMoment))) return [];
+      return [
+        `M_inf(${lineLabel(column.columnIndex)}, planta ${column.story}) = ${displayCell(project, Math.abs(column.shear), 'force')}`
+        + ` · ${number(column.height, 6)} · ${number(column.inflectionFraction, 6)}`
+        + ` = ${displayCell(project, Math.abs(column.bottomMoment), 'moment')} ${momentUnit}`,
+      ];
+    }),
+  );
 
   layout.heading('5.2 Vigas: momento y cortante', 2);
   layout.table(
@@ -1138,6 +1341,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
     ]),
     { size: 7.4 },
   );
+  drawWorked(context, `Cortante de cada viga, desde los dos momentos de sus extremos (${momentUnit} y ${forceUnit}).`, beamShearEquations(context, solution.beams, lineLabel));
 
   layout.heading('5.3 Contraste en la base: método aproximado frente al modelo lateral exacto', 2);
   layout.text(

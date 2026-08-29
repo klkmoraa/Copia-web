@@ -94,8 +94,8 @@ const dim = dimensionalFigure;
 /** Wraps a negative operand so `a · −b` never reads as a subtraction. */
 const operand = (text: string): string => text.startsWith('−') || text.startsWith('-') ? `(${text})` : text;
 
-/** `12.5 − 4.2 + 0.75`: a chain of signed terms written the way it is added up. */
-const signedSum = (terms: readonly string[]): string => {
+/** `12.5 - 4.2 + 0.75`: a chain of signed terms written the way it is added up. */
+export const signedSum = (terms: readonly string[]): string => {
   if (!terms.length) return '0';
   return terms.reduce((accumulated, value, index) => {
     if (index === 0) return value;
@@ -749,6 +749,123 @@ const verificationBlocks = (context: ReportContext): SubstitutionBlock[] => {
     });
   }
   return blocks;
+};
+
+// ---------------------------------------------------------------------------------------
+// Free bodies: what the truss methods actually add up
+// ---------------------------------------------------------------------------------------
+
+/**
+ * True when two figures are the same number written two ways, relative to the magnitudes
+ * involved. Every worked relation in the method sections is gated on this: a memoir must not
+ * print an equality that its own numbers do not satisfy.
+ */
+export const agrees = (left: number, right: number, scale = 1): boolean =>
+  Math.abs(left - right) <= 1e-6 * Math.max(1, Math.abs(scale));
+
+/** One bar crossing the boundary of a free body, and the end of it that stays inside. */
+export interface SeveredBar {
+  readonly memberId: string;
+  /** Node of the bar that belongs to the retained portion. */
+  readonly nodeId: string;
+  /** Axial force, tension positive. */
+  readonly force: number;
+}
+
+/**
+ * The equilibrium of a retained portion of a truss, written out term by term.
+ *
+ * This is the arithmetic the Method of Joints and the Method of Sections actually perform:
+ * each bar force multiplied by its own direction cosine, plus the reactions and applied loads
+ * of the retained nodes, adding up to zero. Each of the three sums is printed only if it
+ * really closes on this analysis's numbers, and the whole development is skipped when the
+ * model carries member loads, whose distributed contribution this helper does not integrate.
+ */
+export const freeBodyEquations = (
+  context: ReportContext,
+  keptNodeIds: readonly string[],
+  bars: readonly SeveredBar[],
+): string[] => {
+  const { project, analysis, index } = context;
+  if (activeMemberLoads(context).length) return [];
+  const origin = index.node(keptNodeIds[0]);
+  if (!origin) return [];
+
+  interface Term { fx: number; fy: number; x: number; y: number; text: string }
+  const terms: Term[] = [];
+  const scaleOfForces: number[] = [];
+
+  for (const bar of bars) {
+    const member = index.member(bar.memberId);
+    const here = index.node(bar.nodeId);
+    if (!member || !here) return [];
+    const farId = member.i === bar.nodeId ? member.j : member.i;
+    const far = index.node(farId);
+    if (!far) return [];
+    const axis = memberAxis(member, here, far);
+    // `memberAxis` measures from i to j; a bar retained by its j end pulls the other way.
+    const sign = member.i === bar.nodeId ? 1 : -1;
+    const cx = sign * axis.c;
+    const cy = sign * axis.s;
+    terms.push({
+      fx: bar.force * cx,
+      fy: bar.force * cy,
+      x: here.x,
+      y: here.y,
+      text: `${bar.memberId}`,
+    });
+    scaleOfForces.push(bar.force);
+  }
+  for (const nodeId of keptNodeIds) {
+    const node = index.node(nodeId);
+    const result = analysis.nodeResults.find((entry) => entry.nodeId === nodeId);
+    if (!node) return [];
+    const loads = project.nodalLoads.filter((load) => load.nodeId === nodeId && caseFactor(context, load.caseId) !== undefined);
+    const fx = (result?.rx ?? 0) + loads.reduce((sum, load) => sum + (caseFactor(context, load.caseId) ?? 1) * load.fx, 0);
+    const fy = (result?.ry ?? 0) + loads.reduce((sum, load) => sum + (caseFactor(context, load.caseId) ?? 1) * load.fy, 0);
+    if (Math.abs(fx) + Math.abs(fy) === 0) continue;
+    terms.push({ fx, fy, x: node.x, y: node.y, text: nodeId });
+    scaleOfForces.push(fx, fy);
+  }
+  if (!terms.length) return [];
+  const scale = scaleOf(scaleOfForces);
+  const forceUnit = unitLabel(project.settings.units, 'force');
+
+  const barTerm = (term: Term, component: 'fx' | 'fy'): string => {
+    const bar = bars.find((entry) => entry.memberId === term.text);
+    if (!bar) return dim(project, term[component], 1, 0, scale);
+    const cosine = bar.force === 0 ? 0 : term[component] / bar.force;
+    return `(${dim(project, bar.force, 1, 0, scale)})(${number(cosine, 6)})`;
+  };
+
+  const equations: string[] = [];
+  for (const [component, symbol] of [['fx', 'ΣF_x'], ['fy', 'ΣF_y']] as const) {
+    const total = terms.reduce((sum, term) => sum + term[component], 0);
+    if (!agrees(total, 0, scale)) continue;
+    const written = signedSum(terms
+      .filter((term) => Math.abs(term[component]) > 0)
+      .map((term) => barTerm(term, component)));
+    if (!written || written === '0') continue;
+    equations.push(`${symbol} = ${written} = 0 ${forceUnit}`);
+  }
+  // A single joint carries every force at the same point, so its moment sum is trivially zero
+  // and printing it would add a row of noughts, not a check.
+  if (keptNodeIds.length > 1) {
+    const momentScale = Math.max(1, scale * Math.max(1, ...terms.map((term) => Math.hypot(term.x - origin.x, term.y - origin.y))));
+    const moments = terms.map((term) => (term.x - origin.x) * term.fy - (term.y - origin.y) * term.fx);
+    const total = moments.reduce((sum, value) => sum + value, 0);
+    if (agrees(total, 0, momentScale)) {
+      const written = signedSum(terms
+        .map((term, position) => ({ term, moment: moments[position] }))
+        .filter((entry) => Math.abs(entry.moment) > 0)
+        .map(({ term }) => `(${dim(project, term.x - origin.x, 0, 1)})(${dim(project, term.fy, 1, 0, scale)})`
+          + ` − (${dim(project, term.y - origin.y, 0, 1)})(${dim(project, term.fx, 1, 0, scale)})`));
+      if (written && written !== '0') {
+        equations.push(`ΣM(${origin.id}) = ${written} = 0 ${dimensionalUnit(project, 1, 1)}`);
+      }
+    }
+  }
+  return equations;
 };
 
 // ---------------------------------------------------------------------------------------

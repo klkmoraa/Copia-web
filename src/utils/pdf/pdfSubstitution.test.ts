@@ -7,12 +7,17 @@
  * extractable text — the PDF-level tests can only see the `(n)` tag beside it.
  */
 import { describe, expect, it } from 'vitest';
-import { createHibbelerStyleDiagramPractice, createHibbelerTributaryBeam } from '../../data/defaultProject';
+import {
+  createHibbelerStyleDiagramPractice,
+  createHibbelerStyleTrussPractice,
+  createHibbelerTributaryBeam,
+} from '../../data/defaultProject';
 import { analyzeProject } from '../../engine/solver';
 import { createPortablePayload } from '../portablePayload';
 import { createModelIndex, type ReportContext } from './reportContext';
 import {
   equilibriumSums,
+  freeBodyEquations,
   quantityConstructionSteps,
   quantitySlopeEquation,
   stepSubstitutions,
@@ -97,6 +102,32 @@ describe('ecuaciones sustituidas de la memoria', () => {
     expect(steps[0]).toBe('Se parte de V(0) = 32.5 kN.');
     expect(steps[2]).toBe('Cierra en V(3 m) = 17.5 kN.');
     for (const step of steps) expect(step).not.toMatch(/q\(x\)|p\(x\)|V\(x\)/);
+  });
+
+  it('cierra el equilibrio de un nudo de armadura con las fuerzas y los cosenos reales', async () => {
+    const context = await buildContext(createHibbelerStyleTrussPractice());
+    // The bars meeting A, with the axial force the analysis itself reports for each.
+    const bars = context.project.members
+      .filter((member) => member.i === 'A' || member.j === 'A')
+      .map((member) => ({
+        memberId: member.id,
+        nodeId: 'A',
+        force: context.index.memberResult(member.id)?.diagram[0]?.axial ?? 0,
+      }));
+    const equations = freeBodyEquations(context, ['A'], bars);
+    // Two sums, each ending on an exact zero, each term written as force x direction cosine.
+    expect(equations).toHaveLength(2);
+    expect(equations[0]).toMatch(/^ΣF_x = .*= 0 kN$/);
+    expect(equations[1]).toMatch(/^ΣF_y = .*= 0 kN$/);
+    expect(equations[0]).toMatch(/\)\(/);
+    for (const equation of equations) expect(equation).not.toMatch(/ΣFx = 0|[A-Za-z]_i\b/);
+  });
+
+  it('no desarrolla un cuerpo libre que no puede integrar', async () => {
+    // The beam carries member loads, whose distributed contribution this helper does not
+    // integrate: it declines rather than print a sum missing a term.
+    const context = await buildContext(createHibbelerStyleDiagramPractice());
+    expect(freeBodyEquations(context, ['A'], [{ memberId: 'AB', nodeId: 'A', force: 0 }])).toEqual([]);
   });
 
   it('convierte cada operando al mismo sistema, también en unidades imperiales', async () => {
