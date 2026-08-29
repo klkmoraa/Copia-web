@@ -20,7 +20,7 @@
     "verify:perf": "node scripts/check-performance-budget.mjs",
     "verify:entry": "node scripts/check-entry-chunk.mjs",
     "verify:space3d": "vitest run src/space3d src/features/space3d --maxWorkers=1 && node scripts/check-space3d-capacity.mjs",
-    "verify": "npm run lint && npm run verify:docs && npm run verify:protected && npm test && npm run build && npm run verify:perf && npm run verify:entry",
+    "verify": "npm run lint && npm run verify:docs && npm run verify:protected && npm test && npm run build && npm run verify:perf && npm run verify:entry && npm run verify:browser-bundle",
     "qa": "npm run build && node qa.mjs",
     "qa:topbar": "npm run build && node scripts/qa-topbar.mjs",
     "qa:dock": "npm run build && node scripts/qa-dock.mjs",
@@ -38,7 +38,8 @@
     "qa:illustration-studio:webkit": "npm run build && node scripts/qa-illustration-studio.mjs --webkit",
     "qa:structure-generator": "npm run build && node scripts/qa-structure-generator.mjs",
     "qa:structure-generator:webkit": "npm run build && node scripts/qa-structure-generator.mjs --webkit",
-    "qa:webkit": "npm run build && node qa-webkit.mjs"
+    "qa:webkit": "npm run build && node qa-webkit.mjs",
+    "verify:browser-bundle": "node scripts/check-browser-bundle.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

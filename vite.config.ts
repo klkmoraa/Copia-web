@@ -8,6 +8,29 @@ import react from '@vitejs/plugin-react';
 // literal someone has to remember to bump.
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
+/**
+ * MathJax's own version constant, which its bundled builds are expected to define.
+ *
+ * `mathjax-full/js/components/version.js` reads its version like this:
+ *
+ *     exports.VERSION = (typeof PACKAGE_VERSION === 'undefined'
+ *       ? (function () { const load = eval('require'); … })()
+ *       : PACKAGE_VERSION);
+ *
+ * The fallback runs at module-evaluation time, and `mathjax.js` — the entry every other
+ * MathJax module pulls in — imports it. In a browser ESM bundle `require` does not exist, so
+ * merely importing MathJax threw `ReferenceError: require is not defined` and took the whole
+ * calculation report down with it: the export dialog could neither preview nor download,
+ * while every Node test passed because `require` is defined there.
+ *
+ * Defining the constant at build time is what MathJax's own component builds do. It makes the
+ * ternary pick the literal, so the `eval` branch is never evaluated — and, being unreachable,
+ * is dropped by the minifier along with the build warning it used to raise.
+ */
+const { version: mathjaxVersion } = JSON.parse(
+  readFileSync(new URL('./node_modules/mathjax-full/package.json', import.meta.url), 'utf8'),
+) as { version: string };
+
 const collectBuildFiles = async (relative = ''): Promise<string[]> => {
   const directory = new URL(`./dist/${relative}`, import.meta.url);
   const entries = await readdir(directory, { withFileTypes: true });
@@ -56,7 +79,10 @@ self.addEventListener('fetch',event=>{
 export default defineConfig({
   plugins: [react(), pwaShellPlugin()],
   base: './',
-  define: { __APP_VERSION__: JSON.stringify(version) },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    PACKAGE_VERSION: JSON.stringify(mathjaxVersion),
+  },
   build: {
     rollupOptions: {
       /**

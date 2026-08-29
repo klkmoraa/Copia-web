@@ -93,7 +93,12 @@ export const PdfPreviewDialog = ({
         // document that merely would not paint is still perfectly downloadable.
         try {
           built = await buildReport(options);
-        } catch {
+        } catch (error) {
+          // The reader gets a sentence; whoever has to fix it gets the cause. Composing the
+          // report failed silently in production for one whole release — `mathjax-full` threw
+          // `ReferenceError: require is not defined` on import — and the only thing anyone
+          // could see was this generic message, because the reason was swallowed here.
+          console.error('[structureCo] La memoria de cálculo no se pudo componer.', error);
           if (live()) {
             setArtifact(null);
             setError(t('portable.exportFailed'));
@@ -116,7 +121,8 @@ export const PdfPreviewDialog = ({
             });
             setCurrentPage(1);
           }
-        } catch {
+        } catch (error) {
+          console.error('[structureCo] La memoria se compuso pero no se pudo rasterizar.', error);
           if (live()) setError(t('pdfPreview.renderFailed'));
         } finally {
           if (live()) setBusy(false);

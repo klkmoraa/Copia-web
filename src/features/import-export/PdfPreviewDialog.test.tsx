@@ -92,21 +92,21 @@ describe('PdfPreviewDialog', () => {
     const { buildReport } = setup();
     await waitFor(() => expect(buildReport).toHaveBeenCalledOnce());
 
-    await user.click(screen.getByRole('checkbox', { name: /Anexo técnico/i }));
+    await user.click(screen.getByRole('checkbox', { name: /Modelo, resultados y traza/i }));
 
     await waitFor(() => expect(buildReport).toHaveBeenCalledTimes(2));
     expect(buildReport.mock.calls[1][0]).toMatchObject({ includeAnnex: false, includeScope: true });
   });
 
-  it('ata la traza al anexo, que es quien la dibuja', async () => {
+  it('ata las matrices a la parte que las lleva', async () => {
     const user = userEvent.setup();
     const { buildReport } = setup();
     await waitFor(() => expect(buildReport).toHaveBeenCalledOnce());
 
-    const trace = screen.getByRole('checkbox', { name: /Traza educativa/i }) as HTMLInputElement;
+    const trace = screen.getByRole('checkbox', { name: /Matrices del sistema/i }) as HTMLInputElement;
     expect(trace.disabled).toBe(false);
-    await user.click(screen.getByRole('checkbox', { name: /Anexo técnico/i }));
-    expect((screen.getByRole('checkbox', { name: /Traza educativa/i }) as HTMLInputElement).disabled).toBe(true);
+    await user.click(screen.getByRole('checkbox', { name: /Modelo, resultados y traza/i }));
+    expect((screen.getByRole('checkbox', { name: /Matrices del sistema/i }) as HTMLInputElement).disabled).toBe(true);
   });
 
   it('sin documento no ofrece descarga', async () => {
