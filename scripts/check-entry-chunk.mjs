@@ -37,6 +37,21 @@ const SENTINELS = [
     text: 'structureCo is an educational support tool.',
     why: 'El español es la reserva de translate(); el inglés se pide con loadCatalog() desde useI18n.',
   },
+  /**
+   * `fflate` entró en la carga inicial por una sola importación estática:
+   * `App.tsx` traía `decodeProjectFragment` de `utils/shareLink`, y ése importa
+   * el compresor. El compresor entero —33 081 bytes, 12 720 gzip— viajaba en la
+   * primera pintada por una rama que `if (!fragment) return;` descarta en casi
+   * todos los arranques. Ahora se pide con `import()` dentro del efecto.
+   *
+   * El centinela es la tabla de errores de su descompresor, que el minificador
+   * conserva porque son cadenas que se emiten en tiempo de ejecución.
+   */
+  {
+    what: 'el compresor fflate',
+    text: 'invalid length/literal',
+    why: 'Sólo hace falta para leer un enlace compartido o un expediente portable; ambos lo piden con import().',
+  },
 ];
 
 const walk = async (directory) => {

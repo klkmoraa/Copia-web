@@ -7,7 +7,6 @@ import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
 import { rememberLanguage } from './i18n/languagePreference';
-import { decodeProjectFragment } from './utils/shareLink';
 import './styles.css';
 import './design-system/material.css';
 /* La biblioteca de componentes viaja en el chunk de ENTRADA, no sólo con la
@@ -54,14 +53,27 @@ const AppShell = () => {
        barra de direcciones de inmediato — ni se reprocesa en un refresco ni
        queda ahí sugiriendo que el enlace sigue «cargado». Un fragmento
        ausente o ajeno (`reason: 'absent'`) no hace nada: el arranque normal
-       sigue siendo abrir el último proyecto local. */
+       sigue siendo abrir el último proyecto local.
+
+       El decodificador se pide por `import()` y no de forma estática porque
+       arrastra `fflate`: importarlo aquí arriba metía el compresor entero en
+       el chunk de entrada para una rama que la inmensa mayoría de los
+       arranques descarta en la línea siguiente. Es el mismo trato que
+       `utils/portableBundle.ts` ya le da al mismo paquete.
+
+       El fragmento se retira ANTES de esperar al módulo, que es cuando se
+       retiraba antes: `decodeProjectFragment` no lanza —devuelve
+       `{ ok: false }`— así que hoy la barra se limpia con cualquier hash, lo
+       decodifique o no, y eso no cambia. */
     const fragment = window.location.hash;
     if (!fragment) return;
-    const decoded = decodeProjectFragment(fragment);
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    if (!decoded.ok) return;
-    replaceProject({ ...decoded.project, settings: { ...decoded.project.settings, language } });
-    setScreen('workspace');
+    void import('./utils/shareLink').then(({ decodeProjectFragment }) => {
+      const decoded = decodeProjectFragment(fragment);
+      if (!decoded.ok) return;
+      replaceProject({ ...decoded.project, settings: { ...decoded.project.settings, language } });
+      setScreen('workspace');
+    });
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
