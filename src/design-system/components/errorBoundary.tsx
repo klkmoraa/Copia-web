@@ -5,6 +5,17 @@ import { EmptyState } from './feedback';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
+  /**
+   * Qué pintar en lugar de la pantalla completa cuando el error se puede acotar.
+   *
+   * Sin esto, cualquier fallo se lleva por delante toda la aplicación — que es lo
+   * correcto en la raíz y desproporcionado alrededor de un panel diferido: si el
+   * chunk del asistente no carga, el usuario no tiene por qué perder de vista su
+   * modelo. El texto lo pone quien llama porque el sistema de diseño no habla
+   * ningún idioma; el de la raíz va fijo y en los dos a la vez justamente porque
+   * allí el i18n puede ser lo que falló.
+   */
+  fallback?: ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -35,6 +46,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render(): ReactNode {
     if (!this.state.hasError) return this.props.children;
+    if (this.props.fallback !== undefined) return this.props.fallback;
     return (
       <div className="sc-error-boundary" role="alert">
         <EmptyState

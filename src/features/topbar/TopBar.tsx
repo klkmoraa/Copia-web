@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -46,6 +46,7 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { LazySurface } from '../workspace/LazySurface';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -748,7 +749,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
-      {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
+      {importCenterOpen ? <LazySurface><PortableImportCenter
         open
         currentProjectName={project.name}
         onClose={closeImportCenter}
@@ -757,12 +758,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis);
           closeImportCenter();
         }}
-      /></Suspense> : null}
-      {proposalAssistantOpen ? <Suspense fallback={null}><ProposalAssistant
+      /></LazySurface> : null}
+      {proposalAssistantOpen ? <LazySurface><ProposalAssistant
         open
         onClose={() => setProposalAssistantOpen(false)}
-      /></Suspense> : null}
-      {previewAnalysis ? <Suspense fallback={null}><PdfPreviewDialog
+      /></LazySurface> : null}
+      {previewAnalysis ? <LazySurface><PdfPreviewDialog
         open
         onOpenChange={(next) => { if (!next) setPreviewAnalysis(null); }}
         t={t as (key: string, values?: Record<string, string | number>) => string}
@@ -784,7 +785,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           await portable.shareOrDownloadPortableBytes(artifact.bytes, artifact.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
           emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
         }}
-      /></Suspense> : null}
+      /></LazySurface> : null}
     </header>
   );
 };

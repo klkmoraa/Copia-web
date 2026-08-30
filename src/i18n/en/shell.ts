@@ -52,6 +52,8 @@ export const shell = {
   'shell.compactToolRail': 'Compact tool rail',
   'shell.expandToolRail': 'Expand tool rail',
   'workspace.loading': 'Preparing editor',
+  'surface.loadFailed': "This part couldn't load. The rest still works.",
+  'surface.reload': 'Reload',
   'data.title': 'Data',
   'data.description': 'Results, model table and review, on one surface.',
   'data.close': 'Close Data',

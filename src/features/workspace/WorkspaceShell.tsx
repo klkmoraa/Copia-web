@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
+import { lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
 import type { InspectorSegment } from '../inspector/inspectorSegments';
@@ -11,6 +11,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
+import { LazySurface } from './LazySurface';
 import { ShellCompositionProvider } from './ShellCompositionProvider';
 import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
@@ -244,17 +245,17 @@ const WorkspaceBrokerContent = ({
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
       <ToastNotification />
-      {broker.isRetained('palette') ? <Suspense fallback={null}><LazyCommandPalette
+      {broker.isRetained('palette') ? <LazySurface><LazyCommandPalette
         open={palette.status === 'active'}
         onClose={() => closeSurface('palette')}
         dispatchLayers={dispatchEditorLayers}
         presentation={palette.presentation as 'overlay' | 'sheet'}
-      /></Suspense> : null}
+      /></LazySurface> : null}
       {/* Invocada, nunca residente: sólo existe en el árbol mientras el broker
           la retiene, y desaparece al cerrarse. Era el contrato de `dense`
           (CRI-101) y ahora vale para las tres pestañas: abrir «Datos» no monta
           la Hoja de datos ni el Doctor si el usuario está en Resultados. */}
-      {broker.isRetained('data') ? <Suspense fallback={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}><LazyDataSurface
+      {broker.isRetained('data') ? <LazySurface pending={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}><LazyDataSurface
         open={data.status === 'active'}
         tab={dataTab}
         onTabChange={setDataTab}
@@ -266,7 +267,7 @@ const WorkspaceBrokerContent = ({
         onRestore={restoreData}
         acknowledgedIds={modelDoctorAcknowledgedIds}
         onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
-      /></Suspense> : null}
+      /></LazySurface> : null}
     </>}
     inspector={<div className="workspace-surfaces">
       {broker.isRetained('detail') ? <Inspector

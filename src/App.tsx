@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { BrandMark } from './features/topbar/BrandMark';
 import { WelcomeScreen } from './features/welcome/WelcomeScreen';
 import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
+import { LazySurface } from './features/workspace/LazySurface';
 import { useI18n } from './i18n/useI18n';
 import { rememberLanguage } from './i18n/languagePreference';
 import './styles.css';
@@ -115,24 +116,24 @@ const AppShell = () => {
     // Space 3D no se envuelve en ClassroomSessionProvider: su modelo no es el
     // proyecto 2D y el Modo Aula no lo evalúa.
     return (
-      <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('space3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
+      <LazySurface pending={<div className="workspace-loading" role="status" aria-label={t('space3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
         <Space3DWorkspace
           language={project.settings.language}
           sourceProject={space3dOrigin === 'workspace' ? project : undefined}
           onOpenHome={() => navigate('welcome')}
           onOpen2D={() => navigate('workspace')}
         />
-      </Suspense>
+      </LazySurface>
     );
   }
 
   return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
-    <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
+    <LazySurface pending={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
       <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenSpace3D={() => { setSpace3DOrigin('workspace'); navigate('space3d'); }} />
-    </Suspense>
+    </LazySurface>
   </ClassroomSessionProvider>;
 };
 
 export default function App() {
-  return <ProjectProvider><AppShell /><Suspense fallback={null}><PwaUpdateNotice /></Suspense></ProjectProvider>;
+  return <ProjectProvider><AppShell /><LazySurface><PwaUpdateNotice /></LazySurface></ProjectProvider>;
 }
