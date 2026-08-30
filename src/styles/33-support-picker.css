@@ -1,11 +1,11 @@
-/* SELECTOR DE APOYOS POR CAPAS
+/* SELECTOR Y BIBLIOTECA DE APOYOS
  *
  * El tramo va al final del manifiesto porque es lo último que entra en la
  * cascada del Inspector: sus selectores casan sobre piezas propias
- * (`.support-picker*`, `.support-card*`, `.support-glyph*`) y sobre nada más,
- * así que no le quita el turno a ningún selector anterior. La única excepción
- * es `.checkbox-grid` dentro del selector, que hereda del tramo 06 y aquí sólo
- * recibe su hueco.
+ * (`.support-picker*`, `.support-tile*`, `.support-detail*`, `.support-library*`,
+ * `.support-glyph*`) y sobre nada más, así que no le quita el turno a ningún
+ * selector anterior. Las dos excepciones son `.checkbox-grid` y `.sc-tabs`
+ * dentro del selector, que heredan de sus tramos y aquí sólo reciben densidad.
  *
  * Todo el color sale de roles del sistema. Los símbolos leen los mismos roles
  * estructurales que el lienzo (`--sc-color-structure-support`) para que la
@@ -16,230 +16,402 @@
   display: flex;
   flex-direction: column;
   gap: var(--sc-space-3);
-  margin-top: var(--sc-space-1);
 }
 
-/* El texto que sólo existe para quien no ve el dibujo. No se oculta con
-   `display:none` —eso lo sacaría del árbol de accesibilidad— sino recortándolo
-   a un píxel, que es la técnica que sí deja que `aria-describedby` lo lea. */
-.support-picker__assistive {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-.support-picker__layer {
-  border: 0;
+/* LA LEYENDA. Va arriba y se queda: sin ella, `Ux ✕ · Uy ✓` es un jeroglífico.
+   Se marca `aria-hidden` porque cada mosaico ya dice en palabras lo mismo. */
+.support-picker__legend {
+  display: flex;
+  gap: var(--sc-space-3);
   margin: 0;
-  padding: 0;
-  min-inline-size: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sc-space-2);
-}
-
-.support-picker__layer > legend {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--sc-space-1) var(--sc-space-2);
-  padding: 0;
-  font-size: var(--sc-font-size-label);
-  font-weight: var(--sc-font-weight-semibold);
-  color: var(--sc-color-text-primary);
-}
-
-.support-picker__layer > legend > small {
-  flex: 1 1 100%;
   font-size: var(--sc-font-size-caption);
-  font-weight: var(--sc-font-weight-regular);
   color: var(--sc-color-text-muted);
-  line-height: 1.35;
 }
 
-/* El ordinal de la capa. Es el número de la investigación —01 borde, 02
-   dirección— y su trabajo es decir que hay un orden, no llamar la atención. */
-.support-picker__ordinal {
-  font-family: var(--sc-font-mono);
-  font-size: var(--sc-font-size-caption);
-  font-weight: var(--sc-font-weight-medium);
-  letter-spacing: var(--sc-tracking-technical);
-  color: var(--sc-color-text-muted);
-  border: var(--sc-border-width) solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-xs);
-  padding: 0 4px;
+.support-picker__legend .is-free { color: var(--sc-color-state-success); }
+.support-picker__legend .is-restrained { color: var(--sc-color-text-secondary); }
+
+.support-picker__tabs .sc-tabs__list { gap: 2px; }
+
+.support-picker__tabs .sc-tabs__panel {
+  padding: var(--sc-space-2) 0 0;
+  outline-offset: 2px;
 }
 
 .support-picker__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: var(--sc-space-2);
 }
 
-.support-card__slot { display: contents; }
-
-.support-card {
+/* EL MOSAICO. Símbolo grande, nombre, y la línea de grados de libertad: los
+   tres siempre, porque un dibujo no distingue una guía horizontal de una
+   vertical y el nombre solo no dice qué restringe. */
+.support-tile {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto auto auto;
   justify-items: center;
-  gap: 2px;
-  padding: var(--sc-space-2) 4px 6px;
+  align-content: start;
+  gap: 3px;
+  padding: var(--sc-space-2) 5px 7px;
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-control);
   background: var(--sc-color-surface-1);
+  color: inherit;
   cursor: pointer;
+  text-align: center;
   transition: var(--sc-transition-control-no-transform);
 }
 
-.support-card:hover { background: var(--sc-color-fill-quaternary); }
-.support-card:active { background: var(--sc-color-fill-tertiary); }
+.support-tile:hover { background: var(--sc-color-fill-quaternary); }
+.support-tile:active { background: var(--sc-color-fill-tertiary); }
 
-.support-card.is-active {
-  border-color: var(--sc-color-action-primary);
-  background: var(--sc-color-action-subtle);
-  box-shadow: inset 0 0 0 1px var(--sc-color-action-primary);
-}
-
-/* El radio de verdad sigue ahí y sigue recibiendo el foco: se le quita la
-   caja, no la existencia. El anillo lo pinta la tarjeta. */
-.support-card > input[type='radio'] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  margin: 0;
-  cursor: pointer;
-}
-
-.support-card:has(> input:focus-visible) {
+.support-tile:focus-visible {
   outline: 3px solid var(--sc-color-focus);
   outline-offset: 2px;
 }
 
-.support-card__glyph {
-  display: block;
-  line-height: 0;
-  pointer-events: none;
+/* Activo es «esto es lo que tiene el nudo». El foco es «de esto habla el panel
+   de detalle». Coinciden casi siempre, pero no cuando el panel enseña un
+   resorte mientras el apoyo sigue siendo un articulado — y ahí la diferencia
+   tiene que verse. */
+.support-tile.is-active {
+  border-color: var(--sc-color-action-primary);
+  background: var(--sc-color-action-subtle);
 }
 
-.support-card__label {
+.support-tile.is-focused { box-shadow: inset 0 0 0 2px var(--sc-color-action-primary); }
+
+.support-tile__dot {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sc-color-action-primary);
+}
+
+/* No disponible en este motor: se lee, no se pulsa. Se conserva el contorno
+   para que siga leyéndose como una ficha del catálogo y no como un hueco. */
+.support-tile.is-unavailable {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.support-tile.is-unavailable:hover { background: var(--sc-color-surface-1); }
+
+.support-tile__glyph { display: block; line-height: 0; }
+
+.support-tile__label {
   font-size: var(--sc-font-size-caption);
   font-weight: var(--sc-font-weight-medium);
-  text-align: center;
   line-height: 1.2;
   color: var(--sc-color-text-primary);
 }
 
-/* Los tres grados de libertad, siempre presentes: restringido en sólido, libre
-   en contorno. Es la lectura rápida que impide que la tarjeta dependa del
-   dibujo, y la que distingue una guía horizontal de una vertical de un vistazo. */
-.support-card__dof {
-  display: flex;
-  gap: 3px;
-}
-
-.support-card__dof > span {
-  font-family: var(--sc-font-mono);
-  font-size: 9px;
-  line-height: 1.4;
-  padding: 0 3px;
-  border-radius: var(--sc-radius-xs);
-  border: var(--sc-border-width) solid transparent;
-}
-
-/* La ficha restringida se invierte contra la tinta principal. Es el único par
-   que se puede garantizar en los dos temas sin inventar un rol: `text-primary`
-   está medido contra el fondo de la aplicación, así que su inverso tiene el
-   mismo contraste. El par `structure-support` / `on-signal` que había aquí
-   antes era gris claro sobre blanco en modo noche. */
-.support-card__dof > .is-restrained {
-  background: var(--sc-color-text-primary);
-  border-color: var(--sc-color-text-primary);
-  color: var(--sc-color-bg-app);
-}
-
-/* El trazo discontinuo repite «libre» sin depender del color, que es lo que
-   hace legible la diferencia también sin distinguir tonos. */
-.support-card__dof > .is-free {
-  border-style: dashed;
-  border-color: var(--sc-color-border-strong);
-  color: var(--sc-color-text-muted);
-}
-
-/* El campo del modelo, sin traducir. Es el puente entre la tarjeta y el JSON
-   del proyecto: quien lee `type = roller` en tres tarjetas distintas entiende
-   sin que nadie se lo explique que suelo, muro e inclinado son el mismo tipo. */
-.support-card__model {
+/* La notación del catálogo, en monoespacio: `Ux ✕ · Uy ✕ · Rz ✓` sólo se lee
+   en columna si los símbolos tienen el mismo ancho. */
+.support-tile__meta {
   font-family: var(--sc-font-mono);
   font-size: 9px;
   line-height: 1.3;
-  text-align: center;
   color: var(--sc-color-text-muted);
-  word-break: break-word;
 }
 
-.support-picker__readout {
+/* EL PANEL DE DETALLE. Sigue al foco, no al tipo. */
+.support-detail {
   display: flex;
-  align-items: flex-start;
-  gap: var(--sc-space-2);
-  padding: var(--sc-space-2);
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-3);
   border-radius: var(--sc-radius-control);
   background: var(--sc-color-surface-inset);
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
 }
 
-.support-picker__readout-glyph { flex: 0 0 auto; line-height: 0; margin-top: -4px; }
+.support-detail__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sc-space-3);
+}
 
-.support-picker__readout > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.support-detail__glyph { flex: 0 0 auto; line-height: 0; margin-top: -6px; }
 
-.support-picker__readout strong {
+.support-detail__header > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.support-detail__header strong {
   font-size: var(--sc-font-size-label);
   color: var(--sc-color-text-primary);
 }
 
-.support-picker__readout p {
+.support-detail__header p {
   margin: 0;
   font-size: var(--sc-font-size-caption);
   line-height: 1.35;
   color: var(--sc-color-text-muted);
 }
 
-.support-picker__readout p.support-picker__readout-dof {
+/* El campo real del modelo, sin traducir. Es el puente entre la tarjeta y el
+   JSON del proyecto: quien lee `angleDeg = 90` en una y `angleDeg = 0` en otra
+   entiende sin que nadie se lo explique que son el mismo tipo. */
+.support-detail__model {
+  align-self: flex-start;
   font-family: var(--sc-font-mono);
-  letter-spacing: var(--sc-tracking-technical);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-fill-quaternary);
   color: var(--sc-color-text-secondary);
 }
 
-.support-picker__readout-count { font-variant-numeric: tabular-nums; }
+.support-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  padding-top: var(--sc-space-3);
+  border-top: var(--sc-border-width) solid var(--sc-color-divider);
+}
 
-.support-picker__note {
+.support-detail__section > h4 {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-semibold);
+  letter-spacing: var(--sc-tracking-wide);
+  text-transform: uppercase;
+  color: var(--sc-color-text-muted);
+}
+
+.support-detail__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.support-chip {
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  padding: 3px 8px;
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-xs);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  cursor: pointer;
+  transition: var(--sc-transition-control-no-transform);
+}
+
+.support-chip:hover { background: var(--sc-color-fill-quaternary); }
+
+.support-chip.is-active {
+  border-color: var(--sc-color-action-primary);
+  background: var(--sc-color-action-subtle);
+  color: var(--sc-color-action-ink-on-soft);
+}
+
+.support-chip:focus-visible { outline: 3px solid var(--sc-color-focus); outline-offset: 2px; }
+
+.support-detail__dof { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.support-detail__dof > span {
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  padding: 2px 6px;
+  border-radius: var(--sc-radius-xs);
+  border: var(--sc-border-width) solid transparent;
+}
+
+/* Restringido se invierte contra la tinta principal. Es el único par que se
+   puede garantizar en los dos temas sin inventar un rol: `text-primary` está
+   medido contra el fondo de la aplicación, así que su inverso tiene el mismo
+   contraste. Libre lleva además trazo discontinuo, para no depender del color. */
+.support-detail__dof > .is-restrained {
+  background: var(--sc-color-text-primary);
+  border-color: var(--sc-color-text-primary);
+  color: var(--sc-color-bg-app);
+}
+
+.support-detail__dof > .is-free {
+  border-style: dashed;
+  border-color: var(--sc-color-border-strong);
+  color: var(--sc-color-text-muted);
+}
+
+.support-detail__dof-sentence,
+.support-detail__count,
+.support-detail__note {
   margin: 0;
   font-size: var(--sc-font-size-caption);
   line-height: 1.35;
   color: var(--sc-color-text-muted);
 }
 
-.support-picker__note.is-elastic {
-  padding: 4px var(--sc-space-2);
+.support-detail__count { font-variant-numeric: tabular-nums; }
+
+.support-picker .checkbox-grid { padding: 0; gap: var(--sc-space-3); }
+
+.support-picker__tip {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.35;
+  color: var(--sc-color-text-muted);
+  padding-inline-start: var(--sc-space-2);
+  border-inline-start: 2px solid var(--sc-color-border-strong);
+}
+
+.support-picker__library {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--sc-control-height-sm);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-control);
+  background: transparent;
+  color: var(--sc-color-text-link);
+  font-size: var(--sc-font-size-caption);
+  cursor: pointer;
+  transition: var(--sc-transition-control-no-transform);
+}
+
+.support-picker__library:hover { background: var(--sc-color-fill-quaternary); }
+.support-picker__library:focus-visible { outline: 3px solid var(--sc-color-focus); outline-offset: 2px; }
+
+/* LA BIBLIOTECA. Lectura, no un segundo selector: aquí no se pulsa nada que
+   cambie el modelo. */
+.support-library .sc-modal-surface__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-5);
+}
+
+.support-library__legend {
+  display: flex;
+  gap: var(--sc-space-3);
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+}
+
+.support-library__legend .is-free { color: var(--sc-color-state-success); }
+.support-library__legend .is-restrained { color: var(--sc-color-text-secondary); }
+
+.support-library__section { display: flex; flex-direction: column; gap: var(--sc-space-2); }
+
+.support-library__section > h3 {
+  margin: 0;
+  font-size: var(--sc-font-size-subtitle);
+  color: var(--sc-color-text-primary);
+}
+
+.support-library__blurb {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.4;
+  color: var(--sc-color-text-muted);
+}
+
+.support-library__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--sc-space-3);
+  margin-top: var(--sc-space-1);
+}
+
+.support-library__card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: var(--sc-space-3);
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-card);
+  background: var(--sc-color-surface-1);
+}
+
+.support-library__card.is-unavailable { border-style: dashed; }
+
+.support-library__glyph { line-height: 0; margin-bottom: var(--sc-space-1); }
+
+.support-library__card strong {
+  font-size: var(--sc-font-size-label);
+  color: var(--sc-color-text-primary);
+}
+
+.support-library__meta {
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  color: var(--sc-color-text-muted);
+}
+
+.support-library__card p {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.4;
+  color: var(--sc-color-text-muted);
+}
+
+.support-library__card code {
+  align-self: flex-start;
+  font-family: var(--sc-font-mono);
+  font-size: 10px;
+  padding: 1px 5px;
   border-radius: var(--sc-radius-xs);
-  border-left: 2px solid var(--sc-color-action-primary);
   background: var(--sc-color-fill-quaternary);
+  color: var(--sc-color-text-secondary);
+}
+
+.support-library__flag {
+  align-self: flex-start;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-state-warning);
+  color: var(--sc-color-state-warning-foreground);
+}
+
+.support-library__rule {
+  padding: var(--sc-space-3);
+  border-radius: var(--sc-radius-card);
+  background: var(--sc-color-accent-blue-soft);
+  border: var(--sc-border-width) solid var(--sc-color-action-edge);
+}
+
+.support-library__rule > h3 {
+  margin: 0 0 var(--sc-space-2);
+  font-size: var(--sc-font-size-label);
+  color: var(--sc-color-text-primary);
+}
+
+.support-library__rule dl { margin: 0; display: flex; flex-direction: column; gap: var(--sc-space-2); }
+
+.support-library__rule dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--sc-space-2);
+  align-items: baseline;
+}
+
+.support-library__rule dt {
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-semibold);
+  color: var(--sc-color-text-primary);
+}
+
+.support-library__rule dd {
+  margin: 0;
+  font-size: var(--sc-font-size-caption);
+  line-height: 1.4;
+  color: var(--sc-color-text-secondary);
+}
+
+@media (max-width: 560px) {
+  .support-library__rule dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
 
 /* LOS SÍMBOLOS
  *
  * Trazos sin relleno propio salvo el cuerpo del apoyo, que lleva el mismo
- * relleno tenue que en el lienzo. `vector-effect` queda fuera a propósito: el
- * glifo no se escala con transformaciones, se dibuja al tamaño pedido. */
-/* Nada se sale del encuadre: el símbolo ya viene centrado en su caja, así que
-   un recorte aquí sólo puede significar que alguien cambió la geometría sin
-   recalcular `CENTER_Y`. Mejor que se vea, y no que invada la tarjeta vecina. */
+ * relleno tenue que en el lienzo. Nada se sale del encuadre: el símbolo ya
+ * viene centrado en su caja, así que un recorte sólo puede significar que
+ * alguien cambió la geometría sin recalcular `CENTER_Y`. Mejor que se vea, y
+ * no que invada la tarjeta vecina. */
 .support-glyph {
   overflow: hidden;
   fill: none;
@@ -254,9 +426,7 @@
 }
 
 .support-glyph__plate { stroke: var(--sc-color-structure-support); }
-
 .support-glyph__wheel { fill: var(--sc-color-surface-1); }
-
 .support-glyph__halo { stroke: var(--sc-color-border-strong); }
 
 .support-glyph__node {
@@ -264,26 +434,25 @@
   stroke: none;
 }
 
-.support-glyph__freedom {
-  stroke: var(--sc-color-text-muted);
-  fill: var(--sc-color-text-muted);
+/* El acento marca lo que el símbolo añade sobre el apoyo: la flecha del asiento,
+   la cota de la holgura, el deslizamiento de la fricción. */
+.support-glyph__accent {
+  stroke: var(--sc-color-technical-reaction);
+  fill: var(--sc-color-technical-reaction);
 }
 
 /* La tarjeta activa tiñe su símbolo de acento: es el mismo azul del borde, y
    así el estado seleccionado se lee sin depender sólo del filete. */
-.support-card.is-active .support-glyph,
-.support-card.is-active .support-glyph__body,
-.support-card.is-active .support-glyph__plate {
+.support-tile.is-active .support-glyph,
+.support-tile.is-active .support-glyph__body,
+.support-tile.is-active .support-glyph__plate {
   stroke: var(--sc-color-action-primary);
 }
 
-.support-card.is-active .support-glyph__body { fill: var(--sc-color-action-primary); }
-
-.support-picker .checkbox-grid {
-  padding: 0;
-  gap: var(--sc-space-3);
-}
+.support-tile.is-active .support-glyph__body { fill: var(--sc-color-action-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  .support-card { transition: none; }
+  .support-tile,
+  .support-chip,
+  .support-picker__library { transition: none; }
 }
