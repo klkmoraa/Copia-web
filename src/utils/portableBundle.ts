@@ -1,5 +1,15 @@
 import type { AnalysisResult, ProjectModel } from '../types';
-import { createCalculationReport, type CalculationReportOptions } from './calculationPdf';
+/**
+ * El generador del informe entra por `import()`, no de forma estática, y el motivo
+ * es lo que arrastra: `calculationPdf` llega hasta `pdf/mathTypeset.ts`, y de ahí a
+ * MathJax entero. Sólo lo necesita `createPortableBundle` —la ruta de exportar—,
+ * mientras que `readPortableBundle` descomprime, valida y parsea sin tocarlo. Con
+ * la importación estática, abrir un expediente ajeno descargaba el tipografiador
+ * matemático completo para no usarlo.
+ *
+ * El tipo se queda en `import type`: se borra al compilar y no arrastra nada.
+ */
+import type { CalculationReportOptions } from './calculationPdf';
 import { canonicalStringify, parsePortablePayload, serializePortablePayload } from './portablePayload';
 import {
   assertSafeArchivePath,
@@ -72,10 +82,11 @@ export const createPortableBundle = async (
   analysis: AnalysisResult,
   options: CalculationReportOptions = {},
 ): Promise<PortableBundleArtifact> => {
-  const [{ zipSync, strToU8 }, report] = await Promise.all([
+  const [{ zipSync, strToU8 }, { createCalculationReport }] = await Promise.all([
     import('fflate'),
-    createCalculationReport(project, analysis, options),
+    import('./calculationPdf'),
   ]);
+  const report = await createCalculationReport(project, analysis, options);
   const manifest: PortableBundleManifest = {
     format: 'structureco-bundle',
     formatVersion: PORTABLE_FORMAT_VERSION,
