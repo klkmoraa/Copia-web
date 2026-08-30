@@ -1,4 +1,5 @@
-import { lazy, Suspense, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { LazySurface } from '../workspace/LazySurface';
 import { Drawer } from '../../design-system/components/overlays';
 import { useI18n } from '../../i18n/useI18n';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
@@ -117,7 +118,7 @@ export const DataSurface = ({
       aria-labelledby={`data-tab-${tab}`}
       data-data-tab={tab}
     >
-      <Suspense fallback={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}>
+      <LazySurface pending={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}>
         {tab === 'results' ? <LazyResultsContent /> : null}
         {tab === 'table' ? <LazyDatasheetContent onPeek={onPeek} /> : null}
         {tab === 'review' ? <LazyModelDoctorContent
@@ -127,7 +128,7 @@ export const DataSurface = ({
           onClose={() => onOpenChange(false)}
         /> : null}
         {tab === 'bom' ? <LazyBomContent onPeek={onPeek} /> : null}
-      </Suspense>
+      </LazySurface>
     </div>
   </Drawer></RetainedStateProvider>;
 };

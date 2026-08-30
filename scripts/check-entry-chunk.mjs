@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * El chunk de entrada no carga lo que la primera pintada no necesita.
+ * El reparto en chunks: qué entra en la primera pintada, y qué viaja junto a qué.
  *
  * Este gate nace de una medición concreta: hasta 2026-08-23 los catálogos
  * español **e inglés** vivían en el mismo archivo, y como `useI18n` lo importa,
@@ -54,6 +54,31 @@ const SENTINELS = [
   },
 ];
 
+/**
+ * Lo anterior vigila qué entra en la **primera pintada**. Esto vigila otra cosa:
+ * qué viaja **junto a** qué, entre chunks que los dos son diferidos.
+ *
+ * Nace de un caso concreto: `utils/portableBundle.ts` importaba
+ * `createCalculationReport` de forma estática, y esa cadena llega hasta MathJax.
+ * Sólo lo necesita `createPortableBundle` —exportar—; `readPortableBundle`
+ * —importar— descomprime y valida sin tocarlo. Con el import estático, abrir un
+ * expediente ajeno descargaba 1 817 093 bytes (624 654 gzip) de tipografiador
+ * matemático para no usarlo. Diferirlo lo dejó en 9 975 (4 105 gzip).
+ *
+ * El gate de arriba **no** puede ver esta regresión: MathJax estaba diferido antes
+ * y seguiría diferido después. Lo que hay que afirmar es que las dos rutas no
+ * comparten archivo.
+ */
+const SEPARATIONS = [
+  {
+    what: 'la ruta de importar un .structureco',
+    text: 'no es un paquete ZIP valido',
+    awayFrom: 'MathJax',
+    otherText: 'MathJax retry',
+    why: 'readPortableBundle no tipografía nada; createCalculationReport se pide con import() desde createPortableBundle.',
+  },
+];
+
 const walk = async (directory) => {
   const entries = await readdir(directory, { withFileTypes: true });
   const nested = await Promise.all(entries.map(async (entry) => {
@@ -97,11 +122,34 @@ for (const sentinel of SENTINELS) {
   found.push(`  ${sentinel.what}: ${carriers.map((c) => c.name).join(', ')} (diferido)`);
 }
 
+for (const rule of SEPARATIONS) {
+  const carriers = [];
+  const others = [];
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    const name = path.relative(DIST, file).replaceAll('\\', '/');
+    if (source.includes(rule.text)) carriers.push(name);
+    if (source.includes(rule.otherText)) others.push(name);
+  }
+  if (carriers.length === 0 || others.length === 0) {
+    failures.push(`  ${rule.what}: uno de los dos centinelas no aparece en el build. ¿Cambió el texto?`);
+    continue;
+  }
+  const shared = carriers.filter((name) => others.includes(name));
+  if (shared.length) {
+    failures.push(`  ${rule.what} arrastra ${rule.awayFrom}: ${shared.join(', ')}\n      ${rule.why}`);
+    continue;
+  }
+  found.push(`  ${rule.what}: ${carriers.join(', ')} — sin ${rule.awayFrom} (${others.join(', ')})`);
+}
+
 if (failures.length) {
-  console.error('El chunk de entrada carga cosas que la primera pintada no necesita:\n');
+  // El script vigila dos cosas —qué entra en la primera pintada y qué viaja junto
+  // a qué—, así que la cabecera no puede hablar sólo de la carga inicial.
+  console.error('El reparto en chunks no cumple lo declarado:\n');
   console.error(failures.join('\n'));
   process.exit(1);
 }
 
-console.log('Chunk de entrada limpio:');
+console.log('Reparto en chunks correcto:');
 console.log(found.join('\n'));

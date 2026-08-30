@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -46,6 +46,7 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { LazySurface } from '../workspace/LazySurface';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -132,10 +133,26 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } },
       transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
     };
-  const [showProjectMenu, setShowProjectMenu] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showAnalysisSetup, setShowAnalysisSetup] = useState(false);
+  /**
+   * Los cuatro popovers de la Cinta son uno solo, y por eso son un valor y no
+   * cuatro banderas.
+   *
+   * Con cuatro booleanos la exclusión mutua había que recordarla en cada
+   * conmutador, y estaba escrita cuatro veces con un subconjunto distinto cada
+   * vez: abrir «Proyecto» o «Exportar» cerraba los otros dos menús pero **no**
+   * la configuración de análisis, así que quedaban dos popovers en pantalla a
+   * la vez. No era sólo cosa de la vista: al cerrar con Escape, el foco se
+   * devuelve al disparador que se elige con un ternario encadenado
+   * (`showProjectMenu ? … : showExportMenu ? …`) que da por hecho que hay uno
+   * abierto — con dos, el foco volvía al botón equivocado.
+   *
+   * Un valor único no puede representar ese estado. No hay nada que recordar.
+   */
+  const [openMenu, setOpenMenu] = useState<'project' | 'export' | 'mobile' | 'analysis' | null>(null);
+  const showProjectMenu = openMenu === 'project';
+  const showExportMenu = openMenu === 'export';
+  const showMobileMenu = openMenu === 'mobile';
+  const showAnalysisSetup = openMenu === 'analysis';
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [proposalAssistantOpen, setProposalAssistantOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
@@ -168,12 +185,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     };
   }, []);
 
-  const closeMenus = () => {
-    setShowProjectMenu(false);
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
-    setShowAnalysisSetup(false);
-  };
+  const closeMenus = () => { setOpenMenu(null); };
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -226,28 +238,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     items[next]?.focus();
   };
 
-  const toggleProjectMenu = () => {
-    setShowProjectMenu((open) => !open);
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
+  const toggleMenu = (menu: 'project' | 'export' | 'mobile' | 'analysis') => {
+    setOpenMenu((current) => (current === menu ? null : menu));
   };
-  const toggleExportMenu = () => {
-    setShowExportMenu((open) => !open);
-    setShowProjectMenu(false);
-    setShowMobileMenu(false);
-  };
-  const toggleMobileMenu = () => {
-    setShowMobileMenu((open) => !open);
-    setShowProjectMenu(false);
-    setShowExportMenu(false);
-    setShowAnalysisSetup(false);
-  };
-  const toggleAnalysisSetup = () => {
-    setShowAnalysisSetup((open) => !open);
-    setShowProjectMenu(false);
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
-  };
+  const toggleProjectMenu = () => { toggleMenu('project'); };
+  const toggleExportMenu = () => { toggleMenu('export'); };
+  const toggleMobileMenu = () => { toggleMenu('mobile'); };
+  const toggleAnalysisSetup = () => { toggleMenu('analysis'); };
 
   // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
   // just because the TopBar itself re-rendered for an unrelated reason. Its
@@ -361,8 +358,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         // documento, lo enseña y descarga desde su propio pie. El `toast` de exportación
         // se emite allí, cuando el archivo sale de verdad.
         setPreviewAnalysis(exportAnalysis);
-        setShowExportMenu(false);
-        setShowMobileMenu(false);
+        setOpenMenu(null);
         return;
       }
       const portable = await import('../../utils/portable');
@@ -370,8 +366,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
       await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
       emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
-      setShowExportMenu(false);
-      setShowMobileMenu(false);
+      setOpenMenu(null);
     } catch (error) {
       setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
     } finally {
@@ -393,8 +388,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       exportProjectJson(project);
       emitWorkspaceCommand('show-toast', { message: t('export.copyFallbackDownloaded'), description: project.name, tone: 'info' });
     }
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
+    setOpenMenu(null);
   };
 
   /* «Guardar en el disco» (File System Access API): elige el archivo una vez
@@ -421,8 +415,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     } else {
       return;
     }
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
+    setOpenMenu(null);
   };
 
   /* Enlace para compartir: el modelo va comprimido en el fragmento (nunca al
@@ -447,8 +440,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     }
     setExportError(null);
     emitWorkspaceCommand('show-toast', { message: t('export.shareLinkCopied'), description: project.name, tone: 'success' });
-    setShowExportMenu(false);
-    setShowMobileMenu(false);
+    setOpenMenu(null);
   };
 
   const analyzeCommand = command('analysis:run');
@@ -513,19 +505,19 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   360 px esta entrada no existe: el destino sigue teniendo un solo
                   lanzador a cada ancho, igual que el historial. El gate que lo
                   fija barre anchos en Chromium (`qa.mjs`); jsdom no ve `@media`. */}
-              <button role="menuitem" className="overflow-home" onClick={() => { setShowProjectMenu(false); onOpenHome?.(); }}>
+              <button role="menuitem" className="overflow-home" onClick={() => { setOpenMenu(null); onOpenHome?.(); }}>
                 <Home size={16} /> {t('navigation.home')}
               </button>
-              <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+              <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setOpenMenu(null); }}>
                 <FilePlus2 size={16} /> {t('project.new')}
               </button>
               {exampleProjects.map((example) => {
                 const copy = presentExample(example.name, example.description, t);
-                return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setOpenMenu(null); }}>
                   <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
                 </button>;
               })}
-              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={16} /> {t('project.importJson')}</button>
+              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setOpenMenu(null); }}><FolderOpen size={16} /> {t('project.importJson')}</button>
             </m.div>
           ) : null}
         </AnimatePresence>
@@ -608,15 +600,15 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           <AnimatePresence>
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setOpenMenu(null); }}><Save size={16} /> {exportJsonCommand.label}</button>
                 <button role="menuitem" onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
                 <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                 <button role="menuitem" onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
-                <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
-                <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportSvgCommand.run(); setOpenMenu(null); }}>{exportSvgCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPngCommand.run(); setOpenMenu(null); }}>{exportPngCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPrintCommand.run(); setOpenMenu(null); }}>{exportPrintCommand.label}</button>
               </m.div>
             ) : null}
           </AnimatePresence>
@@ -633,34 +625,34 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
-                  <button onClick={() => { setShowMobileMenu(false); setProposalAssistantOpen(true); }}><Sparkles size={16} /> {phase2T('proposal.menuLabel')}</button>
+                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setOpenMenu(null); modelDoctorCommand.run(); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
+                  <button onClick={() => { setOpenMenu(null); setProposalAssistantOpen(true); }}><Sparkles size={16} /> {phase2T('proposal.menuLabel')}</button>
                   {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
                       de tocar Estado/Doctor (orden de degradación · CRI-95). */}
-                  <button className="overflow-results" onClick={() => { resultsCommand.run(); setShowMobileMenu(false); }}><ChartNoAxesCombined size={16} /> {resultsCommand.label}</button>
-                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
+                  <button className="overflow-results" onClick={() => { resultsCommand.run(); setOpenMenu(null); }}><ChartNoAxesCombined size={16} /> {resultsCommand.label}</button>
+                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setOpenMenu(null); }}><Sheet size={16} /> {datasheetCommand.label}</button>
                   {/* Los mismos campos que el popover de la barra, no una
                       segunda copia: una sola definición consumida por las dos
                       presentaciones. En el desbordamiento, elegir cierra. */}
-                  <AnalysisContextFields onCommit={() => setShowMobileMenu(false)} />
+                  <AnalysisContextFields onCommit={() => setOpenMenu(null)} />
                 </div>
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
                   <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
+                  <button onClick={() => { themeCommand.run(); setOpenMenu(null); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
                 </div>
 
                 {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                   <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
+                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setOpenMenu(null); }}>
                     <Box size={16} /> {t('space3d.open')}
                   </button> : null}
-                  <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+                  <button onClick={() => { layoutActions.onToggleInspector(); setOpenMenu(null); }}>
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={16} /> : <PanelRightClose size={16} />}
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
                   </button>
-                  <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
+                  <button onClick={() => { layoutActions.onToggleFullCanvas(); setOpenMenu(null); }}>
                     {layoutActions.fullCanvas ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                     {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
                   </button>
@@ -668,15 +660,15 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionExport')}</div>
-                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                  <button onClick={() => { exportJsonCommand.run(); setOpenMenu(null); }}><Save size={16} /> {exportJsonCommand.label}</button>
                   <button onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
                   <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                   <button onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                  <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
-                  <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
-                  <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
+                  <button onClick={() => { exportSvgCommand.run(); setOpenMenu(null); }}><Download size={16} /> {exportSvgCommand.label}</button>
+                  <button onClick={() => { exportPngCommand.run(); setOpenMenu(null); }}><Download size={16} /> {exportPngCommand.label}</button>
+                  <button onClick={() => { exportPrintCommand.run(); setOpenMenu(null); }}>{exportPrintCommand.label}</button>
                 </div>
 
                 {/* El chip de persistencia de la Cinta (zona `status`) ya es la
@@ -748,7 +740,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
-      {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
+      {importCenterOpen ? <LazySurface><PortableImportCenter
         open
         currentProjectName={project.name}
         onClose={closeImportCenter}
@@ -757,12 +749,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis);
           closeImportCenter();
         }}
-      /></Suspense> : null}
-      {proposalAssistantOpen ? <Suspense fallback={null}><ProposalAssistant
+      /></LazySurface> : null}
+      {proposalAssistantOpen ? <LazySurface><ProposalAssistant
         open
         onClose={() => setProposalAssistantOpen(false)}
-      /></Suspense> : null}
-      {previewAnalysis ? <Suspense fallback={null}><PdfPreviewDialog
+      /></LazySurface> : null}
+      {previewAnalysis ? <LazySurface><PdfPreviewDialog
         open
         onOpenChange={(next) => { if (!next) setPreviewAnalysis(null); }}
         t={t as (key: string, values?: Record<string, string | number>) => string}
@@ -784,7 +776,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           await portable.shareOrDownloadPortableBytes(artifact.bytes, artifact.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
           emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
         }}
-      /></Suspense> : null}
+      /></LazySurface> : null}
     </header>
   );
 };

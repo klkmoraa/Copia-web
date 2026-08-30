@@ -52,6 +52,8 @@ export const shell = {
   'shell.compactToolRail': 'Contraer herramientas',
   'shell.expandToolRail': 'Expandir herramientas',
   'workspace.loading': 'Preparando editor',
+  'surface.loadFailed': 'Esta parte no se pudo cargar. El resto sigue funcionando.',
+  'surface.reload': 'Recargar',
   'data.title': 'Datos',
   'data.description': 'Resultados, tabla del modelo y revisión, en una sola superficie.',
   'data.close': 'Cerrar Datos',
