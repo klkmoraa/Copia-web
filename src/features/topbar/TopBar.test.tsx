@@ -102,6 +102,27 @@ describe('TopBar portable export', () => {
    * intactos, y el rótulo del propio ítem tiene que ser el caso activo — no la
    * palabra «Análisis», que no dice en qué estado está el modelo.
    */
+  it('nunca deja dos popovers abiertos a la vez, ni con Analisis de por medio', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+    const bar = document.querySelector('.topbar')! as HTMLElement;
+
+    // Con cuatro banderas independientes, cada conmutador cerraba un subconjunto
+    // distinto: abrir «Proyecto» dejaba «Análisis» abierto detras, y el foco de
+    // Escape se devolvia al disparador equivocado.
+    const analysis = within(bar).getByRole('button', { name: 'Análisis' });
+    await user.click(analysis);
+    expect(await screen.findByRole('dialog', { name: 'Análisis' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Abrir proyectos y ejemplos' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Análisis' })).toBeNull());
+
+    // Y al reves.
+    await user.click(analysis);
+    expect(await screen.findByRole('dialog', { name: 'Análisis' })).toBeTruthy();
+    expect(screen.queryByRole('menu', { name: 'Abrir proyectos y ejemplos' })).toBeNull();
+  });
+
   it('opens the four analysis decisions from a single unified-toolbar item', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
