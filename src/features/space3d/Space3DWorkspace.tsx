@@ -330,6 +330,30 @@ const WorkspaceBody = ({
     () => [...new Set(pendingNotes.filter((item) => !BRIDGE_RESOLVABLE.has(item.code)).map((item) => item.code))],
     [pendingNotes],
   );
+  /**
+   * Los avisos, agrupados por código en una sola pasada.
+   *
+   * La lista se dibujaba deduplicando por código y, dentro de cada `<li>`,
+   * volviendo a barrer `pendingNotes` entera para reunir las entidades de ese
+   * código: cuadrático sobre la misma lista que se acababa de recorrer. Un
+   * modelo con muchos avisos del puente es justo cuando eso se nota.
+   *
+   * El orden no cambia: los grupos salen en el orden de primera aparición
+   * —que es lo que daba el `Map` de la deduplicación— y las entidades dentro
+   * de cada grupo, en el suyo.
+   */
+  const noteGroups = useMemo(() => {
+    const groups = new Map<string, string[]>();
+    for (const note of pendingNotes) {
+      let entities = groups.get(note.code);
+      if (!entities) {
+        entities = [];
+        groups.set(note.code, entities);
+      }
+      if (note.entityId) entities.push(note.entityId);
+    }
+    return [...groups].map(([code, entities]) => ({ code, entities: entities.join(' ') }));
+  }, [pendingNotes]);
   const diverged = sourceProject !== undefined && derived !== null
     && !space3dMatchesPlanarSource(project, sourceProject);
 
@@ -468,10 +492,10 @@ const WorkspaceBody = ({
         : <>
           <p className="space3d-notice space3d-notice--warn" role="status">{t('space3d.bridgeBody')}</p>
           <ul className="space3d-issues">
-            {[...new Map(pendingNotes.map((item) => [item.code, item])).values()].map((item) => <li key={item.code}>
-              <code>{item.code}</code>
-              <span>{t(BRIDGE_KEYS[item.code] ?? 'space3d.error.generic')}</span>
-              <em>{pendingNotes.filter((other) => other.code === item.code).map((other) => other.entityId).filter(Boolean).join(' ')}</em>
+            {noteGroups.map((group) => <li key={group.code}>
+              <code>{group.code}</code>
+              <span>{t(BRIDGE_KEYS[group.code] ?? 'space3d.error.generic')}</span>
+              <em>{group.entities}</em>
             </li>)}
           </ul>
           {acknowledgeable.length > 0
