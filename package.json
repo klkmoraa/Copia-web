@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
-    "test": "vitest run --maxWorkers=1",
+    "test": "vitest run --project=unit && vitest run --project=perf",
     "verify:docs": "node --test scripts/check-docs.test.mjs && node scripts/check-docs.mjs",
     "verify:protected": "node scripts/check-protected-baseline.mjs",
     "verify:structural-assets": "node --test scripts/structural-png-contract.test.mjs scripts/structural-asset-bundle.test.mjs && node scripts/check-three-structural-renders.mjs",
