@@ -9,14 +9,6 @@ import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed } from '../../utils/numberFormat';
 import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
-import {
-  buildIntersectionSnapCandidates,
-  buildPerpendicularSnapCandidates,
-  resolveSnap,
-  type SnapCandidate,
-  type SnapKind,
-  type SnapSegment,
-} from '../../utils/snapping';
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
@@ -33,13 +25,11 @@ import {
   shouldArmLongPress,
   shouldTriggerLongPress,
   zoomCameraAt,
-  type ModelPoint,
   type ScreenPoint,
 } from './canvasInteraction';
 import {
   CANVAS_SCENE_ID,
   EMPTY_DEMAND_RATIOS,
-  EMPTY_SNAP_CANDIDATES,
   EMPTY_STRUCTURAL_EDIT_NODE_IDS,
   IDLE_INTERACTION,
   clamp,
@@ -121,6 +111,7 @@ import type { StructureGenerationGhost } from '../../data/generators/generatorGh
 import { useCanvasCamera } from './useCanvasCamera';
 import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
 import { useCanvasFeedback } from './useCanvasFeedback';
+import { useCanvasSnapping } from './useCanvasSnapping';
 import { CanvasCutInspector } from './CanvasCutInspector';
 import { CanvasGridLines } from './CanvasGridLines';
 
@@ -222,7 +213,6 @@ export const StructuralCanvas = ({
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
   const [spacePressed, setSpacePressed] = useState(false);
-  const [snapPreview, setSnapPreview] = useState<{ x: number; y: number; kind: SnapKind } | null>(null);
   const [quickEntry, setQuickEntry] = useState({ first: '', second: '' });
   const [quickEntryMode, setQuickEntryMode] = useState<'delta' | 'polar'>('delta');
   const [quickEntryError, setQuickEntryError] = useState('');
@@ -374,37 +364,22 @@ export const StructuralCanvas = ({
 
   const nodeMap = useMemo(() => new Map(project.nodes.map((node) => [node.id, node])), [project.nodes]);
   const memberMap = useMemo(() => new Map(project.members.map((member) => [member.id, member])), [project.members]);
-  const snapSegments = useMemo<SnapSegment[]>(() => project.members.flatMap((member) => {
-    const start = nodeMap.get(member.i);
-    const end = nodeMap.get(member.j);
-    return start && end ? [{ id: member.id, start, end }] : [];
-  }), [nodeMap, project.members]);
-  const baseSnapCandidates = useMemo<SnapCandidate[]>(() => {
-    const candidates: SnapCandidate[] = [];
-    if (view.snapTargets.nodes) {
-      for (const node of project.nodes) candidates.push({ x: node.x, y: node.y, kind: 'node', sourceIds: [node.id] });
-    }
-    if (view.snapTargets.midpoints) {
-      for (const segment of snapSegments) candidates.push({
-        x: (segment.start.x + segment.end.x) / 2,
-        y: (segment.start.y + segment.end.y) / 2,
-        kind: 'midpoint',
-        sourceIds: [segment.id],
-      });
-    }
-    if (view.snapTargets.intersections && snapSegments.length <= 500) {
-      candidates.push(...buildIntersectionSnapCandidates(snapSegments));
-    }
-    return candidates;
-  }, [project.nodes, snapSegments, view.snapTargets]);
-  const drawingOrigin = useMemo(() => (memberStart ? nodeMap.get(memberStart) ?? null : null), [memberStart, nodeMap]);
-  // Perpendicular feet only depend on the drawing origin and the geometry, never
-  // on the pointer, so they are built per model revision instead of per frame.
-  const perpendicularSnapCandidates = useMemo<SnapCandidate[]>(() => (
-    drawingOrigin && view.snapTargets.perpendicular
-      ? buildPerpendicularSnapCandidates(drawingOrigin, snapSegments)
-      : EMPTY_SNAP_CANDIDATES
-  ), [drawingOrigin, snapSegments, view.snapTargets.perpendicular]);
+  const {
+    snapPreview,
+    clearSnapPreview,
+    snapPoint,
+    modelPointFromClient,
+    nodeDragPointFromClient,
+  } = useCanvasSnapping({
+    projectNodes: project.nodes,
+    projectMembers: project.members,
+    nodeMap,
+    view,
+    camera,
+    cameraRef,
+    memberStart,
+    localScreenPoint,
+  });
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
@@ -640,50 +615,6 @@ export const StructuralCanvas = ({
     ];
     return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [project.name, showCanvasFeedback, t]);
-
-  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeIds?: string | ReadonlySet<string>) => {
-    // Reuse the memoised arrays untouched whenever nothing has to be merged or
-    // excluded: a pointer move should not copy the whole candidate list.
-    const merged = perpendicularSnapCandidates.length
-      ? [...baseSnapCandidates, ...perpendicularSnapCandidates]
-      : baseSnapCandidates;
-    const excluded = typeof excludedNodeIds === 'string' ? new Set([excludedNodeIds]) : excludedNodeIds;
-    const candidates = excluded?.size
-      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.some((id) => excluded.has(id))))
-      : merged;
-    const result = resolveSnap(point, {
-      enabled: view.snap,
-      gridSize: view.gridSize,
-      pixelsPerUnit: camera.scale,
-      candidates,
-      modes: {
-        grid: view.snapTargets.grid,
-        node: view.snapTargets.nodes,
-        midpoint: view.snapTargets.midpoints,
-        intersection: view.snapTargets.intersections,
-        perpendicular: Boolean(drawingOrigin) && view.snapTargets.perpendicular,
-      },
-    });
-    const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
-    setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
-    return result.point;
-  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, view]);
-
-  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
-    const local = localScreenPoint(clientX, clientY);
-    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
-  }, [cameraRef, localScreenPoint, snapPoint]);
-
-  const nodeDragPointFromClient = useCallback((
-    clientX: number,
-    clientY: number,
-    excludedNodeId: string,
-    grabOffset: ModelPoint,
-  ) => {
-    const local = localScreenPoint(clientX, clientY);
-    const pointerPoint = screenToModelPoint(local, cameraRef.current);
-    return snapPoint({ x: pointerPoint.x + grabOffset.x, y: pointerPoint.y + grabOffset.y }, excludedNodeId);
-  }, [cameraRef, localScreenPoint, snapPoint]);
 
   const deleteSelection = useCallback((target: Selection = selection) => {
     if (!target) return;
@@ -1529,7 +1460,7 @@ export const StructuralCanvas = ({
 
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>, cancelled: boolean) => {
     clearLongPressTimer();
-    setSnapPreview(null);
+    clearSnapPreview();
     setTouchLoupe(null);
     if (event.pointerType === 'touch') activePointersRef.current.delete(event.pointerId);
     const current = interactionRef.current;
@@ -1581,7 +1512,7 @@ export const StructuralCanvas = ({
 
   const cancelActiveInteraction = useCallback(() => {
     clearLongPressTimer();
-    setSnapPreview(null);
+    clearSnapPreview();
     setTouchLoupe(null);
     const current = interactionRef.current;
     if (current.kind === 'node-drag') {
@@ -1598,7 +1529,7 @@ export const StructuralCanvas = ({
     for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
     activePointersRef.current.clear();
     transitionInteraction(IDLE_INTERACTION);
-  }, [cancelNodeDragTransaction, clearLongPressTimer, releasePointer, transitionInteraction]);
+  }, [cancelNodeDragTransaction, clearLongPressTimer, clearSnapPreview, releasePointer, transitionInteraction]);
 
   const cancelStructuralEdit = useCallback(() => {
     cancelActiveInteraction();
@@ -1963,7 +1894,7 @@ export const StructuralCanvas = ({
         }}
         onContextMenu={(event) => event.preventDefault()}
         onPointerLeave={() => {
-          if (interactionRef.current.kind === 'idle') setSnapPreview(null);
+          if (interactionRef.current.kind === 'idle') clearSnapPreview();
           if (coordinateReadoutRef.current) coordinateReadoutRef.current.textContent = `X — · Y — ${lengthLabel}`;
         }}
       >
