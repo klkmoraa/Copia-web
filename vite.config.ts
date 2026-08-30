@@ -62,6 +62,30 @@ const collectBuildFiles = async (relative = ''): Promise<string[]> => {
  * which packages its distribution carries. It is not optional: without it the dev server and
  * the SPA fallback both answer with `index.html`, and the boot dies on `Unexpected token '<'`.
  */
+/** El único archivo de pruebas que afirma sobre reloj de pared; corre aislado. */
+const PERFORMANCE_SUITE = 'src/engine/performance.test.ts';
+
+const SUITE_GLOB = 'src/**/*.{test,spec}.{ts,tsx}';
+
+/**
+ * The quality gate must only observe the real product. Backups, worktrees and
+ * vendored copies of the app live beside `src/` and would otherwise be collected,
+ * reporting stale failures and inflating the suite by an order of magnitude.
+ */
+const COLLECTION_EXCLUDE = [
+  '**/node_modules/**',
+  '**/dist/**',
+  'structureCo/**',
+  'structureCo-backup-*/**',
+  'structureCo-worktrees/**',
+  'structureco-sites/**',
+  'structureco-sites-worktrees/**',
+  'structureco-design-review/**',
+  'structureco-palette-lab/**',
+  'structureCo-contexto-*/**',
+  'structureCo-documentacion-integral-*/**',
+];
+
 const PYODIDE_FILES = ['pyodide.asm.js', 'pyodide.asm.wasm', 'pyodide.mjs', 'pyodide-lock.json', 'python_stdlib.zip'];
 /** The name `pythonRuntime.ts` fetches, so the vendored wheel's version is not in the code. */
 const WHEEL_ASSET = 'reportlab.whl';
@@ -200,22 +224,50 @@ export default defineConfig({
          Pyodide: las pruebas que leen el PDF de vuelta sólo valen si el PDF es el de verdad. */
       'src/utils/pdf/testReportRenderer.ts',
     ],
-    // The quality gate must only observe the real product. Backups, worktrees and
-    // vendored copies of the app live beside `src/` and would otherwise be collected,
-    // reporting stale failures and inflating the suite by an order of magnitude.
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      'structureCo/**',
-      'structureCo-backup-*/**',
-      'structureCo-worktrees/**',
-      'structureco-sites/**',
-      'structureco-sites-worktrees/**',
-      'structureco-design-review/**',
-      'structureco-palette-lab/**',
-      'structureCo-contexto-*/**',
-      'structureCo-documentacion-integral-*/**',
+    exclude: COLLECTION_EXCLUDE,
+    /**
+     * Dos proyectos, y el motivo es una sola prueba.
+     *
+     * La suite corría entera con `--maxWorkers=1`. `src/engine/performance.test.ts`
+     * es el único archivo que afirma sobre reloj de pared —«el modelo de 300
+     * miembros resuelve en menos de 20 s»—, y bajo contención de CPU esa clase de
+     * afirmación mide la máquina, no el código. Serializar las 317 para proteger a
+     * una costaba 410 s por ejecución.
+     *
+     * `benchmarks.test.ts` y `pDeltaBenchmarks.test.ts`, pese al nombre, afirman
+     * exactitud numérica y no tiempo: van en paralelo con el resto.
+     *
+     * Los dos `setupFiles` son seguros por worker — el registro del catálogo es
+     * idempotente y Pyodide arranca de forma perezosa, sólo si una prueba pide un
+     * informe—, así que el paralelismo no multiplica el arranque del intérprete
+     * salvo en los workers que de verdad rinden un PDF.
+     *
+     * `npm test` los encadena en vez de dejarlos concurrir, para que el proyecto
+     * de rendimiento tenga la máquina para él solo. 410 s → 157 s + el margen del
+     * archivo aislado.
+     */
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: [SUITE_GLOB],
+          /* `exclude` de un proyecto reemplaza al heredado, así que la lista de
+             copias y worktrees se repite aquí: omitirla las volvería a recoger. */
+          exclude: [...COLLECTION_EXCLUDE, PERFORMANCE_SUITE],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'perf',
+          include: [PERFORMANCE_SUITE],
+          exclude: COLLECTION_EXCLUDE,
+          // El reloj de pared sólo significa algo sin nadie más compitiendo.
+          fileParallelism: false,
+          maxWorkers: 1,
+        },
+      },
     ],
   },
 });
