@@ -100,12 +100,12 @@ export const ProposalAssistant = ({ open, onClose }: ProposalAssistantProps) => 
       };
       const raw = await createLocalProposalProvider().propose(request);
       const validated = validateCommandProposal(raw);
-      if (!validated.ok) { setNotice({ tone: 'error', message: validated.reason }); return; }
+      if (!validated.ok) { setNotice({ tone: 'error', message: t(validated.key, validated.params) }); return; }
       const proposal = validated.value;
       if (proposal.status === 'needs-clarification') { setNotice({ tone: 'info', message: proposal.question }); return; }
       if (proposal.status === 'rejected') { setNotice({ tone: 'error', message: proposal.reason }); return; }
       const outcome = prepareProposal(project, snapshotHash, proposal);
-      if (!outcome.ok) { setNotice({ tone: 'error', message: outcome.reason }); return; }
+      if (!outcome.ok) { setNotice({ tone: 'error', message: t(outcome.key, outcome.params) }); return; }
       setPrepared(outcome.prepared);
     } finally {
       setBusy(false);
@@ -119,7 +119,7 @@ export const ProposalAssistant = ({ open, onClose }: ProposalAssistantProps) => 
       const currentSnapshotHash = await projectChecksum(project);
       const outcome = confirmProposal(prepared, { proposalId: prepared.proposalId, snapshotHash: prepared.snapshotHash }, currentSnapshotHash);
       if (!outcome.ok) {
-        setNotice({ tone: 'error', message: outcome.reason });
+        setNotice({ tone: 'error', message: t(outcome.key, outcome.params) });
         setPrepared(null);
         return;
       }

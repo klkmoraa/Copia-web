@@ -12,6 +12,7 @@
  * exactamente la clase de amabilidad que convierte una propuesta ambigua en un
  * modelo mal cargado.
  */
+import { translatePhase2, type Phase2TranslationKey } from '../i18n/phase2Catalogs';
 
 /** Magnitudes que una propuesta puede tocar. Cada una acepta sólo sus unidades. */
 export type ProposalQuantityKind = 'elasticModulus' | 'area' | 'inertia' | 'density';
@@ -43,9 +44,14 @@ const FACTORS: Record<ProposalQuantityKind, Record<string, number>> = {
 export const allowedUnits = (kind: ProposalQuantityKind): string[] => Object.keys(FACTORS[kind]);
 
 export class ProposalUnitError extends Error {
-  constructor(message: string) {
-    super(message);
+  key: Phase2TranslationKey;
+  params?: Record<string, string | number>;
+
+  constructor(key: Phase2TranslationKey, params?: Record<string, string | number>) {
+    super(translatePhase2('es', key, params));
     this.name = 'ProposalUnitError';
+    this.key = key;
+    this.params = params;
   }
 }
 
@@ -60,12 +66,14 @@ export class ProposalUnitError extends Error {
 export const toBaseUnits = (quantity: ProposalQuantity, kind: ProposalQuantityKind): number => {
   const factor = FACTORS[kind][quantity.unit];
   if (factor === undefined) {
-    throw new ProposalUnitError(
-      `«${quantity.unit}» no es una unidad admitida para ${kind}. Admitidas: ${allowedUnits(kind).join(', ')}.`,
-    );
+    throw new ProposalUnitError('proposal.error.unitNotAllowed', {
+      unit: quantity.unit,
+      kind,
+      allowed: allowedUnits(kind).join(', '),
+    });
   }
   if (!Number.isFinite(quantity.value)) {
-    throw new ProposalUnitError(`El valor de la cantidad no es un número finito.`);
+    throw new ProposalUnitError('proposal.error.quantityNotFinite');
   }
   return quantity.value * factor;
 };

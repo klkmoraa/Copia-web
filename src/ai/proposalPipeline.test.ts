@@ -73,6 +73,11 @@ describe('validador · lo que rechaza, que es donde está el valor', () => {
 
   it('rechaza una operación fuera de la allowlist', () => {
     rejects(readyProposal({ kind: 'member.delete', memberId: 'M1' }), 'operation.kind');
+    const outcome = validateCommandProposal(readyProposal({ kind: 'member.delete', memberId: 'M1' }));
+    if (!outcome.ok) {
+      expect(outcome.key).toBe('proposal.error.operationKind');
+      expect(outcome.params?.kinds).toContain('member.update');
+    }
   });
 
   it('rechaza otra versión del contrato en vez de interpretarla con estas reglas', () => {
@@ -173,7 +178,11 @@ describe('compilación sobre un clon', () => {
       kind: 'member.update', memberId: 'M99', changes: { A: { value: 200, unit: 'cm2' } },
     }));
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect(outcome.code).toBe('unknown-id');
+    if (!outcome.ok) {
+      expect(outcome.code).toBe('unknown-id');
+      expect(outcome.key).toBe('proposal.error.unknownMember');
+      expect(outcome.params).toEqual({ memberId: 'M99' });
+    }
   });
 
   it('rechaza una sección que no está en el catálogo', () => {
@@ -181,7 +190,11 @@ describe('compilación sobre un clon', () => {
       kind: 'member.section.apply', memberId: 'M1', sectionId: 'inventada',
     }));
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect(outcome.code).toBe('unknown-id');
+    if (!outcome.ok) {
+      expect(outcome.code).toBe('unknown-id');
+      expect(outcome.key).toBe('proposal.error.unknownSection');
+      expect(outcome.params).toEqual({ sectionId: 'inventada' });
+    }
   });
 
   it('toma los números del catálogo local, nunca de la propuesta', () => {
