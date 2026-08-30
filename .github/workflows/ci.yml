@@ -50,6 +50,11 @@ jobs:
       - name: Frontera matemática protegida
         run: npm run verify:protected
 
+      # Contrato de los PNG estructurales y del paquete que los agrupa. Corre sobre
+      # el runner de pruebas de Node, no sobre vitest, asi que `npm test` no lo cubre.
+      - name: Contrato de assets estructurales
+        run: npm run verify:structural-assets
+
       - name: Pruebas deterministas
         run: npm test
 
@@ -66,6 +71,11 @@ jobs:
       # publicado lleve construcciones que sólo funcionan ahí. Este gate mira el artefacto.
       - name: Bundle del navegador sin código de Node
         run: npm run verify:browser-bundle
+
+      # La politica de capacidad de Space 3D (150 nudos / 300 barras) se declara en
+      # scripts/space3d-capacity-policy.mjs y hasta ahora no la comprobaba nadie.
+      - name: Capacidad declarada de Space 3D
+        run: npm run verify:space3d
 
       - name: Conservar el build en caso de fallo
         if: failure()
