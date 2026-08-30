@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Compass,
@@ -11,9 +11,11 @@ import {
   Moon,
   Move3d,
   Play,
+  Search,
   Sun,
   Triangle,
   Upload,
+  X,
 } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
@@ -111,6 +113,8 @@ export const WelcomeScreen = ({
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>('all');
   const [menuOpen, setMenuOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const entry = useWelcomeEntry();
 
   /* Salto directo a la Mesa. La condición sale entera del repositorio real
@@ -121,6 +125,26 @@ export const WelcomeScreen = ({
     onDirectResume?.();
     onOpenWorkspace();
   }, [allowDirectResume, entry, onDirectResume, onOpenWorkspace]);
+
+  const overlayOpen = exerciseDialogOpen || importCenterOpen || dxfImportOpen || templatesOpen || menuOpen || libraryOpen;
+
+  /* Atajo de teclado al buscador: "/" (fuera de un campo de texto) o ⌘K/Ctrl+K
+     en cualquier momento, igual que el resto del sistema espera de un salto
+     rápido. No captura nada mientras hay un diálogo o drawer abierto encima —
+     ahí el foco es suyo, no del lanzador. */
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (overlayOpen) return;
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      const shortcut = (event.key === 'k' && (event.metaKey || event.ctrlKey)) || (event.key === '/' && !typing);
+      if (!shortcut) return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [overlayOpen]);
 
   // Un único par de controles reutilizado en dos sitios (cabecera de escritorio
   // y drawer móvil) en vez de duplicar el JSX. Ninguno de los dos lleva `id`
@@ -182,7 +206,22 @@ export const WelcomeScreen = ({
   /* Un proyecto recién creado no tiene medida que enseñar. La placa de
      Continuar se adapta a eso; el botón no cambia de función. */
   const hasModel = nodeCount > 0 || memberCount > 0;
-  const overlayOpen = exerciseDialogOpen || importCenterOpen || dxfImportOpen || templatesOpen || menuOpen || libraryOpen;
+
+  /* El buscador recorta la MISMA lista de siempre por nombre y descripción —
+     ningún destino nuevo, ninguno oculto por otra razón que no coincidir con
+     lo tecleado. Con la caja vacía, `matches` es siempre `true`: es el estado
+     por defecto de toda la vida, no un caso especial. */
+  const searchQuery = search.trim().toLowerCase();
+  const matches = (...texts: string[]) => searchQuery === '' || texts.some((text) => text.toLowerCase().includes(searchQuery));
+  const showNewCard = matches(t('welcome.newProject'), t('welcome.newProjectDescription'));
+  const showExerciseCard = matches(t('welcome.newExercise'), t('welcome.launcherClassroomDescription'));
+  const showTemplateCard = matches(t('welcome.fromTemplate'), t('welcome.fromTemplateDescription'));
+  const showLibraryCard = matches(t('welcome.personalLibrary'), t('welcome.personalLibraryDescription'));
+  const showImportCard = matches(t('welcome.import'), t('welcome.importDescription'));
+  const showDxfCard = matches(t('welcome.importDxf'), t('welcome.importDxfDescription'));
+  const showSpace3dCard = Boolean(onOpenSpace3D) && matches(t('space3d.title'), t('welcome.space3DDescription'));
+  const noActionMatches = searchQuery !== '' && !showNewCard && !showExerciseCard && !showTemplateCard
+    && !showLibraryCard && !showImportCard && !showDxfCard && !showSpace3dCard;
 
   const templateMotion = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
@@ -226,6 +265,33 @@ export const WelcomeScreen = ({
             </div>
           </header>
 
+          {/* Buscador rápido: recorta la lista de "Empezar" y la de "Recientes"
+              a la vez, por el mismo texto. No abre nada por su cuenta — es un
+              filtro, no un segundo lanzador. */}
+          <div className="welcome-jump-bar">
+            <label className="welcome-jump">
+              <Search size={15} aria-hidden="true" />
+              <span className="sr-only">{t('welcome.searchLabel')}</span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                inputMode="search"
+                autoComplete="off"
+                className="welcome-jump-input"
+                placeholder={t('welcome.searchPlaceholder')}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+            {search ? (
+              <button type="button" className="welcome-jump-clear" onClick={() => { setSearch(''); searchInputRef.current?.focus(); }} aria-label={t('welcome.searchClear')}>
+                <X size={14} />
+              </button>
+            ) : (
+              <kbd className="welcome-jump-kbd" aria-hidden="true">⌘K</kbd>
+            )}
+          </div>
+
           <div className="welcome-launcher-body">
             <section className="welcome-column welcome-column--start" aria-labelledby="welcome-start-title">
               <h2 className="welcome-column-title" id="welcome-start-title">{t('welcome.sectionStart')}</h2>
@@ -236,6 +302,7 @@ export const WelcomeScreen = ({
                 onFocusCapture={onPreloadWorkspace}
                 onTouchStart={onPreloadWorkspace}
               >
+                {showNewCard ? (
                 <button type="button" className="welcome-launcher-card welcome-new-card" onClick={openBlankProject}>
                   <span className="welcome-launcher-icon"><Compass size={20} /></span>
                   <span className="welcome-launcher-info">
@@ -244,7 +311,9 @@ export const WelcomeScreen = ({
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
+                ) : null}
 
+                {showExerciseCard ? (
                 <button type="button" className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
                   <span className="welcome-launcher-icon"><GraduationCap size={20} /></span>
                   <span className="welcome-launcher-info">
@@ -253,7 +322,9 @@ export const WelcomeScreen = ({
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
+                ) : null}
 
+                {showTemplateCard ? (
                 <button type="button" className="welcome-launcher-card welcome-template-launcher" onClick={() => setTemplatesOpen(true)}>
                   <span className="welcome-launcher-icon"><LayoutTemplate size={20} /></span>
                   <span className="welcome-launcher-info">
@@ -262,11 +333,13 @@ export const WelcomeScreen = ({
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
+                ) : null}
 
                 {/* Biblioteca personal: secciones paramétricas, materiales y
                     vistas guardadas por quien usa la app, para reutilizar
                     entre proyectos. Es aditiva — no sustituye al Section
                     Builder del Inspector, que edita un miembro puntual. */}
+                {showLibraryCard ? (
                 <button type="button" className="welcome-launcher-card welcome-library-launcher" onClick={() => setLibraryOpen(true)}>
                   <span className="welcome-launcher-icon"><LibraryBig size={20} /></span>
                   <span className="welcome-launcher-info">
@@ -275,10 +348,12 @@ export const WelcomeScreen = ({
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
+                ) : null}
 
                 {/* Importación portátil y DXF comparten materia: las dos son
                     zonas de archivo, y `.welcome-import-card` es lo que lo
                     dice. `Phase2DxfAction` ya emite exactamente esa materia. */}
+                {showImportCard ? (
                 <button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
                   <span className="welcome-import-icon"><Upload size={20} /></span>
                   <span className="welcome-import-text">
@@ -287,27 +362,34 @@ export const WelcomeScreen = ({
                   </span>
                   <ArrowRight size={16} className="welcome-launcher-arrow" />
                 </button>
+                ) : null}
 
+                {showDxfCard ? (
                 <Suspense fallback={null}><Phase2DxfAction
                   open={dxfImportOpen}
                   onOpenChange={setDxfImportOpen}
                   onOpenWorkspace={onOpenWorkspace}
                 /></Suspense>
+                ) : null}
 
-                {onOpenSpace3D ? (
+                {showSpace3dCard && onOpenSpace3D ? (
                   <button type="button" className="welcome-launcher-card welcome-launcher-card--space3d" onClick={onOpenSpace3D}>
                     <span className="welcome-launcher-icon"><Move3d size={20} /></span>
                     <span className="welcome-launcher-info">
-                      <strong>{t('space3d.title')}</strong>
+                      {/* La marca de experimental va junto al nombre pero fuera
+                          de `<strong>`: dentro, el recorte de una sola línea
+                          de `<strong>` se la comería, y una advertencia
+                          recortada no advierte de nada. */}
+                      <span className="welcome-launcher-title-row">
+                        <strong>{t('space3d.title')}</strong>
+                        <span className="welcome-pill-badge welcome-pill-badge--experimental">{t('space3d.badge')}</span>
+                      </span>
                       <small>{t('welcome.space3DDescription')}</small>
                     </span>
-                    {/* La marca de experimental va fuera del nombre: dentro
-                        del `<strong>` la recorta su propio `text-overflow`,
-                        y una advertencia truncada no advierte de nada. */}
-                    <span className="welcome-pill-badge welcome-pill-badge--experimental">{t('space3d.badge')}</span>
                   </button>
                 ) : null}
               </nav>
+              {noActionMatches ? <p className="welcome-action-empty">{t('welcome.searchNoMatches', { query: search.trim() })}</p> : null}
             </section>
 
             <section className="welcome-column welcome-column--recents" aria-labelledby="welcome-recents-title">
@@ -339,7 +421,7 @@ export const WelcomeScreen = ({
               {/* El hub real, respaldado por IndexedDB: recientes, renombrar,
                   duplicar y recuperación. */}
               <Suspense fallback={<p className="welcome-hub-loading" role="status">{t('hub.loading')}</p>}>
-                <Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} />
+                <Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} filter={search} />
               </Suspense>
             </section>
           </div>

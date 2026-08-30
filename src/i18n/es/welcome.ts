@@ -9,6 +9,10 @@
 export const welcome = {
   'welcome.brandLine': 'Análisis estructural 2D y Modo Aula, local en este dispositivo.',
   'welcome.gateRailNav': 'Formas de empezar',
+  'welcome.searchLabel': 'Buscar proyectos y formas de empezar',
+  'welcome.searchPlaceholder': 'Buscar proyectos o crear algo nuevo…',
+  'welcome.searchClear': 'Borrar búsqueda',
+  'welcome.searchNoMatches': 'Ningún resultado para «{query}» en Empezar.',
   'welcome.resumeEmpty': 'Modelo vacío · empieza por los nudos',
   'welcome.newProjectDescription': 'Un modelo vacío listo para nodos, barras y apoyos.',
   'welcome.goToTable': 'Ir a la Mesa',

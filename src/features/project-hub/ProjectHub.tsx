@@ -28,9 +28,14 @@ const formatUpdated = (iso: string, language: 'es' | 'en') => {
 export const ProjectHub = ({
   repository,
   onOpen,
+  filter,
 }: {
   repository?: ProjectRepository;
   onOpen: (record: StoredProjectRecord) => void;
+  /** Filtro por nombre, tecleado en el buscador de la bienvenida. Vacío o
+   *  ausente enseña la biblioteca entera — no es un modo distinto, es el
+   *  mismo listado con una condición menos. */
+  filter?: string;
 }) => {
   const { language } = useI18n();
   const { t } = usePhase2I18n(language);
@@ -112,6 +117,15 @@ export const ProjectHub = ({
      despliegue, así que nunca puede quedar menos alcanzable que hoy. */
   const collapsed = !loading && !error && projects.length === 0 && recoveries.length === 0;
 
+  /* El filtro sale del buscador de la bienvenida y recorta el mismo listado
+     real, por nombre — no es una vista distinta ni un dato nuevo. Con la caja
+     vacía (el caso normal) `visibleProjects` es `projects` sin tocar. */
+  const trimmedFilter = filter?.trim() ?? '';
+  const visibleProjects = trimmedFilter
+    ? projects.filter((record) => record.name.toLowerCase().includes(trimmedFilter.toLowerCase()))
+    : projects;
+  const noMatches = !loading && projects.length > 0 && trimmedFilter !== '' && visibleProjects.length === 0;
+
   return <section className={`project-hub${collapsed ? ' project-hub--collapsed' : ''}`} aria-labelledby="project-hub-title">
     <header className="project-hub__header">
       <div><span className="project-hub__eyebrow">{t('hub.localFirst')}</span><h2 id="project-hub-title">{t('hub.title')}</h2></div>
@@ -120,7 +134,8 @@ export const ProjectHub = ({
     {loading ? <p role="status">{t('hub.loading')}</p> : null}
     {error ? <p className="project-hub__error" role="alert">{error}</p> : null}
     {!loading && projects.length === 0 ? <p className="project-hub__empty">{t('hub.empty')}</p> : null}
-    {projects.length ? <div className="project-hub__list">
+    {noMatches ? <p className="project-hub__empty">{t('hub.noMatches', { query: trimmedFilter })}</p> : null}
+    {visibleProjects.length ? <div className="project-hub__list">
       {/* Encabezados de columna reales. Sólo campos que el repositorio guarda
           de verdad: nombre, última edición y revisión. Ni miniatura, ni tipo,
           ni estado de análisis — ese último es copy prohibido. */}
@@ -130,7 +145,7 @@ export const ProjectHub = ({
         <span>{t('hub.columnRevision')}</span>
         <span />
       </div>
-      {projects.map((record) => <div className="project-hub__entry" key={record.id}><article className="project-hub__row">
+      {visibleProjects.map((record) => <div className="project-hub__entry" key={record.id}><article className="project-hub__row">
         <div className="project-hub__identity">
           {editing?.id === record.id ? <form onSubmit={(event) => { event.preventDefault(); void commitRename(); }}>
             <label><span className="sr-only">{t('hub.renameLabel')}</span><input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} autoFocus /></label>

@@ -172,6 +172,57 @@ describe('WelcomeScreen · el lanzador', () => {
   });
 });
 
+/**
+ * El buscador recorta la MISMA lista de siete puertas — no abre un segundo
+ * lanzador ni un modo distinto. Con la caja vacía, las siete siguen ahí (ya
+ * lo prueba el bloque de arriba); esto prueba la otra mitad: que teclear
+ * de verdad esconde lo que no coincide y lo devuelve todo al borrar.
+ */
+describe('WelcomeScreen · el buscador', () => {
+  it('recorta la lista de "Empezar" por nombre o descripción', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWelcome();
+    await waitFor(() => expect(actionRows(container)).toHaveLength(7));
+
+    await user.type(screen.getByRole('textbox', { name: /buscar/i }), 'plantilla');
+
+    expect(screen.getByRole('button', { name: /Desde plantilla/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Nuevo proyecto/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Nuevo ejercicio/ })).toBeNull();
+    expect(actionRows(container)).toHaveLength(1);
+  });
+
+  it('devuelve las siete puertas al borrar el texto', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWelcome();
+    const input = screen.getByRole('textbox', { name: /buscar/i });
+
+    await user.type(input, 'plantilla');
+    await waitFor(() => expect(actionRows(container)).toHaveLength(1));
+    await user.clear(input);
+    await waitFor(() => expect(actionRows(container)).toHaveLength(7));
+  });
+
+  it('dice que no hay resultados en vez de dejar la columna muda', async () => {
+    const user = userEvent.setup();
+    renderWelcome();
+
+    await user.type(screen.getByRole('textbox', { name: /buscar/i }), 'zzzzz');
+
+    expect(await screen.findByText(/Ningún resultado para «zzzzz»/)).toBeTruthy();
+  });
+
+  it('con "/" fuera de un campo de texto, enfoca el buscador', async () => {
+    const user = userEvent.setup();
+    renderWelcome();
+    const input = screen.getByRole('textbox', { name: /buscar/i });
+    expect(document.activeElement).not.toBe(input);
+
+    await user.keyboard('/');
+    expect(document.activeElement).toBe(input);
+  });
+});
+
 describe('welcomeEntry · quién está entrando', () => {
   it('un repositorio vacío es un usuario nuevo, y no salta la bienvenida', async () => {
     const entry = await readWelcomeEntry(new InMemoryProjectRepository());
