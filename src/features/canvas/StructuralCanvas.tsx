@@ -531,6 +531,25 @@ export const StructuralCanvas = ({
     });
   }, []);
 
+  /**
+   * Deshace la edición en vuelo y devuelve el borrador al estado con el que
+   * empezó el gesto.
+   *
+   * Esta secuencia estaba escrita cuatro veces —al empezar un pellizco, al
+   * descartar un contacto obsoleto, al cancelar el puntero y al cancelar la
+   * interacción activa— y las cuatro tenían que acordarse de las mismas seis
+   * cosas en el mismo orden. Olvidar el `cancelAnimationFrame` deja un frame
+   * pendiente que reescribe el borrador que se acaba de restaurar.
+   */
+  const revertStructuralEditTo = useCallback((beforeDraft: StructuralEditDraft | null) => {
+    pendingStructuralEditDraftRef.current = null;
+    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+    structuralEditFrameRef.current = null;
+    setStructuralEditDraft(beforeDraft);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+  }, []);
+
   const cancelNodeDragTransaction = useCallback(() => {
     pendingNodeMoveRef.current = null;
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
@@ -1306,12 +1325,7 @@ export const StructuralCanvas = ({
       clearLongPressTimer();
       if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
       if (interactionRef.current.kind === 'structural-edit') {
-        pendingStructuralEditDraftRef.current = null;
-        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-        structuralEditFrameRef.current = null;
-        setStructuralEditDraft(interactionRef.current.beforeDraft);
-        structuralEditLiveDraftRef.current = null;
-        setStructuralEditLiveDraft(null);
+        revertStructuralEditTo(interactionRef.current.beforeDraft);
         setStructuralEditPointerArmed(false);
       }
       for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
@@ -1324,12 +1338,7 @@ export const StructuralCanvas = ({
     clearLongPressTimer();
     if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
     if (interactionRef.current.kind === 'structural-edit') {
-      pendingStructuralEditDraftRef.current = null;
-      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-      structuralEditFrameRef.current = null;
-      setStructuralEditDraft(interactionRef.current.beforeDraft);
-      structuralEditLiveDraftRef.current = null;
-      setStructuralEditLiveDraft(null);
+      revertStructuralEditTo(interactionRef.current.beforeDraft);
       setStructuralEditPointerArmed(false);
     }
     const entries = [...activePointersRef.current.entries()];
@@ -1492,12 +1501,7 @@ export const StructuralCanvas = ({
       transitionInteraction(IDLE_INTERACTION);
     } else if (current.kind === 'structural-edit' && current.pointerId === event.pointerId) {
       if (cancelled) {
-        pendingStructuralEditDraftRef.current = null;
-        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-        structuralEditFrameRef.current = null;
-        setStructuralEditDraft(current.beforeDraft);
-        structuralEditLiveDraftRef.current = null;
-        setStructuralEditLiveDraft(null);
+        revertStructuralEditTo(current.beforeDraft);
       } else flushStructuralEditDraft();
       setStructuralEditPointerArmed(false);
       transitionInteraction(IDLE_INTERACTION);
@@ -1518,18 +1522,13 @@ export const StructuralCanvas = ({
     if (current.kind === 'node-drag') {
       cancelNodeDragTransaction();
     } else if (current.kind === 'structural-edit') {
-      pendingStructuralEditDraftRef.current = null;
-      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-      structuralEditFrameRef.current = null;
-      setStructuralEditDraft(current.beforeDraft);
-      structuralEditLiveDraftRef.current = null;
-      setStructuralEditLiveDraft(null);
+      revertStructuralEditTo(current.beforeDraft);
       setStructuralEditPointerArmed(false);
     }
     for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
     activePointersRef.current.clear();
     transitionInteraction(IDLE_INTERACTION);
-  }, [cancelNodeDragTransaction, clearLongPressTimer, clearSnapPreview, releasePointer, transitionInteraction]);
+  }, [cancelNodeDragTransaction, clearLongPressTimer, clearSnapPreview, releasePointer, revertStructuralEditTo, transitionInteraction]);
 
   const cancelStructuralEdit = useCallback(() => {
     cancelActiveInteraction();
