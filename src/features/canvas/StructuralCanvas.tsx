@@ -30,7 +30,6 @@ import {
 import {
   CANVAS_SCENE_ID,
   EMPTY_DEMAND_RATIOS,
-  EMPTY_STRUCTURAL_EDIT_NODE_IDS,
   IDLE_INTERACTION,
   clamp,
   contextualActionLabelKeys,
@@ -87,15 +86,6 @@ import {
   supportsClipboardReadText,
 } from './structuralClipboard';
 import {
-  createStructuralEditGeometryPreview,
-  prepareStructuralEdit,
-  resolveStructuralSelection,
-  structuralEditSnapshot,
-  type PreparedStructuralEdit,
-  type StructuralEditGeometryPreview,
-} from '../../data/structuralEditing';
-import {
-  buildStructuralEditRequest,
   changeStructuralEditKind,
   createStructuralEditDraft,
   structuralEditCapabilities,
@@ -112,6 +102,7 @@ import { useCanvasCamera } from './useCanvasCamera';
 import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
 import { useCanvasFeedback } from './useCanvasFeedback';
 import { useCanvasSnapping } from './useCanvasSnapping';
+import { useStructuralEditDraft } from './useStructuralEditDraft';
 import { CanvasCutInspector } from './CanvasCutInspector';
 import { CanvasGridLines } from './CanvasGridLines';
 
@@ -219,10 +210,6 @@ export const StructuralCanvas = ({
   const [candidatePicker, setCandidatePicker] = useState<CandidatePickerState | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
-  const [structuralEditDraft, setStructuralEditDraft] = useState<StructuralEditDraft | null>(null);
-  const [structuralEditLiveDraft, setStructuralEditLiveDraft] = useState<StructuralEditDraft | null>(null);
-  const [structuralEditPointerArmed, setStructuralEditPointerArmed] = useState(false);
-  const [structuralEditCommitError, setStructuralEditCommitError] = useState('');
   /**
    * Generador de estructuras. El lienzo guarda sólo lo que tiene que dibujar
    * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
@@ -245,10 +232,6 @@ export const StructuralCanvas = ({
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
-  const structuralEditFrameRef = useRef<number | null>(null);
-  const pendingStructuralEditDraftRef = useRef<StructuralEditDraft | null>(null);
-  const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
-  const structuralEditApplyingRef = useRef(false);
   const longPressMotionRef = useRef<{ pointerId: number; start: ScreenPoint; current: ScreenPoint } | null>(null);
   const { canvasFeedback, showCanvasFeedback } = useCanvasFeedback();
   // This carries no clipboard availability or selection data. It only asks
@@ -288,53 +271,6 @@ export const StructuralCanvas = ({
         > (selection?.kind === 'multi' ? selection.memberIds.length : selection?.kind === 'member' ? 1 : 0),
     };
   }, [editCapabilities.structural, hasInAppClipboard, project, repeatCandidate, selection]);
-  const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
-    if (!structuralEditDraft) return { prepared: null, error: '' };
-    if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
-      return { prepared: null, error: t('modelDoctor.previewStaleBody') };
-    }
-    try {
-      return {
-        prepared: prepareStructuralEdit(project, buildStructuralEditRequest(project, structuralEditDraft)),
-        error: '',
-      };
-    } catch (error) {
-      return { prepared: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
-    }
-  }, [project, structuralEditDraft, t]);
-  const structuralEditLivePreview = useMemo((): { preview: StructuralEditGeometryPreview | null; error: string } => {
-    if (!structuralEditLiveDraft || structuralEditPreview.error) return { preview: null, error: structuralEditPreview.error };
-    try {
-      return {
-        preview: createStructuralEditGeometryPreview(project, buildStructuralEditRequest(project, structuralEditLiveDraft)),
-        error: '',
-      };
-    } catch (error) {
-      return { preview: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
-    }
-  }, [project, structuralEditLiveDraft, structuralEditPreview.error, t]);
-  const structuralEditExcludedNodeIds = useMemo(() => {
-    // A gesture only changes parameters. Its structural closure is fixed from
-    // the source draft, so do not rebuild this O(N + M) set on every rAF frame.
-    const draft = structuralEditDraft;
-    if (!draft) return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
-    try {
-      return new Set(resolveStructuralSelection(project, draft.selection).nodeIds);
-    } catch {
-      return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
-    }
-  }, [project, structuralEditDraft]);
-  const structuralEditFocusSession = structuralEditDraft?.sourceSnapshot ?? null;
-  useEffect(() => {
-    if (!structuralEditFocusSession) return undefined;
-    // Run after the surface is committed. This is deliberately session-scoped
-    // (not draft-scoped), so numeric typing never steals focus back but a mobile
-    // sheet handoff reliably lands on the first parameter field.
-    const frame = window.requestAnimationFrame(() => {
-      hostRef.current?.querySelector<HTMLInputElement>('.structural-edit-surface input')?.focus({ preventScroll: true });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [structuralEditFocusSession]);
   const duplicatePreview = useMemo(() => {
     if (!duplicateDraft) return null;
     try {
@@ -380,6 +316,22 @@ export const StructuralCanvas = ({
     memberStart,
     localScreenPoint,
   });
+  const {
+    structuralEditDraft,
+    setStructuralEditDraft,
+    structuralEditPointerArmed,
+    setStructuralEditPointerArmed,
+    structuralEditCommitError,
+    setStructuralEditCommitError,
+    structuralEditPreview,
+    structuralEditLivePreview,
+    structuralEditExcludedNodeIds,
+    structuralEditApplyingRef,
+    discardStructuralEditFrame,
+    revertStructuralEditTo,
+    flushStructuralEditDraft,
+    scheduleStructuralEditDraft,
+  } = useStructuralEditDraft({ project, t, hostRef });
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
@@ -505,72 +457,19 @@ export const StructuralCanvas = ({
     });
   }, [moveNodeTransient]);
 
-  const flushStructuralEditDraft = useCallback(() => {
-    if (structuralEditFrameRef.current !== null) {
-      window.cancelAnimationFrame(structuralEditFrameRef.current);
-      structuralEditFrameRef.current = null;
-    }
-    const pending = pendingStructuralEditDraftRef.current ?? structuralEditLiveDraftRef.current;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
-    if (pending) setStructuralEditDraft(pending);
-    setStructuralEditLiveDraft(null);
-  }, []);
-
-  const scheduleStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
-    pendingStructuralEditDraftRef.current = draft;
-    if (structuralEditFrameRef.current !== null) return;
-    structuralEditFrameRef.current = window.requestAnimationFrame(() => {
-      structuralEditFrameRef.current = null;
-      const pending = pendingStructuralEditDraftRef.current;
-      pendingStructuralEditDraftRef.current = null;
-      if (pending) {
-        structuralEditLiveDraftRef.current = pending;
-        setStructuralEditLiveDraft(pending);
-      }
-    });
-  }, []);
-
-  /**
-   * Deshace la edición en vuelo y devuelve el borrador al estado con el que
-   * empezó el gesto.
-   *
-   * Esta secuencia estaba escrita cuatro veces —al empezar un pellizco, al
-   * descartar un contacto obsoleto, al cancelar el puntero y al cancelar la
-   * interacción activa— y las cuatro tenían que acordarse de las mismas seis
-   * cosas en el mismo orden. Olvidar el `cancelAnimationFrame` deja un frame
-   * pendiente que reescribe el borrador que se acaba de restaurar.
-   */
-  const revertStructuralEditTo = useCallback((beforeDraft: StructuralEditDraft | null) => {
-    pendingStructuralEditDraftRef.current = null;
-    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-    structuralEditFrameRef.current = null;
-    setStructuralEditDraft(beforeDraft);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
-  }, []);
-
   const cancelNodeDragTransaction = useCallback(() => {
     pendingNodeMoveRef.current = null;
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
-    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     nodeMoveFrameRef.current = null;
-    structuralEditFrameRef.current = null;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
+    discardStructuralEditFrame();
     cancelProjectTransaction();
-  }, [cancelProjectTransaction]);
+  }, [cancelProjectTransaction, discardStructuralEditFrame]);
 
   useEffect(() => () => {
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
-    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
-    structuralEditFrameRef.current = null;
-    pendingStructuralEditDraftRef.current = null;
-    structuralEditLiveDraftRef.current = null;
   }, []);
 
   const clearLongPressTimer = useCallback(() => {
@@ -903,7 +802,7 @@ export const StructuralCanvas = ({
       }
     }
     return true;
-  }, [cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
+  }, [cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, setStructuralEditCommitError, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
 
   /**
    * Un solo clic entrega el origen de inserción y desarma el puntero.
@@ -1528,17 +1427,16 @@ export const StructuralCanvas = ({
     for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
     activePointersRef.current.clear();
     transitionInteraction(IDLE_INTERACTION);
-  }, [cancelNodeDragTransaction, clearLongPressTimer, clearSnapPreview, releasePointer, revertStructuralEditTo, transitionInteraction]);
+  }, [cancelNodeDragTransaction, clearLongPressTimer, clearSnapPreview, releasePointer, revertStructuralEditTo, setStructuralEditPointerArmed, transitionInteraction]);
 
   const cancelStructuralEdit = useCallback(() => {
     cancelActiveInteraction();
     setStructuralEditDraft(null);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
+    discardStructuralEditFrame();
     setStructuralEditPointerArmed(false);
     setStructuralEditCommitError('');
     window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
-  }, [cancelActiveInteraction]);
+  }, [cancelActiveInteraction, discardStructuralEditFrame, setStructuralEditCommitError, setStructuralEditDraft, setStructuralEditPointerArmed]);
 
   const startStructuralEdit = useCallback((kind: StructuralEditKind) => {
     if (!selection || !editCapabilities.structural) return;
@@ -1550,15 +1448,14 @@ export const StructuralCanvas = ({
     closeCandidatePicker();
     setActiveTool('select');
     setStructuralEditPointerArmed(false);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
+    discardStructuralEditFrame();
     setStructuralEditCommitError('');
     try {
       setStructuralEditDraft(createStructuralEditDraft(project, selection, kind));
     } catch (error) {
       showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
     }
-  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+  }, [cancelActiveInteraction, closeCandidatePicker, discardStructuralEditFrame, editCapabilities.structural, project, selection, setActiveTool, setStructuralEditCommitError, setStructuralEditDraft, setStructuralEditPointerArmed, showCanvasFeedback, t]);
 
   const invokeContextualAction = useCallback((action: ContextualActionId) => {
     switch (action) {
@@ -1594,18 +1491,16 @@ export const StructuralCanvas = ({
 
   const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
     setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
+    discardStructuralEditFrame();
     setStructuralEditPointerArmed(false);
     setStructuralEditCommitError('');
-  }, [project]);
+  }, [discardStructuralEditFrame, project, setStructuralEditCommitError, setStructuralEditDraft, setStructuralEditPointerArmed]);
 
   const updateStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
     setStructuralEditDraft(draft);
-    structuralEditLiveDraftRef.current = null;
-    setStructuralEditLiveDraft(null);
+    discardStructuralEditFrame();
     setStructuralEditCommitError('');
-  }, []);
+  }, [discardStructuralEditFrame, setStructuralEditCommitError, setStructuralEditDraft]);
 
   const confirmStructuralEdit = useCallback(async () => {
     const prepared = structuralEditPreview.prepared;
@@ -1617,8 +1512,7 @@ export const StructuralCanvas = ({
         setSelection(structuralSelectionFromIds(prepared.createdNodeIds, prepared.createdMemberIds));
       }
       setStructuralEditDraft(null);
-      structuralEditLiveDraftRef.current = null;
-      setStructuralEditLiveDraft(null);
+      discardStructuralEditFrame();
       setStructuralEditPointerArmed(false);
       setStructuralEditCommitError('');
       window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
@@ -1627,7 +1521,7 @@ export const StructuralCanvas = ({
     } finally {
       structuralEditApplyingRef.current = false;
     }
-  }, [executePreparedStructuralEdit, setSelection, structuralEditPreview.prepared, t]);
+  }, [discardStructuralEditFrame, executePreparedStructuralEdit, setSelection, setStructuralEditCommitError, setStructuralEditDraft, setStructuralEditPointerArmed, structuralEditApplyingRef, structuralEditPreview.prepared, t]);
 
   useEffect(() => {
     if (!structuralEditDraft || JSON.stringify(structuralEditDraft.selection) === JSON.stringify(selection)) return;
