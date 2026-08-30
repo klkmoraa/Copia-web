@@ -120,6 +120,7 @@ import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 import { useCanvasCamera } from './useCanvasCamera';
 import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts';
+import { useCanvasFeedback } from './useCanvasFeedback';
 import { CanvasCutInspector } from './CanvasCutInspector';
 import { CanvasGridLines } from './CanvasGridLines';
 
@@ -259,8 +260,7 @@ export const StructuralCanvas = ({
   const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
   const structuralEditApplyingRef = useRef(false);
   const longPressMotionRef = useRef<{ pointerId: number; start: ScreenPoint; current: ScreenPoint } | null>(null);
-  const feedbackTimerRef = useRef<number | null>(null);
-  const [canvasFeedback, setCanvasFeedback] = useState('');
+  const { canvasFeedback, showCanvasFeedback } = useCanvasFeedback();
   // This carries no clipboard availability or selection data. It only asks
   // React to re-read the existing in-app clipboard ref after Copy succeeds.
   const [, refreshClipboardAvailability] = useState(0);
@@ -568,26 +568,15 @@ export const StructuralCanvas = ({
     cancelProjectTransaction();
   }, [cancelProjectTransaction]);
 
-  const showCanvasFeedback = useCallback((message: string) => {
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    setCanvasFeedback(message);
-    feedbackTimerRef.current = window.setTimeout(() => {
-      setCanvasFeedback('');
-      feedbackTimerRef.current = null;
-    }, 2400);
-  }, []);
-
   useEffect(() => () => {
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
     if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-    if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
     structuralEditFrameRef.current = null;
     pendingStructuralEditDraftRef.current = null;
     structuralEditLiveDraftRef.current = null;
-    feedbackTimerRef.current = null;
   }, []);
 
   const clearLongPressTimer = useCallback(() => {
