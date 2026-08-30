@@ -263,9 +263,11 @@ describe('Inspector selection variants', () => {
     expect(screen.getByRole('heading', { name: 'Derived values' })).toBeTruthy();
     expect(screen.getByText('Model identifier')).toBeTruthy();
 
+    /* Los resortes ya no viven en Propiedades avanzadas: tienen su propia
+       familia en el selector, con el símbolo que les corresponde. */
+    expect(screen.getByRole('tab', { name: 'Elastic' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Advanced properties' }));
-    expect(screen.getByRole('heading', { name: 'Springs' })).toBeTruthy();
-    expect(screen.getByText('Optional elastic support stiffnesses.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Springs' })).toBeNull();
     expect(screen.getByText('Settlements unavailable')).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Seleccionar vínculo rígido MR' }));
@@ -295,7 +297,7 @@ describe('Inspector selection variants', () => {
     expect(within(summary).getByText('N3')).toBeTruthy();
     expect(within(summary).getByText('Nodo libre · coordenadas editables')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Propiedades frecuentes' })).toBeTruthy();
-    expect((screen.getByRole('radio', { name: /Libre/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole('button', { name: /Libre/ }).getAttribute('aria-pressed')).toBe('true');
     expectDescribedUnit(screen.getByRole('textbox', { name: 'X' }), 'm');
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Y' }), 'm');
     expect(screen.getAllByText('Calculado').length).toBeGreaterThan(0);
@@ -306,16 +308,16 @@ describe('Inspector selection variants', () => {
     expect(within(summary).getByText('Apoyo')).toBeTruthy();
     expect(within(summary).getByText('N1')).toBeTruthy();
     expect(within(summary).getByText('Articulado · nodo estructural')).toBeTruthy();
-    expect((screen.getByRole('radio', { name: /Articulado/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole('button', { name: /Articulado/ }).getAttribute('aria-pressed')).toBe('true');
   });
 
   /**
-   * El selector por capas sustituyó al desplegable de cinco entradas. Lo que
-   * esta prueba cuida es lo mismo que cuidaba antes —que rodillo, personalizado
-   * y empotramiento presenten cada uno lo suyo y nada más— pero ahora sobre el
-   * recorrido real: se pulsa una tarjeta, no se elige una opción de una lista.
+   * El selector sustituyó al desplegable de cinco entradas. Lo que esta prueba
+   * cuida es lo mismo que cuidaba antes —que rodillo, personalizado y
+   * empotramiento presenten cada uno lo suyo y nada más— sobre el recorrido
+   * real: se pulsa un mosaico, no se elige una opción de una lista.
    */
-  it('covers roller, custom, and fixed support presentation through the layered picker', async () => {
+  it('covers roller, custom, and fixed support presentation through the tiled picker', async () => {
     const user = userEvent.setup();
     const project = createInspectorProject();
     const node = project.nodes.find((item) => item.id === 'N1');
@@ -323,21 +325,24 @@ describe('Inspector selection variants', () => {
     renderInspector(project);
 
     await user.click(screen.getByRole('button', { name: 'Seleccionar apoyo N1' }));
-    const base = screen.getByRole('group', { name: /Condición de borde/ });
-    expect((within(base).getByRole('radio', { name: /Rodillo/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole('button', { name: /Rodillo inclinado/ }).getAttribute('aria-pressed')).toBe('true');
     expect((screen.getByRole('textbox', { name: 'Normal' }) as HTMLInputElement).value).toBe('37.13');
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Normal' }), '°');
 
-    await user.click(within(base).getByRole('radio', { name: /Personalizado/ }));
+    await user.click(screen.getByRole('tab', { name: 'Guiados' }));
+    await user.click(screen.getByRole('button', { name: /Personalizado/ }));
     const restraints = screen.getByRole('group', { name: 'Grados de libertad restringidos' });
     const ux = within(restraints).getByRole('checkbox', { name: 'Ux' });
     expect((ux as HTMLInputElement).checked).toBe(false);
     await user.click(ux);
     expect((ux as HTMLInputElement).checked).toBe(true);
 
-    await user.click(within(base).getByRole('radio', { name: /Empotramiento/ }));
+    await user.click(screen.getByRole('tab', { name: 'Básicos' }));
+    await user.click(screen.getByRole('button', { name: /Empotramiento/ }));
     expect(screen.queryByRole('group', { name: 'Grados de libertad restringidos' })).toBeNull();
     expect(screen.queryByRole('textbox', { name: 'Normal' })).toBeNull();
+    /* Un empotramiento no orienta física, pero sí presentación. */
+    expect(screen.getByRole('group', { name: 'Orientación visual' })).toBeTruthy();
   });
 
   /**
@@ -354,9 +359,10 @@ describe('Inspector selection variants', () => {
     renderInspector(project);
 
     await user.click(screen.getByRole('button', { name: 'Seleccionar apoyo N1' }));
-    await user.click(screen.getByRole('button', { name: 'Propiedades avanzadas' }));
+    await user.click(screen.getByRole('tab', { name: 'Elásticos' }));
+    await user.click(screen.getByRole('button', { name: /Resorte normal/ }));
 
-    const direction = screen.getByRole('textbox', { name: 'Dirección de k normal' });
+    const direction = screen.getByRole('textbox', { name: 'Dirección de kn' });
     expect((direction as HTMLInputElement).value).toBe('90');
     expect(screen.getByText(/El resorte normal actúa a 90.00° y la normal del rodillo está a 30.00°/)).toBeTruthy();
 

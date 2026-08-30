@@ -39,18 +39,11 @@ import { ModelOverview } from './ModelOverview.tsx';
 import { readExpandedSections, writeExpandedSections } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
-import { formatFixed } from '../../utils/numberFormat';
 import { SectionBuilderPanel } from './SectionBuilderPanel';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
 import { SupportPicker } from './SupportPicker';
-import {
-  DEFAULT_ROLLER_ANGLE_DEG,
-  DEFAULT_SPRING_ANGLE_DEG,
-  applySupportPreset,
-  springNormalDisagrees,
-  type SupportPreset,
-} from './supportCatalog';
+import { applySupportPreset, type SupportEntry } from './supportCatalog';
 import { MemberFavoritesPanel } from '../library/MemberFavoritesPanel';
 import {
   InspectorAdvancedProperties,
@@ -161,8 +154,15 @@ export const InspectorProperties = () => {
       /* Una tarjeta del selector escribe un apoyo entero, no un campo: el
          catálogo es quien sabe qué conserva (la rigidez) y qué reconstruye
          (las restricciones). Ver `supportCatalog.ts`. */
-      else if (key === 'supportPreset') node.support = applySupportPreset(node.support, value as SupportPreset);
+      else if (key === 'supportPreset') node.support = applySupportPreset(node.support, value as SupportEntry);
       else if (key === 'supportAngle') node.support.angleDeg = Number(value);
+      /* «Auto» no guarda un cero: borra el campo. Un `angleDeg: 0` explícito y
+         la ausencia del campo dibujan igual, pero sólo la ausencia dice que
+         nadie eligió una orientación. */
+      else if (key === 'supportVisualAngle') {
+        if (value === null) delete node.support.angleDeg;
+        else node.support.angleDeg = Number(value);
+      }
       else if (key === 'restrainX' || key === 'restrainY' || key === 'restrainR') node.support[key] = Boolean(value);
       else if (key.startsWith('spring.')) {
         node.support.spring ??= {};
@@ -362,21 +362,12 @@ export const InspectorProperties = () => {
       </label>
     </InspectorPropertyGroup>
 
-    {!classroomMode ? <InspectorPropertyGroup title={t('inspector.springs')} description={t('inspector.optionalSupportStiffnesses')}>
-      <PhysicalNumberField label="kx" value={selectedNode.support.spring?.kx ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-kx`} validate={nonNegative} onCommit={(value) => updateNode('spring.kx', value)} />
-      <PhysicalNumberField label="ky" value={selectedNode.support.spring?.ky ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-ky`} validate={nonNegative} onCommit={(value) => updateNode('spring.ky', value)} />
-      <PhysicalNumberField label="kθ" value={selectedNode.support.spring?.kr ?? 0} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:spring-kr`} validate={nonNegative} onCommit={(value) => updateNode('spring.kr', value)} />
-      <PhysicalNumberField label={t('inspector.kNormal')} value={selectedNode.support.spring?.kNormal ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-normal`} validate={nonNegative} onCommit={(value) => updateNode('spring.kNormal', value)} />
-      {/* `spring.angleDeg` existía en el modelo y el solver lo usaba, pero
-          ninguna superficie lo enseñaba: un resorte normal caía siempre en los
-          90° por omisión aunque el rodillo estuviera tumbado. El campo aparece
-          sólo cuando hay rigidez normal que orientar. */}
-      {selectedNode.support.spring?.kNormal ? <InspectorNumericField label={t('inspector.springNormalDirection')} value={selectedNode.support.spring.angleDeg ?? DEFAULT_SPRING_ANGLE_DEG} unit="°" resetKey={`${selectionKey}:spring-angle`} language={language} formatOptions={{ maximumFractionDigits: 2 }} hint={t('inspector.springNormalDirectionHint')} onCommit={(value) => updateNode('spring.angleDeg', value)} /> : null}
-      {springNormalDisagrees(selectedNode.support) ? <InspectorHelper tone="warning">{t('inspector.springNormalMismatch', {
-        spring: formatFixed(selectedNode.support.spring?.angleDeg ?? DEFAULT_SPRING_ANGLE_DEG, 2),
-        support: formatFixed(selectedNode.support.angleDeg ?? DEFAULT_ROLLER_ANGLE_DEG, 2),
-      })}</InspectorHelper> : null}
-    </InspectorPropertyGroup> : <InspectorLockedState title={t('inspector.springsLockedClassroom')}>{t('inspector.springsLockedClassroomBody')}</InspectorLockedState>}
+    {/* Los resortes ya no están aquí. Vivían en Propiedades avanzadas cuando el
+        apoyo se elegía con un desplegable y no había otro sitio; ahora tienen su
+        propia familia en el selector, junto al símbolo que les corresponde y con
+        el campo de dirección de `kNormal`. Dejar una segunda copia aquí daría dos
+        sitios donde editar el mismo campo, que es la forma más fiable de que uno
+        de los dos acabe mintiendo. */}
 
     {!classroomMode && selectedNode.support.type !== 'none' ? <InspectorPropertyGroup title={t('inspector.settlementsByCase')} description={t('inspector.settlementsDescription')}>
       <div className="section-heading">
@@ -534,12 +525,20 @@ export const InspectorProperties = () => {
       <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.nodeFrequentDescription')}>
         <PhysicalNumberField label="X" value={selectedNode.x} units={units} quantity="length" resetKey={`${selectionKey}:x`} onCommit={(value) => updateNode('x', value)} />
         <PhysicalNumberField label="Y" value={selectedNode.y} units={units} quantity="length" resetKey={`${selectionKey}:y`} onCommit={(value) => updateNode('y', value)} />
+      </InspectorPropertyGroup>
+      <InspectorPropertyGroup title={t('inspector.support')} description={t('inspector.supportGroupDescription')}>
         <SupportPicker
+          key={selectionKey}
           support={selectedNode.support}
           selectionKey={selectionKey}
-          onApplyPreset={(preset) => updateNode('supportPreset', preset)}
+          units={units}
+          classroomMode={classroomMode}
+          settlementCount={selectedNodePrescribed.length}
+          onApplyPreset={(entry) => updateNode('supportPreset', entry)}
           onAngleChange={(value) => updateNode('supportAngle', value)}
+          onVisualAngleChange={(value) => updateNode('supportVisualAngle', value)}
           onRestraintChange={(key, value) => updateNode(key, value)}
+          onSpringChange={(key, value) => updateNode(`spring.${key}`, value)}
         />
       </InspectorPropertyGroup>
       <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.derivedReadOnlyDescription')}>
