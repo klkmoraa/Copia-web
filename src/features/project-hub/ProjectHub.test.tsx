@@ -47,6 +47,28 @@ describe('ProjectHub', () => {
     expect(screen.getByText('Antes de subir las cargas')).toBeTruthy();
   });
 
+  it('el filtro del buscador recorta la lista por nombre, sin tocar el almacén', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), name: 'Pórtico taller 4' });
+    await repository.saveProject({ ...createDefaultProject(), name: 'Armadura de práctica' });
+    const { rerender } = render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} filter="pórtico" /></ProjectProvider>);
+
+    expect(await screen.findByText('Pórtico taller 4')).toBeTruthy();
+    expect(screen.queryByText('Armadura de práctica')).toBeNull();
+
+    rerender(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} filter="" /></ProjectProvider>);
+    expect(await screen.findByText('Armadura de práctica')).toBeTruthy();
+  });
+
+  it('sin coincidencias, lo dice en vez de dejar la lista vacía y muda', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), name: 'Pórtico taller 4' });
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} filter="zzzzz" /></ProjectProvider>);
+
+    expect(await screen.findByText(/Ningún proyecto guardado coincide con «zzzzz»/)).toBeTruthy();
+    expect(screen.queryByText('Pórtico taller 4')).toBeNull();
+  });
+
   it('no cuenta una versión nombrada como copia recuperable', async () => {
     const repository = new InMemoryProjectRepository();
     const project = { ...createDefaultProject(), name: 'Con historial' };

@@ -102,6 +102,82 @@
    resto y el ancho sale solo. */
 .welcome-launcher-art .portal-hero { width: auto; max-width: 100%; height: 92px; }
 
+/* --- Buscador rápido -------------------------------------------------------
+   Una banda propia entre la cabecera y el cuerpo, no una celda metida en la
+   rejilla de tres columnas de arriba (marca / portada / acciones): esa
+   rejilla ya está llena y la portada necesita todo el aire que le sobra a la
+   marca. Filtra "Empezar" y "Recientes" con el mismo texto — ver
+   `WelcomeScreen.tsx` — así que vive fuera de las dos columnas que filtra. */
+.welcome-jump-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  padding: 10px clamp(18px, 2.4vw, 28px);
+  border-bottom: var(--sc-hairline);
+  background: var(--sc-color-surface-inset);
+}
+.welcome-jump {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  border-radius: var(--sc-radius-pill);
+  border: var(--sc-hairline);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-muted);
+}
+.welcome-jump:focus-within {
+  border-color: var(--sc-color-focus);
+  color: var(--sc-color-text-secondary);
+}
+.welcome-jump-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+.welcome-jump-input::placeholder { color: var(--sc-color-text-muted); }
+.welcome-jump-input:focus { outline: none; }
+.welcome-jump-kbd {
+  flex: none;
+  font-family: var(--sc-font-mono);
+  font-size: 10.5px;
+  color: var(--sc-color-text-muted);
+  border: var(--sc-hairline);
+  border-radius: 5px;
+  padding: 2px 7px;
+  background: var(--sc-color-surface-1);
+}
+.welcome-jump-clear {
+  flex: none;
+  width: var(--sc-size-target-pointer);
+  height: var(--sc-size-target-pointer);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--sc-hairline);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-secondary);
+  cursor: pointer;
+}
+.welcome-jump-clear:hover { color: var(--sc-color-text-primary); background: var(--sc-color-fill-quaternary); }
+.welcome-jump-clear:active { transform: var(--sc-press-transform); }
+.welcome-action-empty {
+  margin: var(--sc-space-2) 2px 0;
+  color: var(--sc-color-text-muted);
+  font-size: 12.5px;
+}
+
+@media (pointer: coarse) {
+  .welcome-jump-kbd { display: none; }
+}
+
 /* --- Cuerpo: crear a la izquierda, lo que existe a la derecha ------------ */
 .welcome-launcher-body {
   display: grid;
@@ -132,12 +208,22 @@
   letter-spacing: 0;
   text-transform: none;
 }
-.welcome-action-list { display: flex; flex-direction: column; gap: 2px; }
+/* Rejilla de dos columnas, no una lista apilada: "Nuevo proyecto" es la
+   única fila a todo el ancho (es la acción primaria) y las cuatro
+   capacidades intermedias se emparejan en mosaico — la misma densidad que ya
+   tenían, en la mitad del alto. Las dos zonas de archivo (`.welcome-import-card`,
+   propia y del sistema, y la de DXF) vuelven a ocupar el ancho completo: son
+   destino de un arrastre y necesitan sitio para soltar, no un cuarto de fila.
+   `grid-column:1/-1` en vez de reordenar el JSX: el DOM sigue siendo la
+   misma lista plana de siete hijos que `welcomeFlow.test.tsx` cuenta. */
+.welcome-action-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.welcome-action-list > .welcome-new-card,
+.welcome-action-list > .welcome-import-card { grid-column: 1 / -1; }
 
 /* --- Las filas -----------------------------------------------------------
-   Seis capacidades, seis filas iguales. Las dos de archivo conservan
-   `.welcome-import-card` porque su materia (y su contrato de QA) es propia;
-   lo que se iguala aquí es la métrica de fila, no el material. */
+   Siete capacidades. Las dos de archivo conservan `.welcome-import-card`
+   porque su materia (y su contrato de QA) es propia; lo que se iguala aquí es
+   la métrica de fila, no el material. */
 .welcome-action-list .welcome-launcher-card,
 .welcome-action-list .welcome-import-card {
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -169,9 +255,32 @@
   font-size: 12px; line-height: 1.35;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Las cuatro tarjetas emparejadas tienen la mitad del ancho de antes: una
+   frase de una línea se recortaba a la mitad. Dos líneas con salto normal
+   caben en el alto que ya reserva la fila y no pierden la descripción. */
+.welcome-action-list > :not(.welcome-new-card):not(.welcome-import-card) .welcome-launcher-info {
+  align-self: center;
+}
+.welcome-action-list > :not(.welcome-new-card):not(.welcome-import-card) .welcome-launcher-info small {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.welcome-action-list > :not(.welcome-new-card):not(.welcome-import-card) {
+  align-items: start;
+  min-height: 72px;
+  padding-block: 11px;
+}
 .welcome-action-list .welcome-launcher-arrow { grid-area: arrow; align-self: center; justify-self: end; }
-.welcome-action-list .welcome-launcher-card--space3d .welcome-pill-badge { grid-area: arrow; align-self: center; justify-self: end; }
-.welcome-action-list .welcome-launcher-card--space3d .welcome-launcher-arrow { display: none; }
+/* La insignia «Experimental» de Space 3D va en línea junto al nombre, no en
+   la columna de la flecha: en el mosaico de dos columnas esa columna es
+   demasiado angosta para un texto de esa longitud sin solaparse con la
+   descripción. `min-width:0` en el nombre es lo que deja que sea ÉL quien
+   se recorte, y no la insignia quien lo empuje fuera de la tarjeta. */
+.welcome-launcher-title-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.welcome-launcher-title-row strong { min-width: 0; flex: 0 1 auto; }
+.welcome-launcher-title-row .welcome-pill-badge { flex: none; }
 /* Ningún control se eleva bajo el puntero: se tiñe (decisión 4 del sistema).
    Sin `transform` aquí a propósito: esta regla tiene la misma especificidad
    (0,3,0) que `.welcome-launcher-card:not(:disabled):active` y aparece después,
@@ -188,11 +297,29 @@
   background: var(--sc-color-fill-tertiary);
   box-shadow: none;
 }
-/* La fila primaria es la única con relleno de acento en esta pantalla. */
-.welcome-action-list .welcome-new-card { box-shadow: none; }
-.welcome-action-list .welcome-new-card .welcome-launcher-icon {
+/* La fila primaria es la única con relleno de acento en esta pantalla —y
+   ahora lo lleva la fila entera, no sólo el icono: es la acción que se
+   propone, y el ancho completo de la rejilla (arriba) le da sitio para
+   pesar como tal sin dejar de ser una fila del mismo sistema. */
+.welcome-action-list .welcome-new-card {
+  min-height: 68px;
+  padding-inline: var(--sc-space-4);
   background: var(--sc-color-action-primary);
-  color: var(--sc-color-action-on-primary);
+  color: var(--sc-color-action-foreground);
+  box-shadow: none;
+}
+.welcome-action-list .welcome-new-card .welcome-launcher-info strong,
+.welcome-action-list .welcome-new-card .welcome-launcher-info small { color: inherit; }
+.welcome-action-list .welcome-new-card .welcome-launcher-info small { opacity: .84; }
+.welcome-action-list .welcome-new-card .welcome-launcher-arrow { color: inherit; opacity: .84; }
+.welcome-action-list .welcome-new-card:hover {
+  background: var(--sc-color-action-hover);
+  border-color: transparent;
+}
+.welcome-action-list .welcome-new-card:active { background: var(--sc-color-action-pressed); }
+.welcome-action-list .welcome-new-card .welcome-launcher-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--sc-color-action-foreground);
   box-shadow: none;
 }
 
@@ -216,13 +343,9 @@
 }
 .welcome-action-list .welcome-launcher-card:hover .welcome-launcher-icon,
 .welcome-action-list .welcome-import-card:hover .welcome-import-icon { color: var(--sc-color-text-primary); }
-/* La fila primaria vuelve a ganar después de la regla monocroma de arriba: es
-   la única con relleno de acento y el orden de aparición es lo que lo decide. */
-.welcome-action-list .welcome-new-card .welcome-launcher-icon,
-.welcome-action-list .welcome-new-card:hover .welcome-launcher-icon {
-  background: var(--sc-color-action-primary);
-  color: var(--sc-color-action-on-primary);
-}
+/* La primaria queda fuera del apagado de arriba: su icono es blanco
+   translúcido sobre el relleno de acento, no tinta oscura. */
+.welcome-action-list .welcome-new-card:hover .welcome-launcher-icon { color: var(--sc-color-action-foreground); }
 
 /* La flecha de la fila deja de teñirse del color de dominio de cada tarjeta
    (`--launcher-accent`, que era menta/magenta/secundario según la puerta) y
@@ -230,6 +353,13 @@
 .welcome-action-list .welcome-launcher-card:hover .welcome-launcher-arrow,
 .welcome-action-list .welcome-import-card:hover .welcome-launcher-arrow {
   color: var(--sc-color-text-secondary);
+}
+/* La primaria vuelve a ganar: flecha en tinta blanca sobre su propio relleno,
+   no en el gris que acaba de fijar la regla genérica de arriba. */
+.welcome-action-list .welcome-new-card:hover .welcome-launcher-arrow {
+  color: inherit;
+  opacity: 1;
+  transform: translateX(3px);
 }
 
 /* --- Continuar: la pieza dominante de la columna derecha ----------------- */
@@ -331,8 +461,16 @@
 @media (max-width: 700px) {
   .welcome-brand-line { font-size: 12px; }
   .welcome-header { padding: 16px; }
+  .welcome-jump-bar { padding: 10px 16px; }
   .welcome-column { padding: 14px 16px; }
   .welcome-resume-name { font-size: 1.15rem; }
+}
+
+/* Un teléfono angosto no tiene sitio para dos mosaicos de 160px con nombre y
+   descripción de dos líneas cada uno: vuelven a apilarse en una columna. */
+@media (max-width: 460px) {
+  .welcome-action-list { grid-template-columns: 1fr; }
+  .welcome-action-list > :not(.welcome-new-card):not(.welcome-import-card) { min-height: 56px; padding-block: 9px; }
 }
 
 /* Compact apaisado y bajo: 390 px de alto no dan para la portada, pero sí

@@ -9,6 +9,10 @@
 export const welcome = {
   'welcome.brandLine': '2D structural analysis and Classroom Mode, local to this device.',
   'welcome.gateRailNav': 'Ways to start',
+  'welcome.searchLabel': 'Search projects and ways to start',
+  'welcome.searchPlaceholder': 'Search projects or create something new…',
+  'welcome.searchClear': 'Clear search',
+  'welcome.searchNoMatches': 'No matches for “{query}” in Start.',
   'welcome.resumeEmpty': 'Empty model · start with the nodes',
   'welcome.newProjectDescription': 'An empty model ready for nodes, members, and supports.',
   'welcome.goToTable': 'Go to the workspace',
